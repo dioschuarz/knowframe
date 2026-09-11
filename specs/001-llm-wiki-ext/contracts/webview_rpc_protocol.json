@@ -14,6 +14,7 @@
             "setHub",
             "updateColorGroups",
             "rescanVault",
+            "fixBrokenLinks",
             "installGitHooks",
             "webviewReady"
           ]

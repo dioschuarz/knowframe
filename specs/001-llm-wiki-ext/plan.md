@@ -40,12 +40,12 @@
 - Full vault parse and graph calculation for 1,000 Markdown files in $\le 200\text{ ms}$.
 - Resident memory footprint (RSS) of Rust sidecar $\le 35\text{ MB}$ resting state for 5,000 notes.
 - Webview force-directed canvas rendering at consistent 60 FPS.
-- Incremental Git hook delta update in $\le 50\text{ ms}$.
+- Incremental Rust core in-memory graph patch in $\le 50\text{ ms}$; end-to-end Git hook roundtrip $< 150\text{ ms}$.
 
 **Constraints**:
 - Strict non-blocking Git hook fail-open $\le 500\text{ ms}$ timeout.
 - Packaged `.vsix` size $\le 25\text{ MB}$ per platform target (CTaaS GAP-028).
-- Sandboxed Webview with CSP cryptographic nonces and zero plaintext credentials on disk (CTaaS GAP-026/GAP-027).
+- Sandboxed Webview with CSP cryptographic nonces and zero plaintext credentials on disk; daemon tokens managed exclusively via `vscode.SecretStorage` (CTaaS GAP-026/GAP-027, Constitution Principle VI).
 - No continuous disk watchers or background keystroke polling.
 
 **Scale/Scope**:
@@ -97,6 +97,14 @@ specs/001-llm-wiki-ext/
 │       ├── src/
 │       │   ├── main.rs               # CLI entrypoint (scan, daemon, git-delta)
 │       │   ├── lib.rs                # Library root for unit testing
+│       │   ├── types.rs              # Core domain types & enums (NodeStatus, LinkType)
+│       │   ├── error.rs              # Domain error handling & result types
+│       │   ├── models/               # Domain entity models
+│       │   │   └── mod.rs            # NoteNode, NoteEdge structs & serialization
+│       │   ├── cli/                  # Standalone CLI sub-commands
+│       │   │   ├── mod.rs
+│       │   │   ├── scan.rs           # Workspace scanner CLI handler
+│       │   │   └── delta.rs          # Git commit delta CLI dispatcher
 │       │   ├── ast/                  # Markdown AST & pulldown-cmark pull parser
 │       │   │   ├── mod.rs
 │       │   │   ├── parser.rs         # Link and text event extractor
@@ -107,7 +115,7 @@ specs/001-llm-wiki-ext/
 │       │   │   ├── builder.rs        # Graph construction from parsed notes
 │       │   │   ├── centrality.rs     # In-degree, out-degree, Brandes betweenness
 │       │   │   ├── hops.rs           # BFS shortest-path hop resolver
-│       │   │   └── resolver.rs       # Path & submodule link resolution
+│       │   │   └── resolver.rs       # Path, section anchor & submodule link resolution
 │       │   ├── tokens/               # BPE token economics
 │       │   │   ├── mod.rs
 │       │   │   └── counter.rs        # tiktoken-rs cl100k_base accounting
@@ -118,6 +126,7 @@ specs/001-llm-wiki-ext/
 │       │   ├── ipc/                  # WebSocket JSON-RPC 2.0 server
 │       │   │   ├── mod.rs
 │       │   │   ├── server.rs         # tokio-tungstenite daemon
+│       │   │   ├── handlers.rs       # workspace/scan & graph/setHub request handlers
 │       │   │   ├── protocol.rs       # Typed request/response/delta handlers
 │       │   │   └── client.rs         # Ephemeral client for git-delta sub-command
 │       │   └── delta/                # Incremental commit processor
@@ -135,8 +144,12 @@ specs/001-llm-wiki-ext/
 │   ├── esbuild.js                    # Fast bundle pipeline
 │   ├── src/
 │   │   ├── extension.ts              # Extension activation & deactivation lifecycle
+│   │   ├── types/
+│   │   │   └── protocol.ts           # Shared TypeScript contracts & RPC interfaces
 │   │   ├── lifecycle/
-│   │   │   ├── processManager.ts     # Rust binary resolver, spawn & auto-restart
+│   │   │   ├── binaryResolver.ts     # Multi-platform Rust binary discovery
+│   │   │   ├── processManager.ts     # Rust binary spawner, supervisor & auto-restart
+│   │   │   ├── secretManager.ts      # vscode.SecretStorage IPC session token manager
 │   │   │   └── healthMonitor.ts      # Ping/pong socket health check & backoff
 │   │   ├── ipc/
 │   │   │   ├── client.ts             # WebSocket JSON-RPC 2.0 client
@@ -151,7 +164,8 @@ specs/001-llm-wiki-ext/
 │   │       ├── showGraph.ts          # Open knowledge graph command
 │   │       ├── setHub.ts             # Designate active hub command
 │   │       ├── installHooks.ts       # Setup git hooks command
-│   │       └── rescanVault.ts        # Manual refresh command
+│   │       ├── rescanVault.ts        # Manual refresh command
+│   │       └── fixBrokenLinks.ts     # QuickPick broken link navigation
 │   ├── webview-ui/                   # Sandboxed Webview frontend
 │   │   ├── index.html                # CSP-compliant template
 │   │   ├── src/
@@ -163,13 +177,15 @@ specs/001-llm-wiki-ext/
 │   │   │   ├── components/
 │   │   │   │   ├── tokenCounter.ts   # Active harness vs on-demand token display
 │   │   │   │   ├── colorManager.ts   # Interactive cluster hashtag & path manager
-│   │   │   │   └── actionsToolbar.ts # Quick action buttons (Hub, Rescan, etc.)
+│   │   │   │   └── actionsToolbar.ts # Quick action buttons (Hub, Rescan, Fix Links)
 │   │   │   └── rpc/
 │   │   │       └── webviewRpc.ts     # Typed JSON-RPC bridge to Extension Host
 │   └── test/
 │       ├── runTest.ts                # Headless Electron test launcher
 │       └── suite/
 │           ├── extension.test.ts     # Activation and command test
+│           ├── webview.test.ts       # Webview RPC and CSP test
+│           ├── hooks.test.ts         # Hook installation test
 │           └── ipc.test.ts           # Sidecar handshake and ping/pong test
 ```
 

@@ -34,7 +34,7 @@
 
 ## Phase 3: User Story 1 - Organic Vault Discovery & Graph Centrality Computation (Priority: P1) 🎯 MVP
 
-**Goal**: Automatically discover all Markdown files in a workspace, parse standard links and Obsidian wikilinks without requiring frontmatter, construct a directed graph in `petgraph`, calculate degree and Brandes betweenness centrality, assign hop distances via BFS, compute exact `cl100k_base` BPE tokens via `tiktoken-rs`, and flag dead links.
+**Goal**: Automatically discover all Markdown files in a workspace, parse standard links and Obsidian wikilinks without requiring frontmatter, construct a directed graph in `petgraph`, calculate degree and Brandes betweenness centrality, assign hop distances via BFS, compute exact `cl100k_base` BPE tokens via `tiktoken-rs`, and flag dead links (including missing section `#heading` anchors per Constitution Principle V).
 
 **Independent Test**: Execute `cargo test -p llm-wiki-core --test ast_test --test graph_test --test token_test` and run `target/release/llm-wiki-core scan <dir> --format json` verifying $<200\text{ ms}$ parse for 1,000 files, exact BPE tokens, top betweenness node as suggested hub, and dead links flagged.
 
@@ -49,7 +49,7 @@
 - [ ] T014 [P] [US1] Implement `pulldown-cmark` streaming pull parser ignoring links in code blocks (`CodeBlock`) and code spans in `crates/core/src/ast/parser.rs`
 - [ ] T015 [P] [US1] Implement Obsidian wikilink tokenizer (`[[target|label]]`) and anchor parser (`#section`) in `crates/core/src/ast/wikilink.rs`
 - [ ] T016 [P] [US1] Implement hashtag and YAML frontmatter tag extractor normalizing to lowercase in `crates/core/src/ast/tags.rs`
-- [ ] T017 [US1] Implement relative file path resolver and dead link detector (`is_broken: true`) in `crates/core/src/graph/resolver.rs`
+- [ ] T017 [US1] Implement relative file path resolver and dead link detector (verifying disk existence and validating `#section` heading anchors against target note AST, setting `is_broken: true`) in `crates/core/src/graph/resolver.rs`
 - [ ] T018 [US1] Implement `petgraph::DiGraph` graph builder mapping parsed notes and edges in `crates/core/src/graph/builder.rs`
 - [ ] T019 [US1] Implement Brandes betweenness centrality algorithm and degree calculator in `crates/core/src/graph/centrality.rs`
 - [ ] T020 [US1] Implement BFS shortest-path hop resolver assigning Level 0 (Hub), Level 1, Level 2, Level 3+, and Orphan (-1) in `crates/core/src/graph/hops.rs`
@@ -62,13 +62,13 @@
 
 ## Phase 4: User Story 2 - Sidecar Process Lifecycle & Typed WebSocket IPC (Priority: P1)
 
-**Goal**: VS Code Extension Host automatically manages the Rust sidecar daemon lifecycle (spawning on activation, health monitoring with exponential backoff, clean termination on deactivation), establishes local WebSocket IPC over `127.0.0.1:<ephemeral_port>` with cryptographic auth token, and auto-generates `.context-vault.yaml`.
+**Goal**: VS Code Extension Host automatically manages the Rust sidecar daemon lifecycle (spawning on activation, health monitoring with exponential backoff, clean termination on deactivation), establishes local WebSocket IPC over `127.0.0.1:<ephemeral_port>` with cryptographic auth token stored via `vscode.SecretStorage` (Constitution Principle VI), and auto-generates `.context-vault.yaml`.
 
 **Independent Test**: Headless extension integration tests (`extension/test/suite/ipc.test.ts`) verify sidecar binary discovery, process spawning, WebSocket handshake, bidirectional ping/pong $<5\text{ ms}$, auto-restart on kill, and clean shutdown on `deactivate()`.
 
 ### Tests for User Story 2 (TDD First) ⚠️
 - [ ] T023 [P] [US2] Write unit tests for sidecar WebSocket JSON-RPC server and message routing in `crates/core/tests/ipc_test.rs`
-- [ ] T024 [P] [US2] Write headless integration tests for Extension Host process manager and WebSocket client in `extension/test/suite/ipc.test.ts`
+- [ ] T024 [P] [US2] Write headless integration tests for Extension Host process manager, SecretStorage, and WebSocket client in `extension/test/suite/ipc.test.ts`
 
 ### Implementation for User Story 2
 - [ ] T025 [US2] Implement async WebSocket JSON-RPC 2.0 daemon server using `tokio-tungstenite` with auth token handshake in `crates/core/src/ipc/server.rs`
@@ -76,36 +76,39 @@
 - [ ] T027 [P] [US2] Implement `.context-vault.yaml` auto-generator with discovered hub and default globs in `crates/core/src/config/generator.rs`
 - [ ] T028 [US2] Implement Rust binary locator for multi-platform binaries (`linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`, `win32-x64`) in `extension/src/lifecycle/binaryResolver.ts`
 - [ ] T029 [US2] Implement sidecar process supervisor with spawn, auto-restart exponential backoff (max 3 retries), and graceful kill on deactivation in `extension/src/lifecycle/processManager.ts`
-- [ ] T030 [US2] Implement typed WebSocket JSON-RPC 2.0 client with `requestId` correlation and reconnection logic in `extension/src/ipc/client.ts`
-- [ ] T031 [US2] Wire extension activation lifecycle and status bar indicator in `extension/src/extension.ts`
+- [ ] T030 [US2] Implement SecretStorage manager in `extension/src/lifecycle/secretManager.ts` to securely generate, store, and retrieve daemon authentication tokens without plaintext disk artifacts
+- [ ] T031 [US2] Implement typed WebSocket JSON-RPC 2.0 client with `requestId` correlation and reconnection logic in `extension/src/ipc/client.ts`
+- [ ] T032 [US2] Wire extension activation lifecycle, secret initialization, and status bar indicator in `extension/src/extension.ts`
 
-**Checkpoint**: User Stories 1 AND 2 operate together via bidirectional IPC.
+**Checkpoint**: User Stories 1 AND 2 operate together via bidirectional IPC with zero plaintext secrets.
 
 ---
 
 ## Phase 5: User Story 3 - Interactive Force-Directed Webview with Hop Opacity, Cluster Hashtag / Path Coloring & Token Economics (Priority: P2)
 
-**Goal**: Render an interactive 60 FPS HTML5 Canvas force-directed graph in a sandboxed Webview enforcing strict CSP nonces, Hue + Opacity decay law ($\alpha_0=1.0, \alpha_1=0.6, \alpha_2=0.3, \alpha_{\ge 3}=0.15$), cluster coloring (`tag:#...`, `path:...`), active vs reachable token budget counters, and node click navigation.
+**Goal**: Render an interactive 60 FPS HTML5 Canvas force-directed graph in a sandboxed Webview enforcing strict CSP nonces, Hue + Opacity decay law ($\alpha_0=1.0, \alpha_1=0.6, \alpha_2=0.3, \alpha_{\ge 3}=0.15$), cluster coloring (`tag:#...`, `path:...`), active vs reachable token budget counters, quick actions toolbar (Set as Hub, Rescan Vault, Fix Broken Links), and node click navigation.
 
 **Independent Test**: Webview tests and visual verification: verify CSP header contains random nonce, canvas renders at 60 FPS, nodes with `#architecture` take purple base hue modulated by hop distance alpha, active tokens sum Level 0 nodes, and clicking a node dispatches `openFile` to open editor document.
 
 ### Tests for User Story 3 (TDD First) ⚠️
-- [ ] T032 [P] [US3] Write unit tests for Hue + Opacity color composition invariant and cluster rule matching in `extension/webview-ui/test/colorResolver.test.ts`
-- [ ] T033 [P] [US3] Write unit tests for Webview typed RPC message dispatcher and CSP generator in `extension/test/suite/webview.test.ts`
+- [ ] T033 [P] [US3] Write unit tests for Hue + Opacity color composition invariant and cluster rule matching in `extension/webview-ui/test/colorResolver.test.ts`
+- [ ] T034 [P] [US3] Write unit tests for Webview typed RPC message dispatcher and CSP generator in `extension/test/suite/webview.test.ts`
 
 ### Implementation for User Story 3
-- [ ] T034 [P] [US3] Implement CSP helper generating cryptographic nonces (`script-src 'nonce-${nonce}'`) and `asWebviewUri` resource mapping in `extension/src/webview/cspHelper.ts`
-- [ ] T035 [US3] Implement `WebviewPanel` lifecycle manager with `vscode.setState()`/`getState()` and `WebviewPanelSerializer` (no `retainContextWhenHidden`) in `extension/src/webview/panelManager.ts`
-- [ ] T036 [P] [US3] Implement Webview HTML template and theme CSS custom properties in `extension/webview-ui/index.html` and `extension/webview-ui/src/theme.css`
-- [ ] T037 [US3] Implement 2D Canvas force-directed graph renderer with RequestAnimationFrame loop and DPR scaling in `extension/webview-ui/src/graph/canvasRenderer.ts`
-- [ ] T038 [US3] Implement `d3-force` physics simulation (link force, charge repulsion, center force) in `extension/webview-ui/src/graph/physics.ts`
-- [ ] T039 [US3] Implement Hue + Opacity color resolver applying cluster rule base hue with hop distance alpha decay in `extension/webview-ui/src/graph/colorResolver.ts`
-- [ ] T040 [P] [US3] Implement diagnostic token counter widget displaying active harness tokens, reachable subcall tokens, and threshold alert badges in `extension/webview-ui/src/components/tokenCounter.ts`
-- [ ] T041 [P] [US3] Implement interactive Cluster Groups manager UI (add/edit/toggle tag/path rules) with live preview and save in `extension/webview-ui/src/components/colorManager.ts`
-- [ ] T042 [US3] Implement Webview client RPC bridge handling `openFile`, `setHub`, `updateColorGroups`, and `graphDataUpdate` in `extension/webview-ui/src/rpc/webviewRpc.ts`
-- [ ] T043 [US3] Implement Extension Host command `LLM Wiki: Show Knowledge Graph` in `extension/src/commands/showGraph.ts`
+- [ ] T035 [P] [US3] Implement CSP helper generating cryptographic nonces (`script-src 'nonce-${nonce}'`) and `asWebviewUri` resource mapping in `extension/src/webview/cspHelper.ts`
+- [ ] T036 [US3] Implement `WebviewPanel` lifecycle manager with `vscode.setState()`/`getState()` and `WebviewPanelSerializer` (no `retainContextWhenHidden`) in `extension/src/webview/panelManager.ts`
+- [ ] T037 [P] [US3] Implement Webview HTML template and theme CSS custom properties in `extension/webview-ui/index.html` and `extension/webview-ui/src/theme.css`
+- [ ] T038 [US3] Implement 2D Canvas force-directed graph renderer with RequestAnimationFrame loop and DPR scaling in `extension/webview-ui/src/graph/canvasRenderer.ts`
+- [ ] T039 [US3] Implement `d3-force` physics simulation (link force, charge repulsion, center force) in `extension/webview-ui/src/graph/physics.ts`
+- [ ] T040 [US3] Implement Hue + Opacity color resolver applying cluster rule base hue with hop distance alpha decay in `extension/webview-ui/src/graph/colorResolver.ts`
+- [ ] T041 [P] [US3] Implement diagnostic token counter widget displaying active harness tokens, reachable subcall tokens, and threshold alert badges in `extension/webview-ui/src/components/tokenCounter.ts`
+- [ ] T042 [P] [US3] Implement interactive Cluster Groups manager UI (add/edit/toggle tag/path rules) with live preview and save in `extension/webview-ui/src/components/colorManager.ts`
+- [ ] T043 [P] [US3] Implement `actionsToolbar.ts` in `extension/webview-ui/src/components/actionsToolbar.ts` providing quick action buttons (Set as Hub, Rescan Vault, and Fix Broken Links)
+- [ ] T044 [US3] Implement Webview client RPC bridge handling `openFile`, `setHub`, `updateColorGroups`, `fixBrokenLinks`, and `graphDataUpdate` in `extension/webview-ui/src/rpc/webviewRpc.ts`
+- [ ] T045 [US3] Implement Extension Host command `LLM Wiki: Show Knowledge Graph` in `extension/src/commands/showGraph.ts`
+- [ ] T046 [US3] Implement extension commands `setHub.ts`, `rescanVault.ts`, and `fixBrokenLinks.ts` (with QuickPick dead link navigation) in `extension/src/commands/`
 
-**Checkpoint**: Full visual graph interface operational with context economics and cluster coloring.
+**Checkpoint**: Full visual graph interface operational with context economics, toolbar quick actions, and cluster coloring.
 
 ---
 
@@ -116,16 +119,16 @@
 **Independent Test**: Execute `cargo test -p llm-wiki-core --test delta_test`, commit a `.rs` file (verify `prek` skips hook in $<2\text{ ms}$), commit a `.md` file (verify `git-delta` updates graph in $<50\text{ ms}$), and commit with offline daemon (verify hook exits 0 in $<500\text{ ms}$).
 
 ### Tests for User Story 4 (TDD First) ⚠️
-- [ ] T044 [P] [US4] Write unit tests for incremental delta graph patching (add/modify/delete file) in `crates/core/tests/delta_test.rs`
-- [ ] T045 [P] [US4] Write unit tests for `llm-wiki-core git-delta` CLI non-blocking fail-open timeout ($\le 500\text{ ms}$) in `crates/core/tests/cli_delta_test.rs`
-- [ ] T046 [P] [US4] Write unit tests for `prek` installer and 3-tier fallback detection in `extension/test/suite/hooks.test.ts`
+- [ ] T047 [P] [US4] Write unit tests for incremental delta graph patching (add/modify/delete file) in `crates/core/tests/delta_test.rs`
+- [ ] T048 [P] [US4] Write unit tests for `llm-wiki-core git-delta` CLI non-blocking fail-open timeout ($\le 500\text{ ms}$) in `crates/core/tests/cli_delta_test.rs`
+- [ ] T049 [P] [US4] Write unit tests for `prek` installer and 3-tier fallback detection in `extension/test/suite/hooks.test.ts`
 
 ### Implementation for User Story 4
-- [ ] T047 [US4] Implement `llm-wiki-core git-delta` CLI subcommand with 500ms timeout connecting to daemon socket in `crates/core/src/cli/delta.rs`
-- [ ] T048 [US4] Implement in-memory incremental graph updater patching nodes, edges, betweenness, and tokens in $\le 50\text{ ms}$ in `crates/core/src/delta/updater.rs`
-- [ ] T049 [P] [US4] Implement declarative `.pre-commit-config.yaml` writer with `files: '(?i)\.md$'` and `prek install` runner in `extension/src/hooks/prekInstaller.ts`
-- [ ] T050 [P] [US4] Implement 3-tier fallback installer (Tier 1 `prek`, Tier 2 `pre-commit`, Tier 3 `.git/hooks/post-commit` shell script) in `extension/src/hooks/fallbackInstaller.ts`
-- [ ] T051 [US4] Implement VS Code command `LLM Wiki: Install Git Hooks` in `extension/src/commands/installHooks.ts`
+- [ ] T050 [US4] Implement `llm-wiki-core git-delta` CLI subcommand with 500ms timeout connecting to daemon socket in `crates/core/src/cli/delta.rs`
+- [ ] T051 [US4] Implement in-memory incremental graph updater patching nodes, edges, betweenness, and tokens in $\le 50\text{ ms}$ in `crates/core/src/delta/updater.rs`
+- [ ] T052 [P] [US4] Implement declarative `.pre-commit-config.yaml` writer with `files: '(?i)\.md$'` and `prek install` runner in `extension/src/hooks/prekInstaller.ts`
+- [ ] T053 [P] [US4] Implement 3-tier fallback installer (Tier 1 `prek`, Tier 2 `pre-commit`, Tier 3 `.git/hooks/post-commit` shell script) in `extension/src/hooks/fallbackInstaller.ts`
+- [ ] T054 [US4] Implement VS Code command `LLM Wiki: Install Git Hooks` in `extension/src/commands/installHooks.ts`
 
 **Checkpoint**: Event-driven Git hook synchronization functional with zero keystroke polling.
 
@@ -138,11 +141,11 @@
 **Independent Test**: Integration test scanning multi-repo fixture with git submodules; verify cross-boundary relative links resolve without error and dead link detector correctly distinguishes existing submodule targets.
 
 ### Tests for User Story 5 (TDD First) ⚠️
-- [ ] T052 [P] [US5] Write integration tests for cross-submodule link resolution and boundary traversal in `crates/core/tests/submodule_test.rs`
+- [ ] T055 [P] [US5] Write integration tests for cross-submodule link resolution and boundary traversal in `crates/core/tests/submodule_test.rs`
 
 ### Implementation for User Story 5
-- [ ] T053 [US5] Implement cross-submodule relative path resolver and vault boundary traversal in `crates/core/src/graph/resolver.rs`
-- [ ] T054 [US5] Support `mode: multi-repo` and `mode: vault` path normalization in `crates/core/src/config/schema.rs` and `crates/core/src/graph/builder.rs`
+- [ ] T056 [US5] Implement cross-submodule relative path resolver and vault boundary traversal in `crates/core/src/graph/resolver.rs`
+- [ ] T057 [US5] Support `mode: multi-repo` and `mode: vault` path normalization in `crates/core/src/config/schema.rs` and `crates/core/src/graph/builder.rs`
 
 **Checkpoint**: All 5 User Stories complete and verified.
 
@@ -152,10 +155,10 @@
 
 **Purpose**: Final packaging, memory and latency benchmarks, `.vscodeignore` hygiene, and end-to-end quickstart validation.
 
-- [ ] T055 [P] Add `.vscodeignore` exclusions for test files, Rust source code, and intermediate build artifacts per CTaaS GAP-028 in `extension/.vscodeignore`
-- [ ] T056 [P] Configure multi-target `.vsix` packaging script with target binary injection in `extension/package.json` and `scripts/package-all.sh`
-- [ ] T057 Verify resident memory footprint ($\le 35\text{ MB}$ RAM) and graph calculation latency ($\le 200\text{ ms}$ for 1,000 notes) with Criterion benchmarks in `crates/core/benches/graph_bench.rs`
-- [ ] T058 Execute all validation scenarios from `specs/001-llm-wiki-ext/quickstart.md` and document verification results
+- [ ] T058 [P] Add `.vscodeignore` exclusions for test files, Rust source code, and intermediate build artifacts per CTaaS GAP-028 in `extension/.vscodeignore`
+- [ ] T059 [P] Configure multi-target `.vsix` packaging script with target binary injection in `extension/package.json` and `scripts/package-all.sh`
+- [ ] T060 Verify resident memory footprint ($\le 35\text{ MB}$ RAM) and graph calculation latency ($\le 200\text{ ms}$ for 1,000 notes) with Criterion benchmarks in `crates/core/benches/graph_bench.rs`
+- [ ] T061 Execute all validation scenarios from `specs/001-llm-wiki-ext/quickstart.md` and document verification results
 
 ---
 
@@ -164,15 +167,15 @@
 ### Phase Dependencies
 ```mermaid
 flowchart TD
-    P1["Phase 1: Setup"] --> P2["Phase 2: Foundational"]
-    P2 --> P3["Phase 3: US1 Organic Discovery (MVP)"]
-    P2 --> P4["Phase 4: US2 Sidecar IPC"]
-    P3 --> P5["Phase 5: US3 Webview Visualizer"]
+    P1["Phase 1: Setup (T001-T004)"] --> P2["Phase 2: Foundational (T005-T010)"]
+    P2 --> P3["Phase 3: US1 Organic Discovery (T011-T022) 🎯 MVP"]
+    P2 --> P4["Phase 4: US2 Sidecar IPC & SecretStorage (T023-T032)"]
+    P3 --> P5["Phase 5: US3 Webview & Toolbar (T033-T046)"]
     P4 --> P5
-    P3 --> P6["Phase 6: US4 Git Hook via prek"]
+    P3 --> P6["Phase 6: US4 Git Hook via prek (T047-T054)"]
     P4 --> P6
-    P3 --> P7["Phase 7: US5 Submodule Resolution"]
-    P5 --> P8["Phase 8: Polish & Benchmarks"]
+    P3 --> P7["Phase 7: US5 Submodule Traversal (T055-T057)"]
+    P5 --> P8["Phase 8: Polish & Benchmarks (T058-T061)"]
     P6 --> P8
     P7 --> P8
 ```
@@ -208,7 +211,7 @@ Task: T009 "Define shared TypeScript interfaces in extension/src/types/protocol.
 ### Across User Stories:
 - Once Phase 2 (Foundational) is completed, **User Story 1 (Rust CLI)** and **User Story 2 (Extension Host Process Manager)** can be implemented concurrently by independent developers/agents.
 - Within User Story 1: T011, T012, T013 (TDD unit tests) can be written simultaneously. T014, T015, T016 (AST pull parsers) can be built in parallel.
-- Within User Story 3: T034 (CSP helper), T036 (HTML/CSS template), T040 (token counter widget), and T041 (color manager) can be built in parallel before canvas integration.
+- Within User Story 3: T035 (CSP helper), T037 (HTML/CSS template), T041 (token counter widget), T042 (color manager), and T043 (actions toolbar) can be built in parallel before canvas integration.
 
 ---
 
@@ -218,12 +221,12 @@ Task: T009 "Define shared TypeScript interfaces in extension/src/types/protocol.
 1. Complete **Phase 1: Setup** (T001–T004).
 2. Complete **Phase 2: Foundational** (T005–T010).
 3. Complete **Phase 3: User Story 1** (T011–T022).
-4. **STOP and VALIDATE**: Run `cargo test` and `llm-wiki-core scan /home/ds/projects/notes`. We now have a high-performance standalone CLI tool that organically discovers documentation, calculates centrality, and budgets tokens in $<200\text{ ms}$.
+4. **STOP and VALIDATE**: Run `cargo test` and `llm-wiki-core scan /home/ds/projects/notes`. We now have a high-performance standalone CLI tool that organically discovers documentation, calculates centrality, validates section heading anchors, and budgets tokens in $<200\text{ ms}$.
 
 ### Incremental Feature Delivery
 1. **Increment 1 (MVP)**: Standalone CLI engine (`llm-wiki-core scan`).
-2. **Increment 2**: Extension Host supervisor and WebSocket bridge (`workspace/scan` over IPC).
-3. **Increment 3**: Sandboxed Webview with Canvas physics, hop opacity decay, and cluster color manager.
+2. **Increment 2**: Extension Host supervisor, SecretStorage token management, and WebSocket bridge (`workspace/scan` over IPC).
+3. **Increment 3**: Sandboxed Webview with Canvas physics, hop opacity decay, toolbar quick actions, and cluster color manager.
 4. **Increment 4**: Event-driven `prek` Git hook integration with $\le 500\text{ ms}$ fail-open timeout.
 5. **Increment 5**: Multi-repo & Git submodule resolution.
 6. **Increment 6**: Packaging (`.vsix`), memory/latency verification, and distribution readiness.

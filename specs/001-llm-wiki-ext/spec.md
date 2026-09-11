@@ -158,7 +158,7 @@ So that cross-project architecture references do not generate false-positive dea
 2. **Self-Referencing Links**: Nodes referencing themselves (`[self](file.md)`) must not increment degree centrality artificially or distort layout physics.
 3. **Empty or Malformed Markdown**: Files with zero bytes or broken formatting must be registered as valid nodes with 0 tokens and 0 edges, without panicking the AST parser.
 4. **OS Case-Sensitivity Discrepancies**: On Linux (case-sensitive) vs macOS/Windows (case-insensitive), wikilinks `[[my_note]]` matching `My_Note.md` must be normalized gracefully using case-folded dictionary index lookups.
-5. **Dangling Anchors in Existing Files**: Links pointing to `file.md#non-existent-header` must verify file existence first, and optionally flag missing section anchors as secondary warnings.
+5. **Dangling Anchors in Existing Files**: Links pointing to `file.md#non-existent-header` must verify file existence and validate section anchors against target document headings (`# Heading`), immediately flagging missing section targets as broken links (`is_broken: true`) with red dashed styling, in strict accordance with Constitution Principle V.
 6. **Webview Tab Hidden & Restored**: When the Webview panel is hidden, VS Code destroys its iframe DOM. The Webview script must invoke `vscode.setState()` before disposal and recover via `vscode.getState()` upon reactivation without triggering redundant Rust re-scans.
 7. **Detached HEAD or Merge Conflict States**: During rebase or merge conflicts, the Git hook must safely ignore non-clean commit states and gracefully fall back.
 
@@ -197,6 +197,7 @@ So that cross-project architecture references do not generate false-positive dea
 - **FR-020**: All IPC messages MUST conform to typed JSON-RPC 2.0 contracts with matching `requestId` fields.
 - **FR-021**: Extension Host MUST monitor sidecar process health, auto-restarting on unexpected termination with exponential backoff.
 - **FR-022**: Extension Host MUST cleanly terminate the sidecar process during VS Code `deactivate()`.
+- **FR-045**: Extension Host MUST store IPC daemon authentication credentials exclusively via `vscode.SecretStorage` and pass them securely to the sidecar daemon in-memory or via environment variables (`LLM_WIKI_AUTH_TOKEN`) without writing plaintext tokens to disk (CTaaS GAP-026, Constitution Principle VI).
 
 #### 5. Configuration Contract (`.context-vault.yaml`)
 - **FR-023**: System MUST automatically generate `.context-vault.yaml` at workspace root upon initial scan if not present.
@@ -219,10 +220,10 @@ So that cross-project architecture references do not generate false-positive dea
 - **FR-036**: Level 1 nodes MUST be rendered at 60% opacity; Level 2 at 30% opacity; Level 3+ at 15% opacity.
 - **FR-037**: Dead links MUST be rendered as dashed red edges (`#EF4444`) with warning icons.
 - **FR-038**: Orphan nodes MUST be rendered in muted gray (`#6B7280`) on the graph perimeter unless custom cluster rules override.
-- **FR-039**: System MUST support user-defined chromatic cluster groups in `.context-vault.yaml` based on hashtag queries (`tag:#name`) and path globs (`path:folder/**`).
+- **FR-039**: System MUST support backend configuration schema and parsing of user-defined chromatic cluster groups in `.context-vault.yaml` based on hashtag queries (`tag:#name`) and path globs (`path:folder/**`).
 - **FR-040**: Webview renderer MUST apply cluster colors to node base hues while strictly preserving the hop-distance opacity decay law (100% at Level 0, 60% at Level 1, 30% at Level 2, 15% at Level 3+).
 - **FR-041**: Webview UI MUST provide an interactive Cluster Groups panel allowing users to define, edit, and toggle hashtag and path color rules with immediate live rendering and persistence to `.context-vault.yaml`.
-- **FR-042**: Diagnostic sidebar MUST provide quick actions: "Set as Central Hub", "Fix Broken Links", "Rescan Vault".
+- **FR-042**: Diagnostic sidebar MUST provide quick action toolbar buttons: "Set as Central Hub", "Fix Broken Links" (which queries all edges where `is_broken: true` and opens a VS Code QuickPick displaying broken links with file and line coordinates for immediate jump-to-editor navigation), and "Rescan Vault".
 - **FR-043**: Webview MUST implement strict CSP with cryptographic nonces and asset loading via `webview.asWebviewUri` (CTaaS GAP-027).
 - **FR-044**: Webview state MUST be persisted via `vscode.setState()` and restored via `WebviewPanelSerializer`.
 
@@ -384,8 +385,8 @@ repos:
 - **SC-001**: Graph parsing, link resolution, and centrality computation of 1,000 Markdown files completes in under **200 ms**.
 - **SC-002**: Resident memory footprint (RSS) of the Rust sidecar remains strictly below **35 MB** in resting state for vaults up to 5,000 notes.
 - **SC-003**: The Webview graph visualizer renders smoothly at **60 FPS** during pan, zoom, node drag, and physics force stabilization.
-- **SC-004**: Git commit hook delta processing completes in under **150 ms** under normal conditions, and strictly aborts/fails open within **500 ms** if the socket is unreachable.
-- **SC-005**: Dead link detection achieves **100% accuracy** on broken internal paths and dangling wikilinks.
+- **SC-004**: Incremental in-memory graph patching in the Rust core completes in $\le 50\text{ ms}$; total end-to-end Git commit hook delta processing (process launch, file filtering, and IPC roundtrip) completes in under **150 ms** under normal conditions, and strictly aborts/fails open within **500 ms** if the socket is unreachable.
+- **SC-005**: Dead link detection achieves **100% accuracy** on broken internal paths, dangling wikilinks, and missing section anchors (`#heading`).
 - **SC-006**: Token estimation matches the reference OpenAI/Tiktoken `cl100k_base` BPE tokenizer with **0% deviation**.
 - **SC-007**: Packaged `.vsix` extension size remains below **25 MB** per target architecture, passing automated `@vscode/vsce package` checks.
 

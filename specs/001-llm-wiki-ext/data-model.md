@@ -119,9 +119,9 @@ Represents a directed reference between two markdown documents.
 | `source` | `String` | Canonical ID of the originating node | References existing `NoteNode.id` |
 | `target` | `String` | Canonical ID of the target document | May reference non-existent ID if broken |
 | `link_type` | `LinkType` | Syntax style used in source note | Enum: `markdown` (`[text](url)`), `wikilink` (`[[note]]`) |
-| `is_broken` | `bool` | Dead link indicator | `true` if target file does not exist on disk |
+| `is_broken` | `bool` | Dead link indicator | `true` if target file does not exist on disk OR if `#anchor` does not match any heading in target AST (Principle V) |
 | `raw_text` | `String` | Exact link text extracted from AST | Raw AST string |
-| `anchor` | `Option<String>` | Section anchor if specified | e.g. `#section-heading` or `None` |
+| `anchor` | `Option<String>` | Section anchor if specified | e.g. `#section-heading` or `None` (validated against target note AST) |
 
 ---
 
@@ -147,6 +147,7 @@ Defines a chromatic clustering rule mapping hashtag queries or filesystem direct
 4. **Opacity Invariant**:
    $$\text{Final Color} = \text{rgba}(R_{\text{base}}, G_{\text{base}}, B_{\text{base}}, \alpha_{\text{hop}})$$
    where $\alpha_{0} = 1.0$, $\alpha_{1} = 0.6$, $\alpha_{2} = 0.3$, $\alpha_{\ge 3} = 0.15$.
+   For orphan nodes (`hop_distance == -1`): $\alpha_{\text{orphan}} = 0.15$ (matching peripheral deep hops) if matching a custom cluster color rule, or $\alpha_{\text{orphan}} = 0.4$ with default muted gray (`#6B7280`).
 
 ---
 
