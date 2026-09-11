@@ -43,6 +43,12 @@ export class CanvasRenderer {
     this.edges = edges;
   }
 
+  public resetZoom(): void {
+    this.scale = 1;
+    this.offsetX = 0;
+    this.offsetY = 0;
+  }
+
   public resize(width: number, height: number): void {
     this.canvas.width = width * this.dpr;
     this.canvas.height = height * this.dpr;

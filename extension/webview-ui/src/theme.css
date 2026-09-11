@@ -33,84 +33,238 @@ body, html {
 #toolbar-container {
   position: absolute;
   top: 12px;
-  left: 12px;
-  z-index: 10;
-}
-
-.actions-toolbar {
-  display: flex;
-  gap: 8px;
-  background: rgba(30, 30, 30, 0.85);
-  backdrop-filter: blur(8px);
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid var(--border-color);
-}
-
-.btn-action {
-  background: var(--btn-sec-bg);
-  color: var(--btn-sec-fg);
-  border: 1px solid var(--border-color);
-  padding: 4px 10px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  display: flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.btn-action:hover {
-  background: var(--btn-hover);
-  color: #fff;
+  right: 12px;
+  z-index: 50;
 }
 
 #token-container {
-  position: absolute;
-  top: 12px;
-  right: 12px;
-  z-index: 10;
+  display: none;
 }
 
-.token-counter-card {
-  background: rgba(30, 30, 30, 0.85);
-  backdrop-filter: blur(8px);
-  padding: 10px 14px;
-  border-radius: 6px;
+.floating-toolbar-wrapper {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+}
+
+.floating-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  background: var(--vscode-editorWidget-background, rgba(30, 30, 30, 0.85));
+  backdrop-filter: blur(12px);
+  padding: 4px 6px;
+  border-radius: 8px;
   border: 1px solid var(--border-color);
-  font-size: 12px;
-  min-width: 240px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
 }
 
-.token-header {
+.tb-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  width: 30px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 5px;
+  color: var(--fg-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tb-icon-btn:hover {
+  background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1));
+  color: var(--vscode-list-hoverForeground, #ffffff);
+}
+
+.tb-token-btn {
+  width: auto;
+  padding: 0 8px;
+  gap: 6px;
+}
+
+.tb-svg {
+  width: 15px;
+  height: 15px;
+  flex-shrink: 0;
+}
+
+.tb-pill {
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  border: 1px solid #10b981;
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--fg-color);
+}
+
+.tb-divider {
+  width: 1px;
+  height: 18px;
+  background: var(--border-color);
+  margin: 0 2px;
+}
+
+/* Floating Popovers */
+.floating-popover {
+  position: absolute;
+  top: calc(100% + 8px);
+  right: 0;
+  background: var(--vscode-editorWidget-background, #252526);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  min-width: 270px;
+  overflow: hidden;
+  animation: popIn 0.15s ease-out;
+}
+
+@keyframes popIn {
+  from {
+    opacity: 0;
+    transform: translateY(-6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.popover-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 12px;
+  background: var(--vscode-editor-background, #1e1e1e);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.popover-title-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.popover-title {
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.popover-badge {
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 6px;
+  border-radius: 4px;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.popover-close-btn {
+  background: transparent;
+  border: none;
+  color: var(--vscode-descriptionForeground);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.popover-close-btn:hover {
+  background: var(--vscode-list-hoverBackground);
+  color: var(--fg-color);
+}
+
+.popover-body {
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.popover-metric-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 6px;
 }
 
-.token-title {
-  font-weight: bold;
+.p-lbl {
+  color: var(--vscode-descriptionForeground);
+  font-size: 11px;
 }
 
-.token-badge {
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-size: 10px;
-  font-weight: bold;
-  color: #fff;
+.p-val {
+  color: var(--vscode-editor-foreground);
+  font-size: 12px;
 }
 
-.token-metrics .metric {
+.popover-bar-bg {
+  height: 5px;
+  background: var(--vscode-widget-border, #333333);
+  border-radius: 3px;
+  margin: 8px 0;
+  overflow: hidden;
+}
+
+.popover-bar-fill {
+  height: 100%;
+  background: #10b981;
+  width: 10%;
+  transition: width 0.3s ease;
+}
+
+.popover-limits-row {
   display: flex;
   justify-content: space-between;
-  margin-top: 4px;
+  font-size: 10px;
+  color: var(--vscode-descriptionForeground);
+  margin-top: 6px;
 }
 
-.token-thresholds {
-  margin-top: 8px;
+/* Actions Menu Popover */
+.actions-menu-popover {
+  min-width: 280px;
+  padding: 4px;
+}
+
+.menu-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 5px;
+  cursor: pointer;
+  transition: background 0.12s ease;
+}
+
+.menu-item:hover {
+  background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.08));
+}
+
+.m-icon {
+  font-size: 15px;
+  line-height: 1.2;
+}
+
+.m-title {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--fg-color);
+}
+
+.m-desc {
   font-size: 10px;
-  color: #888;
+  color: var(--vscode-descriptionForeground);
+  margin-top: 2px;
+}
+
+.menu-divider {
+  height: 1px;
+  background: var(--border-color);
+  margin: 4px 6px;
 }
 
 #node-tooltip {

@@ -1,7 +1,6 @@
 import { CanvasRenderer } from './graph/canvasRenderer';
 import { createPhysicsSimulation } from './graph/physics';
 import { WebviewRpcBridge } from './rpc/webviewRpc';
-import { renderTokenCounter } from './components/tokenCounter';
 import { renderActionsToolbar } from './components/actionsToolbar';
 import { renderColorManager } from './components/colorManager';
 import { NoteNode, NoteEdge, TokenSummary, ClusterColorGroup } from '../../src/types/graph';
@@ -51,8 +50,8 @@ window.addEventListener('resize', () => {
   renderer.resize(window.innerWidth, window.innerHeight);
 });
 
-// Render Actions Toolbar
-renderActionsToolbar(toolbarContainer, {
+// Render Actions Toolbar with Icon Popovers
+const toolbarController = renderActionsToolbar(toolbarContainer, {
   onSetHub: () => {
     if (selectedNode) {
       rpc.setHub(selectedNode.id);
@@ -65,6 +64,9 @@ renderActionsToolbar(toolbarContainer, {
   },
   onFixBrokenLinks: () => {
     rpc.fixBrokenLinks();
+  },
+  onResetZoom: () => {
+    renderer.resetZoom();
   },
   onToggleColorManager: () => {
     renderColorManager(colorModalContainer, colorGroups, {
@@ -89,7 +91,7 @@ rpc.on('graphDataUpdate', (data: any) => {
   physics.updateData(nodes, edges);
 
   if (data.tokenSummary) {
-    renderTokenCounter(tokenContainer, data.tokenSummary);
+    toolbarController.updateTokenSummary(data.tokenSummary);
   }
 
   rpc.setState({ nodes, edges, tokenSummary: data.tokenSummary });
@@ -103,6 +105,6 @@ if (savedState) {
   renderer.setData(nodes, edges);
   physics.updateData(nodes, edges);
   if (savedState.tokenSummary) {
-    renderTokenCounter(tokenContainer, savedState.tokenSummary);
+    toolbarController.updateTokenSummary(savedState.tokenSummary);
   }
 }
