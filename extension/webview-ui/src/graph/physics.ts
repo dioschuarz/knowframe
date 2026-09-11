@@ -56,38 +56,46 @@ export function createPhysicsSimulation(
 
   function applyEdges(): void {
     const nodeMap = new Set(currentNodes.map((n) => n.id));
-    const validEdges = currentEdges.filter(
-      (e) =>
-        !e.isBroken &&
-        nodeMap.has(typeof e.source === 'object' ? (e.source as NoteNode).id : (e.source as string)) &&
-        nodeMap.has(typeof e.target === 'object' ? (e.target as NoteNode).id : (e.target as string)),
-    );
+    const validEdges = currentEdges
+      .filter((e) => {
+        const srcId = typeof e.source === 'object' ? (e.source as NoteNode).id : (e.source as string);
+        const tgtId = typeof e.target === 'object' ? (e.target as NoteNode).id : (e.target as string);
+        return !e.isBroken && nodeMap.has(srcId) && nodeMap.has(tgtId);
+      })
+      .map((e) => ({
+        ...e,
+        source: typeof e.source === 'object' ? (e.source as NoteNode).id : (e.source as string),
+        target: typeof e.target === 'object' ? (e.target as NoteNode).id : (e.target as string),
+      }));
     link.links(validEdges);
   }
 
   return {
     simulation,
     updateData: (nodes: NoteNode[], edges: NoteEdge[]) => {
-      // Preserve any user-pinned coordinates across reloads
-      const existingPins = new Map<string, { fx: number; fy: number }>();
+      // Preserve node positions and pinned coordinates across updates
+      const existingMap = new Map<string, { x?: number; y?: number; vx?: number; vy?: number; fx?: number | null; fy?: number | null }>();
       for (const n of currentNodes) {
-        if (n.fx !== null && n.fx !== undefined && n.fy !== null && n.fy !== undefined) {
-          existingPins.set(n.id, { fx: n.fx, fy: n.fy });
-        }
+        existingMap.set(n.id, { x: n.x, y: n.y, vx: n.vx, vy: n.vy, fx: n.fx, fy: n.fy });
       }
       for (const n of nodes) {
-        const pin = existingPins.get(n.id);
-        if (pin) {
-          n.fx = pin.fx;
-          n.fy = pin.fy;
+        const existing = existingMap.get(n.id);
+        if (existing) {
+          if (existing.x !== undefined) n.x = existing.x;
+          if (existing.y !== undefined) n.y = existing.y;
+          if (existing.vx !== undefined) n.vx = existing.vx;
+          if (existing.vy !== undefined) n.vy = existing.vy;
+          if (existing.fx !== undefined && existing.fx !== null) n.fx = existing.fx;
+          if (existing.fy !== undefined && existing.fy !== null) n.fy = existing.fy;
         }
       }
 
+      const isInitial = currentNodes.length === 0;
       currentNodes = nodes;
       currentEdges = edges;
       simulation.nodes(nodes);
       applyEdges();
-      simulation.alpha(1).restart();
+      simulation.alpha(isInitial ? 1 : 0.4).restart();
     },
     updateParameters: (newParams: Partial<PhysicsParameters>) => {
       params = { ...params, ...newParams };

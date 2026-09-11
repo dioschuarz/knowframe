@@ -6,6 +6,7 @@ export type NodeStatus = 'active' | 'connected_inactive' | 'orphan';
 export type LinkType = 'markdown' | 'wikilink';
 export type TokenBudgetStatus = 'normal' | 'warning' | 'critical';
 export type ClusterQueryType = 'tag' | 'path';
+export type LabelsMode = 'hover' | 'all';
 
 export interface NoteNode {
   id: string;

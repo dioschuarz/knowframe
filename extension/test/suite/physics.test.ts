@@ -200,4 +200,70 @@ suite('Graph Physics & Gravity Configuration Test Suite', () => {
 
     sim.stop();
   });
+
+  test('applyEdges safely sanitizes mutated object edge sources and targets', () => {
+    const sim = createPhysicsSimulation(800, 600, () => {});
+    const nodeA: NoteNode = {
+      id: 'a',
+      label: 'A',
+      filePath: 'a.md',
+      tags: [],
+      color: '#3B82F6',
+      status: 'active',
+      tokens: 10,
+      hopDistance: 0,
+      inDegree: 1,
+      outDegree: 1,
+      betweenness: 0,
+      brokenLinks: 0,
+      x: 50,
+      y: 50,
+    };
+    const nodeB: NoteNode = {
+      id: 'b',
+      label: 'B',
+      filePath: 'b.md',
+      tags: [],
+      color: '#64748B',
+      status: 'connected_inactive',
+      tokens: 10,
+      hopDistance: 1,
+      inDegree: 1,
+      outDegree: 1,
+      betweenness: 0,
+      brokenLinks: 0,
+      x: 100,
+      y: 100,
+    };
+
+    // First update: edges have string IDs
+    sim.updateData([nodeA, nodeB], [
+      { id: 'e_ab', source: 'a', target: 'b', isBroken: false, linkType: 'wikilink' },
+    ]);
+    sim.simulation.tick(3);
+
+    // Second update: simulate edges having mutated object references from previous D3 run
+    const mutatedEdge: NoteEdge = {
+      id: 'e_ab',
+      source: nodeA as any,
+      target: nodeB as any,
+      isBroken: false,
+      linkType: 'wikilink',
+    };
+
+    const nextNodeA = { ...nodeA };
+    const nextNodeB = { ...nodeB };
+
+    // Should not throw and should preserve positions smoothly
+    assert.doesNotThrow(() => {
+      sim.updateData([nextNodeA, nextNodeB], [mutatedEdge]);
+      sim.simulation.tick(3);
+    });
+
+    assert.ok(nextNodeA.x !== undefined && !Number.isNaN(nextNodeA.x));
+    assert.ok(nextNodeB.x !== undefined && !Number.isNaN(nextNodeB.x));
+
+    sim.stop();
+  });
 });
+

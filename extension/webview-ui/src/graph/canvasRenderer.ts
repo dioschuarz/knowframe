@@ -1,8 +1,9 @@
-import { NoteEdge, NoteNode } from '../../../src/types/graph';
+import { NoteEdge, NoteNode, LabelsMode } from '../../../src/types/graph.ts';
 import { resolveNodeColor } from './colorResolver';
 
 export interface CanvasRendererOptions {
   canvas: HTMLCanvasElement;
+  initialLabelsMode?: LabelsMode;
   onNodeClick?: (node: NoteNode) => void;
   onNodeHover?: (node: NoteNode | null, x: number, y: number) => void;
   onNodeDragStart?: (node: NoteNode, x: number, y: number) => void;
@@ -17,6 +18,7 @@ export class CanvasRenderer {
   private nodes: NoteNode[] = [];
   private edges: NoteEdge[] = [];
   private dpr = window.devicePixelRatio || 1;
+  private labelsMode: LabelsMode = 'hover';
 
   // Zoom & Pan
   private scale = 1;
@@ -52,6 +54,8 @@ export class CanvasRenderer {
     this.onNodeDragEnd = options.onNodeDragEnd;
     this.onNodeDoubleClick = options.onNodeDoubleClick;
 
+    this.labelsMode = options.initialLabelsMode || 'hover';
+
     this.setupDpr();
     this.setupEvents();
     this.startLoop();
@@ -60,6 +64,14 @@ export class CanvasRenderer {
   public setData(nodes: NoteNode[], edges: NoteEdge[]): void {
     this.nodes = nodes;
     this.edges = edges;
+  }
+
+  public setLabelsMode(mode: LabelsMode): void {
+    this.labelsMode = mode;
+  }
+
+  public getLabelsMode(): LabelsMode {
+    return this.labelsMode;
   }
 
   public resetZoom(): void {
@@ -230,10 +242,18 @@ export class CanvasRenderer {
     this.ctx.translate(this.offsetX, this.offsetY);
     this.ctx.scale(this.scale, this.scale);
 
+    const nodeMap = new Map<string, NoteNode>();
+    for (const node of this.nodes) {
+      nodeMap.set(node.id, node);
+    }
+
     // 1. Draw Edges
     for (const edge of this.edges) {
-      const srcNode = typeof edge.source === 'object' ? edge.source : this.nodes.find((n) => n.id === edge.source);
-      const tgtNode = typeof edge.target === 'object' ? edge.target : this.nodes.find((n) => n.id === edge.target);
+      const srcId = typeof edge.source === 'object' ? (edge.source as NoteNode).id : (edge.source as string);
+      const tgtId = typeof edge.target === 'object' ? (edge.target as NoteNode).id : (edge.target as string);
+
+      const srcNode = nodeMap.get(srcId);
+      const tgtNode = tgtId ? nodeMap.get(tgtId) : undefined;
 
       if (!srcNode || srcNode.x === undefined || srcNode.y === undefined) continue;
 
@@ -244,16 +264,16 @@ export class CanvasRenderer {
         this.ctx.lineTo(tgtNode.x, tgtNode.y);
       } else {
         // Floating broken edge pointing slightly outward
-        this.ctx.lineTo(srcNode.x + 30, srcNode.y + 30);
+        this.ctx.lineTo(srcNode.x + 25, srcNode.y + 25);
       }
 
       if (edge.isBroken) {
         this.ctx.strokeStyle = '#EF4444'; // Dashed Red for Dead Links
-        this.ctx.lineWidth = 2;
+        this.ctx.lineWidth = 1.5;
         this.ctx.setLineDash([4, 4]);
       } else {
-        this.ctx.strokeStyle = 'rgba(148, 163, 184, 0.4)';
-        this.ctx.lineWidth = 1.5;
+        this.ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+        this.ctx.lineWidth = 1.2;
         this.ctx.setLineDash([]);
       }
       this.ctx.stroke();
@@ -314,15 +334,12 @@ export class CanvasRenderer {
       const isHovered = node === this.hoveredNode;
       const isProminent = (node.inDegree || 0) + (node.outDegree || 0) >= 4 || node.hopDistance === 1;
 
-      // Zoom-adaptive label visibility
-      // scale < 0.45: only hub & hovered
-      // 0.45 <= scale < 0.9: hub, prominent nodes, and hovered
-      // scale >= 0.9: all nodes
-      const shouldDraw =
-        isHovered ||
-        isHub ||
-        (this.scale >= 0.9) ||
-        (this.scale >= 0.45 && isProminent);
+      // Label visibility:
+      // In 'hover' mode (clean default): ONLY show label for hovered node and the central Hub!
+      // In 'all' mode: show labels for all nodes (unless drastically zoomed out)
+      const shouldDraw = this.labelsMode === 'all'
+        ? (this.scale >= 0.35 || isHovered || isHub || isProminent)
+        : (isHovered || isHub);
 
       if (!shouldDraw) continue;
 

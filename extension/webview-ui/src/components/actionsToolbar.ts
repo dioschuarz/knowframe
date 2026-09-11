@@ -3,6 +3,7 @@ import {
   PhysicsParameters,
   DEFAULT_PHYSICS_PARAMS,
   PHYSICS_PRESETS,
+  LabelsMode,
 } from '../../../src/types/graph';
 
 export interface ActionsToolbarCallbacks {
@@ -16,6 +17,7 @@ export interface ActionsToolbarCallbacks {
   onReheat?: () => void;
   onUnpinAll?: () => void;
   onStickyToggle?: (enabled: boolean) => void;
+  onToggleLabelsMode?: (mode: LabelsMode) => void;
 }
 
 export interface ActionsToolbarController {
@@ -23,6 +25,7 @@ export interface ActionsToolbarController {
   setPhysicsParameters: (params: PhysicsParameters) => void;
   updatePinnedCount: (count: number) => void;
   isStickyDrag: () => boolean;
+  setLabelsMode: (mode: LabelsMode) => void;
 }
 
 export function renderActionsToolbar(
@@ -72,6 +75,13 @@ export function renderActionsToolbar(
         <button id="btn-toggle-colors" class="tb-icon-btn" title="Manage Chromatic Cluster Rules">
           <svg class="tb-svg" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 0a8 8 0 1 0 8 8 8 8 0 0 0-8-8zm-4.5 9.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm2-4a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm5 0a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm2 4a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5z"/>
+          </svg>
+        </button>
+
+        <!-- Labels Mode Toggle Button -->
+        <button id="btn-toggle-labels" class="tb-icon-btn" title="Toggle File Names: Hover Only (Clean) / Show All">
+          <svg class="tb-svg" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v7A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 13.5 3h-11zm2.854 7.354l1.5-4a.5.5 0 0 1 .94 0l1.5 4a.5.5 0 0 1-.936.352L7.886 9.5H6.468l-.472 1.206a.5.5 0 1 1-.936-.352zM7.177 7.7l-.469 1.2h.944l-.475-1.2zM11 7a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0v-3A.5.5 0 0 1 11 7z"/>
           </svg>
         </button>
 
@@ -141,6 +151,15 @@ export function renderActionsToolbar(
             </div>
           </div>
 
+          <!-- Labels Mode Toggle -->
+          <div class="physics-toggle-row">
+            <span class="p-lbl">File Names:</span>
+            <div class="preset-btn-group">
+              <button id="btn-lbl-hover" class="preset-btn active" title="Clean mode: names only appear when passing mouse over node">Hover Only (Clean)</button>
+              <button id="btn-lbl-all" class="preset-btn" title="Display names for all notes">Show All</button>
+            </div>
+          </div>
+
           <!-- Sliders -->
           <div class="physics-row">
             <div class="physics-row-header">
@@ -202,6 +221,13 @@ export function renderActionsToolbar(
           <div class="m-text">
             <div class="m-title">Gravity & Spacing</div>
             <div class="m-desc">Tune node repulsion, link distance & center pull</div>
+          </div>
+        </div>
+        <div class="menu-item" id="menu-act-toggle-labels">
+          <span class="m-icon">🏷️</span>
+          <div class="m-text">
+            <div class="m-title" id="menu-title-labels">File Names: Hover Only</div>
+            <div class="m-desc">Toggle between clean hover-only and showing all names</div>
           </div>
         </div>
         <div class="menu-item" id="menu-act-unpin">
@@ -371,6 +397,56 @@ export function renderActionsToolbar(
     closeAllPopovers();
     callbacks.onToggleColorManager();
   });
+
+  // Labels mode state and wiring
+  let currentLabelsMode: LabelsMode = 'hover';
+
+  function updateLabelsModeUi(mode: LabelsMode) {
+    currentLabelsMode = mode;
+    const btnHover = container.querySelector('#btn-lbl-hover') as HTMLElement;
+    const btnAll = container.querySelector('#btn-lbl-all') as HTMLElement;
+    const tbBtn = container.querySelector('#btn-toggle-labels') as HTMLElement;
+    const menuTitle = container.querySelector('#menu-title-labels') as HTMLElement;
+
+    if (mode === 'hover') {
+      btnHover?.classList.add('active');
+      btnAll?.classList.remove('active');
+      tbBtn?.classList.remove('active');
+      if (tbBtn) tbBtn.title = 'File Names: Hover Only (Clean) — Click to Show All';
+      if (menuTitle) menuTitle.textContent = 'File Names: Hover Only (Clean)';
+    } else {
+      btnHover?.classList.remove('active');
+      btnAll?.classList.add('active');
+      tbBtn?.classList.add('active');
+      if (tbBtn) tbBtn.title = 'File Names: Showing All — Click for Hover Only';
+      if (menuTitle) menuTitle.textContent = 'File Names: Show All';
+    }
+  }
+
+  container.querySelector('#btn-toggle-labels')?.addEventListener('click', () => {
+    closeAllPopovers();
+    const nextMode: LabelsMode = currentLabelsMode === 'hover' ? 'all' : 'hover';
+    updateLabelsModeUi(nextMode);
+    callbacks.onToggleLabelsMode?.(nextMode);
+  });
+
+  container.querySelector('#btn-lbl-hover')?.addEventListener('click', () => {
+    updateLabelsModeUi('hover');
+    callbacks.onToggleLabelsMode?.('hover');
+  });
+
+  container.querySelector('#btn-lbl-all')?.addEventListener('click', () => {
+    updateLabelsModeUi('all');
+    callbacks.onToggleLabelsMode?.('all');
+  });
+
+  container.querySelector('#menu-act-toggle-labels')?.addEventListener('click', () => {
+    closeAllPopovers();
+    const nextMode: LabelsMode = currentLabelsMode === 'hover' ? 'all' : 'hover';
+    updateLabelsModeUi(nextMode);
+    callbacks.onToggleLabelsMode?.(nextMode);
+  });
+
   container.querySelector('#btn-reset-zoom')?.addEventListener('click', () => {
     closeAllPopovers();
     callbacks.onResetZoom?.();
@@ -546,6 +622,10 @@ export function renderActionsToolbar(
 
     isStickyDrag() {
       return chkStickyDrag ? chkStickyDrag.checked : true;
+    },
+
+    setLabelsMode(mode: LabelsMode) {
+      updateLabelsModeUi(mode);
     },
   };
 }

@@ -80,6 +80,11 @@ body, html {
   color: var(--vscode-list-hoverForeground, #ffffff);
 }
 
+.tb-icon-btn.active {
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #ffffff);
+}
+
 .tb-token-btn {
   width: auto;
   padding: 0 8px;

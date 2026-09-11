@@ -10,6 +10,7 @@ import {
   ClusterColorGroup,
   PhysicsParameters,
   DEFAULT_PHYSICS_PARAMS,
+  LabelsMode,
 } from '../../src/types/graph';
 
 const rpc = new WebviewRpcBridge();
@@ -25,11 +26,12 @@ let colorGroups: ClusterColorGroup[] = [];
 let selectedNode: NoteNode | null = null;
 let lastTokenSummary: TokenSummary | null = null;
 
-// Initialize physics parameters from saved state or default
+// Initialize physics parameters and labels mode from saved state or default
 const savedState = rpc.getState<any>();
 let currentPhysicsParams: PhysicsParameters = savedState?.physicsParams
   ? { ...DEFAULT_PHYSICS_PARAMS, ...savedState.physicsParams }
   : { ...DEFAULT_PHYSICS_PARAMS };
+let currentLabelsMode: LabelsMode = savedState?.labelsMode === 'all' ? 'all' : 'hover';
 
 const physics = createPhysicsSimulation(
   window.innerWidth,
@@ -42,6 +44,7 @@ const physics = createPhysicsSimulation(
 
 const renderer = new CanvasRenderer({
   canvas,
+  initialLabelsMode: currentLabelsMode,
   onNodeClick: (node) => {
     selectedNode = node;
     rpc.openFile(node.filePath);
@@ -89,10 +92,9 @@ window.addEventListener('resize', () => {
 
 function persistState(): void {
   rpc.setState({
-    nodes,
-    edges,
     tokenSummary: lastTokenSummary,
     physicsParams: currentPhysicsParams,
+    labelsMode: currentLabelsMode,
   });
 }
 
@@ -119,6 +121,12 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
     physics.updateParameters(params);
     persistState();
   },
+  onToggleLabelsMode: (mode) => {
+    currentLabelsMode = mode;
+    renderer.setLabelsMode(mode);
+    renderer.draw();
+    persistState();
+  },
   onReheat: () => {
     physics.restart(0.5);
   },
@@ -139,8 +147,9 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
   },
 });
 
-// Set initial physics parameters in toolbar UI
+// Set initial physics parameters and labels mode in toolbar UI
 toolbarController.setPhysicsParameters(currentPhysicsParams);
+toolbarController.setLabelsMode(currentLabelsMode);
 
 // Listen for updates from VS Code Extension Host
 rpc.on('graphDataUpdate', (data: any) => {
@@ -160,13 +169,7 @@ rpc.on('graphDataUpdate', (data: any) => {
 });
 
 // Recover state on tab restoration
-if (savedState) {
-  nodes = savedState.nodes || [];
-  edges = savedState.edges || [];
-  renderer.setData(nodes, edges);
-  physics.updateData(nodes, edges);
-  if (savedState.tokenSummary) {
-    lastTokenSummary = savedState.tokenSummary;
-    toolbarController.updateTokenSummary(savedState.tokenSummary);
-  }
+if (savedState && savedState.tokenSummary) {
+  lastTokenSummary = savedState.tokenSummary;
+  toolbarController.updateTokenSummary(savedState.tokenSummary);
 }
