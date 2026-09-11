@@ -7,10 +7,10 @@ export function resolveBinaryPath(extensionPath: string): string {
 
   // 1. Check workspace dev target build (crates/core/target/debug or target/debug)
   const candidateDevPaths = [
-    path.join(extensionPath, '..', 'target', 'debug', binaryName),
     path.join(extensionPath, '..', 'target', 'release', binaryName),
-    path.join(extensionPath, '..', 'crates', 'core', 'target', 'debug', binaryName),
+    path.join(extensionPath, '..', 'target', 'debug', binaryName),
     path.join(extensionPath, '..', 'crates', 'core', 'target', 'release', binaryName),
+    path.join(extensionPath, '..', 'crates', 'core', 'target', 'debug', binaryName),
   ];
 
   for (const p of candidateDevPaths) {
