@@ -6,9 +6,11 @@
 
 <!--
 === SYNC IMPACT REPORT ===
-Version Change: 1.1.0 -> 1.2.0 (Cluster Hashtag & Path Color Groups)
+Version Change: 1.2.0 -> 1.3.0 (AI Context Observatory & Progressive Disclosure UX)
 Modified Principles:
-  - Principle IV: Multi-Tier Context Hierarchy & BPE Token Budgeting -> Expanded to mandate user-defined chromatic cluster groups based on Markdown hashtags (#tag) and filesystem paths (globs), with strict Hue + Opacity composition invariant preserving hop distance visibility.
+  - Principle III: Organic Discovery & Curated Representation -> Upgraded with "Filesystem is source, knowledge graph is curated representation", tri-state classification (Connected, Orphan, Excluded), and two-tier exclusion architecture (scan.exclude vs graph.exclude) ensuring excluded nodes do not pollute orphan metrics or canvas space while remaining resolvable link targets.
+  - Principle IV: Multi-Tier Context Hierarchy & BPE Token Budgeting -> Formalized the AI Context Observatory paradigm, semantic tier-based node sizing, focus modes (Hub, 1-hop, 2-hops, All), and explicit distinction between Active Prompt Load and Reachable On-Demand Context.
+  - Principle VI: Sandboxed Webview & Zero-Plaintext Security Boundary -> Expanded with strict Action Hierarchy and Progressive Disclosure: zero UI action duplication across sidebar/toolbar/menus, state-driven action emergence, 3 core pillars (Knowledge, AI Context, Health & Issues), and selection-driven contextual inspectors.
 Added Principles: None
 Added Sections: None
 Removed Sections: None
@@ -29,7 +31,7 @@ The extension MUST NOT employ continuous disk file watchers or background keystr
 - **Architectural Motivations for `prek`**:
   1. *Rust-to-Rust Homogeneity*: Both the Git hook manager (`prek`) and the knowledge graph engine (`llm-wiki-core`) are written in Rust, creating an ultra-lean, zero-runtime systems stack that eliminates Python runtime requirements, virtualenv bootstrapping, and interpreter startup latency.
   2. *True Parallel Hook Execution*: `prek` executes hooks concurrently across a multi-threaded worker pool. The knowledge graph synchronization (`llm-wiki-sync`) runs in parallel alongside other project linters, formatters, and security checks without inducing sequential lock contention or delaying commits.
-  3. *Pattern Reusability via Standard `.pre-commit-config.yaml`*: Leverages the universal, declarative `.pre-commit-config.yaml` file pattern as a drop-in drop-in replacement, requiring zero proprietary configuration DSLs or workflow migration for existing engineering teams.
+  3. *Pattern Reusability via Standard `.pre-commit-config.yaml`*: Leverages the universal, declarative `.pre-commit-config.yaml` file pattern as a drop-in replacement, requiring zero proprietary configuration DSLs or workflow migration for existing engineering teams.
   4. *Zero-Overhead File Filtering*: Declarative regex filtering (`files: '(?i)\.md$'`) guarantees that commits modifying only source code bypass hook execution in $< 2\text{ ms}$ without spawning the sidecar.
 - **Multi-Tier Fallback Hierarchy**: Hook installation and dispatch MUST support a 3-tier discovery hierarchy:
   1. *Tier 1 (Rust-Native / Primary)*: `prek` executing a declarative `.pre-commit-config.yaml` with hook ID `llm-wiki-sync` and stage `post-commit` (or `pre-commit`).
@@ -38,35 +40,57 @@ The extension MUST NOT employ continuous disk file watchers or background keystr
 - **Strict Non-Blocking Fail-Open**: All hook invocations MUST enforce a hard non-blocking timeout of $\le 500\text{ ms}$. If the socket is unresponsive, the sidecar is offline, or `prek` encounters an error, the hook MUST immediately exit with code 0 (silent fail-open), never obstructing or delaying developer Git commits.
 - **Delta Processing & Loopback Authorization**: The hook transmits only changed Markdown paths directly to `llm-wiki-core`, enabling instantaneous incremental graph updates ($\le 50\text{ ms}$) without re-indexing unchanged workspace files. Loopback `git/commitDelta` notifications on `127.0.0.1` are write-only notifications carrying Git metadata, accepted without requiring `vscode.SecretStorage` credentials so external terminal commits succeed non-blockingly.
 
-### III. Organic Discovery Without Mandatory Frontmatter
+### III. Organic Discovery, Curated Representation & Noise Exclusion
 The knowledge graph MUST build organically from the user's existing filesystem chaos without demanding YAML frontmatter, rigid directory structures, or canonical entry filenames (`README.md`, `index.md`).
-- **Algorithmic Hub Discovery**: The Rust engine MUST calculate degree centrality (in-degree, out-degree) and betweenness centrality across all Markdown files to mathematically deduce central knowledge hubs.
-- **User Agency**: The engine MUST propose the top centrality nodes as default hubs while providing explicit UI mechanisms for users to designate custom root hubs.
+- **Core Knowledge Axiom**: *The filesystem is the source; the knowledge graph is a curated representation of what matters.* The system is not a raw file tree visualizer; its mandate is to distill structural knowledge relevant to developer tasks and AI agent context.
+- **Tri-State Node Classification**: Every Markdown document known to the system MUST belong to exactly one of three lifecycle states:
+  1. **Connected**: Part of the knowledge graph and reachable via link traversals.
+  2. **Orphan**: Part of the knowledge graph but possessing zero inbound and outbound connections.
+  3. **Excluded**: Intentionally outside the knowledge graph by user directive or default workspace hygiene rules.
+- **Two-Tier Exclusion Architecture**:
+  1. *Technical Scan Exclusion (`scan.exclude`)*: Files and directories matching technical ignore globs (e.g. `.git/**`, `node_modules/**`, `target/**`, `dist/**`, `build/**`) are completely bypassed by the AST parser and indexer.
+  2. *Curated Knowledge Exclusion (`graph.exclude`)*: Files and directory trees (e.g. package documentation, library `**/README.md`, vendor licenses) that are parsed and indexed to maintain link integrity, but are intentionally excluded from the rendered graph and orphan calculations.
+- **Target Resolvability Invariant**: Valid Markdown links or wikilinks targeting a `graph.exclude` document MUST resolve cleanly and MUST NOT be classified as broken links. Excluded targets are valid knowledge destinations that the user has chosen not to visualize.
+- **Algorithmic Hub Discovery**: The Rust engine MUST calculate degree centrality (in-degree, out-degree) and betweenness centrality across all unexcluded Markdown files to mathematically deduce central knowledge hubs.
+- **User Agency & Consent**: The system MUST propose top centrality nodes as default hubs and propose noisy file clusters for exclusion, but MUST NEVER silently exclude documentation or alter central hubs without explicit user consent.
 
-### IV. Multi-Tier Context Hierarchy, Cluster Coloring & BPE Token Budgeting
-The extension MUST provide immediate visual clarity on agent context window consumption, preventing context saturation in AI agents (Claude Code, Codex, Antigravity, Roo/Cline).
+### IV. Multi-Tier Context Hierarchy, Semantic Sizing, Focus Mode & Token Budgeting
+The extension MUST function as an **AI Context Observatory**, providing instant visual clarity on agent context window consumption to prevent context saturation in AI agents (Claude Code, Codex, Antigravity, Roo/Cline).
 - **Context Tiers & Opacity Decay Law**:
   - **Level 0 (Active Context / Harness Base)**: Fixed agent prompts and harness files (`AGENTS.md`, `CLAUDE.md`, or selected Hub). Rendered with 100% solid opacity and expanded node radius.
   - **Level 1 (First Hop)**: Files directly referenced by Level 0. Rendered at 60% opacity.
   - **Level 2+ (Deep Hops)**: Transitive reference chains. Rendered at decaying opacity (30% at Level 2, 15% at Level 3+).
   - **Orphan Nodes**: Disconnected notes with zero edges. Rendered in muted gray (`#6B7280`) on the graph perimeter unless custom cluster rules override.
+- **Semantic Visual Hierarchy & Sizing**: Node geometry MUST visually communicate context role rather than raw connection volume alone. Level 0 hubs are rendered with prominent radius and bold labels; Level 1 with medium radius; Level 2 with compact radius; Level 3+ with subtle indicators.
+- **Focus Modes**: To eliminate visual overwhelm in large vaults (500+ notes), the graph renderer MUST support hop-constrained focus view states (`Hub`, `1 hop`, `2 hops`, `All`). In focused modes, secondary or peripheral nodes are subdued or collapsed to keep cognitive load minimal.
 - **User-Defined Cluster Coloring (Hashtags & Paths)**:
   - The system MUST allow users to define custom chromatic cluster groups based on:
     1. *Cluster Hashtags*: Extracted from inline Markdown hashtags (`#tag`) and YAML frontmatter `tags: [...]`.
     2. *Filesystem Paths*: Directory globs matching note physical paths (e.g. `docs/architecture/**`, `notes/05_secrets/**`).
   - *Hue + Opacity Composition Invariant*: User-defined cluster colors determine the **base hue/saturation** of the node. The **alpha/opacity channel is strictly governed by the hop distance** (Level 0 = 1.0, Level 1 = 0.6, Level 2 = 0.3, Level 3+ = 0.15). This guarantees that custom styling enriches semantic clustering without compromising the visual differentiation between active and secondary LLM context.
-- **BPE Token Accounting**: The Rust engine MUST compute exact BPE tokens (`cl100k_base`) per file and cumulative branch cost. The UI MUST display active prompt load versus accessible on-demand tokens, raising warnings at 60,000 tokens and critical alerts at 100,000 tokens.
+- **BPE Token Accounting**: The Rust engine MUST compute exact BPE tokens (`cl100k_base`) per file and cumulative branch cost. The UI MUST display **Active Prompt Load (L0)** versus **Reachable On-Demand Context (L1+)**, raising warnings at 60,000 tokens and critical alerts at 100,000 tokens.
 
 ### V. Strict Link Integrity & Cross-Submodule Vault Traversal
 The engine MUST enforce 100% internal link validation across both standard Markdown links `[text](path)` and wikilinks `[[filename]]`.
-- **Dead Link Detection**: Links pointing to missing files, broken anchors, or moved targets MUST be immediately flagged with red dashed edges and alert badges.
+- **Dead Link Detection**: Links pointing to missing files, broken anchors, or moved targets MUST be immediately flagged with red dashed edges, diagnostic issue cards, and line-precise coordinates.
 - **Multi-Repo & Submodule Boundary Resolution**: In multi-repo and unified vault configurations, relative links crossing Git submodule boundaries MUST be resolved transparently without fragmenting the graph topology.
 
-### VI. Sandboxed Webview & Zero-Plaintext Security Boundary (CTaaS GAP-026/GAP-027)
-All embedded interfaces and runtime secrets MUST adhere to CTaaS Developer Tooling security specifications:
+### VI. Sandboxed Webview, Progressive Disclosure & Zero Action Duplication
+All embedded interfaces and runtime interactions MUST adhere to strict information architecture and security principles:
+- **Calm Control Center & The Three Pillars**: The user experience MUST be organized around three calm, distinct pillars:
+  1. **Knowledge**: Structural topology and note relationships.
+  2. **AI Context**: Prompt token load, reachable context horizons, and budget limits.
+  3. **Health & Issues**: Broken links, unmapped orphans, and synchronization status.
+- **Zero Action Duplication**: Administrative actions MUST NOT be duplicated across competing UI surfaces (e.g. sidebar buttons, top toolbar buttons, and dropdown items simultaneously). Primary controls are reserved exclusively for active graph manipulation (Token status, Search, Filter/Focus, Reset Disposition, More).
+- **State-Driven Action Emergence**: High-friction administrative operations MUST emerge naturally from displayed system states rather than existing as permanent clutter:
+  - Broken link issues appear as status metrics (`343 broken links → [Review issues]`).
+  - Vault synchronization appears as a quiet status indicator (`● Synced · 12s ago`), with full index rebuild relegated to advanced menus.
+  - Central Hub selection is displayed as the active entity with a contextual `[Change]` workflow.
+  - Git hook management resides in Settings / Integrations, not as a primary dashboard button.
+- **Selection-Driven Contextual Inspector**: When an element is selected (node, edge, or issue), the Webview MUST present a contextual inspector drawer containing relevant metadata and targeted actions (`[Open file]`, `[Set as hub]`, `[Exclude file/folder]`, `[Fix reference]`).
 - **Webview Sandboxing & CSP**: Webview panels MUST enforce a strict Content Security Policy (CSP) with unique cryptographic nonces (`script-src 'nonce-${nonce}'`). Local assets MUST strictly be loaded via `webview.asWebviewUri` under allowed `localResourceRoots`.
 - **Typed Asynchronous RPC**: Communication between the Extension Host and Webview iframe MUST use strongly typed JSON-RPC 2.0 messages with request-response correlation tokens (`requestId`).
-- **Memory-Safe State Lifecycle**: Webview panel state MUST be serialized via `vscode.setState()` / `vscode.getState()` and `WebviewPanelSerializer`. The memory-heavy option `retainContextWhenHidden` MUST NOT be enabled.
+- **Memory-Safe State Lifecycle**: Webview panel state MUST be serialized via `vscode.setState()` / `vscode.getState()` and `WebviewPanelSerializer`.
 - **Zero Plaintext Secrets**: Any credentials, tokens, or private settings MUST be stored exclusively via `vscode.SecretStorage` (backed by OS Keychains/safeStorage) and NEVER written to plaintext configuration files or disk logs.
 
 ### VII. Test-Driven Development (TDD) & Multi-Platform Binary Verification
@@ -122,4 +146,4 @@ This Constitution represents the supreme architectural and technical policy for 
   - **MINOR**: Addition of new principles, sections, or materially expanded guidelines.
   - **PATCH**: Clarifications, wording adjustments, or typo fixes.
 
-**Version**: 1.2.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-11
+**Version**: 1.3.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-11
