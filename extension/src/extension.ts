@@ -9,11 +9,13 @@ import { registerSetHubCommand } from './commands/setHub';
 import { registerRescanVaultCommand } from './commands/rescanVault';
 import { registerFixBrokenLinksCommand } from './commands/fixBrokenLinks';
 import { registerInstallHooksCommand } from './commands/installHooks';
+import { SidebarViewProvider } from './webview/sidebarViewProvider';
 
 let processManager: ProcessManager | null = null;
 let ipcClient: IpcClient | null = null;
 let statusBarItem: vscode.StatusBarItem | null = null;
 let latestScanResult: ScanResultPayload | null = null;
+let sidebarProvider: SidebarViewProvider | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const outputChannel = vscode.window.createOutputChannel('LLM Wiki');
@@ -31,12 +33,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
+  // Register Sidebar Webview View Provider (Activity Bar)
+  sidebarProvider = new SidebarViewProvider(context.extensionUri, () => latestScanResult);
+  context.subscriptions.push(
+    vscode.window.registerWebviewViewProvider(SidebarViewProvider.viewType, sidebarProvider)
+  );
+
   const onScanResultUpdated = (newResult: ScanResultPayload) => {
     latestScanResult = newResult;
     updateStatusBarWithBudget(newResult);
     if (GraphPanelManager.currentPanel) {
       GraphPanelManager.currentPanel.updateData(newResult);
     }
+    sidebarProvider?.updateData(newResult);
   };
 
   // Register Webview Panel Serializer

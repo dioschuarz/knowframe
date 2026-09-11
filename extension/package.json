@@ -80,6 +80,36 @@
           "when": "resourceExtname == .md",
           "group": "navigation"
         }
+      ],
+      "view/title": [
+        {
+          "command": "llmWiki.showKnowledgeGraph",
+          "when": "view == llmWiki.sidebarView",
+          "group": "navigation"
+        },
+        {
+          "command": "llmWiki.rescanVault",
+          "when": "view == llmWiki.sidebarView",
+          "group": "navigation"
+        }
+      ]
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "llm-wiki-sidebar",
+          "title": "LLM Wiki",
+          "icon": "media/sidebar-icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "llm-wiki-sidebar": [
+        {
+          "type": "webview",
+          "id": "llmWiki.sidebarView",
+          "name": "Knowledge Base"
+        }
       ]
     },
     "configuration": {
