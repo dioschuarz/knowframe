@@ -1,0 +1,9 @@
+target/
+dist/
+out/
+node_modules/
+extension/node_modules/
+*.vsix
+.DS_Store
+*.port
+.git/llm-wiki.port
