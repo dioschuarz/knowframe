@@ -17,9 +17,17 @@ struct Cli {
 enum Commands {
     /// Headless scan of workspace documentation, outputting topology JSON
     Scan {
-        /// Workspace root directory
-        #[arg(default_value = ".")]
-        root: PathBuf,
+        /// Workspace root directory (flag)
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Workspace root directory (path flag alias)
+        #[arg(long)]
+        path: Option<PathBuf>,
+
+        /// Positional workspace root directory
+        #[arg(index = 1)]
+        positional_root: Option<PathBuf>,
 
         /// Override designated Level 0 Hub
         #[arg(long)]
@@ -32,9 +40,13 @@ enum Commands {
 
     /// Run as background WebSocket JSON-RPC daemon
     Daemon {
-        /// Workspace root directory
-        #[arg(default_value = ".")]
-        root: PathBuf,
+        /// Workspace root directory (flag)
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Positional workspace root directory
+        #[arg(index = 1)]
+        positional_root: Option<PathBuf>,
 
         /// Port to bind (0 for OS-assigned ephemeral port)
         #[arg(short, long, default_value_t = 0)]
@@ -57,9 +69,16 @@ async fn main() -> anyhow::Result<()> {
     let cli = Cli::parse();
 
     match cli.command {
-        Commands::Scan { root, hub, pretty } => {
+        Commands::Scan {
+            root,
+            path,
+            positional_root,
+            hub,
+            pretty,
+        } => {
+            let workspace_root = path.or(root).or(positional_root).unwrap_or_else(|| PathBuf::from("."));
             let options = ScanOptions {
-                workspace_root: root,
+                workspace_root,
                 hub,
                 pretty,
             };
@@ -70,9 +89,14 @@ async fn main() -> anyhow::Result<()> {
                 println!("{}", serde_json::to_string(&result)?);
             }
         }
-        Commands::Daemon { root, port } => {
+        Commands::Daemon {
+            root,
+            positional_root,
+            port,
+        } => {
+            let workspace_root = root.or(positional_root).unwrap_or_else(|| PathBuf::from("."));
             let auth_token = std::env::var("LLM_WIKI_AUTH_TOKEN").ok();
-            let (addr, _shutdown_tx) = start_ipc_server(port, root, auth_token).await?;
+            let (addr, _shutdown_tx) = start_ipc_server(port, workspace_root, auth_token).await?;
             println!(
                 "{}",
                 serde_json::json!({
@@ -81,6 +105,8 @@ async fn main() -> anyhow::Result<()> {
                     "address": addr.to_string()
                 })
             );
+            use std::io::Write;
+            let _ = std::io::stdout().flush();
             // Wait for termination signal
             tokio::signal::ctrl_c().await?;
         }
