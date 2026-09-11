@@ -102,14 +102,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 }
 
 function updateStatusBarWithBudget(scan: ScanResultPayload): void {
-  if (!statusBarItem) return;
+  if (!statusBarItem) {return;}
   const activeTokens = scan.token_summary.active_harness_tokens.toLocaleString();
   const subcallTokens = scan.token_summary.subcall_accessible_tokens.toLocaleString();
   const status = scan.token_summary.status;
 
   let icon = '$(graph)';
-  if (status === 'warning') icon = '$(warning)';
-  if (status === 'critical') icon = '$(error)';
+  if (status === 'warning') {icon = '$(warning)';}
+  if (status === 'critical') {icon = '$(error)';}
 
   statusBarItem.text = `${icon} Wiki: ${activeTokens} tok (subcall: ${subcallTokens})`;
   statusBarItem.tooltip = `Active Prompt Load: ${activeTokens} tokens\nAccessible Subcall: ${subcallTokens} tokens\nStatus: ${status.toUpperCase()}`;

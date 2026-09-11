@@ -78,6 +78,27 @@ export class WebviewRpcBridge {
     });
   }
 
+  public fixBrokenLink(source: string, line?: number, target?: string): void {
+    this.sendMessage({
+      type: 'fixBrokenLink',
+      payload: { source, line, target },
+    });
+  }
+
+  public previewExclusion(pattern: string): void {
+    this.sendMessage({
+      type: 'previewExclusion',
+      payload: { pattern },
+    });
+  }
+
+  public excludePath(pattern: string, scope: 'scan' | 'graph' = 'graph'): void {
+    this.sendMessage({
+      type: 'excludePath',
+      payload: { pattern, scope },
+    });
+  }
+
   public updateColorGroups(colorGroups: any[]): void {
     this.sendMessage({
       type: 'updateColorGroups',

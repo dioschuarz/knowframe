@@ -58,6 +58,7 @@ pub async fn start_ipc_server(
     Ok((addr, shutdown_tx))
 }
 
+#[allow(clippy::result_large_err)]
 async fn handle_connection(
     stream: TcpStream,
     peer_addr: SocketAddr,
@@ -72,7 +73,8 @@ async fn handle_connection(
         if let Some(ref token) = *expected_token {
             if let Some(auth_header) = req.headers().get("Authorization") {
                 if let Ok(val) = auth_header.to_str() {
-                    if val.trim().strip_prefix("Bearer ").map(|s| s.trim()) == Some(token.as_str()) {
+                    if val.trim().strip_prefix("Bearer ").map(|s| s.trim()) == Some(token.as_str())
+                    {
                         is_authenticated = true;
                     }
                 }
@@ -127,9 +129,7 @@ async fn handle_connection(
                 } else {
                     // JSON-RPC Notification (no id)
                     if let Ok(notif) = serde_json::from_value::<JsonRpcNotification>(val) {
-                        if notif.method == "git/commitDelta" && is_loopback {
-                            handle_notification(&state, notif).await;
-                        } else if is_authenticated {
+                        if (notif.method == "git/commitDelta" && is_loopback) || is_authenticated {
                             handle_notification(&state, notif).await;
                         }
                     }

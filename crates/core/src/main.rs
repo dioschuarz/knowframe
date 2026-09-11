@@ -76,7 +76,10 @@ async fn main() -> anyhow::Result<()> {
             hub,
             pretty,
         } => {
-            let workspace_root = path.or(root).or(positional_root).unwrap_or_else(|| PathBuf::from("."));
+            let workspace_root = path
+                .or(root)
+                .or(positional_root)
+                .unwrap_or_else(|| PathBuf::from("."));
             let options = ScanOptions {
                 workspace_root,
                 hub,
@@ -94,7 +97,9 @@ async fn main() -> anyhow::Result<()> {
             positional_root,
             port,
         } => {
-            let workspace_root = root.or(positional_root).unwrap_or_else(|| PathBuf::from("."));
+            let workspace_root = root
+                .or(positional_root)
+                .unwrap_or_else(|| PathBuf::from("."));
             let auth_token = std::env::var("LLM_WIKI_AUTH_TOKEN").ok();
             let (addr, _shutdown_tx) = start_ipc_server(port, workspace_root, auth_token).await?;
             println!(
@@ -112,7 +117,8 @@ async fn main() -> anyhow::Result<()> {
         }
         Commands::GitDelta { root, files } => {
             let timeout_duration = std::time::Duration::from_millis(500);
-            let _ = llm_wiki_core::cli::delta::execute_git_delta(&root, &files, timeout_duration).await;
+            let _ =
+                llm_wiki_core::cli::delta::execute_git_delta(&root, &files, timeout_duration).await;
         }
     }
 

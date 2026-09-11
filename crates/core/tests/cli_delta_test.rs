@@ -13,7 +13,8 @@ async fn test_git_delta_cli_offline_daemon_fail_open() {
         root,
         &["docs/note.md".to_string()],
         std::time::Duration::from_millis(500),
-    ).await;
+    )
+    .await;
 
     let elapsed = start.elapsed();
 

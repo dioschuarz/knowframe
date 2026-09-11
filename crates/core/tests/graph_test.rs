@@ -16,8 +16,22 @@ fn test_degrees_and_betweenness_centrality() {
     topology.add_node(orphan);
 
     // hub -> bridge -> leaf
-    topology.add_edge(NoteEdge::new("hub.md", "bridge.md", LinkType::Markdown, "b", None, Some(1)));
-    topology.add_edge(NoteEdge::new("bridge.md", "leaf.md", LinkType::Markdown, "l", None, Some(1)));
+    topology.add_edge(NoteEdge::new(
+        "hub.md",
+        "bridge.md",
+        LinkType::Markdown,
+        "b",
+        None,
+        Some(1),
+    ));
+    topology.add_edge(NoteEdge::new(
+        "bridge.md",
+        "leaf.md",
+        LinkType::Markdown,
+        "l",
+        None,
+        Some(1),
+    ));
 
     topology.compute_degrees();
     topology.compute_betweenness();
@@ -48,10 +62,31 @@ fn test_circular_link_bfs_hop_distance() {
     topology.add_node(NoteNode::new("orphan.md", "/repo/orphan.md", "Orphan"));
 
     // Cycle: a -> b -> a
-    topology.add_edge(NoteEdge::new("a.md", "b.md", LinkType::Markdown, "b", None, None));
-    topology.add_edge(NoteEdge::new("b.md", "a.md", LinkType::Markdown, "a", None, None));
+    topology.add_edge(NoteEdge::new(
+        "a.md",
+        "b.md",
+        LinkType::Markdown,
+        "b",
+        None,
+        None,
+    ));
+    topology.add_edge(NoteEdge::new(
+        "b.md",
+        "a.md",
+        LinkType::Markdown,
+        "a",
+        None,
+        None,
+    ));
     // Path: b -> c
-    topology.add_edge(NoteEdge::new("b.md", "c.md", LinkType::Markdown, "c", None, None));
+    topology.add_edge(NoteEdge::new(
+        "b.md",
+        "c.md",
+        LinkType::Markdown,
+        "c",
+        None,
+        None,
+    ));
 
     // Designate a.md as Hub
     topology.compute_hops("a.md");

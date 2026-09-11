@@ -5,6 +5,7 @@ export interface CanvasRendererOptions {
   canvas: HTMLCanvasElement;
   initialLabelsMode?: LabelsMode;
   onNodeClick?: (node: NoteNode) => void;
+  onEdgeClick?: (edge: NoteEdge) => void;
   onNodeHover?: (node: NoteNode | null, x: number, y: number) => void;
   onNodeDragStart?: (node: NoteNode, x: number, y: number) => void;
   onNodeDrag?: (node: NoteNode, x: number, y: number) => void;
@@ -21,6 +22,7 @@ export class CanvasRenderer {
   private dpr = window.devicePixelRatio || 1;
   private labelsMode: LabelsMode = 'hover';
   private matchedNodeIds: Set<string> | null = null;
+  private showExcluded: boolean = false;
 
   // Zoom & Pan
   private scale = 1;
@@ -40,6 +42,7 @@ export class CanvasRenderer {
   private hoveredNode: NoteNode | null = null;
   private animFrameId: number | null = null;
   private onNodeClick?: (node: NoteNode) => void;
+  private onEdgeClick?: (edge: NoteEdge) => void;
   private onNodeHover?: (node: NoteNode | null, x: number, y: number) => void;
   private onNodeDragStart?: (node: NoteNode, x: number, y: number) => void;
   private onNodeDrag?: (node: NoteNode, x: number, y: number) => void;
@@ -51,6 +54,7 @@ export class CanvasRenderer {
     this.canvas = options.canvas;
     this.ctx = options.canvas.getContext('2d')!;
     this.onNodeClick = options.onNodeClick;
+    this.onEdgeClick = options.onEdgeClick;
     this.onNodeHover = options.onNodeHover;
     this.onNodeDragStart = options.onNodeDragStart;
     this.onNodeDrag = options.onNodeDrag;
@@ -86,6 +90,15 @@ export class CanvasRenderer {
     return this.matchedNodeIds;
   }
 
+  public setShowExcluded(show: boolean): void {
+    this.showExcluded = show;
+    this.draw();
+  }
+
+  public getShowExcluded(): boolean {
+    return this.showExcluded;
+  }
+
   public resetZoom(): void {
     this.scale = 1;
     this.offsetX = 0;
@@ -102,6 +115,18 @@ export class CanvasRenderer {
       this.scale = transform.scale;
       this.offsetX = transform.offsetX || 0;
       this.offsetY = transform.offsetY || 0;
+    }
+  }
+
+  public centerOnNode(nodeId: string): void {
+    const node = this.nodes.find((n) => n.id === nodeId);
+    if (node && node.x !== undefined && node.y !== undefined) {
+      const width = this.canvas.clientWidth || 800;
+      const height = this.canvas.clientHeight || 600;
+      this.offsetX = width / 2 - node.x * this.scale;
+      this.offsetY = height / 2 - node.y * this.scale;
+      this.draw();
+      this.onViewTransformChange?.({ scale: this.scale, offsetX: this.offsetX, offsetY: this.offsetY });
     }
   }
 
@@ -191,6 +216,11 @@ export class CanvasRenderer {
         this.draggedNode = null;
         this.isNodeDragging = false;
         this.hasMoved = false;
+      } else if (!this.hasMoved && !this.isPanning) {
+        const hitEdge = this.findEdgeAt(e.clientX, e.clientY);
+        if (hitEdge) {
+          this.onEdgeClick?.(hitEdge);
+        }
       }
       const wasPanning = this.isPanning;
       this.isPanning = false;
@@ -224,6 +254,52 @@ export class CanvasRenderer {
     });
   }
 
+  public findEdgeAt(clientX: number, clientY: number): NoteEdge | null {
+    const rect = this.canvas.getBoundingClientRect();
+    const worldX = (clientX - rect.left - this.offsetX) / this.scale;
+    const worldY = (clientY - rect.top - this.offsetY) / this.scale;
+
+    const nodeMap = new Map<string, NoteNode>();
+    for (const node of this.nodes) {
+      nodeMap.set(node.id, node);
+    }
+
+    const threshold = 8 / this.scale;
+    const sortedEdges = [...this.edges].sort((a, b) => (b.isBroken ? 1 : 0) - (a.isBroken ? 1 : 0));
+
+    for (const edge of sortedEdges) {
+      const srcId = typeof edge.source === 'object' ? (edge.source as NoteNode).id : (edge.source as string);
+      const tgtId = typeof edge.target === 'object' ? (edge.target as NoteNode).id : (edge.target as string);
+      const srcNode = nodeMap.get(srcId);
+      if (!srcNode || srcNode.x === undefined || srcNode.y === undefined) continue;
+
+      const tgtNode = tgtId ? nodeMap.get(tgtId) : undefined;
+      if (!this.showExcluded && (srcNode.status === 'excluded' || tgtNode?.status === 'excluded')) continue;
+
+      const x1 = srcNode.x;
+      const y1 = srcNode.y;
+      const x2 = tgtNode && tgtNode.x !== undefined ? tgtNode.x : x1 + 25;
+      const y2 = tgtNode && tgtNode.y !== undefined ? tgtNode.y : y1 + 25;
+
+      const dx = x2 - x1;
+      const dy = y2 - y1;
+      const lenSq = dx * dx + dy * dy;
+      let dist = 0;
+      if (lenSq === 0) {
+        dist = Math.hypot(worldX - x1, worldY - y1);
+      } else {
+        let t = ((worldX - x1) * dx + (worldY - y1) * dy) / lenSq;
+        t = Math.max(0, Math.min(1, t));
+        dist = Math.hypot(worldX - (x1 + t * dx), worldY - (y1 + t * dy));
+      }
+
+      if (dist <= threshold) {
+        return edge;
+      }
+    }
+    return null;
+  }
+
   private findNodeAt(clientX: number, clientY: number): NoteNode | null {
     const rect = this.canvas.getBoundingClientRect();
     const canvasX = clientX - rect.left;
@@ -236,6 +312,7 @@ export class CanvasRenderer {
     for (let i = this.nodes.length - 1; i >= 0; i--) {
       const node = this.nodes[i];
       if (node.x === undefined || node.y === undefined) continue;
+      if (node.status === 'excluded' && !this.showExcluded) continue;
 
       const r = this.getNodeRadius(node);
       const dx = worldX - node.x;
@@ -248,10 +325,11 @@ export class CanvasRenderer {
   }
 
   private getNodeRadius(node: NoteNode): number {
-    const base = 6;
-    const hubExtra = node.hopDistance === 0 ? 6 : 0;
-    const centralityExtra = (node.betweenness || 0) * 10;
-    return base + hubExtra + centralityExtra;
+    if (node.hopDistance === 0) return 14;
+    if (node.hopDistance === 1) return 9;
+    if (node.hopDistance === 2) return 6;
+    if (node.hopDistance >= 3) return 4;
+    return 4;
   }
 
   private startLoop(): void {
@@ -288,6 +366,7 @@ export class CanvasRenderer {
       const tgtNode = tgtId ? nodeMap.get(tgtId) : undefined;
 
       if (!srcNode || srcNode.x === undefined || srcNode.y === undefined) continue;
+      if (!this.showExcluded && (srcNode.status === 'excluded' || tgtNode?.status === 'excluded')) continue;
 
       const srcMatched = !isSearchActive || this.matchedNodeIds!.has(srcId);
       const tgtMatched = !isSearchActive || this.matchedNodeIds!.has(tgtId);
@@ -302,7 +381,11 @@ export class CanvasRenderer {
         this.ctx.lineTo(srcNode.x + 25, srcNode.y + 25);
       }
 
-      if (isSearchActive && (!srcMatched || !tgtMatched)) {
+      if (srcNode.status === 'excluded' || tgtNode?.status === 'excluded') {
+        this.ctx.strokeStyle = 'rgba(148, 163, 184, 0.15)';
+        this.ctx.lineWidth = 0.8;
+        this.ctx.setLineDash([2, 4]);
+      } else if (isSearchActive && (!srcMatched || !tgtMatched)) {
         // Dim edge if either node is outside search results
         this.ctx.strokeStyle = 'rgba(148, 163, 184, 0.05)';
         this.ctx.lineWidth = 0.8;
@@ -330,8 +413,23 @@ export class CanvasRenderer {
     for (const node of this.nodes) {
       if (node.x === undefined || node.y === undefined) continue;
 
-      const isMatched = !isSearchActive || this.matchedNodeIds!.has(node.id);
       const r = this.getNodeRadius(node);
+
+      if (node.status === 'excluded') {
+        if (!this.showExcluded) continue;
+        this.ctx.beginPath();
+        this.ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+        this.ctx.fillStyle = 'rgba(148, 163, 184, 0.05)';
+        this.ctx.fill();
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
+        this.ctx.setLineDash([2, 3]);
+        this.ctx.stroke();
+        this.ctx.setLineDash([]);
+        continue;
+      }
+
+      const isMatched = !isSearchActive || this.matchedNodeIds!.has(node.id);
 
       if (isSearchActive && !isMatched) {
         // Faded / Dimmed node: low opacity so search hits stand out cleanly
@@ -404,6 +502,7 @@ export class CanvasRenderer {
 
     for (const node of this.nodes) {
       if (node.x === undefined || node.y === undefined) continue;
+      if (node.status === 'excluded' && !this.showExcluded) continue;
 
       const isMatched = !isSearchActive || this.matchedNodeIds!.has(node.id);
       const isHub = node.hopDistance === 0;
@@ -436,7 +535,9 @@ export class CanvasRenderer {
       this.ctx.strokeText(node.label, node.x, labelY);
 
       // Label foreground text
-      if (isSearchActive && isMatched) {
+      if (node.status === 'excluded') {
+        this.ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
+      } else if (isSearchActive && isMatched) {
         this.ctx.fillStyle = '#38BDF8';
       } else if (isHub) {
         this.ctx.fillStyle = '#60A5FA';

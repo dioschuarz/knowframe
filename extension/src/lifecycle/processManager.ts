@@ -52,7 +52,7 @@ export class ProcessManager implements vscode.Disposable {
 
         for (const line of text.split('\n')) {
           const trimmed = line.trim();
-          if (!trimmed) continue;
+          if (!trimmed) {continue;}
           try {
             const data = JSON.parse(trimmed);
             if (data.event === 'daemon_ready' && data.port) {

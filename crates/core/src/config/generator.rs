@@ -21,8 +21,7 @@ pub fn write_config_if_missing(
         return Ok(false);
     }
     let config = generate_default_config(discovered_hub);
-    let yaml = serde_yaml::to_string(&config)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::Other, e.to_string()))?;
+    let yaml = serde_yaml::to_string(&config).map_err(|e| std::io::Error::other(e.to_string()))?;
     std::fs::write(&config_path, yaml)?;
     Ok(true)
 }

@@ -58,7 +58,10 @@ impl GraphTopology {
         }
 
         for edge in &self.edges {
-            if !edge.is_broken && self.nodes.contains_key(&edge.source) && self.nodes.contains_key(&edge.target) {
+            if !edge.is_broken
+                && self.nodes.contains_key(&edge.source)
+                && self.nodes.contains_key(&edge.target)
+            {
                 // Avoid duplicating multi-edges in adjacency
                 let neighbors = adj.entry(edge.source.clone()).or_default();
                 if !neighbors.contains(&edge.target) {
@@ -72,9 +75,12 @@ impl GraphTopology {
 
     /// Computes in-degree and out-degree metrics for all nodes.
     pub fn compute_degrees(&mut self) {
-        let mut in_degrees: HashMap<String, u32> = self.nodes.keys().map(|k| (k.clone(), 0)).collect();
-        let mut out_degrees: HashMap<String, u32> = self.nodes.keys().map(|k| (k.clone(), 0)).collect();
-        let mut broken_counts: HashMap<String, u32> = self.nodes.keys().map(|k| (k.clone(), 0)).collect();
+        let mut in_degrees: HashMap<String, u32> =
+            self.nodes.keys().map(|k| (k.clone(), 0)).collect();
+        let mut out_degrees: HashMap<String, u32> =
+            self.nodes.keys().map(|k| (k.clone(), 0)).collect();
+        let mut broken_counts: HashMap<String, u32> =
+            self.nodes.keys().map(|k| (k.clone(), 0)).collect();
 
         for edge in &self.edges {
             if edge.is_broken {
@@ -91,6 +97,18 @@ impl GraphTopology {
             node.in_degree = *in_degrees.get(id).unwrap_or(&0);
             node.out_degree = *out_degrees.get(id).unwrap_or(&0);
             node.broken_links = *broken_counts.get(id).unwrap_or(&0);
+
+            if node.status != crate::model::NodeStatus::Excluded {
+                if node.in_degree + node.out_degree > 0 {
+                    if node.hop_distance == 0 {
+                        node.status = crate::model::NodeStatus::Active;
+                    } else {
+                        node.status = crate::model::NodeStatus::ConnectedInactive;
+                    }
+                } else {
+                    node.status = crate::model::NodeStatus::Orphan;
+                }
+            }
         }
     }
 
@@ -134,13 +152,76 @@ impl GraphTopology {
             .map(|(k, v)| (k.clone(), PathBuf::from(&v.file_path)))
             .collect();
 
-        let index = ResolverIndex::new(&known_nodes);
+        let excluded_nodes: std::collections::HashSet<String> = self
+            .nodes
+            .iter()
+            .filter(|(_, v)| v.status == crate::model::NodeStatus::Excluded)
+            .map(|(k, _)| k.clone())
+            .collect();
+
+        let index = ResolverIndex::with_exclusions(&known_nodes, excluded_nodes);
 
         for edge in &mut self.edges {
             resolve_edge_integrity(edge, &index, &self.headings);
         }
 
         self.compute_degrees();
+    }
+
+    /// Computes ObservatorySummary adhering to the Node Lifecycle Invariant:
+    /// total_notes = connected_notes + orphan_notes + excluded_notes.
+    pub fn compute_observatory_summary(
+        &self,
+        last_sync: Option<u64>,
+    ) -> crate::model::ObservatorySummary {
+        let total_notes = self.nodes.len() as u32;
+        let mut connected_notes = 0u32;
+        let mut orphan_notes = 0u32;
+        let mut excluded_notes = 0u32;
+        let mut active_tokens = 0u64;
+        let mut reachable_tokens = 0u64;
+
+        for node in self.nodes.values() {
+            match node.status {
+                crate::model::NodeStatus::Excluded => {
+                    excluded_notes += 1;
+                }
+                crate::model::NodeStatus::Orphan => {
+                    orphan_notes += 1;
+                }
+                crate::model::NodeStatus::Active | crate::model::NodeStatus::ConnectedInactive => {
+                    connected_notes += 1;
+                }
+            }
+
+            if node.hop_distance == 0 {
+                active_tokens += node.tokens as u64;
+            }
+            if node.hop_distance >= 0 && node.hop_distance <= 2 {
+                reachable_tokens += node.tokens as u64;
+            }
+        }
+
+        let broken_links_count = self.edges.iter().filter(|e| e.is_broken).count() as u32;
+
+        let last_sync_timestamp = last_sync.unwrap_or_else(|| {
+            std::time::SystemTime::now()
+                .duration_since(std::time::UNIX_EPOCH)
+                .map(|d| d.as_millis() as u64)
+                .unwrap_or(0)
+        });
+
+        crate::model::ObservatorySummary {
+            total_notes,
+            connected_notes,
+            orphan_notes,
+            excluded_notes,
+            broken_links_count,
+            active_tokens,
+            reachable_tokens,
+            sync_status: "synced".to_string(),
+            last_sync_timestamp,
+        }
     }
 
     /// Converts graph to petgraph DiGraph representation.
@@ -155,12 +236,71 @@ impl GraphTopology {
 
         for edge in &self.edges {
             if !edge.is_broken {
-                if let (Some(&src_idx), Some(&tgt_idx)) = (index_map.get(&edge.source), index_map.get(&edge.target)) {
+                if let (Some(&src_idx), Some(&tgt_idx)) =
+                    (index_map.get(&edge.source), index_map.get(&edge.target))
+                {
                     graph.add_edge(src_idx, tgt_idx, ());
                 }
             }
         }
 
         graph
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::NodeStatus;
+
+    #[test]
+    fn test_observatory_summary_node_lifecycle_invariant() {
+        let mut topology = GraphTopology::new();
+
+        let mut n1 = NoteNode::new("hub.md", "/vault/hub.md", "Hub");
+        n1.status = NodeStatus::Active;
+        n1.hop_distance = 0;
+        n1.tokens = 1000;
+        topology.add_node(n1);
+
+        let mut n2 = NoteNode::new("doc1.md", "/vault/doc1.md", "Doc 1");
+        n2.status = NodeStatus::ConnectedInactive;
+        n2.hop_distance = 1;
+        n2.tokens = 500;
+        topology.add_node(n2);
+
+        let mut n3 = NoteNode::new("orphan.md", "/vault/orphan.md", "Orphan");
+        n3.status = NodeStatus::Orphan;
+        n3.hop_distance = -1;
+        n3.tokens = 200;
+        topology.add_node(n3);
+
+        let mut n4 = NoteNode::new(
+            "packages/lib/README.md",
+            "/vault/packages/lib/README.md",
+            "Excluded Readme",
+        );
+        n4.status = NodeStatus::Excluded;
+        n4.hop_distance = -1;
+        n4.tokens = 300;
+        topology.add_node(n4);
+
+        let summary = topology.compute_observatory_summary(Some(123456789));
+
+        assert_eq!(summary.total_notes, 4);
+        assert_eq!(summary.connected_notes, 2);
+        assert_eq!(
+            summary.orphan_notes, 1,
+            "Excluded note must NOT be counted as orphan"
+        );
+        assert_eq!(summary.excluded_notes, 1);
+        assert_eq!(
+            summary.total_notes,
+            summary.connected_notes + summary.orphan_notes + summary.excluded_notes
+        );
+        assert_eq!(summary.active_tokens, 1000);
+        assert_eq!(summary.reachable_tokens, 1500);
+        assert_eq!(summary.sync_status, "synced");
+        assert_eq!(summary.last_sync_timestamp, 123456789);
     }
 }

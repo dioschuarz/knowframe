@@ -1,6 +1,6 @@
 //! Parser for Obsidian-style wikilinks: [[target]], [[target|label]], [[target#heading|label]].
 
-use crate::model::{LinkType, NoteEdge};
+use crate::model::{LinkResolutionStatus, LinkType, NoteEdge};
 use regex::Regex;
 
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -61,11 +61,7 @@ pub fn parse_wikilinks(text: &str) -> Vec<RawWikilink> {
     links
 }
 
-pub fn wikilink_to_edge(
-    source: &str,
-    link: RawWikilink,
-    line: Option<u32>,
-) -> NoteEdge {
+pub fn wikilink_to_edge(source: &str, link: RawWikilink, line: Option<u32>) -> NoteEdge {
     NoteEdge {
         id: format!("{}->{}", source, link.target),
         source: source.to_string(),
@@ -75,5 +71,6 @@ pub fn wikilink_to_edge(
         raw_text: link.label,
         anchor: link.anchor,
         line,
+        resolution_status: Some(LinkResolutionStatus::Resolved),
     }
 }

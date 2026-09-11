@@ -13,7 +13,11 @@ fn test_incremental_delta_add_file() {
     std::fs::write(&file_a_path, "# File A\nIntro content").unwrap();
 
     let mut topology = GraphTopology::new();
-    let mut node_a = NoteNode::new("file_a.md", file_a_path.to_string_lossy().to_string(), "File A".to_string());
+    let mut node_a = NoteNode::new(
+        "file_a.md",
+        file_a_path.to_string_lossy().to_string(),
+        "File A".to_string(),
+    );
     node_a.tokens = 10;
     topology.add_node(node_a);
     topology.resolve_links();
@@ -39,7 +43,10 @@ fn test_incremental_delta_add_file() {
     assert!(node_b.tokens > 0);
 
     // Verify edge from file_b to file_a exists and is not broken
-    let b_to_a = topology.edges.iter().find(|e| e.source == "file_b.md" && e.target == "file_a.md");
+    let b_to_a = topology
+        .edges
+        .iter()
+        .find(|e| e.source == "file_b.md" && e.target == "file_a.md");
     assert!(b_to_a.is_some());
     assert!(!b_to_a.unwrap().is_broken);
 }
@@ -53,7 +60,11 @@ fn test_incremental_delta_modify_file() {
     std::fs::write(&file_a_path, "# File A\nOriginal content with no links").unwrap();
 
     let mut topology = GraphTopology::new();
-    let mut node_a = NoteNode::new("file_a.md", file_a_path.to_string_lossy().to_string(), "File A".to_string());
+    let mut node_a = NoteNode::new(
+        "file_a.md",
+        file_a_path.to_string_lossy().to_string(),
+        "File A".to_string(),
+    );
     node_a.tokens = 8;
     topology.add_node(node_a);
     topology.resolve_links();
@@ -61,7 +72,11 @@ fn test_incremental_delta_modify_file() {
     assert_eq!(topology.edges.len(), 0);
 
     // Modify file_a.md to add broken link to nonexistent note
-    std::fs::write(&file_a_path, "# File A\nModified content with [[missing_note.md]]").unwrap();
+    std::fs::write(
+        &file_a_path,
+        "# File A\nModified content with [[missing_note.md]]",
+    )
+    .unwrap();
 
     let delta = vec![FileDeltaItem {
         path: "file_a.md".to_string(),
@@ -71,7 +86,11 @@ fn test_incremental_delta_modify_file() {
     apply_file_delta(&mut topology, root, &delta, Some("file_a.md"));
 
     assert_eq!(topology.nodes.len(), 1);
-    let edges_from_a: Vec<_> = topology.edges.iter().filter(|e| e.source == "file_a.md").collect();
+    let edges_from_a: Vec<_> = topology
+        .edges
+        .iter()
+        .filter(|e| e.source == "file_a.md")
+        .collect();
     assert_eq!(edges_from_a.len(), 1);
     assert!(edges_from_a[0].is_broken);
 }
@@ -87,8 +106,16 @@ fn test_incremental_delta_delete_file() {
     std::fs::write(&file_b_path, "# File B\nTarget note").unwrap();
 
     let mut topology = GraphTopology::new();
-    let mut node_a = NoteNode::new("file_a.md", file_a_path.to_string_lossy().to_string(), "File A".to_string());
-    let mut node_b = NoteNode::new("file_b.md", file_b_path.to_string_lossy().to_string(), "File B".to_string());
+    let mut node_a = NoteNode::new(
+        "file_a.md",
+        file_a_path.to_string_lossy().to_string(),
+        "File A".to_string(),
+    );
+    let mut node_b = NoteNode::new(
+        "file_b.md",
+        file_b_path.to_string_lossy().to_string(),
+        "File B".to_string(),
+    );
     node_a.tokens = 10;
     node_b.tokens = 10;
     topology.add_node(node_a);
@@ -120,7 +147,10 @@ fn test_incremental_delta_delete_file() {
     assert!(!topology.nodes.contains_key("file_b.md"));
 
     // Verify edge from file_a to file_b is now marked as broken
-    let edge = topology.edges.iter().find(|e| e.source == "file_a.md" && e.target == "file_b.md");
+    let edge = topology
+        .edges
+        .iter()
+        .find(|e| e.source == "file_a.md" && e.target == "file_b.md");
     assert!(edge.is_some());
     assert!(edge.unwrap().is_broken);
 }

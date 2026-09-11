@@ -10,10 +10,12 @@ pub fn assign_bfs_hops(
     nodes: &mut HashMap<String, NoteNode>,
     adj: &HashMap<String, Vec<String>>,
 ) {
-    // Reset all nodes to orphan (-1)
+    // Reset all non-excluded nodes to orphan (-1)
     for node in nodes.values_mut() {
-        node.hop_distance = -1;
-        node.status = NodeStatus::Orphan;
+        if node.status != NodeStatus::Excluded {
+            node.hop_distance = -1;
+            node.status = NodeStatus::Orphan;
+        }
     }
 
     if !nodes.contains_key(hub_id) {
@@ -28,12 +30,14 @@ pub fn assign_bfs_hops(
 
     while let Some((curr_id, dist)) = queue.pop_front() {
         if let Some(node) = nodes.get_mut(&curr_id) {
-            node.hop_distance = dist;
-            node.status = if dist == 0 {
-                NodeStatus::Active
-            } else {
-                NodeStatus::ConnectedInactive
-            };
+            if node.status != NodeStatus::Excluded {
+                node.hop_distance = dist;
+                node.status = if dist == 0 {
+                    NodeStatus::Active
+                } else {
+                    NodeStatus::ConnectedInactive
+                };
+            }
         }
 
         if let Some(neighbors) = adj.get(&curr_id) {

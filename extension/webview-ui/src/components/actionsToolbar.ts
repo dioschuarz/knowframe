@@ -4,15 +4,16 @@ import {
   DEFAULT_PHYSICS_PARAMS,
   PHYSICS_PRESETS,
   LabelsMode,
-} from '../../../src/types/graph';
-import type { SearchMatchOptions, SearchMode } from '../graph/searchMatcher';
+  FocusMode,
+} from '../../../src/types/graph.ts';
+import type { SearchMatchOptions, SearchMode } from '../graph/searchMatcher.ts';
 
 export interface ActionsToolbarCallbacks {
-  onSetHub: () => void;
-  onRescanVault: () => void;
-  onFixBrokenLinks: () => void;
+  onSetHub?: () => void;
+  onRescanVault?: () => void;
+  onFixBrokenLinks?: () => void;
   onInstallHooks?: () => void;
-  onToggleColorManager: () => void;
+  onToggleColorManager?: () => void;
   onResetZoom?: () => void;
   onPhysicsChange?: (params: PhysicsParameters) => void;
   onReheat?: () => void;
@@ -20,6 +21,11 @@ export interface ActionsToolbarCallbacks {
   onStickyToggle?: (enabled: boolean) => void;
   onToggleLabelsMode?: (mode: LabelsMode) => void;
   onSearchChange?: (query: string, options: SearchMatchOptions) => void;
+  onFocusModeChange?: (mode: FocusMode) => void;
+  onToggleOrphans?: (show: boolean) => void;
+  onToggleExcluded?: (show: boolean) => void;
+  onOpenSettings?: (tab?: string) => void;
+  onOpenTokenBreakdown?: () => void;
 }
 
 export interface ActionsToolbarController {
@@ -32,13 +38,16 @@ export interface ActionsToolbarController {
   openSearch: () => void;
   closeSearch: () => void;
   getSearchOptions: () => SearchMatchOptions;
+  setFocusMode?: (mode: FocusMode) => void;
+  setShowOrphans?: (show: boolean) => void;
+  setShowExcluded?: (show: boolean) => void;
 }
 
 export function renderActionsToolbar(
   container: HTMLElement,
   callbacks: ActionsToolbarCallbacks,
 ): ActionsToolbarController {
-  let activePopover: 'none' | 'token' | 'physics' | 'actions' = 'none';
+  let activePopover: 'none' | 'token' | 'physics' | 'actions' | 'focus' | 'search' = 'none';
 
   container.innerHTML = `
     <div class="floating-toolbar-wrapper">
@@ -61,50 +70,57 @@ export function renderActionsToolbar(
           </svg>
         </button>
 
-        <!-- Gravity & Spacing Settings Button -->
-        <button id="btn-physics-toggle" class="tb-icon-btn" aria-label="Gravity & Spacing" data-tooltip-title="Gravity & Spacing" data-tooltip-desc="Tune center gravity, node distance, repulsion force, and presets">
-          <svg class="tb-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-            <line x1="2" y1="4" x2="14" y2="4"/>
-            <line x1="2" y1="8" x2="14" y2="8"/>
-            <line x1="2" y1="12" x2="14" y2="12"/>
-            <circle cx="5" cy="4" r="1.6" fill="currentColor"/>
-            <circle cx="11" cy="8" r="1.6" fill="currentColor"/>
-            <circle cx="7" cy="12" r="1.6" fill="currentColor"/>
-          </svg>
-        </button>
-
-        <!-- Set Hub Button -->
-        <button id="btn-set-hub" class="tb-icon-btn" aria-label="Set Central Hub" data-tooltip-title="Set Central Hub" data-tooltip-desc="Select a note on graph first, then click here to set as Level 0 hub">
-          <svg class="tb-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-            <circle cx="8" cy="8" r="6"/>
-            <circle cx="8" cy="8" r="2" fill="currentColor"/>
-            <line x1="8" y1="1" x2="8" y2="3"/>
-            <line x1="8" y1="13" x2="8" y2="15"/>
-            <line x1="1" y1="8" x2="3" y2="8"/>
-            <line x1="13" y1="8" x2="15" y2="8"/>
-          </svg>
-        </button>
-
-        <!-- Clusters Button -->
-        <button id="btn-toggle-colors" class="tb-icon-btn" aria-label="Manage Clusters" data-tooltip-title="Cluster Colors" data-tooltip-desc="Configure chromatic cluster rules mapped to #tags or directory paths">
-          <svg class="tb-svg" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M8 0a8 8 0 1 0 8 8 8 8 0 0 0-8-8zm-4.5 9.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm2-4a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm5 0a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm2 4a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5z"/>
-          </svg>
-        </button>
-
-        <!-- Labels Mode Toggle Button -->
-        <button id="btn-toggle-labels" class="tb-icon-btn" aria-label="File Names" data-tooltip-title="File Names: Hover Only (Clean)" data-tooltip-desc="Click to switch to Show All mode and display all note names">
-          <svg class="tb-svg" viewBox="0 0 16 16" fill="currentColor">
-            <path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v7A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 13.5 3h-11zm2.854 7.354l1.5-4a.5.5 0 0 1 .94 0l1.5 4a.5.5 0 0 1-.936.352L7.886 9.5H6.468l-.472 1.206a.5.5 0 1 1-.936-.352zM7.177 7.7l-.469 1.2h.944l-.475-1.2zM11 7a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0v-3A.5.5 0 0 1 11 7z"/>
-          </svg>
-        </button>
-
-        <!-- Reset Zoom Button -->
-        <button id="btn-reset-zoom" class="tb-icon-btn" aria-label="Reset Zoom & Center View" data-tooltip-title="Reset View" data-tooltip-desc="Reset pan coordinates and zoom scale back to centered 100%">
-          <svg class="tb-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
-            <path d="M1 5V1h4M15 5V1h-4M1 11v4h4M15 11v4h-4"/>
-          </svg>
-        </button>
+        <!-- Focus Mode Dropdown -->
+        <div class="tb-dropdown-container" id="focus-dropdown-container">
+          <button id="btn-focus-toggle" class="tb-icon-btn tb-focus-btn" aria-label="Focus Mode" data-tooltip-title="Focus Mode" data-tooltip-desc="Restrict graph view to Hub, 1 hop, 2 hops, or All">
+            <span class="focus-icon">🎯</span>
+            <span id="tb-focus-label" class="tb-focus-label">Focus: All</span>
+            <span class="tb-dropdown-arrow">▾</span>
+          </button>
+          <div id="focus-dropdown-menu" class="floating-popover focus-menu-popover" style="display: none;">
+            <div class="menu-item focus-item" data-focus="all">
+              <span class="m-icon">🌐</span>
+              <div class="m-text">
+                <div class="m-title">All Notes</div>
+                <div class="m-desc">Complete knowledge graph</div>
+              </div>
+              <span class="focus-check" id="check-focus-all">✓</span>
+            </div>
+            <div class="menu-item focus-item" data-focus="2_hops">
+              <span class="m-icon">🎯</span>
+              <div class="m-text">
+                <div class="m-title">2 Hops</div>
+                <div class="m-desc">Extended neighborhood around Hub</div>
+              </div>
+              <span class="focus-check" id="check-focus-2_hops" style="display: none;">✓</span>
+            </div>
+            <div class="menu-item focus-item" data-focus="1_hop">
+              <span class="m-icon">🔍</span>
+              <div class="m-text">
+                <div class="m-title">1 Hop</div>
+                <div class="m-desc">Direct links to/from Hub</div>
+              </div>
+              <span class="focus-check" id="check-focus-1_hop" style="display: none;">✓</span>
+            </div>
+            <div class="menu-item focus-item" data-focus="hub">
+              <span class="m-icon">⭐</span>
+              <div class="m-text">
+                <div class="m-title">Hub Only</div>
+                <div class="m-desc">Central knowledge anchor only</div>
+              </div>
+              <span class="focus-check" id="check-focus-hub" style="display: none;">✓</span>
+            </div>
+            <div class="menu-divider"></div>
+            <label class="focus-checkbox-item">
+              <input type="checkbox" id="chk-focus-orphans" checked>
+              <span>Show orphans</span>
+            </label>
+            <label class="focus-checkbox-item">
+              <input type="checkbox" id="chk-focus-excluded">
+              <span>Show excluded (ghosted)</span>
+            </label>
+          </div>
+        </div>
 
         <!-- Reset Disposition Button -->
         <button id="btn-reset-disposition-tb" class="tb-icon-btn" aria-label="Reset Disposition" data-tooltip-title="Reset Disposition" data-tooltip-desc="Unpin all manually moved notes and return graph to simulation layout">
@@ -272,13 +288,6 @@ export function renderActionsToolbar(
 
       <!-- Actions Dropdown Menu Window -->
       <div id="actions-dropdown" class="floating-popover actions-menu-popover" style="display: none;">
-        <div class="menu-item" id="menu-act-search">
-          <span class="m-icon">🔍</span>
-          <div class="m-text">
-            <div class="m-title">Search Graph</div>
-            <div class="m-desc">Filter nodes by title, folder, or tag (Ctrl+F)</div>
-          </div>
-        </div>
         <div class="menu-item" id="menu-act-physics">
           <span class="m-icon">🎛️</span>
           <div class="m-text">
@@ -293,41 +302,19 @@ export function renderActionsToolbar(
             <div class="m-desc">Toggle between clean hover-only and showing all names</div>
           </div>
         </div>
-        <div class="menu-item" id="menu-act-unpin">
-          <span class="m-icon">📌</span>
-          <div class="m-text">
-            <div class="m-title">Reset Disposition</div>
-            <div class="m-desc">Unpin all manually moved notes and return to simulation layout</div>
-          </div>
-        </div>
-        <div class="menu-divider"></div>
-        <div class="menu-item" id="menu-act-rescan">
-          <span class="m-icon">🔄</span>
-          <div class="m-text">
-            <div class="m-title">Rescan Vault</div>
-            <div class="m-desc">Re-run AST parsing & compute graph topology</div>
-          </div>
-        </div>
-        <div class="menu-item" id="menu-act-fix-links">
-          <span class="m-icon">🛠️</span>
-          <div class="m-text">
-            <div class="m-title">Fix Broken Links</div>
-            <div class="m-desc">Inspect broken references & create missing notes</div>
-          </div>
-        </div>
-        <div class="menu-item" id="menu-act-hooks">
-          <span class="m-icon">⚙️</span>
-          <div class="m-text">
-            <div class="m-title">Install Git Hooks</div>
-            <div class="m-desc">Configure prek / commit-delta background sync</div>
-          </div>
-        </div>
-        <div class="menu-divider"></div>
         <div class="menu-item" id="menu-act-reset-zoom">
           <span class="m-icon">⛶</span>
           <div class="m-text">
             <div class="m-title">Reset Canvas View</div>
             <div class="m-desc">Center graph and reset zoom level</div>
+          </div>
+        </div>
+        <div class="menu-divider"></div>
+        <div class="menu-item" id="menu-act-settings">
+          <span class="m-icon">⚙️</span>
+          <div class="m-text">
+            <div class="m-title">Advanced Settings...</div>
+            <div class="m-desc">Hub rules, exclusions, cluster colors, git hooks, diagnostics</div>
           </div>
         </div>
       </div>
@@ -338,6 +325,9 @@ export function renderActionsToolbar(
   const physicsPopover = container.querySelector('#physics-popover') as HTMLElement;
   const actionsDropdown = container.querySelector('#actions-dropdown') as HTMLElement;
   const searchPopover = container.querySelector('#search-popover') as HTMLElement;
+  const focusDropdownMenu = container.querySelector('#focus-dropdown-menu') as HTMLElement;
+  const btnFocusToggle = container.querySelector('#btn-focus-toggle') as HTMLElement;
+  const tbFocusLabel = container.querySelector('#tb-focus-label') as HTMLElement;
 
   const searchInput = container.querySelector('#tb-search-input') as HTMLInputElement;
   const searchMatchBadge = container.querySelector('#tb-search-count') as HTMLElement;
@@ -417,6 +407,7 @@ export function renderActionsToolbar(
     physicsPopover.style.display = 'none';
     actionsDropdown.style.display = 'none';
     searchPopover.style.display = 'none';
+    if (focusDropdownMenu) focusDropdownMenu.style.display = 'none';
     activePopover = 'none';
     btnSearchToggle?.classList.toggle('active', !!searchInput?.value.trim());
     hideTooltip();
@@ -590,16 +581,77 @@ export function renderActionsToolbar(
   }
 
   // Bind Toolbar Buttons
-  container.querySelector('#btn-token-toggle')?.addEventListener('click', toggleTokenPopover);
-  container.querySelector('#btn-search-toggle')?.addEventListener('click', toggleSearchPopover);
-  container.querySelector('#btn-physics-toggle')?.addEventListener('click', togglePhysicsPopover);
-  container.querySelector('#btn-set-hub')?.addEventListener('click', () => {
-    closeAllPopovers();
-    callbacks.onSetHub();
+  container.querySelector('#btn-token-toggle')?.addEventListener('click', () => {
+    if (callbacks.onOpenTokenBreakdown) {
+      callbacks.onOpenTokenBreakdown();
+    } else {
+      toggleTokenPopover();
+    }
   });
-  container.querySelector('#btn-toggle-colors')?.addEventListener('click', () => {
-    closeAllPopovers();
-    callbacks.onToggleColorManager();
+  container.querySelector('#btn-search-toggle')?.addEventListener('click', toggleSearchPopover);
+
+  // Focus Mode State & Wiring
+  let currentFocusMode: FocusMode = 'all';
+
+  function updateFocusUi(mode: FocusMode): void {
+    currentFocusMode = mode;
+    const labelMap: Record<FocusMode, string> = {
+      all: 'Focus: All',
+      '2_hops': 'Focus: 2 Hops',
+      '1_hop': 'Focus: 1 Hop',
+      hub: 'Focus: Hub',
+    };
+    if (tbFocusLabel) {
+      tbFocusLabel.textContent = labelMap[mode] || 'Focus: All';
+    }
+    const checkAll = container.querySelector('#check-focus-all') as HTMLElement;
+    const check2Hops = container.querySelector('#check-focus-2_hops') as HTMLElement;
+    const check1Hop = container.querySelector('#check-focus-1_hop') as HTMLElement;
+    const checkHub = container.querySelector('#check-focus-hub') as HTMLElement;
+
+    if (checkAll) checkAll.style.display = mode === 'all' ? 'inline' : 'none';
+    if (check2Hops) check2Hops.style.display = mode === '2_hops' ? 'inline' : 'none';
+    if (check1Hop) check1Hop.style.display = mode === '1_hop' ? 'inline' : 'none';
+    if (checkHub) checkHub.style.display = mode === 'hub' ? 'inline' : 'none';
+  }
+
+  function toggleFocusDropdown(e?: MouseEvent): void {
+    e?.stopPropagation();
+    if (activePopover === 'focus') {
+      closeAllPopovers();
+    } else {
+      closeAllPopovers();
+      if (focusDropdownMenu) {
+        focusDropdownMenu.style.display = 'block';
+        activePopover = 'focus';
+      }
+    }
+  }
+
+  btnFocusToggle?.addEventListener('click', toggleFocusDropdown);
+
+  container.querySelectorAll('.focus-item').forEach((item) => {
+    item.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const mode = item.getAttribute('data-focus') as FocusMode;
+      if (mode) {
+        updateFocusUi(mode);
+        closeAllPopovers();
+        callbacks.onFocusModeChange?.(mode);
+      }
+    });
+  });
+
+  const chkFocusOrphans = container.querySelector('#chk-focus-orphans') as HTMLInputElement;
+  chkFocusOrphans?.addEventListener('change', (e) => {
+    e.stopPropagation();
+    callbacks.onToggleOrphans?.(chkFocusOrphans.checked);
+  });
+
+  const chkFocusExcluded = container.querySelector('#chk-focus-excluded') as HTMLInputElement;
+  chkFocusExcluded?.addEventListener('change', (e) => {
+    e.stopPropagation();
+    callbacks.onToggleExcluded?.(chkFocusExcluded.checked);
   });
 
   // Bind Search Box controls
@@ -776,11 +828,6 @@ export function renderActionsToolbar(
     callbacks.onUnpinAll?.();
   });
 
-  container.querySelector('#menu-act-unpin')?.addEventListener('click', () => {
-    closeAllPopovers();
-    callbacks.onUnpinAll?.();
-  });
-
   // Action Menu Items
   container.querySelector('#menu-act-physics')?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -788,21 +835,13 @@ export function renderActionsToolbar(
     physicsPopover.style.display = 'block';
     activePopover = 'physics';
   });
-  container.querySelector('#menu-act-rescan')?.addEventListener('click', () => {
-    closeAllPopovers();
-    callbacks.onRescanVault();
-  });
-  container.querySelector('#menu-act-fix-links')?.addEventListener('click', () => {
-    closeAllPopovers();
-    callbacks.onFixBrokenLinks();
-  });
-  container.querySelector('#menu-act-hooks')?.addEventListener('click', () => {
-    closeAllPopovers();
-    callbacks.onInstallHooks?.();
-  });
   container.querySelector('#menu-act-reset-zoom')?.addEventListener('click', () => {
     closeAllPopovers();
     callbacks.onResetZoom?.();
+  });
+  container.querySelector('#menu-act-settings')?.addEventListener('click', () => {
+    closeAllPopovers();
+    callbacks.onOpenSettings?.();
   });
 
   // Click outside to dismiss
@@ -854,8 +893,12 @@ export function renderActionsToolbar(
       // Update Toolbar Pill
       const pill = container.querySelector('#tb-token-pill') as HTMLElement;
       if (pill) {
-        pill.textContent = `${activeFormatted} tok`;
+        const countStr = summary.activeHarnessTokens >= 1000
+          ? (summary.activeHarnessTokens / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
+          : summary.activeHarnessTokens.toString();
+        pill.textContent = `${countStr} active`;
         pill.style.borderColor = badgeColor;
+        pill.style.color = badgeColor;
       }
 
       // Update Popover contents
@@ -942,6 +985,22 @@ export function renderActionsToolbar(
 
     getSearchOptions() {
       return { mode: currentSearchMode, caseSensitive: isCaseSensitive };
+    },
+
+    setFocusMode(mode: FocusMode) {
+      updateFocusUi(mode);
+    },
+
+    setShowOrphans(show: boolean) {
+      if (chkFocusOrphans) {
+        chkFocusOrphans.checked = show;
+      }
+    },
+
+    setShowExcluded(show: boolean) {
+      if (chkFocusExcluded) {
+        chkFocusExcluded.checked = show;
+      }
     },
   };
 }

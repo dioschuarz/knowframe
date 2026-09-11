@@ -78,6 +78,8 @@ pub struct ScanResultPayload {
     pub edges: Vec<EdgePayload>,
     pub token_summary: TokenSummaryPayload,
     pub recommended_hub: Option<String>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub observatory_summary: Option<crate::model::ObservatorySummary>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -126,6 +128,8 @@ pub struct EdgePayload {
     pub anchor: Option<String>,
     #[serde(default)]
     pub line: Option<u32>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolution_status: Option<crate::model::LinkResolutionStatus>,
 }
 
 impl From<&NoteEdge> for EdgePayload {
@@ -138,6 +142,7 @@ impl From<&NoteEdge> for EdgePayload {
             link_type: e.link_type,
             anchor: e.anchor.clone(),
             line: e.line,
+            resolution_status: e.resolution_status,
         }
     }
 }
@@ -180,4 +185,78 @@ pub struct ChangedFileItem {
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct SetHubParams {
     pub hub_id: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct PreviewExclusionParams {
+    pub pattern: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct PreviewExclusionResult {
+    pub matching_count: u32,
+    pub sample_paths: Vec<String>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExcludePathParams {
+    pub pattern: String,
+    pub scope: String, // "scan" | "graph"
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ExcludePathResult {
+    pub success: bool,
+    pub affected_files_count: u32,
+    pub updated_summary: ObservatorySummaryCounts,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObservatorySummaryCounts {
+    pub total_notes: u32,
+    pub connected_notes: u32,
+    pub orphan_notes: u32,
+    pub excluded_notes: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct SuggestExclusionsResult {
+    pub suggestions: Vec<crate::model::NoiseSuggestion>,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetCentralHubParams {
+    pub hub_path: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetCentralHubResult {
+    pub success: bool,
+    pub primary_hub: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SetFocusModeParams {
+    pub focus_mode: crate::model::FocusMode,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct OpenFileNotificationParams {
+    pub file_path: String,
+    pub line_number: u32,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct FixBrokenLinkNotificationParams {
+    pub source_path: String,
+    pub target_path: String,
+    pub line_number: u32,
 }

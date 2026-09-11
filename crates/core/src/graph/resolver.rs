@@ -1,7 +1,7 @@
 //! Relative path resolver, multi-repo/submodule traversal, and dead link & anchor detector.
 
-use crate::model::NoteEdge;
-use std::collections::HashMap;
+use crate::model::{LinkResolutionStatus, LinkType, NoteEdge};
+use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
 /// Precomputed lookup index for O(1) canonical, case-folded, and basename resolution.
@@ -9,10 +9,18 @@ pub struct ResolverIndex<'a> {
     pub known_nodes: &'a HashMap<String, PathBuf>,
     pub case_folded: HashMap<String, String>,
     pub basename_map: HashMap<String, String>,
+    pub excluded_nodes: HashSet<String>,
 }
 
 impl<'a> ResolverIndex<'a> {
     pub fn new(known_nodes: &'a HashMap<String, PathBuf>) -> Self {
+        Self::with_exclusions(known_nodes, HashSet::new())
+    }
+
+    pub fn with_exclusions(
+        known_nodes: &'a HashMap<String, PathBuf>,
+        excluded_nodes: HashSet<String>,
+    ) -> Self {
         let mut case_folded = HashMap::with_capacity(known_nodes.len());
         let mut basename_map = HashMap::with_capacity(known_nodes.len());
 
@@ -28,6 +36,7 @@ impl<'a> ResolverIndex<'a> {
             known_nodes,
             case_folded,
             basename_map,
+            excluded_nodes,
         }
     }
 }
@@ -106,13 +115,11 @@ pub fn resolve_edge_integrity(
             target_stem.clone()
         };
 
-        if let Some(k) = index.basename_map.get(&target_stem.to_lowercase()) {
-            Some(k.clone())
-        } else if let Some(k) = index.basename_map.get(&target_stem_md.to_lowercase()) {
-            Some(k.clone())
-        } else {
-            None
-        }
+        index
+            .basename_map
+            .get(&target_stem.to_lowercase())
+            .or_else(|| index.basename_map.get(&target_stem_md.to_lowercase()))
+            .cloned()
     };
 
     let canonical_target = match matched_target {
@@ -121,6 +128,11 @@ pub fn resolve_edge_integrity(
             edge.target = rel_target.clone();
             edge.id = format!("{}->{}", edge.source, edge.target);
             edge.is_broken = true;
+            edge.resolution_status = Some(if edge.link_type == LinkType::Wikilink {
+                LinkResolutionStatus::BrokenWikilink
+            } else {
+                LinkResolutionStatus::BrokenMissingFile
+            });
             return;
         }
     };
@@ -135,7 +147,8 @@ pub fn resolve_edge_integrity(
 
         if let Some(headings) = node_headings.get(&canonical_target) {
             for h in headings {
-                if slugify_heading(h) == anchor_slug || h.trim().eq_ignore_ascii_case(anchor.trim()) {
+                if slugify_heading(h) == anchor_slug || h.trim().eq_ignore_ascii_case(anchor.trim())
+                {
                     anchor_found = true;
                     break;
                 }
@@ -144,9 +157,58 @@ pub fn resolve_edge_integrity(
 
         if !anchor_found {
             edge.is_broken = true;
+            edge.resolution_status = Some(LinkResolutionStatus::BrokenMissingAnchor);
             return;
         }
     }
 
     edge.is_broken = false;
+    if index.excluded_nodes.contains(&canonical_target) {
+        edge.resolution_status = Some(LinkResolutionStatus::ResolvedExcluded);
+    } else {
+        edge.resolution_status = Some(LinkResolutionStatus::Resolved);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::model::LinkType;
+
+    #[test]
+    fn test_target_resolvability_invariant_with_excluded_target() {
+        let mut known_nodes = HashMap::new();
+        known_nodes.insert(
+            "docs/index.md".to_string(),
+            PathBuf::from("/vault/docs/index.md"),
+        );
+        known_nodes.insert(
+            "packages/lib/README.md".to_string(),
+            PathBuf::from("/vault/packages/lib/README.md"),
+        );
+
+        let mut excluded_nodes = HashSet::new();
+        excluded_nodes.insert("packages/lib/README.md".to_string());
+
+        let index = ResolverIndex::with_exclusions(&known_nodes, excluded_nodes);
+        let headings = HashMap::new();
+
+        let mut edge = NoteEdge::new(
+            "docs/index.md",
+            "../packages/lib/README.md",
+            LinkType::Markdown,
+            "Lib Readme",
+            None,
+            Some(10),
+        );
+
+        resolve_edge_integrity(&mut edge, &index, &headings);
+
+        assert_eq!(edge.target, "packages/lib/README.md");
+        assert!(!edge.is_broken, "Excluded target must not be marked broken");
+        assert_eq!(
+            edge.resolution_status,
+            Some(LinkResolutionStatus::ResolvedExcluded)
+        );
+    }
 }

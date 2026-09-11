@@ -3,7 +3,11 @@ import { createPhysicsSimulation } from './graph/physics';
 import { WebviewRpcBridge } from './rpc/webviewRpc';
 import { renderActionsToolbar } from './components/actionsToolbar';
 import { renderColorManager } from './components/colorManager';
+import { renderInspectorDrawer, InspectorDrawerController } from './components/inspectorDrawer';
+import { renderExclusionModal, ExclusionModalController } from './components/exclusionModal';
+import { renderSettingsDrawer, SettingsDrawerController, type SettingsTab } from './components/settingsDrawer';
 import { filterNodesByQuery, SearchMatchOptions } from './graph/searchMatcher';
+import { filterGraphByFocus } from './graph/focusEngine';
 import {
   NoteNode,
   NoteEdge,
@@ -12,6 +16,7 @@ import {
   PhysicsParameters,
   DEFAULT_PHYSICS_PARAMS,
   LabelsMode,
+  FocusMode,
 } from '../../src/types/graph';
 
 const rpc = new WebviewRpcBridge();
@@ -19,16 +24,113 @@ const rpc = new WebviewRpcBridge();
 const canvas = document.getElementById('graph-canvas') as HTMLCanvasElement;
 const toolbarContainer = document.getElementById('toolbar-container') as HTMLElement;
 const colorModalContainer = document.getElementById('color-modal-container') as HTMLElement;
+const inspectorContainer = document.getElementById('inspector-container') as HTMLElement;
+const exclusionModalContainer = document.getElementById('exclusion-modal-container') as HTMLElement;
+const settingsContainer = document.getElementById('settings-container') as HTMLElement;
 const tooltip = document.getElementById('node-tooltip') as HTMLElement;
 
+let rawNodes: NoteNode[] = [];
+let rawEdges: NoteEdge[] = [];
 let nodes: NoteNode[] = [];
 let edges: NoteEdge[] = [];
 let colorGroups: ClusterColorGroup[] = [];
 let selectedNode: NoteNode | null = null;
 let lastTokenSummary: TokenSummary | null = null;
+let currentPreviewPattern = '';
+
+const savedState = rpc.getState<any>();
+let currentFocusMode: FocusMode = (savedState?.focusMode as FocusMode) || 'all';
+let currentShowOrphans: boolean = savedState?.showOrphans !== undefined ? savedState.showOrphans : true;
+
+const exclusionModal = renderExclusionModal(exclusionModalContainer, {
+  onApply: (pattern, scope) => {
+    rpc.excludePath(pattern, scope);
+  },
+});
+
+const settingsDrawer = renderSettingsDrawer(
+  settingsContainer,
+  {
+    activeTab: 'knowledge',
+    primaryHub: null,
+    brokenLinksCount: 0,
+    scanExclusions: [],
+    graphExclusions: [],
+    colorGroups: colorGroups,
+    gitHooksInstalled: true,
+    gitCommitLatencyMs: 15,
+  },
+  {
+    onChangeHub: () => {
+      rpc.sendMessage({ type: 'setHub', payload: {} });
+    },
+    onFixBrokenLinks: () => {
+      rpc.fixBrokenLinks();
+    },
+    onRescanVault: () => {
+      rpc.rescanVault();
+    },
+    onAddExclusion: (pattern, scope) => {
+      rpc.excludePath(pattern, scope);
+    },
+    onInstallGitHooks: () => {
+      rpc.sendMessage({ type: 'installHooks' });
+    },
+  },
+);
+
+function inspectNode(node: NoteNode): void {
+  selectedNode = node;
+  const inLinks: string[] = [];
+  const outLinks: string[] = [];
+  for (const edge of edges) {
+    const srcId = typeof edge.source === 'object' ? (edge.source as any).id : edge.source;
+    const tgtId = typeof edge.target === 'object' ? (edge.target as any).id : edge.target;
+    if (tgtId === node.id || tgtId === node.label) {
+      inLinks.push(srcId);
+    }
+    if (srcId === node.id || srcId === node.label) {
+      outLinks.push(tgtId);
+    }
+  }
+  const isHub = node.hopDistance === 0;
+  inspectorDrawer.inspectNode(node, inLinks, outLinks, isHub);
+}
+
+const inspectorDrawer = renderInspectorDrawer(inspectorContainer, {
+  onOpenFile: (filePath) => {
+    rpc.openFile(filePath);
+  },
+  onOpenSource: (sourcePath, line) => {
+    rpc.openFile(sourcePath, line);
+  },
+  onSetHub: (hubId) => {
+    rpc.setHub(hubId);
+  },
+  onExclude: (filePath) => {
+    currentPreviewPattern = filePath;
+    rpc.previewExclusion(filePath);
+  },
+  onFixReference: (edge) => {
+    const srcId = typeof edge.source === 'object' ? (edge.source as any).id : edge.source;
+    const tgtId = typeof edge.target === 'object' ? (edge.target as any).id : edge.target;
+    rpc.fixBrokenLink(srcId, edge.line, tgtId);
+  },
+  onNavigateLink: (target) => {
+    const targetNode = nodes.find((n) => n.id === target || n.label === target || n.filePath === target);
+    if (targetNode) {
+      inspectNode(targetNode);
+      renderer.centerOnNode(targetNode.id);
+    } else {
+      rpc.openFile(target);
+    }
+  },
+  onClose: () => {
+    selectedNode = null;
+  },
+});
 
 // Initialize physics parameters and labels mode from saved state or default
-const savedState = rpc.getState<any>();
 let currentPhysicsParams: PhysicsParameters = savedState?.physicsParams
   ? { ...DEFAULT_PHYSICS_PARAMS, ...savedState.physicsParams }
   : { ...DEFAULT_PHYSICS_PARAMS };
@@ -47,8 +149,12 @@ const renderer = new CanvasRenderer({
   canvas,
   initialLabelsMode: currentLabelsMode,
   onNodeClick: (node) => {
-    selectedNode = node;
-    rpc.openFile(node.filePath);
+    inspectNode(node);
+  },
+  onEdgeClick: (edge) => {
+    const srcId = typeof edge.source === 'object' ? (edge.source as any).id : edge.source;
+    const srcNode = nodes.find((n) => n.id === srcId);
+    inspectorDrawer.inspectEdge(edge, srcNode?.label || (typeof srcId === 'string' ? srcId : ''));
   },
   onNodeHover: (node, x, y) => {
     if (node) {
@@ -104,8 +210,19 @@ window.addEventListener('resize', () => {
   physics.resize(window.innerWidth, window.innerHeight);
 });
 
+function applyFocusFilter(reheatAlpha: number = 0.3): void {
+  const result = filterGraphByFocus(rawNodes, rawEdges, currentFocusMode, currentShowOrphans);
+  nodes = result.nodes;
+  edges = result.edges;
+  renderer.setData(nodes, edges);
+  physics.updateData(nodes, edges);
+  physics.restart(reheatAlpha);
+  applySearchFilter();
+  persistState();
+}
+
 function persistState(): void {
-  const pinnedNodes = nodes
+  const pinnedNodes = rawNodes
     .filter((n) => n.fx !== null && n.fx !== undefined)
     .map((n) => ({ id: n.id, fx: n.fx, fy: n.fy }));
 
@@ -113,6 +230,9 @@ function persistState(): void {
     tokenSummary: lastTokenSummary,
     physicsParams: currentPhysicsParams,
     labelsMode: currentLabelsMode,
+    focusMode: currentFocusMode,
+    showOrphans: currentShowOrphans,
+    showExcluded: renderer.getShowExcluded(),
     colorGroups,
     viewTransform: renderer.getViewTransform(),
     pinnedNodes,
@@ -175,19 +295,6 @@ function applySearchFilter(): void {
 
 // Render Actions Toolbar with Icon Popovers and Physics Controls
 const toolbarController = renderActionsToolbar(toolbarContainer, {
-  onSetHub: () => {
-    if (selectedNode) {
-      rpc.setHub(selectedNode.id);
-    } else {
-      rpc.send('triggerSetHubQuickPick');
-    }
-  },
-  onRescanVault: () => {
-    rpc.rescanVault();
-  },
-  onFixBrokenLinks: () => {
-    rpc.fixBrokenLinks();
-  },
   onResetZoom: () => {
     renderer.resetZoom();
   },
@@ -215,6 +322,30 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
     toolbarController.updatePinnedCount(0);
     persistState();
   },
+  onFocusModeChange: (mode) => {
+    currentFocusMode = mode;
+    applyFocusFilter(0.3);
+  },
+  onToggleOrphans: (show) => {
+    currentShowOrphans = show;
+    applyFocusFilter(0.3);
+  },
+  onToggleExcluded: (show) => {
+    renderer.setShowExcluded(show);
+    persistState();
+  },
+  onOpenSettings: (tab) => {
+    settingsDrawer.open((tab as SettingsTab) || 'knowledge');
+  },
+  onOpenTokenBreakdown: () => {
+    if (lastTokenSummary) {
+      const topNodes = [...rawNodes]
+        .sort((a, b) => b.tokens - a.tokens)
+        .slice(0, 10)
+        .map((n) => ({ label: n.label, filePath: n.filePath, tokens: n.tokens }));
+      inspectorDrawer.inspectTokenEconomics(lastTokenSummary, topNodes);
+    }
+  },
   onToggleColorManager: () => {
     renderColorManager(
       colorModalContainer,
@@ -223,15 +354,14 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
         onSaveGroups: (newGroups) => {
           colorGroups = newGroups;
           rpc.updateColorGroups(newGroups);
-          applyClientSideColorGroups(nodes, newGroups);
-          renderer.draw();
-          persistState();
+          applyClientSideColorGroups(rawNodes, newGroups);
+          applyFocusFilter(0.2);
         },
         onClose: () => {
           colorModalContainer.innerHTML = '';
         },
       },
-      nodes,
+      rawNodes,
     );
   },
 });
@@ -239,11 +369,16 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
 // Set initial physics parameters and labels mode in toolbar UI
 toolbarController.setPhysicsParameters(currentPhysicsParams);
 toolbarController.setLabelsMode(currentLabelsMode);
+if (toolbarController.setFocusMode) toolbarController.setFocusMode(currentFocusMode);
+if (toolbarController.setShowOrphans) toolbarController.setShowOrphans(currentShowOrphans);
+if (toolbarController.setShowExcluded && savedState?.showExcluded !== undefined) {
+  toolbarController.setShowExcluded(savedState.showExcluded);
+}
 
 // Listen for updates from VS Code Extension Host
 rpc.on('graphDataUpdate', (data: any) => {
-  nodes = data.nodes || [];
-  edges = data.edges || [];
+  rawNodes = data.nodes || [];
+  rawEdges = data.edges || [];
   if (data.color_groups && data.color_groups.length > 0) {
     colorGroups = data.color_groups;
   }
@@ -251,7 +386,7 @@ rpc.on('graphDataUpdate', (data: any) => {
   // Restore any saved pinned positions if not already set
   if (savedState?.pinnedNodes && Array.isArray(savedState.pinnedNodes)) {
     const pinMap = new Map<string, any>(savedState.pinnedNodes.map((p: any) => [p.id, p]));
-    for (const n of nodes) {
+    for (const n of rawNodes) {
       if (pinMap.has(n.id) && (n.fx === undefined || n.fx === null)) {
         const pin = pinMap.get(n.id);
         n.fx = pin.fx;
@@ -262,12 +397,25 @@ rpc.on('graphDataUpdate', (data: any) => {
   }
 
   if (colorGroups.length > 0) {
-    applyClientSideColorGroups(nodes, colorGroups);
+    applyClientSideColorGroups(rawNodes, colorGroups);
   }
 
-  renderer.setData(nodes, edges);
-  physics.updateData(nodes, edges);
-  applySearchFilter();
+  applyFocusFilter(0.4);
+
+  const brokenLinksCount = rawEdges.filter((e) => e.isBroken).length;
+  const connectedCount = rawNodes.filter((n) => n.hopDistance >= 0).length;
+  const orphanCount = rawNodes.filter((n) => n.hopDistance < 0).length;
+  const excludedCount = rawNodes.filter((n) => n.status === 'excluded').length;
+
+  settingsDrawer.updateProps({
+    primaryHub: data.recommended_hub || (rawNodes[0] ? rawNodes[0].label : null),
+    brokenLinksCount,
+    totalNotes: rawNodes.length,
+    connectedNotes: connectedCount,
+    orphanNotes: orphanCount,
+    excludedNotes: excludedCount,
+    colorGroups,
+  });
 
   if (data.tokenSummary) {
     lastTokenSummary = data.tokenSummary;
@@ -283,6 +431,20 @@ if (savedState && savedState.tokenSummary) {
   lastTokenSummary = savedState.tokenSummary;
   toolbarController.updateTokenSummary(savedState.tokenSummary);
 }
+if (savedState?.showExcluded !== undefined) {
+  renderer.setShowExcluded(savedState.showExcluded);
+}
+
+rpc.on('exclusionPreviewResult', (data: any) => {
+  const matchingCount = data?.matching_count ?? data?.matchingCount ?? 0;
+  const samplePaths = data?.sample_paths ?? data?.samplePaths ?? [];
+  exclusionModal.show({
+    pattern: currentPreviewPattern,
+    matchingCount,
+    samplePaths,
+    scope: 'graph',
+  });
+});
 
 // Request initial or refreshed graph data from Extension Host
 rpc.send('requestGraphData');

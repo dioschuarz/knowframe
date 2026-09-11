@@ -31,7 +31,7 @@ export function registerFixBrokenLinksCommand(
 
     if (selected) {
       const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri;
-      if (!workspaceRoot) return;
+      if (!workspaceRoot) {return;}
 
       const sourceFile = selected.edge.source;
       const fileUri = path.isAbsolute(sourceFile)

@@ -10,7 +10,6 @@ use tokio::time::timeout;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
 
-
 /// Resolves daemon port by reading `.git/llm-wiki.port` or falling back to default 8989.
 pub fn resolve_daemon_port(workspace_root: &Path) -> u16 {
     let port_file = workspace_root.join(".git").join("llm-wiki.port");
@@ -63,7 +62,8 @@ pub async fn execute_git_delta(
             changed_files,
         };
 
-        let notification = JsonRpcNotification::new("git/commitDelta", serde_json::to_value(params)?);
+        let notification =
+            JsonRpcNotification::new("git/commitDelta", serde_json::to_value(params)?);
         let serialized = serde_json::to_string(&notification)?;
 
         // Connect to WebSocket with loopback write-only authorization

@@ -35,8 +35,12 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
         ContextVaultConfig::default()
     };
 
-    let include_set = build_globset(&config.include)?;
-    let exclude_set = build_globset(&config.exclude)?;
+    let include_set = build_globset(&config.get_scan_include())?;
+    let exclude_set = build_globset(&config.get_scan_exclude())?;
+    let exclusion_engine = crate::graph::exclusions::ExclusionEngine::new(
+        &config.get_scan_exclude(),
+        &config.get_graph_exclude(),
+    )?;
 
     let mut topology = GraphTopology::new();
 
@@ -44,7 +48,12 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
     let walker = WalkDir::new(root).into_iter().filter_entry(|e| {
         if e.file_type().is_dir() {
             let name = e.file_name().to_string_lossy();
-            if name == ".git" || name == "node_modules" || name == "target" || name == "dist" || name == "out" {
+            if name == ".git"
+                || name == "node_modules"
+                || name == "target"
+                || name == "dist"
+                || name == "out"
+            {
                 return false;
             }
         }
@@ -85,6 +94,9 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
             let mut node = NoteNode::new(&rel_str, abs_path.to_string_lossy().to_string(), label);
             node.tokens = tokens;
             node.tags = parsed.tags;
+            if exclusion_engine.is_graph_excluded(&rel_str) {
+                node.status = crate::model::NodeStatus::Excluded;
+            }
 
             Some((node, rel_str, parsed.headings, parsed.edges))
         })
@@ -126,7 +138,11 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
             }
             match group.query_type() {
                 crate::model::ClusterQueryType::Tag => {
-                    let pat = group.pattern().to_lowercase().trim_start_matches('#').to_string();
+                    let pat = group
+                        .pattern()
+                        .to_lowercase()
+                        .trim_start_matches('#')
+                        .to_string();
                     if node.tags.iter().any(|t| t.to_lowercase() == pat) {
                         matched_color = Some(group.color.clone());
                         break;
@@ -146,6 +162,8 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
 
         if let Some(color) = matched_color {
             node.color = color;
+        } else if node.status == crate::model::NodeStatus::Excluded {
+            node.color = "#475569".to_string(); // Excluded Slate/Ghost
         } else if node.hop_distance == 0 {
             node.color = "#3B82F6".to_string(); // Active Hub Blue
         } else if node.hop_distance > 0 {
@@ -165,11 +183,13 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
 
     let node_payloads: Vec<NodePayload> = node_vec.iter().map(NodePayload::from).collect();
     let edge_payloads: Vec<EdgePayload> = topology.edges.iter().map(EdgePayload::from).collect();
+    let observatory_summary = topology.compute_observatory_summary(None);
 
     Ok(ScanResultPayload {
         nodes: node_payloads,
         edges: edge_payloads,
         token_summary: TokenSummaryPayload::from(&token_summary),
         recommended_hub: suggested,
+        observatory_summary: Some(observatory_summary),
     })
 }

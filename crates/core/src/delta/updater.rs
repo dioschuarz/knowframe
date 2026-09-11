@@ -69,7 +69,8 @@ pub fn apply_file_delta(
                         .unwrap_or_else(|| rel_str.clone())
                 });
 
-                let mut node = NoteNode::new(&rel_str, abs_path.to_string_lossy().to_string(), label);
+                let mut node =
+                    NoteNode::new(&rel_str, abs_path.to_string_lossy().to_string(), label);
                 node.tokens = tokens;
                 node.tags = parsed.tags;
 

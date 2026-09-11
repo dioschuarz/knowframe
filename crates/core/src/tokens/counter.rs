@@ -30,5 +30,10 @@ pub fn compute_token_summary(
         }
     }
 
-    TokenSummary::new(active_tokens, subcall_tokens, warning_threshold, critical_threshold)
+    TokenSummary::new(
+        active_tokens,
+        subcall_tokens,
+        warning_threshold,
+        critical_threshold,
+    )
 }

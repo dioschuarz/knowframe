@@ -61,11 +61,13 @@ fn test_cross_submodule_relative_links_resolution() {
     }
 
     // Verify cross-submodule relative link resolved
-    let auth_to_billing = result
-        .edges
-        .iter()
-        .find(|e| e.source == "services/auth/README.md" && e.target == "services/billing/README.md");
-    assert!(auth_to_billing.is_some(), "auth README should link to billing README");
+    let auth_to_billing = result.edges.iter().find(|e| {
+        e.source == "services/auth/README.md" && e.target == "services/billing/README.md"
+    });
+    assert!(
+        auth_to_billing.is_some(),
+        "auth README should link to billing README"
+    );
     assert!(!auth_to_billing.unwrap().is_broken);
 
     // Verify nested relative traversal with section anchor resolved
@@ -73,7 +75,10 @@ fn test_cross_submodule_relative_links_resolution() {
         .edges
         .iter()
         .find(|e| e.source == "services/billing/README.md" && e.target == "docs/architecture.md");
-    assert!(billing_to_arch.is_some(), "billing README should link to docs/architecture.md");
+    assert!(
+        billing_to_arch.is_some(),
+        "billing README should link to docs/architecture.md"
+    );
     assert!(!billing_to_arch.unwrap().is_broken);
 }
 

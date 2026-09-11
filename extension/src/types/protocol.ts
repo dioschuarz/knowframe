@@ -34,7 +34,7 @@ export interface NodePayload {
   file_path: string;
   tags: string[];
   color: string;
-  status: 'active' | 'connected_inactive' | 'orphan';
+  status: 'active' | 'connected_inactive' | 'orphan' | 'excluded';
   tokens: number;
   hop_distance: number;
   in_degree: number;
@@ -51,6 +51,12 @@ export interface EdgePayload {
   link_type: 'markdown' | 'wikilink';
   anchor?: string | null;
   line?: number | null;
+  resolution_status?:
+    | 'resolved'
+    | 'resolved_excluded'
+    | 'broken_missing_file'
+    | 'broken_missing_anchor'
+    | 'broken_wikilink';
 }
 
 export interface TokenSummaryPayload {
@@ -61,11 +67,79 @@ export interface TokenSummaryPayload {
   status: 'normal' | 'warning' | 'critical';
 }
 
+export interface ObservatorySummaryPayload {
+  totalNotes: number;
+  connectedNotes: number;
+  orphanNotes: number;
+  excludedNotes: number;
+  brokenLinksCount: number;
+  activeTokens: number;
+  reachableTokens: number;
+  syncStatus: 'synced' | 'syncing' | 'error';
+  lastSyncTimestamp: number;
+}
+
 export interface ScanResultPayload {
   nodes: NodePayload[];
   edges: EdgePayload[];
   token_summary: TokenSummaryPayload;
   recommended_hub: string | null;
+  observatory_summary?: ObservatorySummaryPayload;
+}
+
+export interface PreviewExclusionParams {
+  pattern: string;
+}
+
+export interface PreviewExclusionResult {
+  matchingCount: number;
+  samplePaths: string[];
+}
+
+export interface ExcludePathParams {
+  pattern: string;
+  scope: 'scan' | 'graph';
+}
+
+export interface ExcludePathResult {
+  success: boolean;
+  affectedFilesCount: number;
+  updatedSummary: {
+    totalNotes: number;
+    connectedNotes: number;
+    orphanNotes: number;
+    excludedNotes: number;
+  };
+}
+
+export interface NoiseSuggestionItem {
+  pattern: string;
+  matchingCount: number;
+  reason: string;
+  recommended: boolean;
+}
+
+export interface SuggestExclusionsResult {
+  suggestions: NoiseSuggestionItem[];
+}
+
+export interface SetCentralHubParams {
+  hubPath: string;
+}
+
+export interface SetCentralHubResult {
+  success: boolean;
+  primaryHub: string;
+}
+
+export interface SetFocusModeParams {
+  focusMode: 'hub' | '1_hop' | '2_hops' | 'all';
+}
+
+export interface FixBrokenLinkParams {
+  sourcePath: string;
+  targetPath: string;
+  lineNumber: number;
 }
 
 export interface ChangedFileItem {
@@ -101,11 +175,19 @@ export interface UpdateColorGroupsPayload {
 export type WebviewInboundType =
   | 'openFile'
   | 'setHub'
+  | 'setCentralHub'
   | 'updateColorGroups'
   | 'fixBrokenLinks'
+  | 'fixBrokenLink'
   | 'rescanVault'
   | 'requestGraphData'
-  | 'triggerSetHubQuickPick';
+  | 'triggerSetHubQuickPick'
+  | 'previewExclusion'
+  | 'excludePath'
+  | 'suggestExclusions'
+  | 'setFocusMode'
+  | 'openSettings'
+  | 'reviewIssues';
 
 export interface WebviewInboundMessage {
   requestId?: string;
@@ -118,6 +200,9 @@ export type WebviewOutboundType =
   | 'deltaUpdate'
   | 'tokenBudgetAlert'
   | 'sidecarStatus'
+  | 'exclusionPreviewResult'
+  | 'excludePathResult'
+  | 'noiseSuggestions'
   | 'error';
 
 export interface WebviewOutboundMessage {

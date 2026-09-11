@@ -2,11 +2,18 @@
  * Graph domain entities and types for LLM Wiki Extension.
  */
 
-export type NodeStatus = 'active' | 'connected_inactive' | 'orphan';
+export type NodeStatus = 'active' | 'connected_inactive' | 'orphan' | 'excluded';
+export type LinkResolutionStatus =
+  | 'resolved'
+  | 'resolved_excluded'
+  | 'broken_missing_file'
+  | 'broken_missing_anchor'
+  | 'broken_wikilink';
 export type LinkType = 'markdown' | 'wikilink';
 export type TokenBudgetStatus = 'normal' | 'warning' | 'critical';
 export type ClusterQueryType = 'tag' | 'path';
 export type LabelsMode = 'hover' | 'all';
+export type FocusMode = 'hub' | '1_hop' | '2_hops' | 'all';
 
 export interface NoteNode {
   id: string;
@@ -39,6 +46,7 @@ export interface NoteEdge {
   linkType: LinkType;
   anchor?: string | null;
   line?: number | null;
+  resolutionStatus?: LinkResolutionStatus;
 }
 
 export interface TokenSummary {
@@ -54,6 +62,64 @@ export interface ClusterColorGroup {
   color: string;
   label: string;
   enabled: boolean;
+}
+
+export interface ExclusionRule {
+  id: string;
+  pattern: string;
+  scope: 'scan' | 'graph';
+  matchingCount?: number;
+  createdAt: string;
+}
+
+export interface NoiseSuggestion {
+  pattern: string;
+  matchingCount: number;
+  reason: string;
+  recommended: boolean;
+}
+
+export interface ObservatorySummary {
+  totalNotes: number;
+  connectedNotes: number;
+  orphanNotes: number;
+  excludedNotes: number;
+  brokenLinksCount: number;
+  activeTokens: number;
+  reachableTokens: number;
+  syncStatus: 'synced' | 'syncing' | 'error';
+  lastSyncTimestamp: number;
+}
+
+export interface ScanSettings {
+  include: string[];
+  exclude: string[];
+}
+
+export interface GraphSettings {
+  exclude: string[];
+  focusMode?: FocusMode;
+  showOrphans?: boolean;
+  showExcluded?: boolean;
+}
+
+export interface ContextVaultConfig {
+  version: string;
+  vault: {
+    name: string;
+    mode: 'single-repo' | 'multi-repo' | 'vault';
+    autoDiscoveredHub?: string | null;
+    hubs: string[];
+  };
+  include?: string[];
+  exclude?: string[];
+  scan?: ScanSettings;
+  graph?: GraphSettings;
+  tokenBudget?: {
+    warningThreshold: number;
+    criticalThreshold: number;
+  };
+  colorGroups?: ClusterColorGroup[];
 }
 
 export interface PhysicsParameters {
@@ -98,4 +164,8 @@ export interface GraphData {
   recommendedHub: string | null;
   activeHub: string | null;
   physicsParams?: PhysicsParameters;
+  observatorySummary?: ObservatorySummary;
+  focusMode?: FocusMode;
+  showOrphans?: boolean;
+  showExcluded?: boolean;
 }

@@ -86,11 +86,6 @@
           "command": "llmWiki.showKnowledgeGraph",
           "when": "view == llmWiki.sidebarView",
           "group": "navigation"
-        },
-        {
-          "command": "llmWiki.rescanVault",
-          "when": "view == llmWiki.sidebarView",
-          "group": "navigation"
         }
       ]
     },

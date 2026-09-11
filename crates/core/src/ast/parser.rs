@@ -2,7 +2,7 @@
 
 use super::tags::{extract_frontmatter_tags, extract_inline_hashtags};
 use super::wikilink::{parse_wikilinks, wikilink_to_edge};
-use crate::model::{LinkType, NoteEdge};
+use crate::model::{LinkResolutionStatus, LinkType, NoteEdge};
 use pulldown_cmark::{Event, HeadingLevel, Options, Parser, Tag, TagEnd};
 use std::collections::HashSet;
 
@@ -18,7 +18,10 @@ pub struct ParsedDocument {
 /// Computes 1-based line number for a byte offset in content.
 pub fn offset_to_line(content: &str, offset: usize) -> u32 {
     let safe_offset = offset.min(content.len());
-    let newlines = content[..safe_offset].bytes().filter(|&b| b == b'\n').count();
+    let newlines = content[..safe_offset]
+        .bytes()
+        .filter(|&b| b == b'\n')
+        .count();
     (newlines + 1) as u32
 }
 
@@ -44,9 +47,7 @@ pub fn parse_markdown_ast(file_id: &str, content: &str) -> ParsedDocument {
     // Mask for code blocks and code spans to ensure immunity for regexes
     let mut masked_bytes = content.as_bytes().to_vec();
 
-    let mut parser = Parser::new_ext(content, Options::all()).into_offset_iter();
-
-    while let Some((event, range)) = parser.next() {
+    for (event, range) in Parser::new_ext(content, Options::all()).into_offset_iter() {
         match event {
             Event::Start(Tag::CodeBlock(_)) => {
                 in_code_block = true;
@@ -117,6 +118,7 @@ pub fn parse_markdown_ast(file_id: &str, content: &str) -> ParsedDocument {
                             raw_text,
                             anchor,
                             line,
+                            resolution_status: Some(LinkResolutionStatus::Resolved),
                         });
                     }
                 }

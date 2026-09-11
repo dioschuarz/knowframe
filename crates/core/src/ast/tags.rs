@@ -14,25 +14,31 @@ pub fn extract_frontmatter_tags(content: &str) -> (Vec<String>, Option<String>) 
 
     if let Some(end_idx) = content[3..].find("\n---") {
         let yaml_str = &content[3..3 + end_idx];
-        if let Ok(Value::Mapping(map)) = serde_yaml::from_str::<Value>(yaml_str) {
+        if let Ok(val) = serde_yaml::from_str::<Value>(yaml_str) {
             // Check for title in frontmatter
-            if let Some(Value::String(t)) = map.get(&Value::String("title".to_string())) {
+            if let Some(Value::String(t)) = val.get("title") {
                 title = Some(t.clone());
             }
 
             // Check for tags
-            if let Some(val) = map.get(&Value::String("tags".to_string())) {
-                match val {
+            if let Some(tags_val) = val.get("tags") {
+                match tags_val {
                     Value::Sequence(seq) => {
                         for item in seq {
                             if let Value::String(s) = item {
-                                tags.push(s.to_lowercase().trim().trim_start_matches('#').to_string());
+                                tags.push(
+                                    s.to_lowercase().trim().trim_start_matches('#').to_string(),
+                                );
                             }
                         }
                     }
                     Value::String(s) => {
                         for item in s.split(',') {
-                            let t = item.trim().to_lowercase().trim_start_matches('#').to_string();
+                            let t = item
+                                .trim()
+                                .to_lowercase()
+                                .trim_start_matches('#')
+                                .to_string();
                             if !t.is_empty() {
                                 tags.push(t);
                             }

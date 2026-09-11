@@ -40,7 +40,9 @@ async fn test_ipc_server_authentication_and_scan() {
             format!("Bearer {}", auth_token).parse().unwrap(),
         );
 
-        let (mut ws_stream, _) = connect_async(req).await.expect("Failed to connect with valid token");
+        let (mut ws_stream, _) = connect_async(req)
+            .await
+            .expect("Failed to connect with valid token");
         println!("[TEST] Connected!");
 
         // 2. Send workspace/scan JSON-RPC request
@@ -60,7 +62,8 @@ async fn test_ipc_server_authentication_and_scan() {
         let response_msg = ws_stream.next().await.unwrap().unwrap();
         let text = response_msg.to_text().unwrap();
         println!("[TEST] Received response: {}", text);
-        let rpc_res: JsonRpcResponse = serde_json::from_str(text).expect("Failed to deserialize response");
+        let rpc_res: JsonRpcResponse =
+            serde_json::from_str(text).expect("Failed to deserialize response");
 
         assert_eq!(rpc_res.id, json!(1));
         assert!(rpc_res.result.is_some());

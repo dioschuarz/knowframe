@@ -1,5 +1,5 @@
-use llm_wiki_core::tokens::counter::{count_bpe_tokens, compute_token_summary};
 use llm_wiki_core::model::{NoteNode, TokenBudgetStatus};
+use llm_wiki_core::tokens::counter::{compute_token_summary, count_bpe_tokens};
 
 #[test]
 fn test_exact_bpe_token_calculation() {

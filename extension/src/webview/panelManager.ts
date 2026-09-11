@@ -144,7 +144,7 @@ export class GraphPanelManager implements vscode.Disposable {
   }
 
   private async handleWebviewMessage(message: WebviewInboundMessage): Promise<void> {
-    if (!message || !message.type) return;
+    if (!message || !message.type) {return;}
 
     switch (message.type) {
       case 'openFile': {
@@ -157,8 +157,72 @@ export class GraphPanelManager implements vscode.Disposable {
       case 'setHub': {
         const payload = message.payload as { hub_id: string };
         if (payload?.hub_id && this.ipcClient) {
-          await this.ipcClient.sendRequest('graph/setHub', { hub_id: payload.hub_id });
+          try {
+            await this.ipcClient.sendRequest('graph/setCentralHub', { hubPath: payload.hub_id });
+          } catch {
+            await this.ipcClient.sendRequest('graph/setHub', { hub_id: payload.hub_id });
+          }
           vscode.commands.executeCommand('llmWiki.rescanVault');
+        }
+        break;
+      }
+      case 'fixBrokenLink': {
+        const payload = message.payload as { source: string; line?: number; target: string };
+        if (payload && this.currentScanResult) {
+          const notes = this.currentScanResult.nodes.map((n) => n.file_path || n.id);
+          const picked = await vscode.window.showQuickPick(notes, {
+            placeHolder: `Select replacement target for "${payload.target}" in ${payload.source}`,
+          });
+          if (picked) {
+            await this.replaceLinkInFile(payload.source, payload.line, payload.target, picked);
+            vscode.window.showInformationMessage(`Updated link in ${payload.source} to [[${picked}]]`);
+            vscode.commands.executeCommand('llmWiki.rescanVault');
+          }
+        }
+        break;
+      }
+      case 'previewExclusion': {
+        const payload = message.payload as { pattern: string };
+        if (payload?.pattern && this.ipcClient) {
+          try {
+            const res = await this.ipcClient.sendRequest('graph/previewExclusion', { pattern: payload.pattern });
+            this.panel.webview.postMessage({
+              type: 'exclusionPreviewResult',
+              payload: res,
+            });
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Exclusion preview failed: ${err.message}`);
+          }
+        }
+        break;
+      }
+      case 'excludePath': {
+        const payload = message.payload as { pattern: string; scope: 'scan' | 'graph' };
+        if (payload?.pattern && this.ipcClient) {
+          try {
+            await this.ipcClient.sendRequest('graph/excludePath', {
+              pattern: payload.pattern,
+              scope: payload.scope || 'graph',
+            });
+            vscode.window.showInformationMessage(`Excluded pattern: ${payload.pattern}`);
+            vscode.commands.executeCommand('llmWiki.rescanVault');
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Exclusion failed: ${err.message}`);
+          }
+        }
+        break;
+      }
+      case 'suggestExclusions': {
+        if (this.ipcClient) {
+          try {
+            const res = await this.ipcClient.sendRequest('graph/suggestExclusions', {});
+            this.panel.webview.postMessage({
+              type: 'noiseSuggestions',
+              payload: res,
+            });
+          } catch (err: any) {
+            console.error('Suggest exclusions error:', err);
+          }
         }
         break;
       }
@@ -190,6 +254,30 @@ export class GraphPanelManager implements vscode.Disposable {
     }
   }
 
+  private async replaceLinkInFile(sourcePath: string, _line: number | undefined, oldTarget: string, newTarget: string): Promise<void> {
+    try {
+      let uri: vscode.Uri;
+      if (path.isAbsolute(sourcePath)) {
+        uri = vscode.Uri.file(sourcePath);
+      } else {
+        const root = vscode.workspace.workspaceFolders?.[0]?.uri;
+        if (!root) {return;}
+        uri = vscode.Uri.joinPath(root, sourcePath);
+      }
+      const doc = await vscode.workspace.openTextDocument(uri);
+      const text = doc.getText();
+      const targetClean = newTarget.replace(/\.md$/, '');
+      const newText = text.replace(oldTarget, targetClean);
+      const edit = new vscode.WorkspaceEdit();
+      const fullRange = new vscode.Range(doc.positionAt(0), doc.positionAt(text.length));
+      edit.replace(uri, fullRange, newText);
+      await vscode.workspace.applyEdit(edit);
+      await doc.save();
+    } catch (err: any) {
+      vscode.window.showErrorMessage(`Failed to fix reference: ${err.message}`);
+    }
+  }
+
   private async openDocument(filePath: string, line?: number): Promise<void> {
     try {
       let uri: vscode.Uri;
@@ -197,7 +285,7 @@ export class GraphPanelManager implements vscode.Disposable {
         uri = vscode.Uri.file(filePath);
       } else {
         const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-        if (!root) return;
+        if (!root) {return;}
         uri = vscode.Uri.joinPath(root, filePath);
       }
 

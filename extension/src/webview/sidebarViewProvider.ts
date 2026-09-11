@@ -31,8 +31,11 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(async (data) => {
       switch (data.type) {
         case 'openGraph':
+        case 'reviewIssues':
+        case 'reviewSuggestions':
           vscode.commands.executeCommand('llmWiki.showKnowledgeGraph');
           break;
+        case 'changeHub':
         case 'setHub':
           vscode.commands.executeCommand('llmWiki.setHub');
           break;
@@ -48,6 +51,11 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         case 'openFile':
           if (data.filePath) {
             this.openDocument(data.filePath);
+          }
+          break;
+        case 'openHub':
+          if (data.hubPath) {
+            this.openDocument(data.hubPath);
           }
           break;
       }
@@ -75,7 +83,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         uri = vscode.Uri.file(filePath);
       } else {
         const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-        if (!root) return;
+        if (!root) {return;}
         uri = vscode.Uri.joinPath(root, filePath);
       }
       const doc = await vscode.workspace.openTextDocument(uri);
@@ -86,7 +94,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
   }
 
   private updateHtml(): void {
-    if (!this._view) return;
+    if (!this._view) {return;}
     const webview = this._view.webview;
     const nonce = generateNonce();
     const cspPolicy = buildCspPolicy(nonce, webview.cspSource);
@@ -102,141 +110,187 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
   <title>LLM Wiki Sidebar</title>
   <style>
     body {
-      font-family: var(--vscode-font-family);
-      font-size: var(--vscode-font-size);
-      color: var(--vscode-foreground);
-      background-color: var(--vscode-sideBar-background);
-      padding: 12px;
+      font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
+      font-size: var(--vscode-font-size, 12px);
+      color: var(--vscode-foreground, #d4d4d4);
+      background-color: var(--vscode-sideBar-background, #252526);
+      padding: 10px;
       margin: 0;
       box-sizing: border-box;
     }
-    .btn-primary {
-      width: 100%;
+    .status-dashboard {
       display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 8px;
-      padding: 8px 12px;
-      background: var(--vscode-button-background);
-      color: var(--vscode-button-foreground);
-      border: none;
-      border-radius: 4px;
-      font-weight: 600;
-      cursor: pointer;
-      margin-bottom: 14px;
-      font-size: 13px;
+      flex-direction: column;
+      gap: 10px;
     }
-    .btn-primary:hover {
-      background: var(--vscode-button-hoverBackground);
-    }
-    .card {
-      background: var(--vscode-editor-background);
-      border: 1px solid var(--vscode-widget-border, #333333);
-      border-radius: 6px;
-      padding: 10px;
-      margin-bottom: 12px;
-    }
-    .card-header {
-      font-size: 11px;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-      color: var(--vscode-descriptionForeground);
-      margin-bottom: 6px;
+    .dashboard-attention-card {
       display: flex;
       justify-content: space-between;
       align-items: center;
+      padding: 8px 10px;
+      border-radius: 6px;
+      font-size: 12px;
     }
-    .status-badge {
-      display: inline-flex;
+    .broken-links-alert {
+      background: rgba(239, 68, 68, 0.12);
+      border: 1px solid rgba(239, 68, 68, 0.4);
+    }
+    .suggestions-alert {
+      background: rgba(59, 130, 246, 0.12);
+      border: 1px solid rgba(59, 130, 246, 0.4);
+    }
+    .attention-header {
+      display: flex;
       align-items: center;
-      gap: 4px;
-      font-size: 11px;
-      padding: 2px 6px;
-      border-radius: 10px;
-      background: rgba(16, 185, 129, 0.15);
-      color: #10b981;
+      gap: 6px;
     }
-    .status-dot {
+    .attention-icon {
+      font-size: 14px;
+    }
+    .broken-links-alert .attention-title {
+      color: #ef4444;
+      font-weight: 600;
+    }
+    .suggestions-alert .attention-title {
+      color: #3b82f6;
+      font-weight: 600;
+    }
+    .dash-action-link {
+      background: transparent;
+      border: 1px solid var(--vscode-widget-border, #333);
+      color: var(--vscode-textLink-foreground, #38bdf8);
+      padding: 3px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .dash-action-link:hover {
+      background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1));
+      text-decoration: underline;
+    }
+    .dashboard-pillar {
+      background: var(--vscode-editor-background, #1e1e1e);
+      border: 1px solid var(--vscode-widget-border, #333333);
+      border-radius: 6px;
+      padding: 10px;
+    }
+    .pillar-title {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      color: var(--vscode-descriptionForeground, #888);
+      margin-bottom: 8px;
+      text-transform: uppercase;
+    }
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 6px;
+    }
+    .metric-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      padding: 6px 4px;
+      text-align: center;
+    }
+    .metric-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--vscode-editor-foreground, #fff);
+    }
+    .metric-label {
+      font-size: 9.5px;
+      color: var(--vscode-descriptionForeground, #888);
+      margin-top: 2px;
+    }
+    .token-metrics {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    .token-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 11.5px;
+    }
+    .token-row-label {
+      color: var(--vscode-descriptionForeground, #aaa);
+    }
+    .token-row-value {
+      font-weight: 600;
+      color: var(--vscode-editor-foreground, #fff);
+    }
+    .reachable-row {
+      font-size: 11px;
+      opacity: 0.85;
+    }
+    .token-progress-track {
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+      margin: 2px 0;
+    }
+    .token-progress-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease;
+    }
+    .hub-info-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 6px;
+    }
+    .hub-details {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      max-width: 70%;
+    }
+    .hub-icon {
+      font-size: 12px;
+    }
+    .hub-path-link {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--vscode-textLink-foreground, #38bdf8);
+      cursor: pointer;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .hub-path-link:hover {
+      text-decoration: underline;
+    }
+    .sync-status-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      color: var(--vscode-descriptionForeground, #888);
+    }
+    .sync-indicator-dot {
       width: 6px;
       height: 6px;
       border-radius: 50%;
       background: #10b981;
     }
-    .hub-title {
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--vscode-textLink-foreground);
-      cursor: pointer;
-      word-break: break-all;
-    }
-    .hub-title:hover {
-      text-decoration: underline;
-    }
-    .stats-grid {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      gap: 8px;
-      margin-bottom: 12px;
-    }
-    .stat-box {
-      background: var(--vscode-editor-background);
-      border: 1px solid var(--vscode-widget-border, #333333);
-      border-radius: 4px;
-      padding: 8px;
-      text-align: center;
-    }
-    .stat-val {
-      font-size: 16px;
-      font-weight: bold;
-      color: var(--vscode-editor-foreground);
-    }
-    .stat-lbl {
-      font-size: 10px;
-      color: var(--vscode-descriptionForeground);
-      margin-top: 2px;
-    }
-    .token-bar {
-      height: 4px;
-      background: var(--vscode-widget-border, #333333);
-      border-radius: 2px;
-      margin-top: 6px;
-      overflow: hidden;
-    }
-    .token-fill {
-      height: 100%;
-      background: #3b82f6;
-      width: 10%;
-      transition: width 0.3s ease;
-    }
     .section-title {
-      font-size: 11px;
-      text-transform: uppercase;
-      font-weight: 600;
-      color: var(--vscode-descriptionForeground);
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.6px;
+      color: var(--vscode-descriptionForeground, #888);
       margin: 12px 0 6px 0;
-    }
-    .action-links {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      margin-bottom: 12px;
-    }
-    .action-btn {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      padding: 6px 10px;
-      background: var(--vscode-editor-background);
-      border: 1px solid var(--vscode-widget-border, #333333);
-      color: var(--vscode-foreground);
-      border-radius: 4px;
-      font-size: 12px;
-      cursor: pointer;
-      text-align: left;
-    }
-    .action-btn:hover {
-      background: var(--vscode-list-hoverBackground);
-      color: var(--vscode-list-hoverForeground);
+      text-transform: uppercase;
     }
     .top-notes {
       list-style: none;
@@ -244,13 +298,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       margin: 0;
     }
     .note-item {
-      padding: 6px 8px;
+      padding: 5px 8px;
       border-radius: 4px;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 12px;
+      font-size: 11.5px;
     }
     .note-item:hover {
       background: var(--vscode-list-hoverBackground);
@@ -266,79 +320,101 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       font-size: 10px;
       color: var(--vscode-descriptionForeground);
     }
-    .broken-badge {
-      background: rgba(239, 68, 68, 0.2);
-      color: #ef4444;
-      padding: 1px 5px;
-      border-radius: 8px;
-      font-size: 10px;
-      font-weight: bold;
-    }
   </style>
 </head>
 <body>
-  <button id="btn-open-graph" class="btn-primary">
-    <span>📊 Open Knowledge Graph</span>
-  </button>
-
-  <div class="card">
-    <div class="card-header">
-      <span>Central Knowledge Hub</span>
-      <span class="status-badge"><span class="status-dot"></span> Online</span>
+  <div class="status-dashboard">
+    <!-- Attention Cards (Conditionally shown) -->
+    <div class="dashboard-attention-card broken-links-alert" id="dash-broken-alert" style="display: none;">
+      <div class="attention-header">
+        <span class="attention-icon">⚠️</span>
+        <span class="attention-title" id="dash-broken-text">0 broken links</span>
+      </div>
+      <button class="dash-action-link" id="dash-btn-review-broken">Review issues</button>
     </div>
-    <div id="hub-name" class="hub-title">Scanning vault...</div>
+
+    <div class="dashboard-attention-card suggestions-alert" id="dash-suggestions-alert" style="display: none;">
+      <div class="attention-header">
+        <span class="attention-icon">💡</span>
+        <span class="attention-title" id="dash-suggestions-text">Noise detected</span>
+      </div>
+      <button class="dash-action-link" id="dash-btn-review-suggestions">Review suggestions</button>
+    </div>
+
+    <!-- Pillar 1: Knowledge Base -->
+    <div class="dashboard-pillar pillar-knowledge">
+      <div class="pillar-title">KNOWLEDGE</div>
+      <div class="metrics-grid">
+        <div class="metric-item">
+          <span class="metric-value" id="val-connected">0</span>
+          <span class="metric-label">Connected</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-value" id="val-orphans">0</span>
+          <span class="metric-label">Orphans</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-value" id="val-excluded">0</span>
+          <span class="metric-label">Excluded</span>
+        </div>
+        <div class="metric-item">
+          <span class="metric-value" id="val-links">0</span>
+          <span class="metric-label">Total Links</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pillar 2: AI Context -->
+    <div class="dashboard-pillar pillar-ai-context">
+      <div class="pillar-title">AI CONTEXT</div>
+      <div class="token-metrics">
+        <div class="token-row">
+          <span class="token-row-label">Active Prompt Load (L0)</span>
+          <span class="token-row-value" id="val-l0-tokens">0 tok</span>
+        </div>
+        <div class="token-progress-track">
+          <div class="token-progress-fill" id="val-token-fill" style="width: 0%; background-color: var(--vscode-charts-blue, #3b82f6);"></div>
+        </div>
+        <div class="token-row reachable-row">
+          <span class="token-row-label">Reachable (L1-L2)</span>
+          <span class="token-row-value" id="val-reachable-tokens">0 tok</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pillar 3: Central Hub & Health -->
+    <div class="dashboard-pillar pillar-hub-health">
+      <div class="pillar-title">CENTRAL HUB & HEALTH</div>
+      <div class="hub-info-row">
+        <div class="hub-details">
+          <span class="hub-icon">⭐</span>
+          <span class="hub-path-link" id="dash-hub-link" title="Scanning vault...">Scanning vault...</span>
+        </div>
+        <button class="dash-action-link" id="dash-btn-change-hub">Change</button>
+      </div>
+      <div class="sync-status-row">
+        <span class="sync-indicator-dot"></span>
+        <span class="sync-status-text">Synced</span>
+      </div>
+    </div>
+
+    <div class="section-title">Top Connected Notes</div>
+    <ul id="top-notes-list" class="top-notes">
+      <li style="color: var(--vscode-descriptionForeground); font-size: 11px; padding: 4px;">Loading top hubs...</li>
+    </ul>
   </div>
-
-  <div class="stats-grid">
-    <div class="stat-box">
-      <div id="stat-notes" class="stat-val">-</div>
-      <div class="stat-lbl">Notes</div>
-    </div>
-    <div class="stat-box">
-      <div id="stat-links" class="stat-val">-</div>
-      <div class="stat-lbl">Links</div>
-    </div>
-    <div class="stat-box">
-      <div id="stat-tokens" class="stat-val">-</div>
-      <div class="stat-lbl">Prompt Tokens</div>
-      <div class="token-bar"><div id="token-fill" class="token-fill"></div></div>
-    </div>
-    <div class="stat-box">
-      <div id="stat-broken" class="stat-val">-</div>
-      <div class="stat-lbl">Broken Links</div>
-    </div>
-  </div>
-
-  <div class="section-title">Quick Actions</div>
-  <div class="action-links">
-    <button class="action-btn" id="act-set-hub">🎯 Set Central Hub</button>
-    <button class="action-btn" id="act-rescan">🔄 Rescan Vault</button>
-    <button class="action-btn" id="act-fix-links">🛠️ Fix Broken Links</button>
-    <button class="action-btn" id="act-hooks">⚙️ Install Git Hooks</button>
-  </div>
-
-  <div class="section-title">Top Connected Notes</div>
-  <ul id="top-notes-list" class="top-notes">
-    <li style="color: var(--vscode-descriptionForeground); font-size: 11px; padding: 4px;">Loading top hubs...</li>
-  </ul>
 
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
 
-    document.getElementById('btn-open-graph').addEventListener('click', () => {
-      vscode.postMessage({ type: 'openGraph' });
+    document.getElementById('dash-btn-review-broken')?.addEventListener('click', () => {
+      vscode.postMessage({ type: 'reviewIssues' });
     });
-    document.getElementById('act-set-hub').addEventListener('click', () => {
-      vscode.postMessage({ type: 'setHub' });
+    document.getElementById('dash-btn-review-suggestions')?.addEventListener('click', () => {
+      vscode.postMessage({ type: 'reviewSuggestions' });
     });
-    document.getElementById('act-rescan').addEventListener('click', () => {
-      vscode.postMessage({ type: 'rescanVault' });
-    });
-    document.getElementById('act-fix-links').addEventListener('click', () => {
-      vscode.postMessage({ type: 'fixBrokenLinks' });
-    });
-    document.getElementById('act-hooks').addEventListener('click', () => {
-      vscode.postMessage({ type: 'installHooks' });
+    document.getElementById('dash-btn-change-hub')?.addEventListener('click', () => {
+      vscode.postMessage({ type: 'changeHub' });
     });
 
     let currentData = ${initialData};
@@ -352,39 +428,83 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       }
     });
 
+    function formatTokenCount(tokens) {
+      if (!tokens) return '0';
+      if (tokens >= 1000) {
+        return (tokens / 1000).toFixed(1).replace(/\\.0$/, '') + 'k';
+      }
+      return tokens.toLocaleString();
+    }
+
     function renderData(data) {
       if (!data || !data.nodes) return;
 
       const nodes = data.nodes || [];
       const edges = data.edges || [];
       const summary = data.token_summary || {};
+      const obsSummary = data.observatory_summary;
 
-      document.getElementById('stat-notes').textContent = nodes.length.toLocaleString();
-      document.getElementById('stat-links').textContent = edges.length.toLocaleString();
+      const totalLinks = edges.length;
+      let connectedNotes = 0;
+      let orphanNotes = 0;
+      let excludedNotes = 0;
+      let brokenCount = 0;
+      let activeTokens = 0;
+      let reachableTokens = 0;
 
-      const brokenCount = edges.filter(e => e.is_broken).length;
-      const brokenEl = document.getElementById('stat-broken');
-      brokenEl.textContent = brokenCount;
-      if (brokenCount > 0) {
-        brokenEl.innerHTML = '<span class="broken-badge">' + brokenCount + '</span>';
+      if (obsSummary) {
+        connectedNotes = obsSummary.connectedNotes || 0;
+        orphanNotes = obsSummary.orphanNotes || 0;
+        excludedNotes = obsSummary.excludedNotes || 0;
+        brokenCount = obsSummary.brokenLinksCount || 0;
+        activeTokens = obsSummary.activeTokens || 0;
+        reachableTokens = obsSummary.reachableTokens || 0;
+      } else {
+        connectedNotes = nodes.filter(n => n.status === 'active' || n.status === 'connected_inactive').length;
+        orphanNotes = nodes.filter(n => n.status === 'orphan').length;
+        excludedNotes = nodes.filter(n => n.status === 'excluded').length;
+        brokenCount = edges.filter(e => e.is_broken).length;
+        activeTokens = summary.active_harness_tokens || 0;
+        reachableTokens = summary.subcall_accessible_tokens || 0;
       }
 
-      const activeTokens = summary.active_harness_tokens || 0;
-      document.getElementById('stat-tokens').textContent = activeTokens.toLocaleString();
-      const pct = Math.min(100, Math.round((activeTokens / (summary.critical_threshold || 100000)) * 100));
-      const fill = document.getElementById('token-fill');
-      fill.style.width = pct + '%';
-      if (pct > 80) fill.style.background = '#ef4444';
-      else if (pct > 50) fill.style.background = '#f59e0b';
-      else fill.style.background = '#3b82f6';
+      document.getElementById('val-connected').textContent = connectedNotes.toLocaleString();
+      document.getElementById('val-orphans').textContent = orphanNotes.toLocaleString();
+      document.getElementById('val-excluded').textContent = excludedNotes.toLocaleString();
+      document.getElementById('val-links').textContent = totalLinks.toLocaleString();
 
-      const hubEl = document.getElementById('hub-name');
-      const hubId = data.recommended_hub || (nodes[0] ? nodes[0].id : 'No Hub');
+      const brokenAlert = document.getElementById('dash-broken-alert');
+      const brokenText = document.getElementById('dash-broken-text');
+      if (brokenCount > 0) {
+        brokenAlert.style.display = 'flex';
+        brokenText.textContent = brokenCount + ' broken links';
+      } else {
+        brokenAlert.style.display = 'none';
+      }
+
+      document.getElementById('val-l0-tokens').textContent = formatTokenCount(activeTokens) + ' tok';
+      document.getElementById('val-reachable-tokens').textContent = formatTokenCount(reachableTokens) + ' tok';
+
+      const critThreshold = summary.critical_threshold || 100000;
+      const budgetPct = Math.min(100, Math.round((activeTokens / critThreshold) * 100));
+      const fill = document.getElementById('val-token-fill');
+      fill.style.width = budgetPct + '%';
+      if (budgetPct >= 90) {
+        fill.style.backgroundColor = 'var(--vscode-charts-red, #ef4444)';
+      } else if (budgetPct >= 60) {
+        fill.style.backgroundColor = 'var(--vscode-charts-yellow, #f59e0b)';
+      } else {
+        fill.style.backgroundColor = 'var(--vscode-charts-blue, #3b82f6)';
+      }
+
+      const hubEl = document.getElementById('dash-hub-link');
+      const hubId = data.recommended_hub || (nodes[0] ? nodes[0].id : 'No Hub Selected');
       hubEl.textContent = hubId;
+      hubEl.title = hubId;
       const hubNode = nodes.find(n => n.id === hubId);
       if (hubNode) {
         hubEl.onclick = () => {
-          vscode.postMessage({ type: 'openFile', filePath: hubNode.file_path });
+          vscode.postMessage({ type: 'openHub', hubPath: hubNode.file_path });
         };
       }
 
@@ -395,7 +515,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       for (const node of sorted) {
         const li = document.createElement('li');
         li.className = 'note-item';
-        li.innerHTML = '<span class="note-name" title="' + node.id + '">' + node.label + '</span><span class="note-tokens">' + (node.tokens || 0).toLocaleString() + ' tok</span>';
+        li.innerHTML = '<span class="note-name" title="' + node.id + '">' + node.label + '</span><span class="note-tokens">' + formatTokenCount(node.tokens || 0) + ' tok</span>';
         li.onclick = () => {
           vscode.postMessage({ type: 'openFile', filePath: node.file_path });
         };

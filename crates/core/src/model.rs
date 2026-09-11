@@ -8,6 +8,31 @@ pub enum NodeStatus {
     Active,
     ConnectedInactive,
     Orphan,
+    Excluded,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum LinkResolutionStatus {
+    #[default]
+    Resolved,
+    ResolvedExcluded,
+    BrokenMissingFile,
+    BrokenMissingAnchor,
+    BrokenWikilink,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+pub enum FocusMode {
+    #[serde(rename = "hub")]
+    Hub,
+    #[serde(rename = "1_hop")]
+    OneHop,
+    #[serde(rename = "2_hops")]
+    TwoHops,
+    #[serde(rename = "all")]
+    #[default]
+    All,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -24,32 +49,22 @@ pub enum ClusterQueryType {
     Path,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "kebab-case")]
 pub enum VaultMode {
+    #[default]
     SingleRepo,
     MultiRepo,
     Vault,
 }
 
-impl Default for VaultMode {
-    fn default() -> Self {
-        Self::SingleRepo
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
 #[serde(rename_all = "lowercase")]
 pub enum TokenBudgetStatus {
+    #[default]
     Normal,
     Warning,
     Critical,
-}
-
-impl Default for TokenBudgetStatus {
-    fn default() -> Self {
-        Self::Normal
-    }
 }
 
 /// Represents an individual note node in the knowledge graph.
@@ -82,7 +97,11 @@ pub struct NoteNode {
 }
 
 impl NoteNode {
-    pub fn new(id: impl Into<String>, file_path: impl Into<String>, label: impl Into<String>) -> Self {
+    pub fn new(
+        id: impl Into<String>,
+        file_path: impl Into<String>,
+        label: impl Into<String>,
+    ) -> Self {
         let id_str = id.into();
         Self {
             id: id_str.clone(),
@@ -120,6 +139,9 @@ pub struct NoteEdge {
     pub anchor: Option<String>,
     /// 1-based source line number in originating document
     pub line: Option<u32>,
+    /// Link resolution status
+    #[serde(default)]
+    pub resolution_status: Option<LinkResolutionStatus>,
 }
 
 impl NoteEdge {
@@ -143,6 +165,7 @@ impl NoteEdge {
             raw_text: raw_text.into(),
             anchor,
             line,
+            resolution_status: Some(LinkResolutionStatus::Resolved),
         }
     }
 }
@@ -175,4 +198,39 @@ impl TokenSummary {
             status,
         }
     }
+}
+
+/// Represents an active path ignore or graph exclusion rule.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ExclusionRule {
+    pub id: String,
+    pub pattern: String,
+    pub scope: String,
+    #[serde(default)]
+    pub matching_count: Option<u32>,
+    pub created_at: String,
+}
+
+/// Automated recommendation for noisy clusters of disconnected files.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct NoiseSuggestion {
+    pub pattern: String,
+    pub matching_count: u32,
+    pub reason: String,
+    pub recommended: bool,
+}
+
+/// Aggregated vault health, token load, and topology metrics for Observatory UX.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ObservatorySummary {
+    pub total_notes: u32,
+    pub connected_notes: u32,
+    pub orphan_notes: u32,
+    pub excluded_notes: u32,
+    pub broken_links_count: u32,
+    pub active_tokens: u64,
+    pub reachable_tokens: u64,
+    pub sync_status: String,
+    pub last_sync_timestamp: u64,
 }

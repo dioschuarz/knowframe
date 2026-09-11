@@ -83,5 +83,52 @@ fn bench_graph_topology(c: &mut Criterion) {
     });
 }
 
-criterion_group!(benches, bench_graph_topology);
+fn bench_exclusions(c: &mut Criterion) {
+    let scan_patterns = vec![
+        "**/target/**".to_string(),
+        "**/node_modules/**".to_string(),
+        "**/.git/**".to_string(),
+    ];
+    let graph_patterns = vec![
+        "templates/**".to_string(),
+        "archive/**".to_string(),
+        "daily/**".to_string(),
+        "**/*.ex.md".to_string(),
+        "vendor/**".to_string(),
+    ];
+    let engine =
+        llm_wiki_core::graph::exclusions::ExclusionEngine::new(&scan_patterns, &graph_patterns)
+            .expect("Failed to create ExclusionEngine");
+
+    let paths: Vec<String> = (0..5000)
+        .map(|i| {
+            if i % 10 == 0 {
+                format!("archive/notes/old_meeting_{:04}.md", i)
+            } else if i % 15 == 0 {
+                format!("templates/standard_{:04}.md", i)
+            } else if i % 25 == 0 {
+                format!("node_modules/pkg/doc_{:04}.md", i)
+            } else {
+                format!("notes/feature_specs/spec_{:04}.md", i)
+            }
+        })
+        .collect();
+
+    c.bench_function("exclusion_engine_5000_files", |b| {
+        b.iter(|| {
+            let mut scan_excluded = 0;
+            let mut graph_excluded = 0;
+            for p in &paths {
+                if engine.is_scan_excluded(p) {
+                    scan_excluded += 1;
+                } else if engine.is_graph_excluded(p) {
+                    graph_excluded += 1;
+                }
+            }
+            black_box((scan_excluded, graph_excluded))
+        });
+    });
+}
+
+criterion_group!(benches, bench_graph_topology, bench_exclusions);
 criterion_main!(benches);

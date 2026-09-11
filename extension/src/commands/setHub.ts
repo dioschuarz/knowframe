@@ -54,7 +54,7 @@ export function registerSetHubCommand(
         matchOnDetail: true,
       });
 
-      if (!selected) return;
+      if (!selected) {return;}
       hubId = selected.hubId;
     }
 
