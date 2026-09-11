@@ -702,6 +702,7 @@ dependencies = [
  "lazy_static",
  "petgraph",
  "pulldown-cmark",
+ "rayon",
  "regex",
  "serde",
  "serde_json",

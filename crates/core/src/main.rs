@@ -2,6 +2,7 @@
 
 use clap::{Parser, Subcommand};
 use llm_wiki_core::cli::scan::{execute_scan, ScanOptions};
+use llm_wiki_core::ipc::server::start_ipc_server;
 use std::path::PathBuf;
 
 #[derive(Parser)]
@@ -17,7 +18,7 @@ enum Commands {
     /// Headless scan of workspace documentation, outputting topology JSON
     Scan {
         /// Workspace root directory
-        #[arg(short, long, default_value = ".")]
+        #[arg(default_value = ".")]
         root: PathBuf,
 
         /// Override designated Level 0 Hub
@@ -32,7 +33,7 @@ enum Commands {
     /// Run as background WebSocket JSON-RPC daemon
     Daemon {
         /// Workspace root directory
-        #[arg(short, long, default_value = ".")]
+        #[arg(default_value = ".")]
         root: PathBuf,
 
         /// Port to bind (0 for OS-assigned ephemeral port)
@@ -70,12 +71,22 @@ async fn main() -> anyhow::Result<()> {
             }
         }
         Commands::Daemon { root, port } => {
-            println!("llm-wiki-core daemon starting on root {:?} port {}...", root, port);
-            // Will be fully implemented in Phase 4 (US2)
+            let auth_token = std::env::var("LLM_WIKI_AUTH_TOKEN").ok();
+            let (addr, _shutdown_tx) = start_ipc_server(port, root, auth_token).await?;
+            println!(
+                "{}",
+                serde_json::json!({
+                    "event": "daemon_ready",
+                    "port": addr.port(),
+                    "address": addr.to_string()
+                })
+            );
+            // Wait for termination signal
+            tokio::signal::ctrl_c().await?;
         }
         Commands::GitDelta { root, files } => {
-            println!("Processing git delta for {:?} files in {:?}", files.len(), root);
-            // Will be fully implemented in Phase 6 (US4)
+            let timeout_duration = std::time::Duration::from_millis(500);
+            let _ = llm_wiki_core::cli::delta::execute_git_delta(&root, &files, timeout_duration).await;
         }
     }
 

@@ -32,6 +32,7 @@ walkdir = "2.5"
 regex = "1.10"
 lazy_static = "1.4"
 chrono = { version = "0.4", features = ["serde"] }
+rayon = "1.10"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["async_tokio"] }

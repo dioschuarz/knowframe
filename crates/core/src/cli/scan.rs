@@ -8,7 +8,7 @@ use crate::model::NoteNode;
 use crate::tokens::counter::{compute_token_summary, count_bpe_tokens};
 use anyhow::{Context, Result};
 use globset::{Glob, GlobSet, GlobSetBuilder};
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 use walkdir::WalkDir;
 
 pub struct ScanOptions {
@@ -40,52 +40,60 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
 
     let mut topology = GraphTopology::new();
 
-    // 1. Walk directory and collect markdown files
-    for entry in WalkDir::new(root).into_iter().filter_map(|e| e.ok()) {
-        if !entry.file_type().is_file() {
-            continue;
+    // 1. Walk directory and collect markdown files, pruning ignored directories
+    let walker = WalkDir::new(root).into_iter().filter_entry(|e| {
+        if e.file_type().is_dir() {
+            let name = e.file_name().to_string_lossy();
+            if name == ".git" || name == "node_modules" || name == "target" || name == "dist" || name == "out" {
+                return false;
+            }
         }
+        true
+    });
 
-        let abs_path = entry.path();
-        let rel_path = match abs_path.strip_prefix(root) {
-            Ok(p) => p,
-            Err(_) => continue,
-        };
+    use rayon::prelude::*;
+    use std::path::Path;
 
-        // Convert path to POSIX string
-        let rel_str = rel_path.to_string_lossy().replace('\\', "/");
+    let matching_files: Vec<(PathBuf, String)> = walker
+        .filter_map(|e| e.ok())
+        .filter(|e| e.file_type().is_file())
+        .filter_map(|e| {
+            let abs_path = e.path().to_path_buf();
+            let rel_path = abs_path.strip_prefix(root).ok()?;
+            let rel_str = rel_path.to_string_lossy().replace('\\', "/");
+            if !include_set.is_match(&rel_str) || exclude_set.is_match(&rel_str) {
+                return None;
+            }
+            Some((abs_path, rel_str))
+        })
+        .collect();
 
-        if !include_set.is_match(&rel_str) || exclude_set.is_match(&rel_str) {
-            continue;
-        }
+    let parsed_items: Vec<_> = matching_files
+        .into_par_iter()
+        .filter_map(|(abs_path, rel_str)| {
+            let content = std::fs::read_to_string(&abs_path).ok()?;
+            let tokens = count_bpe_tokens(&content).unwrap_or(0);
+            let parsed = parse_markdown_ast(&rel_str, &content);
 
-        // Read file content
-        let content = match std::fs::read_to_string(abs_path) {
-            Ok(c) => c,
-            Err(_) => continue,
-        };
+            let label = parsed.title.unwrap_or_else(|| {
+                Path::new(&rel_str)
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().to_string())
+                    .unwrap_or_else(|| rel_str.clone())
+            });
 
-        // Compute BPE tokens
-        let tokens = count_bpe_tokens(&content).unwrap_or(0);
+            let mut node = NoteNode::new(&rel_str, abs_path.to_string_lossy().to_string(), label);
+            node.tokens = tokens;
+            node.tags = parsed.tags;
 
-        // Parse AST
-        let parsed = parse_markdown_ast(&rel_str, &content);
+            Some((node, rel_str, parsed.headings, parsed.edges))
+        })
+        .collect();
 
-        let label = parsed.title.unwrap_or_else(|| {
-            rel_path
-                .file_stem()
-                .map(|s| s.to_string_lossy().to_string())
-                .unwrap_or_else(|| rel_str.clone())
-        });
-
-        let mut node = NoteNode::new(&rel_str, abs_path.to_string_lossy().to_string(), label);
-        node.tokens = tokens;
-        node.tags = parsed.tags;
-
+    for (node, rel_str, headings, edges) in parsed_items {
         topology.add_node(node);
-        topology.set_headings(rel_str.clone(), parsed.headings);
-
-        for edge in parsed.edges {
+        topology.set_headings(rel_str, headings);
+        for edge in edges {
             topology.add_edge(edge);
         }
     }

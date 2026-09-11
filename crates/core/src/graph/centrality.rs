@@ -1,4 +1,5 @@
 //! Degree and Brandes betweenness centrality algorithms.
+//! High-performance index-based implementation with zero-allocation inner loops.
 
 use std::collections::{HashMap, VecDeque};
 
@@ -8,76 +9,103 @@ pub fn compute_brandes_betweenness(
     node_ids: &[String],
     adj: &HashMap<String, Vec<String>>,
 ) -> HashMap<String, f64> {
-    let mut cb: HashMap<String, f64> = node_ids.iter().map(|id| (id.clone(), 0.0)).collect();
     let n = node_ids.len();
     if n <= 2 {
-        return cb;
+        return node_ids.iter().map(|id| (id.clone(), 0.0)).collect();
     }
 
-    for s in node_ids {
-        let mut stack = Vec::new();
-        let mut predecessors: HashMap<String, Vec<String>> = HashMap::new();
-        let mut sigma: HashMap<String, f64> = HashMap::new();
-        let mut distance: HashMap<String, i32> = HashMap::new();
+    // 1. Build index map: id -> usize
+    let id_to_idx: HashMap<&str, usize> = node_ids
+        .iter()
+        .enumerate()
+        .map(|(idx, id)| (id.as_str(), idx))
+        .collect();
 
-        for id in node_ids {
-            predecessors.insert(id.clone(), Vec::new());
-            sigma.insert(id.clone(), 0.0);
-            distance.insert(id.clone(), -1);
+    // 2. Build index-based adjacency list: Vec<Vec<usize>>
+    let mut adj_indexed: Vec<Vec<usize>> = vec![Vec::new(); n];
+    for (src, neighbors) in adj {
+        if let Some(&src_idx) = id_to_idx.get(src.as_str()) {
+            for tgt in neighbors {
+                if let Some(&tgt_idx) = id_to_idx.get(tgt.as_str()) {
+                    adj_indexed[src_idx].push(tgt_idx);
+                }
+            }
+        }
+    }
+
+    // 3. Preallocate reusable data structures across BFS runs
+    let mut cb = vec![0.0f64; n];
+    let mut stack = Vec::with_capacity(n);
+    let mut predecessors: Vec<Vec<usize>> = vec![Vec::new(); n];
+    let mut sigma = vec![0.0f64; n];
+    let mut distance = vec![-1i32; n];
+    let mut delta = vec![0.0f64; n];
+    let mut queue = VecDeque::with_capacity(n);
+
+    // 4. Run Brandes BFS from each source node
+    for s in 0..n {
+        stack.clear();
+        queue.clear();
+
+        for i in 0..n {
+            predecessors[i].clear();
+            sigma[i] = 0.0;
+            distance[i] = -1;
+            delta[i] = 0.0;
         }
 
-        *sigma.get_mut(s).unwrap() = 1.0;
-        *distance.get_mut(s).unwrap() = 0;
-
-        let mut queue = VecDeque::new();
-        queue.push_back(s.clone());
+        sigma[s] = 1.0;
+        distance[s] = 0;
+        queue.push_back(s);
 
         while let Some(v) = queue.pop_front() {
-            stack.push(v.clone());
-            let v_dist = *distance.get(&v).unwrap();
-            let v_sigma = *sigma.get(&v).unwrap();
+            stack.push(v);
+            let v_dist = distance[v];
+            let v_sigma = sigma[v];
 
-            if let Some(neighbors) = adj.get(&v) {
-                for w in neighbors {
-                    // w found for the first time?
-                    if *distance.get(w).unwrap() < 0 {
-                        *distance.get_mut(w).unwrap() = v_dist + 1;
-                        queue.push_back(w.clone());
-                    }
+            for &w in &adj_indexed[v] {
+                // First time discovering w?
+                if distance[w] < 0 {
+                    distance[w] = v_dist + 1;
+                    queue.push_back(w);
+                }
 
-                    // shortest path to w via v?
-                    if *distance.get(w).unwrap() == v_dist + 1 {
-                        *sigma.get_mut(w).unwrap() += v_sigma;
-                        predecessors.get_mut(w).unwrap().push(v.clone());
-                    }
+                // Shortest path to w via v?
+                if distance[w] == v_dist + 1 {
+                    sigma[w] += v_sigma;
+                    predecessors[w].push(v);
                 }
             }
         }
 
-        let mut delta: HashMap<String, f64> = node_ids.iter().map(|id| (id.clone(), 0.0)).collect();
-
-        // S returns vertices in order of non-increasing distance from s
+        // Accumulate dependency deltas in reverse topological order
         while let Some(w) = stack.pop() {
-            let w_sigma = *sigma.get(&w).unwrap();
-            let w_delta = *delta.get(&w).unwrap();
+            let w_sigma = sigma[w];
+            let w_delta = delta[w];
 
-            for v in predecessors.get(&w).unwrap() {
-                let v_sigma = *sigma.get(v).unwrap();
-                let coeff = (v_sigma / w_sigma) * (1.0 + w_delta);
-                *delta.get_mut(v).unwrap() += coeff;
+            if w_sigma > 0.0 {
+                let factor = (1.0 + w_delta) / w_sigma;
+                for &v in &predecessors[w] {
+                    delta[v] += sigma[v] * factor;
+                }
             }
 
-            if w != *s {
-                *cb.get_mut(&w).unwrap() += w_delta;
+            if w != s {
+                cb[w] += w_delta;
             }
         }
     }
 
-    // Directed normalization scale: 1.0 / ((N - 1) * (N - 2))
+    // 5. Directed normalization scale: 1.0 / ((N - 1) * (N - 2))
     let scale = 1.0 / (((n - 1) * (n - 2)) as f64);
-    for val in cb.values_mut() {
+    for val in &mut cb {
         *val *= scale;
     }
 
-    cb
+    // 6. Map back to node IDs
+    node_ids
+        .iter()
+        .enumerate()
+        .map(|(idx, id)| (id.clone(), cb[idx]))
+        .collect()
 }

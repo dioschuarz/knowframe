@@ -1,8 +1,36 @@
-//! Relative path resolver and dead link & anchor detector.
+//! Relative path resolver, multi-repo/submodule traversal, and dead link & anchor detector.
 
 use crate::model::NoteEdge;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
+
+/// Precomputed lookup index for O(1) canonical, case-folded, and basename resolution.
+pub struct ResolverIndex<'a> {
+    pub known_nodes: &'a HashMap<String, PathBuf>,
+    pub case_folded: HashMap<String, String>,
+    pub basename_map: HashMap<String, String>,
+}
+
+impl<'a> ResolverIndex<'a> {
+    pub fn new(known_nodes: &'a HashMap<String, PathBuf>) -> Self {
+        let mut case_folded = HashMap::with_capacity(known_nodes.len());
+        let mut basename_map = HashMap::with_capacity(known_nodes.len());
+
+        for k in known_nodes.keys() {
+            case_folded.insert(k.to_lowercase(), k.clone());
+            if let Some(file_name) = Path::new(k).file_name() {
+                let name = file_name.to_string_lossy().to_lowercase();
+                basename_map.entry(name).or_insert_with(|| k.clone());
+            }
+        }
+
+        Self {
+            known_nodes,
+            case_folded,
+            basename_map,
+        }
+    }
+}
 
 /// Normalizes a relative path from the source file directory to a canonical vault POSIX path.
 pub fn resolve_relative_path(source_id: &str, target_path: &str) -> String {
@@ -41,23 +69,66 @@ pub fn slugify_heading(heading: &str) -> String {
 }
 
 /// Resolves edges against registered nodes and validates section heading anchors.
+/// Supports multi-repo cross-submodule traversal, case-insensitive normalization,
+/// and Obsidian shortest-path vault lookups with O(1) indexed lookups.
 pub fn resolve_edge_integrity(
     edge: &mut NoteEdge,
-    known_nodes: &HashMap<String, PathBuf>,
+    index: &ResolverIndex,
     node_headings: &HashMap<String, Vec<String>>,
 ) {
-    let canonical_target = resolve_relative_path(&edge.source, &edge.target);
+    let raw_target = &edge.target;
+    let rel_target = resolve_relative_path(&edge.source, raw_target);
+
+    // Candidate search strategy with O(1) indexing:
+    // 1. Direct relative match
+    // 2. Direct absolute/root match
+    // 3. Case-insensitive relative match
+    // 4. Case-insensitive root match
+    // 5. Obsidian shortest-path match (filename or suffix match)
+    let matched_target = if index.known_nodes.contains_key(&rel_target) {
+        Some(rel_target.clone())
+    } else if index.known_nodes.contains_key(raw_target) {
+        Some(raw_target.clone())
+    } else if let Some(k) = index.case_folded.get(&rel_target.to_lowercase()) {
+        Some(k.clone())
+    } else if let Some(k) = index.case_folded.get(&raw_target.to_lowercase()) {
+        Some(k.clone())
+    } else {
+        // Vault shortest-path or case-folded filename lookup
+        let target_stem = Path::new(raw_target)
+            .file_name()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| raw_target.clone());
+
+        let target_stem_md = if !target_stem.ends_with(".md") {
+            format!("{}.md", target_stem)
+        } else {
+            target_stem.clone()
+        };
+
+        if let Some(k) = index.basename_map.get(&target_stem.to_lowercase()) {
+            Some(k.clone())
+        } else if let Some(k) = index.basename_map.get(&target_stem_md.to_lowercase()) {
+            Some(k.clone())
+        } else {
+            None
+        }
+    };
+
+    let canonical_target = match matched_target {
+        Some(found) => found,
+        None => {
+            edge.target = rel_target.clone();
+            edge.id = format!("{}->{}", edge.source, edge.target);
+            edge.is_broken = true;
+            return;
+        }
+    };
+
     edge.target = canonical_target.clone();
     edge.id = format!("{}->{}", edge.source, edge.target);
 
-    // 1. Validate file existence
-    let target_exists = known_nodes.contains_key(&canonical_target);
-    if !target_exists {
-        edge.is_broken = true;
-        return;
-    }
-
-    // 2. Validate section heading anchor if present
+    // Validate section heading anchor if present
     if let Some(ref anchor) = edge.anchor {
         let anchor_slug = slugify_heading(anchor);
         let mut anchor_found = false;
@@ -73,6 +144,9 @@ pub fn resolve_edge_integrity(
 
         if !anchor_found {
             edge.is_broken = true;
+            return;
         }
     }
+
+    edge.is_broken = false;
 }

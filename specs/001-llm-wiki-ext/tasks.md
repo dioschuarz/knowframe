@@ -67,18 +67,18 @@
 **Independent Test**: Headless extension integration tests (`extension/test/suite/ipc.test.ts`) verify sidecar binary discovery, process spawning, WebSocket handshake, bidirectional ping/pong $<5\text{ ms}$, auto-restart on kill, and clean shutdown on `deactivate()`.
 
 ### Tests for User Story 2 (TDD First) ⚠️
-- [ ] T023 [P] [US2] Write unit tests for sidecar WebSocket JSON-RPC server and message routing in `crates/core/tests/ipc_test.rs`
-- [ ] T024 [P] [US2] Write headless integration tests for Extension Host process manager, SecretStorage, and WebSocket client in `extension/test/suite/ipc.test.ts`
+- [x] T023 [P] [US2] Write unit tests for sidecar WebSocket JSON-RPC server and message routing in `crates/core/tests/ipc_test.rs`
+- [x] T024 [P] [US2] Write headless integration tests for Extension Host process manager, SecretStorage, and WebSocket client in `extension/test/suite/ipc.test.ts`
 
 ### Implementation for User Story 2
-- [ ] T025 [US2] Implement async WebSocket JSON-RPC 2.0 daemon server using `tokio-tungstenite` with auth token handshake (accepting unauthenticated loopback write-only `git/commitDelta` notifications on `127.0.0.1`) in `crates/core/src/ipc/server.rs`
-- [ ] T026 [US2] Implement `workspace/scan` and `graph/setHub` request handlers in `crates/core/src/ipc/handlers.rs`
-- [ ] T027 [P] [US2] Implement `.context-vault.yaml` auto-generator with discovered hub and default globs in `crates/core/src/config/generator.rs`
-- [ ] T028 [US2] Implement Rust binary locator for multi-platform binaries (`linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`, `win32-x64`) in `extension/src/lifecycle/binaryResolver.ts`
-- [ ] T029 [US2] Implement sidecar process supervisor with spawn, auto-restart exponential backoff (max 3 retries), and graceful kill on deactivation in `extension/src/lifecycle/processManager.ts`
-- [ ] T030 [US2] Implement SecretStorage manager in `extension/src/lifecycle/secretManager.ts` to securely generate, store, and retrieve daemon authentication tokens without plaintext disk artifacts, injecting `LLM_WIKI_AUTH_TOKEN` into daemon process environment and `vscode.EnvironmentVariableCollection`
-- [ ] T031 [US2] Implement typed WebSocket JSON-RPC 2.0 client with `requestId` correlation and reconnection logic in `extension/src/ipc/client.ts`
-- [ ] T032 [US2] Wire extension activation lifecycle, secret initialization, and status bar indicator in `extension/src/extension.ts`
+- [x] T025 [US2] Implement async WebSocket JSON-RPC 2.0 daemon server using `tokio-tungstenite` with auth token handshake (accepting unauthenticated loopback write-only `git/commitDelta` notifications on `127.0.0.1`) in `crates/core/src/ipc/server.rs`
+- [x] T026 [US2] Implement `workspace/scan` and `graph/setHub` request handlers in `crates/core/src/ipc/handlers.rs`
+- [x] T027 [P] [US2] Implement `.context-vault.yaml` auto-generator with discovered hub and default globs in `crates/core/src/config/generator.rs`
+- [x] T028 [US2] Implement Rust binary locator for multi-platform binaries (`linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`, `win32-x64`) in `extension/src/lifecycle/binaryResolver.ts`
+- [x] T029 [US2] Implement sidecar process supervisor with spawn, auto-restart exponential backoff (max 3 retries), and graceful kill on deactivation in `extension/src/lifecycle/processManager.ts`
+- [x] T030 [US2] Implement SecretStorage manager in `extension/src/lifecycle/secretManager.ts` to securely generate, store, and retrieve daemon authentication tokens without plaintext disk artifacts, injecting `LLM_WIKI_AUTH_TOKEN` into daemon process environment and `vscode.EnvironmentVariableCollection`
+- [x] T031 [US2] Implement typed WebSocket JSON-RPC 2.0 client with `requestId` correlation and reconnection logic in `extension/src/ipc/client.ts`
+- [x] T032 [US2] Wire extension activation lifecycle, secret initialization, and status bar indicator in `extension/src/extension.ts`
 
 **Checkpoint**: User Stories 1 AND 2 operate together via bidirectional IPC with zero plaintext secrets.
 
@@ -91,22 +91,22 @@
 **Independent Test**: Webview tests and visual verification: verify CSP header contains random nonce, canvas renders at 60 FPS, nodes with `#architecture` take purple base hue modulated by hop distance alpha, active tokens sum Level 0 nodes, and clicking a node dispatches `openFile` to open editor document.
 
 ### Tests for User Story 3 (TDD First) ⚠️
-- [ ] T033 [P] [US3] Write unit tests for Hue + Opacity color composition invariant and cluster rule matching in `extension/webview-ui/test/colorResolver.test.ts`
-- [ ] T034 [P] [US3] Write unit tests for Webview typed RPC message dispatcher and CSP generator in `extension/test/suite/webview.test.ts`
+- [x] T033 [P] [US3] Write unit tests for Hue + Opacity color composition invariant and cluster rule matching in `extension/webview-ui/test/colorResolver.test.ts`
+- [x] T034 [P] [US3] Write unit tests for Webview typed RPC message dispatcher and CSP generator in `extension/test/suite/webview.test.ts`
 
 ### Implementation for User Story 3
-- [ ] T035 [P] [US3] Implement CSP helper generating cryptographic nonces (`script-src 'nonce-${nonce}'`) and `asWebviewUri` resource mapping in `extension/src/webview/cspHelper.ts`
-- [ ] T036 [US3] Implement `WebviewPanel` lifecycle manager with `vscode.setState()`/`getState()` and `WebviewPanelSerializer` (no `retainContextWhenHidden`) in `extension/src/webview/panelManager.ts`
-- [ ] T037 [P] [US3] Implement Webview HTML template and theme CSS custom properties in `extension/webview-ui/index.html` and `extension/webview-ui/src/theme.css`
-- [ ] T038 [US3] Implement 2D Canvas force-directed graph renderer with RequestAnimationFrame loop and DPR scaling in `extension/webview-ui/src/graph/canvasRenderer.ts`
-- [ ] T039 [US3] Implement `d3-force` physics simulation (link force, charge repulsion, center force) in `extension/webview-ui/src/graph/physics.ts`
-- [ ] T040 [US3] Implement Hue + Opacity color resolver applying cluster rule base hue with hop distance alpha decay in `extension/webview-ui/src/graph/colorResolver.ts`
-- [ ] T041 [P] [US3] Implement diagnostic token counter widget displaying active harness tokens, reachable subcall tokens, and threshold alert badges in `extension/webview-ui/src/components/tokenCounter.ts`
-- [ ] T042 [P] [US3] Implement interactive Cluster Groups manager UI (add/edit/toggle tag/path rules) with live preview and save in `extension/webview-ui/src/components/colorManager.ts`
-- [ ] T043 [P] [US3] Implement `actionsToolbar.ts` in `extension/webview-ui/src/components/actionsToolbar.ts` providing quick action buttons (Set as Hub, Rescan Vault, and Fix Broken Links)
-- [ ] T044 [US3] Implement Webview client RPC bridge handling `openFile`, `setHub`, `updateColorGroups`, `fixBrokenLinks`, and `graphDataUpdate` in `extension/webview-ui/src/rpc/webviewRpc.ts`
-- [ ] T045 [US3] Implement Extension Host command `llmWiki.showKnowledgeGraph` (`LLM Wiki: Show Knowledge Graph`) in `extension/src/commands/showGraph.ts`
-- [ ] T046 [US3] Implement extension commands `llmWiki.setHub` (`setHub.ts`), `llmWiki.rescanVault` (`rescanVault.ts`), and `llmWiki.fixBrokenLinks` (`fixBrokenLinks.ts` with QuickPick dead link navigation) in `extension/src/commands/`
+- [x] T035 [P] [US3] Implement CSP helper generating cryptographic nonces (`script-src 'nonce-${nonce}'`) and `asWebviewUri` resource mapping in `extension/src/webview/cspHelper.ts`
+- [x] T036 [US3] Implement `WebviewPanel` lifecycle manager with `vscode.setState()`/`getState()` and `WebviewPanelSerializer` (no `retainContextWhenHidden`) in `extension/src/webview/panelManager.ts`
+- [x] T037 [P] [US3] Implement Webview HTML template and theme CSS custom properties in `extension/webview-ui/index.html` and `extension/webview-ui/src/theme.css`
+- [x] T038 [US3] Implement 2D Canvas force-directed graph renderer with RequestAnimationFrame loop and DPR scaling in `extension/webview-ui/src/graph/canvasRenderer.ts`
+- [x] T039 [US3] Implement `d3-force` physics simulation (link force, charge repulsion, center force) in `extension/webview-ui/src/graph/physics.ts`
+- [x] T040 [US3] Implement Hue + Opacity color resolver applying cluster rule base hue with hop distance alpha decay in `extension/webview-ui/src/graph/colorResolver.ts`
+- [x] T041 [P] [US3] Implement diagnostic token counter widget displaying active harness tokens, reachable subcall tokens, and threshold alert badges in `extension/webview-ui/src/components/tokenCounter.ts`
+- [x] T042 [P] [US3] Implement interactive Cluster Groups manager UI (add/edit/toggle tag/path rules) with live preview and save in `extension/webview-ui/src/components/colorManager.ts`
+- [x] T043 [P] [US3] Implement `actionsToolbar.ts` in `extension/webview-ui/src/components/actionsToolbar.ts` providing quick action buttons (Set as Hub, Rescan Vault, and Fix Broken Links)
+- [x] T044 [US3] Implement Webview client RPC bridge handling `openFile`, `setHub`, `updateColorGroups`, `fixBrokenLinks`, and `graphDataUpdate` in `extension/webview-ui/src/rpc/webviewRpc.ts`
+- [x] T045 [US3] Implement Extension Host command `llmWiki.showKnowledgeGraph` (`LLM Wiki: Show Knowledge Graph`) in `extension/src/commands/showGraph.ts`
+- [x] T046 [US3] Implement extension commands `llmWiki.setHub` (`setHub.ts`), `llmWiki.rescanVault` (`rescanVault.ts`), and `llmWiki.fixBrokenLinks` (`fixBrokenLinks.ts` with QuickPick dead link navigation) in `extension/src/commands/`
 
 **Checkpoint**: Full visual graph interface operational with context economics, toolbar quick actions, and cluster coloring.
 
@@ -119,16 +119,16 @@
 **Independent Test**: Execute `cargo test -p llm-wiki-core --test delta_test`, commit a `.rs` file (verify `prek` skips hook in $<2\text{ ms}$), commit a `.md` file (verify `git-delta` updates graph in $<50\text{ ms}$), and commit with offline daemon (verify hook exits 0 in $<500\text{ ms}$).
 
 ### Tests for User Story 4 (TDD First) ⚠️
-- [ ] T047 [P] [US4] Write unit tests for incremental delta graph patching (add/modify/delete file) in `crates/core/tests/delta_test.rs`
-- [ ] T048 [P] [US4] Write unit tests for `llm-wiki-core git-delta` CLI non-blocking fail-open timeout ($\le 500\text{ ms}$) in `crates/core/tests/cli_delta_test.rs`
-- [ ] T049 [P] [US4] Write unit tests for `prek` installer and 3-tier fallback detection in `extension/test/suite/hooks.test.ts`
+- [x] T047 [P] [US4] Write unit tests for incremental delta graph patching (add/modify/delete file) in `crates/core/tests/delta_test.rs`
+- [x] T048 [P] [US4] Write unit tests for `llm-wiki-core git-delta` CLI non-blocking fail-open timeout ($\le 500\text{ ms}$) in `crates/core/tests/cli_delta_test.rs`
+- [x] T049 [P] [US4] Write unit tests for `prek` installer and 3-tier fallback detection in `extension/test/suite/hooks.test.ts`
 
 ### Implementation for User Story 4
-- [ ] T050 [US4] Implement `llm-wiki-core git-delta` CLI subcommand with 500ms timeout discovering active daemon port via `.git/llm-wiki.port` (fallback 8989) and dispatching loopback `git/commitDelta` notification to daemon socket in `crates/core/src/cli/delta.rs`
-- [ ] T051 [US4] Implement in-memory incremental graph updater patching nodes, edges, betweenness, and tokens in $\le 50\text{ ms}$ in `crates/core/src/delta/updater.rs`
-- [ ] T052 [P] [US4] Implement declarative `.pre-commit-config.yaml` writer with `files: '(?i)\.md$'` and `prek install` runner in `extension/src/hooks/prekInstaller.ts`
-- [ ] T053 [P] [US4] Implement 3-tier fallback installer (Tier 1 `prek`, Tier 2 `pre-commit`, Tier 3 `.git/hooks/post-commit` shell script) in `extension/src/hooks/fallbackInstaller.ts`
-- [ ] T054 [US4] Implement VS Code command `LLM Wiki: Install Git Hooks` in `extension/src/commands/installHooks.ts`
+- [x] T050 [US4] Implement `llm-wiki-core git-delta` CLI subcommand with 500ms timeout discovering active daemon port via `.git/llm-wiki.port` (fallback 8989) and dispatching loopback `git/commitDelta` notification to daemon socket in `crates/core/src/cli/delta.rs`
+- [x] T051 [US4] Implement in-memory incremental graph updater patching nodes, edges, betweenness, and tokens in $\le 50\text{ ms}$ in `crates/core/src/delta/updater.rs`
+- [x] T052 [P] [US4] Implement declarative `.pre-commit-config.yaml` writer with `files: '(?i)\.md$'` and `prek install` runner in `extension/src/hooks/prekInstaller.ts`
+- [x] T053 [P] [US4] Implement 3-tier fallback installer (Tier 1 `prek`, Tier 2 `pre-commit`, Tier 3 `.git/hooks/post-commit` shell script) in `extension/src/hooks/fallbackInstaller.ts`
+- [x] T054 [US4] Implement VS Code command `LLM Wiki: Install Git Hooks` in `extension/src/commands/installHooks.ts`
 
 **Checkpoint**: Event-driven Git hook synchronization functional with zero keystroke polling.
 
@@ -141,11 +141,11 @@
 **Independent Test**: Integration test scanning multi-repo fixture with git submodules; verify cross-boundary relative links resolve without error and dead link detector correctly distinguishes existing submodule targets.
 
 ### Tests for User Story 5 (TDD First) ⚠️
-- [ ] T055 [P] [US5] Write integration tests for cross-submodule link resolution and boundary traversal in `crates/core/tests/submodule_test.rs`
+- [x] T055 [P] [US5] Write integration tests for cross-submodule link resolution and boundary traversal in `crates/core/tests/submodule_test.rs`
 
 ### Implementation for User Story 5
-- [ ] T056 [US5] Implement cross-submodule relative path resolver and vault boundary traversal in `crates/core/src/graph/resolver.rs`
-- [ ] T057 [US5] Support `mode: multi-repo` and `mode: vault` path normalization in `crates/core/src/config/schema.rs` and `crates/core/src/graph/builder.rs`
+- [x] T056 [US5] Implement cross-submodule relative path resolver and vault boundary traversal in `crates/core/src/graph/resolver.rs`
+- [x] T057 [US5] Support `mode: multi-repo` and `mode: vault` path normalization in `crates/core/src/config/schema.rs` and `crates/core/src/graph/builder.rs`
 
 **Checkpoint**: All 5 User Stories complete and verified.
 
@@ -155,10 +155,10 @@
 
 **Purpose**: Final packaging, memory and latency benchmarks, `.vscodeignore` hygiene, and end-to-end quickstart validation.
 
-- [ ] T058 [P] Add `.vscodeignore` exclusions for test files, Rust source code, and intermediate build artifacts per CTaaS GAP-028 in `extension/.vscodeignore`
-- [ ] T059 [P] Configure multi-target `.vsix` packaging script with target binary injection in `extension/package.json` and `scripts/package-all.sh`
-- [ ] T060 Verify resident memory footprint ($\le 35\text{ MB}$ RAM) and graph calculation latency ($\le 200\text{ ms}$ for 1,000 notes) with Criterion benchmarks in `crates/core/benches/graph_bench.rs`
-- [ ] T061 Execute all validation scenarios from `specs/001-llm-wiki-ext/quickstart.md` and document verification results
+- [x] T058 [P] Add `.vscodeignore` exclusions for test files, Rust source code, and intermediate build artifacts per CTaaS GAP-028 in `extension/.vscodeignore`
+- [x] T059 [P] Configure multi-target `.vsix` packaging script with target binary injection in `extension/package.json` and `scripts/package-all.sh`
+- [x] T060 Verify resident memory footprint ($\le 35\text{ MB}$ RAM) and graph calculation latency ($\le 200\text{ ms}$ for 1,000 notes) with Criterion benchmarks in `crates/core/benches/graph_bench.rs`
+- [x] T061 Execute all validation scenarios from `specs/001-llm-wiki-ext/quickstart.md` and document verification results
 
 ---
 

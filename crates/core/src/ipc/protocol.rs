@@ -62,6 +62,16 @@ pub struct JsonRpcNotification {
     pub params: Value,
 }
 
+impl JsonRpcNotification {
+    pub fn new(method: impl Into<String>, params: Value) -> Self {
+        Self {
+            jsonrpc: "2.0".to_string(),
+            method: method.into(),
+            params,
+        }
+    }
+}
+
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct ScanResultPayload {
     pub nodes: Vec<NodePayload>,

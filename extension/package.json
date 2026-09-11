@@ -46,11 +46,21 @@
     ],
     "menus": {
       "commandPalette": [
-        { "command": "llmWiki.showKnowledgeGraph" },
-        { "command": "llmWiki.setHub" },
-        { "command": "llmWiki.rescanVault" },
-        { "command": "llmWiki.fixBrokenLinks" },
-        { "command": "llmWiki.installGitHooks" }
+        {
+          "command": "llmWiki.showKnowledgeGraph"
+        },
+        {
+          "command": "llmWiki.setHub"
+        },
+        {
+          "command": "llmWiki.rescanVault"
+        },
+        {
+          "command": "llmWiki.fixBrokenLinks"
+        },
+        {
+          "command": "llmWiki.installGitHooks"
+        }
       ],
       "editor/title": [
         {
@@ -70,7 +80,11 @@
         },
         "llmWiki.gitHookEngine": {
           "type": "string",
-          "enum": ["prek", "pre-commit", "script"],
+          "enum": [
+            "prek",
+            "pre-commit",
+            "script"
+          ],
           "default": "prek",
           "description": "Git hook orchestrator preference"
         },
@@ -92,9 +106,12 @@
     "compile": "node esbuild.js",
     "watch": "node esbuild.js --watch",
     "package": "node esbuild.js --production",
-    "lint": "eslint src --ext ts"
+    "lint": "eslint src --ext ts",
+    "test": "node --test --experimental-strip-types test/suite/*.test.ts"
   },
   "dependencies": {
+    "@types/d3-force": "^3.0.10",
+    "d3-force": "^3.0.0",
     "ws": "^8.17.1",
     "yaml": "^2.4.5"
   },

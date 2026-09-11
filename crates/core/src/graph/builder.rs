@@ -2,7 +2,7 @@
 
 use super::centrality::compute_brandes_betweenness;
 use super::hops::assign_bfs_hops;
-use super::resolver::resolve_edge_integrity;
+use super::resolver::{resolve_edge_integrity, ResolverIndex};
 use crate::model::{NoteEdge, NoteNode};
 use petgraph::graph::DiGraph;
 use std::collections::HashMap;
@@ -134,8 +134,10 @@ impl GraphTopology {
             .map(|(k, v)| (k.clone(), PathBuf::from(&v.file_path)))
             .collect();
 
+        let index = ResolverIndex::new(&known_nodes);
+
         for edge in &mut self.edges {
-            resolve_edge_integrity(edge, &known_nodes, &self.headings);
+            resolve_edge_integrity(edge, &index, &self.headings);
         }
 
         self.compute_degrees();
