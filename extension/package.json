@@ -9,6 +9,7 @@
     "url": "https://github.com/antigravity/llm_wiki_ext4vsc"
   },
   "license": "MIT",
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -26,27 +27,32 @@
       {
         "command": "llmWiki.showKnowledgeGraph",
         "title": "LLM Wiki: Show Knowledge Graph",
-        "category": "LLM Wiki"
+        "category": "LLM Wiki",
+        "icon": "$(graph)"
       },
       {
         "command": "llmWiki.setHub",
         "title": "LLM Wiki: Set as Central Hub",
-        "category": "LLM Wiki"
+        "category": "LLM Wiki",
+        "icon": "$(target)"
       },
       {
         "command": "llmWiki.rescanVault",
         "title": "LLM Wiki: Rescan Vault",
-        "category": "LLM Wiki"
+        "category": "LLM Wiki",
+        "icon": "$(refresh)"
       },
       {
         "command": "llmWiki.fixBrokenLinks",
         "title": "LLM Wiki: Fix Broken Links",
-        "category": "LLM Wiki"
+        "category": "LLM Wiki",
+        "icon": "$(tools)"
       },
       {
         "command": "llmWiki.installGitHooks",
         "title": "LLM Wiki: Install Git Hooks",
-        "category": "LLM Wiki"
+        "category": "LLM Wiki",
+        "icon": "$(source-control)"
       }
     ],
     "menus": {
