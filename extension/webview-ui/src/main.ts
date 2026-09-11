@@ -3,12 +3,18 @@ import { createPhysicsSimulation } from './graph/physics';
 import { WebviewRpcBridge } from './rpc/webviewRpc';
 import { renderActionsToolbar } from './components/actionsToolbar';
 import { renderColorManager } from './components/colorManager';
-import { NoteNode, NoteEdge, TokenSummary, ClusterColorGroup } from '../../src/types/graph';
+import {
+  NoteNode,
+  NoteEdge,
+  TokenSummary,
+  ClusterColorGroup,
+  PhysicsParameters,
+  DEFAULT_PHYSICS_PARAMS,
+} from '../../src/types/graph';
 
 const rpc = new WebviewRpcBridge();
 
 const canvas = document.getElementById('graph-canvas') as HTMLCanvasElement;
-const tokenContainer = document.getElementById('token-container') as HTMLElement;
 const toolbarContainer = document.getElementById('toolbar-container') as HTMLElement;
 const colorModalContainer = document.getElementById('color-modal-container') as HTMLElement;
 const tooltip = document.getElementById('node-tooltip') as HTMLElement;
@@ -17,6 +23,13 @@ let nodes: NoteNode[] = [];
 let edges: NoteEdge[] = [];
 let colorGroups: ClusterColorGroup[] = [];
 let selectedNode: NoteNode | null = null;
+let lastTokenSummary: TokenSummary | null = null;
+
+// Initialize physics parameters from saved state or default
+const savedState = rpc.getState<any>();
+let currentPhysicsParams: PhysicsParameters = savedState?.physicsParams
+  ? { ...DEFAULT_PHYSICS_PARAMS, ...savedState.physicsParams }
+  : { ...DEFAULT_PHYSICS_PARAMS };
 
 const renderer = new CanvasRenderer({
   canvas,
@@ -42,15 +55,30 @@ const renderer = new CanvasRenderer({
   },
 });
 
-const physics = createPhysicsSimulation(window.innerWidth, window.innerHeight, () => {
-  renderer.draw();
-});
+const physics = createPhysicsSimulation(
+  window.innerWidth,
+  window.innerHeight,
+  () => {
+    renderer.draw();
+  },
+  currentPhysicsParams,
+);
 
 window.addEventListener('resize', () => {
   renderer.resize(window.innerWidth, window.innerHeight);
+  physics.resize(window.innerWidth, window.innerHeight);
 });
 
-// Render Actions Toolbar with Icon Popovers
+function persistState(): void {
+  rpc.setState({
+    nodes,
+    edges,
+    tokenSummary: lastTokenSummary,
+    physicsParams: currentPhysicsParams,
+  });
+}
+
+// Render Actions Toolbar with Icon Popovers and Physics Controls
 const toolbarController = renderActionsToolbar(toolbarContainer, {
   onSetHub: () => {
     if (selectedNode) {
@@ -68,6 +96,14 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
   onResetZoom: () => {
     renderer.resetZoom();
   },
+  onPhysicsChange: (params) => {
+    currentPhysicsParams = params;
+    physics.updateParameters(params);
+    persistState();
+  },
+  onReheat: () => {
+    physics.restart(0.5);
+  },
   onToggleColorManager: () => {
     renderColorManager(colorModalContainer, colorGroups, {
       onSaveGroups: (newGroups) => {
@@ -81,6 +117,9 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
   },
 });
 
+// Set initial physics parameters in toolbar UI
+toolbarController.setPhysicsParameters(currentPhysicsParams);
+
 // Listen for updates from VS Code Extension Host
 rpc.on('graphDataUpdate', (data: any) => {
   nodes = data.nodes || [];
@@ -91,20 +130,21 @@ rpc.on('graphDataUpdate', (data: any) => {
   physics.updateData(nodes, edges);
 
   if (data.tokenSummary) {
+    lastTokenSummary = data.tokenSummary;
     toolbarController.updateTokenSummary(data.tokenSummary);
   }
 
-  rpc.setState({ nodes, edges, tokenSummary: data.tokenSummary });
+  persistState();
 });
 
 // Recover state on tab restoration
-const savedState = rpc.getState<any>();
 if (savedState) {
   nodes = savedState.nodes || [];
   edges = savedState.edges || [];
   renderer.setData(nodes, edges);
   physics.updateData(nodes, edges);
   if (savedState.tokenSummary) {
+    lastTokenSummary = savedState.tokenSummary;
     toolbarController.updateTokenSummary(savedState.tokenSummary);
   }
 }

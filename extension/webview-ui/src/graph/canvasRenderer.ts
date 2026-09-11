@@ -194,7 +194,7 @@ export class CanvasRenderer {
 
     this.ctx.setLineDash([]);
 
-    // 2. Draw Nodes
+    // 2. Draw Nodes (Pass 1: circles & rings)
     for (const node of this.nodes) {
       if (node.x === undefined || node.y === undefined) continue;
 
@@ -222,14 +222,54 @@ export class CanvasRenderer {
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
         this.ctx.stroke();
       }
+    }
 
-      // Draw Label
-      if (this.scale > 0.6 || node.hopDistance === 0 || node === this.hoveredNode) {
-        this.ctx.fillStyle = node.hopDistance === 0 ? '#FFFFFF' : '#CBD5E1';
-        this.ctx.font = node.hopDistance === 0 ? 'bold 12px sans-serif' : '11px sans-serif';
-        this.ctx.textAlign = 'center';
-        this.ctx.fillText(node.label, node.x, node.y + r + 14);
+    // 3. Draw Labels (Pass 2: on top of all circles to prevent clipping)
+    this.ctx.textAlign = 'center';
+    this.ctx.textBaseline = 'top';
+
+    for (const node of this.nodes) {
+      if (node.x === undefined || node.y === undefined) continue;
+
+      const isHub = node.hopDistance === 0;
+      const isHovered = node === this.hoveredNode;
+      const isProminent = (node.inDegree || 0) + (node.outDegree || 0) >= 4 || node.hopDistance === 1;
+
+      // Zoom-adaptive label visibility
+      // scale < 0.45: only hub & hovered
+      // 0.45 <= scale < 0.9: hub, prominent nodes, and hovered
+      // scale >= 0.9: all nodes
+      const shouldDraw =
+        isHovered ||
+        isHub ||
+        (this.scale >= 0.9) ||
+        (this.scale >= 0.45 && isProminent);
+
+      if (!shouldDraw) continue;
+
+      const r = this.getNodeRadius(node);
+      const targetScreenPx = isHub ? 13 : (isHovered ? 12 : 11);
+      // Scale-adaptive font size in world units so on-screen size remains steady and legible
+      const worldFontPx = Math.max(4, Math.min(22, targetScreenPx / this.scale));
+      const labelY = node.y + r + (4 / this.scale);
+
+      this.ctx.font = `${isHub || isHovered ? 'bold ' : ''}${Math.round(worldFontPx)}px sans-serif`;
+
+      // Dark background outline/stroke for maximum legibility across complex graphs
+      this.ctx.lineWidth = 3.5 / this.scale;
+      this.ctx.lineJoin = 'round';
+      this.ctx.strokeStyle = 'rgba(15, 23, 42, 0.92)';
+      this.ctx.strokeText(node.label, node.x, labelY);
+
+      // Label foreground text
+      if (isHub) {
+        this.ctx.fillStyle = '#60A5FA';
+      } else if (isHovered) {
+        this.ctx.fillStyle = '#38BDF8';
+      } else {
+        this.ctx.fillStyle = '#E2E8F0';
       }
+      this.ctx.fillText(node.label, node.x, labelY);
     }
 
     this.ctx.restore();

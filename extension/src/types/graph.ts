@@ -53,10 +53,46 @@ export interface ClusterColorGroup {
   enabled: boolean;
 }
 
+export interface PhysicsParameters {
+  centerGravity: number;
+  linkDistance: number;
+  repulsion: number;
+  collisionRadius: number;
+}
+
+export const DEFAULT_PHYSICS_PARAMS: PhysicsParameters = {
+  centerGravity: 0.15,
+  linkDistance: 80,
+  repulsion: 250,
+  collisionRadius: 18,
+};
+
+export const PHYSICS_PRESETS: Record<'compact' | 'balanced' | 'spacious', PhysicsParameters> = {
+  compact: {
+    centerGravity: 0.35,
+    linkDistance: 50,
+    repulsion: 160,
+    collisionRadius: 14,
+  },
+  balanced: {
+    centerGravity: 0.15,
+    linkDistance: 80,
+    repulsion: 250,
+    collisionRadius: 18,
+  },
+  spacious: {
+    centerGravity: 0.08,
+    linkDistance: 160,
+    repulsion: 450,
+    collisionRadius: 24,
+  },
+};
+
 export interface GraphData {
   nodes: NoteNode[];
   edges: NoteEdge[];
   tokenSummary: TokenSummary;
   recommendedHub: string | null;
   activeHub: string | null;
+  physicsParams?: PhysicsParameters;
 }
