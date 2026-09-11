@@ -1,0 +1,112 @@
+{
+  "name": "llm-wiki",
+  "displayName": "LLM Wiki",
+  "description": "Dynamic Obsidian-style knowledge graph and BPE token economics for LLM prompt context and AI agents",
+  "version": "0.1.0",
+  "publisher": "antigravity",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Visualization",
+    "Other"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./dist/extension.js",
+  "contributes": {
+    "commands": [
+      {
+        "command": "llmWiki.showKnowledgeGraph",
+        "title": "LLM Wiki: Show Knowledge Graph",
+        "category": "LLM Wiki"
+      },
+      {
+        "command": "llmWiki.setHub",
+        "title": "LLM Wiki: Set as Central Hub",
+        "category": "LLM Wiki"
+      },
+      {
+        "command": "llmWiki.rescanVault",
+        "title": "LLM Wiki: Rescan Vault",
+        "category": "LLM Wiki"
+      },
+      {
+        "command": "llmWiki.fixBrokenLinks",
+        "title": "LLM Wiki: Fix Broken Links",
+        "category": "LLM Wiki"
+      },
+      {
+        "command": "llmWiki.installGitHooks",
+        "title": "LLM Wiki: Install Git Hooks",
+        "category": "LLM Wiki"
+      }
+    ],
+    "menus": {
+      "commandPalette": [
+        { "command": "llmWiki.showKnowledgeGraph" },
+        { "command": "llmWiki.setHub" },
+        { "command": "llmWiki.rescanVault" },
+        { "command": "llmWiki.fixBrokenLinks" },
+        { "command": "llmWiki.installGitHooks" }
+      ],
+      "editor/title": [
+        {
+          "command": "llmWiki.showKnowledgeGraph",
+          "when": "resourceExtname == .md",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "LLM Wiki",
+      "properties": {
+        "llmWiki.daemonPort": {
+          "type": "number",
+          "default": 0,
+          "description": "Daemon listening port (0 for OS-assigned ephemeral port)"
+        },
+        "llmWiki.gitHookEngine": {
+          "type": "string",
+          "enum": ["prek", "pre-commit", "script"],
+          "default": "prek",
+          "description": "Git hook orchestrator preference"
+        },
+        "llmWiki.tokenBudgetWarning": {
+          "type": "number",
+          "default": 60000,
+          "description": "Warning threshold for Active Prompt Load tokens"
+        },
+        "llmWiki.tokenBudgetCritical": {
+          "type": "number",
+          "default": 100000,
+          "description": "Critical threshold for Active Prompt Load tokens"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run package",
+    "compile": "node esbuild.js",
+    "watch": "node esbuild.js --watch",
+    "package": "node esbuild.js --production",
+    "lint": "eslint src --ext ts"
+  },
+  "dependencies": {
+    "ws": "^8.17.1",
+    "yaml": "^2.4.5"
+  },
+  "devDependencies": {
+    "@types/node": "^20.14.0",
+    "@types/vscode": "^1.90.0",
+    "@types/ws": "^8.5.10",
+    "@typescript-eslint/eslint-plugin": "^7.13.0",
+    "@typescript-eslint/parser": "^7.13.0",
+    "esbuild": "^0.21.5",
+    "eslint": "^8.57.0",
+    "prettier": "^3.3.2",
+    "typescript": "^5.4.5"
+  }
+}

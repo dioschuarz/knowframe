@@ -8,10 +8,10 @@
 
 **Purpose**: Project initialization, monorepo directory layout, dependencies, and linting configuration.
 
-- [ ] T001 Create project directory structure for Cargo workspace (`crates/core`) and VS Code Extension (`extension/`) per implementation plan
-- [ ] T002 [P] Initialize Cargo workspace root `Cargo.toml` and core sidecar manifest `crates/core/Cargo.toml` with dependencies (`pulldown-cmark`, `petgraph`, `tiktoken-rs`, `tokio`, `tokio-tungstenite`, `serde`, `serde_json`, `serde_yaml`, `clap`, `glob`)
-- [ ] T003 [P] Initialize TypeScript extension host `extension/package.json`, `extension/tsconfig.json`, and `extension/esbuild.js` with dependencies (`ws`, `d3-force`, `@vscode/webview-ui-toolkit`, `@types/vscode`)
-- [ ] T004 [P] Configure code linting and formatting configs: `rustfmt.toml`, `clippy.toml` in repo root, and `extension/.eslintrc.json`, `extension/.prettierrc`
+- [x] T001 Create project directory structure for Cargo workspace (`crates/core`) and VS Code Extension (`extension/`) per implementation plan
+- [x] T002 [P] Initialize Cargo workspace root `Cargo.toml` and core sidecar manifest `crates/core/Cargo.toml` with dependencies (`pulldown-cmark`, `petgraph`, `tiktoken-rs`, `tokio`, `tokio-tungstenite`, `serde`, `serde_json`, `serde_yaml`, `clap`, `glob`)
+- [x] T003 [P] Initialize TypeScript extension host `extension/package.json`, `extension/tsconfig.json`, and `extension/esbuild.js` with dependencies (`ws`, `d3-force`, `@vscode/webview-ui-toolkit`, `@types/vscode`)
+- [x] T004 [P] Configure code linting and formatting configs: `rustfmt.toml`, `clippy.toml` in repo root, and `extension/.eslintrc.json`, `extension/.prettierrc`
 
 ---
 
@@ -21,12 +21,12 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T005 [P] Define core domain types and enums (`NodeStatus` with enum `['active', 'connected_inactive', 'orphan']`, `LinkType` with enum `['markdown', 'wikilink']`, `ClusterQueryType` with enum `['tag', 'path']`) in `crates/core/src/types.rs`
-- [ ] T006 [P] Implement `NoteNode` and `NoteEdge` structs with serde serialization in `crates/core/src/models/mod.rs` enforcing constraints: `id` non-empty POSIX path, `color` 7-char Hex `#RRGGBB`, `hop_distance` $0$ for Hub, $\ge 1$ for hops, $-1$ for orphan
-- [ ] T007 [P] Implement `ContextVaultConfig` and `ClusterColorGroup` schema in `crates/core/src/config/schema.rs` adhering to `contracts/context_vault_schema.json` with regex validation for `query` (`^(tag:#[a-zA-Z0-9_/-]+|path:.+)$`)
-- [ ] T008 [P] Implement JSON-RPC 2.0 protocol types (`JsonRpcRequest`, `JsonRpcResponse`, `JsonRpcError`) adhering to `contracts/ipc_jsonrpc_protocol.json` in `crates/core/src/ipc/protocol.rs`
-- [ ] T009 [P] Define shared TypeScript interfaces for JSON-RPC messages and Webview RPC in `extension/src/types/protocol.ts` adhering to `contracts/ipc_jsonrpc_protocol.json` and `contracts/webview_rpc_protocol.json`
-- [ ] T010 Implement error handling and result types (`WikiError`, `Result<T>`) in `crates/core/src/error.rs`
+- [x] T005 [P] Define core domain types and enums (`NodeStatus` with enum `['active', 'connected_inactive', 'orphan']`, `LinkType` with enum `['markdown', 'wikilink']`, `ClusterQueryType` with enum `['tag', 'path']`) in `crates/core/src/types.rs`
+- [x] T006 [P] Implement `NoteNode` and `NoteEdge` structs with serde serialization in `crates/core/src/models/mod.rs` enforcing constraints: `id` non-empty POSIX path, `color` 7-char Hex `#RRGGBB`, `hop_distance` $0$ for Hub, $\ge 1$ for hops, $-1$ for orphan
+- [x] T007 [P] Implement `ContextVaultConfig` and `ClusterColorGroup` schema in `crates/core/src/config/schema.rs` adhering to `contracts/context_vault_schema.json` with regex validation for `query` (`^(tag:#[a-zA-Z0-9_/-]+|path:.+)$`)
+- [x] T008 [P] Implement JSON-RPC 2.0 protocol types (`JsonRpcRequest`, `JsonRpcResponse`, `JsonRpcError`) adhering to `contracts/ipc_jsonrpc_protocol.json` in `crates/core/src/ipc/protocol.rs`
+- [x] T009 [P] Define shared TypeScript interfaces for JSON-RPC messages and Webview RPC in `extension/src/types/protocol.ts` adhering to `contracts/ipc_jsonrpc_protocol.json` and `contracts/webview_rpc_protocol.json`
+- [x] T010 Implement error handling and result types (`WikiError`, `Result<T>`) in `crates/core/src/error.rs`
 
 **Checkpoint**: Foundation ready — user story implementation can now begin in parallel.
 
@@ -41,20 +41,20 @@
 ### Tests for User Story 1 (TDD First) ⚠️
 > **NOTE: Write these tests FIRST, ensure they FAIL before implementation**
 
-- [ ] T011 [P] [US1] Write unit tests for Markdown AST link and hashtag parsing (code-block link immunity, wikilinks, inline `#tags`) in `crates/core/tests/ast_test.rs`
-- [ ] T012 [P] [US1] Write unit tests for graph centrality (in-degree, out-degree, Brandes betweenness) and circular link BFS hop distance in `crates/core/tests/graph_test.rs`
-- [ ] T013 [P] [US1] Write unit tests for BPE token calculation (`cl100k_base`) with 0% deviation in `crates/core/tests/token_test.rs`
+- [x] T011 [P] [US1] Write unit tests for Markdown AST link and hashtag parsing (code-block link immunity, wikilinks, inline `#tags`) in `crates/core/tests/ast_test.rs`
+- [x] T012 [P] [US1] Write unit tests for graph centrality (in-degree, out-degree, Brandes betweenness) and circular link BFS hop distance in `crates/core/tests/graph_test.rs`
+- [x] T013 [P] [US1] Write unit tests for BPE token calculation (`cl100k_base`) with 0% deviation in `crates/core/tests/token_test.rs`
 
 ### Implementation for User Story 1
-- [ ] T014 [P] [US1] Implement `pulldown-cmark` streaming pull parser ignoring links in code blocks (`CodeBlock`) and code spans, splitting URL anchor fragments (`#section`) into `NoteEdge.anchor` in `crates/core/src/ast/parser.rs`
-- [ ] T015 [P] [US1] Implement Obsidian wikilink tokenizer (`[[target|label]]`) and anchor parser (`#section`) in `crates/core/src/ast/wikilink.rs`
-- [ ] T016 [P] [US1] Implement hashtag and YAML frontmatter tag extractor normalizing to lowercase in `crates/core/src/ast/tags.rs`
-- [ ] T017 [US1] Implement relative file path resolver and dead link detector (verifying disk existence, recording 1-based source line numbers in `NoteEdge.line`, and validating `#section` heading anchors against target note AST, setting `is_broken: true`) in `crates/core/src/graph/resolver.rs`
-- [ ] T018 [US1] Implement `petgraph::DiGraph` graph builder mapping parsed notes and edges in `crates/core/src/graph/builder.rs`
-- [ ] T019 [US1] Implement Brandes betweenness centrality algorithm and degree calculator in `crates/core/src/graph/centrality.rs`
-- [ ] T020 [US1] Implement BFS shortest-path hop resolver assigning Level 0 (Hub), Level 1, Level 2, Level 3+, and Orphan (-1) in `crates/core/src/graph/hops.rs`
-- [ ] T021 [US1] Implement exact BPE token counter (`cl100k_base`) and cumulative branch token accumulator in `crates/core/src/tokens/counter.rs`
-- [ ] T022 [US1] Implement CLI `scan` subcommand outputting full JSON topology in `crates/core/src/cli/scan.rs` and wire into `crates/core/src/main.rs`
+- [x] T014 [P] [US1] Implement `pulldown-cmark` streaming pull parser ignoring links in code blocks (`CodeBlock`) and code spans, splitting URL anchor fragments (`#section`) into `NoteEdge.anchor` in `crates/core/src/ast/parser.rs`
+- [x] T015 [P] [US1] Implement Obsidian wikilink tokenizer (`[[target|label]]`) and anchor parser (`#section`) in `crates/core/src/ast/wikilink.rs`
+- [x] T016 [P] [US1] Implement hashtag and YAML frontmatter tag extractor normalizing to lowercase in `crates/core/src/ast/tags.rs`
+- [x] T017 [US1] Implement relative file path resolver and dead link detector (verifying disk existence, recording 1-based source line numbers in `NoteEdge.line`, and validating `#section` heading anchors against target note AST, setting `is_broken: true`) in `crates/core/src/graph/resolver.rs`
+- [x] T018 [US1] Implement `petgraph::DiGraph` graph builder mapping parsed notes and edges in `crates/core/src/graph/builder.rs`
+- [x] T019 [US1] Implement Brandes betweenness centrality algorithm and degree calculator in `crates/core/src/graph/centrality.rs`
+- [x] T020 [US1] Implement BFS shortest-path hop resolver assigning Level 0 (Hub), Level 1, Level 2, Level 3+, and Orphan (-1) in `crates/core/src/graph/hops.rs`
+- [x] T021 [US1] Implement exact BPE token counter (`cl100k_base`) and cumulative branch token accumulator in `crates/core/src/tokens/counter.rs`
+- [x] T022 [US1] Implement CLI `scan` subcommand outputting full JSON topology in `crates/core/src/cli/scan.rs` and wire into `crates/core/src/main.rs`
 
 **Checkpoint**: User Story 1 is fully functional and headless testable (MVP complete).
 
