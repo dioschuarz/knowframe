@@ -57,7 +57,6 @@ export function renderActionsToolbar(
             <circle cx="11" cy="8" r="1.6" fill="currentColor"/>
             <circle cx="7" cy="12" r="1.6" fill="currentColor"/>
           </svg>
-          <span class="tb-btn-label">Gravity</span>
         </button>
 
         <!-- Set Hub Button -->
@@ -70,7 +69,6 @@ export function renderActionsToolbar(
             <line x1="1" y1="8" x2="3" y2="8"/>
             <line x1="13" y1="8" x2="15" y2="8"/>
           </svg>
-          <span class="tb-btn-label">Set Hub</span>
         </button>
 
         <!-- Clusters Button -->
@@ -78,7 +76,6 @@ export function renderActionsToolbar(
           <svg class="tb-svg" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 0a8 8 0 1 0 8 8 8 8 0 0 0-8-8zm-4.5 9.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm2-4a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm5 0a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm2 4a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5z"/>
           </svg>
-          <span class="tb-btn-label">Clusters</span>
         </button>
 
         <!-- Labels Mode Toggle Button -->
@@ -86,7 +83,6 @@ export function renderActionsToolbar(
           <svg class="tb-svg" viewBox="0 0 16 16" fill="currentColor">
             <path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v7A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 13.5 3h-11zm2.854 7.354l1.5-4a.5.5 0 0 1 .94 0l1.5 4a.5.5 0 0 1-.936.352L7.886 9.5H6.468l-.472 1.206a.5.5 0 1 1-.936-.352zM7.177 7.7l-.469 1.2h.944l-.475-1.2zM11 7a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0v-3A.5.5 0 0 1 11 7z"/>
           </svg>
-          <span id="tb-label-text" class="tb-btn-label">Labels</span>
         </button>
 
         <!-- Reset Zoom Button -->
@@ -94,7 +90,6 @@ export function renderActionsToolbar(
           <svg class="tb-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M1 5V1h4M15 5V1h-4M1 11v4h4M15 11v4h-4"/>
           </svg>
-          <span class="tb-btn-label">Reset</span>
         </button>
 
         <div class="tb-divider"></div>
@@ -106,7 +101,6 @@ export function renderActionsToolbar(
             <circle cx="8" cy="8" r="1.5"/>
             <circle cx="8" cy="13" r="1.5"/>
           </svg>
-          <span class="tb-btn-label">Actions ▾</span>
         </button>
       </div>
 
@@ -451,14 +445,12 @@ export function renderActionsToolbar(
     const btnHover = container.querySelector('#btn-lbl-hover') as HTMLElement;
     const btnAll = container.querySelector('#btn-lbl-all') as HTMLElement;
     const tbBtn = container.querySelector('#btn-toggle-labels') as HTMLElement;
-    const tbLabelText = container.querySelector('#tb-label-text') as HTMLElement;
     const menuTitle = container.querySelector('#menu-title-labels') as HTMLElement;
 
     if (mode === 'hover') {
       btnHover?.classList.add('active');
       btnAll?.classList.remove('active');
       tbBtn?.classList.remove('active');
-      if (tbLabelText) tbLabelText.textContent = 'Labels';
       tbBtn?.setAttribute('data-tooltip-title', 'File Names: Hover Only (Clean)');
       tbBtn?.setAttribute('data-tooltip-desc', 'Click to switch to Show All mode and display names for all notes.');
       if (menuTitle) menuTitle.textContent = 'File Names: Hover Only (Clean)';
@@ -466,7 +458,6 @@ export function renderActionsToolbar(
       btnHover?.classList.remove('active');
       btnAll?.classList.add('active');
       tbBtn?.classList.add('active');
-      if (tbLabelText) tbLabelText.textContent = 'Labels: All';
       tbBtn?.setAttribute('data-tooltip-title', 'File Names: Show All');
       tbBtn?.setAttribute('data-tooltip-desc', 'Click to switch to Hover Only mode for a clean noise-free graph.');
       if (menuTitle) menuTitle.textContent = 'File Names: Show All';

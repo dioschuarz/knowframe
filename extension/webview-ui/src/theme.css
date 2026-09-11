@@ -64,32 +64,20 @@ body, html {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  height: 28px;
-  padding: 0 8px;
-  gap: 5px;
+  height: 30px;
+  width: 30px;
+  padding: 0;
   background: transparent;
   border: 1px solid transparent;
   border-radius: 5px;
   color: var(--fg-color);
   cursor: pointer;
   transition: all 0.15s ease;
-  white-space: nowrap;
-}
-
-.tb-btn-label {
-  font-size: 11px;
-  font-weight: 500;
-  color: var(--fg-color);
-  user-select: none;
 }
 
 .tb-icon-btn:hover {
   background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1));
   border-color: var(--border-color);
-  color: var(--vscode-list-hoverForeground, #ffffff);
-}
-
-.tb-icon-btn:hover .tb-btn-label {
   color: var(--vscode-list-hoverForeground, #ffffff);
 }
 
@@ -99,11 +87,6 @@ body, html {
   border-color: var(--vscode-button-background, #0e639c);
 }
 
-.tb-icon-btn.active .tb-btn-label {
-  color: var(--vscode-button-foreground, #ffffff);
-  font-weight: 600;
-}
-
 .tb-token-btn {
   width: auto;
   padding: 0 8px;
@@ -111,8 +94,8 @@ body, html {
 }
 
 .tb-svg {
-  width: 14px;
-  height: 14px;
+  width: 15px;
+  height: 15px;
   flex-shrink: 0;
 }
 
@@ -172,20 +155,6 @@ body, html {
   font-size: 10px;
   color: var(--vscode-descriptionForeground, #94a3b8);
   line-height: 1.35;
-}
-
-@media (max-width: 720px) {
-  .tb-btn-label {
-    display: none;
-  }
-  .tb-icon-btn {
-    padding: 0;
-    width: 28px;
-  }
-  .tb-token-btn {
-    width: auto;
-    padding: 0 6px;
-  }
 }
 
 /* Floating Popovers */
