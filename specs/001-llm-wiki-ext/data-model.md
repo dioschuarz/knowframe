@@ -181,3 +181,32 @@ Payload emitted by Git hook (`prek` / `post-commit`) and processed incrementally
 }
 ```
 *Status values*: `added`, `modified`, `deleted`.
+
+---
+
+### 2.6. `ContextVaultConfig`
+Workspace-level configuration parsed from `.context-vault.yaml` defining scanning scope, hubs, budget alerts, and color groups.
+
+| Field | Type | Description | Validation / Constraints |
+| :--- | :--- | :--- | :--- |
+| `version` | `String` | Configuration format version | Default: `"1.0"` |
+| `vault` | `VaultSettings` | Vault identity and hub configuration | Required object |
+| `include` | `Vec<String>` | Glob patterns to scan for Markdown notes | Default: `["**/*.md"]` |
+| `exclude` | `Vec<String>` | Glob patterns to ignore during scan | Default: `["node_modules/**", ".git/**", "target/**", "dist/**"]` |
+| `token_budget` | `TokenBudgetSettings` | BPE token alert thresholds | Warning (default 60,000) and Critical (default 100,000) |
+| `color_groups` | `Vec<ClusterColorGroup>` | Chromatic cluster mapping rules | List of hashtag/path rules |
+
+#### `VaultSettings`
+| Field | Type | Description | Validation / Constraints |
+| :--- | :--- | :--- | :--- |
+| `name` | `String` | Human-readable vault name | Default: `"Workspace Context"` |
+| `mode` | `VaultMode` | Operational vault mode | Enum: `single-repo`, `multi-repo`, `vault` |
+| `auto_discovered_hub` | `Option<String>` | Automatically selected high-centrality Hub | Optional relative path (e.g. `AGENTS.md`) |
+| `hubs` | `Vec<String>` | Explicit user-designated Level 0 Hub files | List of relative file paths |
+
+#### `TokenBudgetSettings`
+| Field | Type | Description | Validation / Constraints |
+| :--- | :--- | :--- | :--- |
+| `warning_threshold` | `u64` | Soft alert threshold for Active Prompt Load | Min: 0, Default: 60,000 |
+| `critical_threshold` | `u64` | Hard alert threshold for Active Prompt Load | Min: 0, Default: 100,000 |
+

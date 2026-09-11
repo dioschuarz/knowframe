@@ -46,7 +46,7 @@
 - [ ] T013 [P] [US1] Write unit tests for BPE token calculation (`cl100k_base`) with 0% deviation in `crates/core/tests/token_test.rs`
 
 ### Implementation for User Story 1
-- [ ] T014 [P] [US1] Implement `pulldown-cmark` streaming pull parser ignoring links in code blocks (`CodeBlock`) and code spans in `crates/core/src/ast/parser.rs`
+- [ ] T014 [P] [US1] Implement `pulldown-cmark` streaming pull parser ignoring links in code blocks (`CodeBlock`) and code spans, splitting URL anchor fragments (`#section`) into `NoteEdge.anchor` in `crates/core/src/ast/parser.rs`
 - [ ] T015 [P] [US1] Implement Obsidian wikilink tokenizer (`[[target|label]]`) and anchor parser (`#section`) in `crates/core/src/ast/wikilink.rs`
 - [ ] T016 [P] [US1] Implement hashtag and YAML frontmatter tag extractor normalizing to lowercase in `crates/core/src/ast/tags.rs`
 - [ ] T017 [US1] Implement relative file path resolver and dead link detector (verifying disk existence and validating `#section` heading anchors against target note AST, setting `is_broken: true`) in `crates/core/src/graph/resolver.rs`
@@ -124,7 +124,7 @@
 - [ ] T049 [P] [US4] Write unit tests for `prek` installer and 3-tier fallback detection in `extension/test/suite/hooks.test.ts`
 
 ### Implementation for User Story 4
-- [ ] T050 [US4] Implement `llm-wiki-core git-delta` CLI subcommand with 500ms timeout connecting to daemon socket in `crates/core/src/cli/delta.rs`
+- [ ] T050 [US4] Implement `llm-wiki-core git-delta` CLI subcommand with 500ms timeout discovering active daemon port via `.git/llm-wiki.port` (fallback 8989) and dispatching loopback `git/commitDelta` notification to daemon socket in `crates/core/src/cli/delta.rs`
 - [ ] T051 [US4] Implement in-memory incremental graph updater patching nodes, edges, betweenness, and tokens in $\le 50\text{ ms}$ in `crates/core/src/delta/updater.rs`
 - [ ] T052 [P] [US4] Implement declarative `.pre-commit-config.yaml` writer with `files: '(?i)\.md$'` and `prek install` runner in `extension/src/hooks/prekInstaller.ts`
 - [ ] T053 [P] [US4] Implement 3-tier fallback installer (Tier 1 `prek`, Tier 2 `pre-commit`, Tier 3 `.git/hooks/post-commit` shell script) in `extension/src/hooks/fallbackInstaller.ts`

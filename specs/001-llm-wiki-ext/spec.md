@@ -193,7 +193,7 @@ So that cross-project architecture references do not generate false-positive dea
 
 #### 4. Sidecar Architecture & IPC Protocol
 - **FR-018**: Rust core MUST compile as a standalone binary (`llm-wiki-core`) supporting CLI invocation and daemon/IPC mode.
-- **FR-019**: Sidecar communication MUST operate over local WebSocket (`ws://127.0.0.1:<ephemeral_port>`) or local domain sockets.
+- **FR-019**: Sidecar communication MUST operate over local WebSocket (`ws://127.0.0.1:<ephemeral_port>`) or local domain sockets. The active daemon ephemeral port MUST be recorded in `.git/llm-wiki.port` (with fallback to `8989`) upon binding, and loopback write-only `git/commitDelta` notifications on `127.0.0.1` MUST be accepted without exposing read state.
 - **FR-020**: All IPC messages MUST conform to typed JSON-RPC 2.0 contracts with matching `requestId` fields.
 - **FR-021**: Extension Host MUST monitor sidecar process health, auto-restarting on unexpected termination with exponential backoff.
 - **FR-022**: Extension Host MUST cleanly terminate the sidecar process during VS Code `deactivate()`.
@@ -215,7 +215,7 @@ So that cross-project architecture references do not generate false-positive dea
 - **FR-033**: The Git hook dispatcher MUST enforce a strict non-blocking timeout of $\le 500\text{ ms}$ and fail open (exit code 0) if the socket or daemon is unreachable.
 
 #### 7. Webview Graph UI, Visual Hierarchy & Cluster Color Groups
-- **FR-034**: Webview MUST render a force-directed interactive graph running on HTML5 Canvas / WebGL.
+- **FR-034**: Webview MUST render a force-directed interactive graph running on high-performance 2D HTML5 Canvas (`d3-force`).
 - **FR-035**: Level 0 active nodes MUST be rendered with 100% solid opacity and expanded radius based on centrality.
 - **FR-036**: Level 1 nodes MUST be rendered at 60% opacity; Level 2 at 30% opacity; Level 3+ at 15% opacity.
 - **FR-037**: Dead links MUST be rendered as dashed red edges (`#EF4444`) with warning icons.
