@@ -106,10 +106,18 @@ export function renderActionsToolbar(
           </svg>
         </button>
 
+        <!-- Reset Disposition Button -->
+        <button id="btn-reset-disposition-tb" class="tb-icon-btn" aria-label="Reset Disposition" data-tooltip-title="Reset Disposition" data-tooltip-desc="Unpin all manually moved notes and return graph to simulation layout">
+          <svg class="tb-svg" viewBox="0 0 16 16" fill="currentColor">
+            <path d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.283.282-.63.535-1.01.777C10.288 3.738 10 5.28 10 6.5c0 .35.034.65.088.91l2.42 2.42a.5.5 0 0 1-.354.854H8.5v4.5a.5.5 0 0 1-1 0V10.684H3.846a.5.5 0 0 1-.354-.854l2.42-2.42C5.966 7.15 6 6.85 6 6.5c0-1.22-.288-2.762-.344-3.744-.38-.242-.727-.495-1.01-.777C4.342 1.674 4 1.18 4 .5a.5.5 0 0 1 .146-.354z"/>
+          </svg>
+          <span id="tb-pinned-badge" class="tb-pin-badge" style="display: none;">0</span>
+        </button>
+
         <div class="tb-divider"></div>
 
         <!-- Actions Menu Dropdown Button -->
-        <button id="btn-actions-menu" class="tb-icon-btn" aria-label="Vault Actions" data-tooltip-title="Vault Actions & Tools" data-tooltip-desc="Rescan vault, fix broken links, install git hooks, and unpin notes">
+        <button id="btn-actions-menu" class="tb-icon-btn" aria-label="Vault Actions" data-tooltip-title="Vault Actions & Tools" data-tooltip-desc="Rescan vault, fix broken links, install git hooks, and reset disposition">
           <svg class="tb-svg" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="8" cy="3" r="1.5"/>
             <circle cx="8" cy="8" r="1.5"/>
@@ -693,6 +701,10 @@ export function renderActionsToolbar(
     closeAllPopovers();
     callbacks.onResetZoom?.();
   });
+  container.querySelector('#btn-reset-disposition-tb')?.addEventListener('click', () => {
+    closeAllPopovers();
+    callbacks.onUnpinAll?.();
+  });
   container.querySelector('#btn-actions-menu')?.addEventListener('click', toggleActionsDropdown);
 
   // Instant hover tooltips for all toolbar buttons
@@ -880,6 +892,18 @@ export function renderActionsToolbar(
     updatePinnedCount(count: number) {
       if (badgePinnedCount) {
         badgePinnedCount.textContent = count.toString();
+      }
+      const tbBadge = container.querySelector('#tb-pinned-badge') as HTMLElement;
+      const tbBtn = container.querySelector('#btn-reset-disposition-tb') as HTMLElement;
+      if (tbBadge) {
+        if (count > 0) {
+          tbBadge.textContent = count.toString();
+          tbBadge.style.display = 'flex';
+          tbBtn?.classList.add('has-pinned');
+        } else {
+          tbBadge.style.display = 'none';
+          tbBtn?.classList.remove('has-pinned');
+        }
       }
     },
 
