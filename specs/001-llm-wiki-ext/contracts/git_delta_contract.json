@@ -1,6 +1,6 @@
 {
   "$schema": "https://json-schema.org/draft/2020-12/schema",
-  "title": "GitHookDeltaNotification",
+  "title": "GitCommitDeltaNotification",
   "description": "JSON-RPC 2.0 notification emitted by llm-wiki-core git-delta CLI command to the background sidecar daemon",
   "type": "object",
   "properties": {

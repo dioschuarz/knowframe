@@ -36,7 +36,7 @@ The extension MUST NOT employ continuous disk file watchers or background keystr
   2. *Tier 2 (Ecosystem Compatibility)*: Python `pre-commit` or `lefthook` if already integrated in the developer's repository.
   3. *Tier 3 (Zero-Dependency Direct Script)*: Standalone `.git/hooks/post-commit` shell dispatcher executing `llm-wiki-core git-delta` directly.
 - **Strict Non-Blocking Fail-Open**: All hook invocations MUST enforce a hard non-blocking timeout of $\le 500\text{ ms}$. If the socket is unresponsive, the sidecar is offline, or `prek` encounters an error, the hook MUST immediately exit with code 0 (silent fail-open), never obstructing or delaying developer Git commits.
-- **Delta Processing**: The hook transmits only changed Markdown paths directly to `llm-wiki-core`, enabling instantaneous incremental graph updates ($\le 50\text{ ms}$) without re-indexing unchanged workspace files.
+- **Delta Processing & Loopback Authorization**: The hook transmits only changed Markdown paths directly to `llm-wiki-core`, enabling instantaneous incremental graph updates ($\le 50\text{ ms}$) without re-indexing unchanged workspace files. Loopback `git/commitDelta` notifications on `127.0.0.1` are write-only notifications carrying Git metadata, accepted without requiring `vscode.SecretStorage` credentials so external terminal commits succeed non-blockingly.
 
 ### III. Organic Discovery Without Mandatory Frontmatter
 The knowledge graph MUST build organically from the user's existing filesystem chaos without demanding YAML frontmatter, rigid directory structures, or canonical entry filenames (`README.md`, `index.md`).
@@ -82,7 +82,7 @@ Quality and cross-platform stability are guaranteed through strict automated tes
 ### 1. Technology Matrix
 - **Core Engine (Sidecar)**: Rust 2021/2024 edition, `pulldown-cmark` (AST Markdown parser), `petgraph` (graph data structure and centrality algorithms), `tiktoken-rs` (cl100k BPE token counter), `tokio` (async runtime), `tokio-tungstenite` / Unix Domain Sockets / Windows Named Pipes (IPC/WebSocket transport), `serde` / `serde_json` / `serde_yaml` (data serialization).
 - **Extension Host**: Node.js 20+, TypeScript 5.4+, VS Code Extension API (`^1.90.0`), `ws` / IPC client.
-- **Webview UI**: HTML5 Canvas / WebGL force-directed graph renderer (`d3-force` or WebGL graph), `@vscode/webview-ui-toolkit` Web Components, CSS custom properties adhering to active VS Code theme tokens.
+- **Webview UI**: High-performance 2D HTML5 Canvas force-directed graph renderer (`d3-force`), `@vscode/webview-ui-toolkit` Web Components, CSS custom properties adhering to active VS Code theme tokens.
 - **Configuration Contract**: `.context-vault.yaml` placed at workspace root.
 
 ### 2. Non-Functional Performance Budgets

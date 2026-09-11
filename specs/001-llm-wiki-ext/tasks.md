@@ -71,12 +71,12 @@
 - [ ] T024 [P] [US2] Write headless integration tests for Extension Host process manager, SecretStorage, and WebSocket client in `extension/test/suite/ipc.test.ts`
 
 ### Implementation for User Story 2
-- [ ] T025 [US2] Implement async WebSocket JSON-RPC 2.0 daemon server using `tokio-tungstenite` with auth token handshake in `crates/core/src/ipc/server.rs`
+- [ ] T025 [US2] Implement async WebSocket JSON-RPC 2.0 daemon server using `tokio-tungstenite` with auth token handshake (accepting unauthenticated loopback write-only `git/commitDelta` notifications on `127.0.0.1`) in `crates/core/src/ipc/server.rs`
 - [ ] T026 [US2] Implement `workspace/scan` and `graph/setHub` request handlers in `crates/core/src/ipc/handlers.rs`
 - [ ] T027 [P] [US2] Implement `.context-vault.yaml` auto-generator with discovered hub and default globs in `crates/core/src/config/generator.rs`
 - [ ] T028 [US2] Implement Rust binary locator for multi-platform binaries (`linux-x64`, `linux-arm64`, `darwin-x64`, `darwin-arm64`, `win32-x64`) in `extension/src/lifecycle/binaryResolver.ts`
 - [ ] T029 [US2] Implement sidecar process supervisor with spawn, auto-restart exponential backoff (max 3 retries), and graceful kill on deactivation in `extension/src/lifecycle/processManager.ts`
-- [ ] T030 [US2] Implement SecretStorage manager in `extension/src/lifecycle/secretManager.ts` to securely generate, store, and retrieve daemon authentication tokens without plaintext disk artifacts
+- [ ] T030 [US2] Implement SecretStorage manager in `extension/src/lifecycle/secretManager.ts` to securely generate, store, and retrieve daemon authentication tokens without plaintext disk artifacts, injecting `LLM_WIKI_AUTH_TOKEN` into daemon process environment and `vscode.EnvironmentVariableCollection`
 - [ ] T031 [US2] Implement typed WebSocket JSON-RPC 2.0 client with `requestId` correlation and reconnection logic in `extension/src/ipc/client.ts`
 - [ ] T032 [US2] Wire extension activation lifecycle, secret initialization, and status bar indicator in `extension/src/extension.ts`
 
@@ -105,8 +105,8 @@
 - [ ] T042 [P] [US3] Implement interactive Cluster Groups manager UI (add/edit/toggle tag/path rules) with live preview and save in `extension/webview-ui/src/components/colorManager.ts`
 - [ ] T043 [P] [US3] Implement `actionsToolbar.ts` in `extension/webview-ui/src/components/actionsToolbar.ts` providing quick action buttons (Set as Hub, Rescan Vault, and Fix Broken Links)
 - [ ] T044 [US3] Implement Webview client RPC bridge handling `openFile`, `setHub`, `updateColorGroups`, `fixBrokenLinks`, and `graphDataUpdate` in `extension/webview-ui/src/rpc/webviewRpc.ts`
-- [ ] T045 [US3] Implement Extension Host command `LLM Wiki: Show Knowledge Graph` in `extension/src/commands/showGraph.ts`
-- [ ] T046 [US3] Implement extension commands `setHub.ts`, `rescanVault.ts`, and `fixBrokenLinks.ts` (with QuickPick dead link navigation) in `extension/src/commands/`
+- [ ] T045 [US3] Implement Extension Host command `llmWiki.showKnowledgeGraph` (`LLM Wiki: Show Knowledge Graph`) in `extension/src/commands/showGraph.ts`
+- [ ] T046 [US3] Implement extension commands `llmWiki.setHub` (`setHub.ts`), `llmWiki.rescanVault` (`rescanVault.ts`), and `llmWiki.fixBrokenLinks` (`fixBrokenLinks.ts` with QuickPick dead link navigation) in `extension/src/commands/`
 
 **Checkpoint**: Full visual graph interface operational with context economics, toolbar quick actions, and cluster coloring.
 

@@ -157,10 +157,10 @@ So that cross-project architecture references do not generate false-positive dea
 1. **Circular Link Dependencies**: If Note A links to Note B and Note B links to Note A, the hop distance resolver must use Breadth-First Search (BFS) with visited sets to prevent infinite loops; both nodes retain their minimum shortest-path hop distance from Level 0.
 2. **Self-Referencing Links**: Nodes referencing themselves (`[self](file.md)`) must not increment degree centrality artificially or distort layout physics.
 3. **Empty or Malformed Markdown**: Files with zero bytes or broken formatting must be registered as valid nodes with 0 tokens and 0 edges, without panicking the AST parser.
-4. **OS Case-Sensitivity Discrepancies**: On Linux (case-sensitive) vs macOS/Windows (case-insensitive), wikilinks `[[my_note]]` matching `My_Note.md` must be normalized gracefully using case-folded dictionary index lookups.
+4. **OS Case-Sensitivity Discrepancies**: On Linux (case-sensitive) vs macOS/Windows (case-insensitive), wikilinks `[[my_note]]` matching `My_Note.md` must be normalized gracefully using case-folded dictionary index lookups. If multiple case-insensitive files match on a case-sensitive OS without an exact match, the resolver selects the first file sorted lexicographically and emits a diagnostic warning.
 5. **Dangling Anchors in Existing Files**: Links pointing to `file.md#non-existent-header` must verify file existence and validate section anchors against target document headings (`# Heading`), immediately flagging missing section targets as broken links (`is_broken: true`) with red dashed styling, in strict accordance with Constitution Principle V.
 6. **Webview Tab Hidden & Restored**: When the Webview panel is hidden, VS Code destroys its iframe DOM. The Webview script must invoke `vscode.setState()` before disposal and recover via `vscode.getState()` upon reactivation without triggering redundant Rust re-scans.
-7. **Detached HEAD or Merge Conflict States**: During rebase or merge conflicts, the Git hook must safely ignore non-clean commit states and gracefully fall back.
+7. **Detached HEAD, Rebase, or Merge Conflict States**: If `.git/MERGE_HEAD`, `.git/rebase-merge`, or `.git/rebase-apply` exists, or during merge conflicts, the Git hook must immediately exit with code 0 without attempting delta updates.
 
 ---
 
@@ -221,7 +221,7 @@ So that cross-project architecture references do not generate false-positive dea
 - **FR-037**: Dead links MUST be rendered as dashed red edges (`#EF4444`) with warning icons.
 - **FR-038**: Orphan nodes MUST be rendered in muted gray (`#6B7280`) on the graph perimeter unless custom cluster rules override.
 - **FR-039**: System MUST support backend configuration schema and parsing of user-defined chromatic cluster groups in `.context-vault.yaml` based on hashtag queries (`tag:#name`) and path globs (`path:folder/**`).
-- **FR-040**: Webview renderer MUST apply cluster colors to node base hues while strictly preserving the hop-distance opacity decay law (100% at Level 0, 60% at Level 1, 30% at Level 2, 15% at Level 3+).
+- **FR-040**: Webview renderer MUST apply cluster colors to node base hues while strictly preserving the hop-distance opacity decay law defined in FR-035 and FR-036.
 - **FR-041**: Webview UI MUST provide an interactive Cluster Groups panel allowing users to define, edit, and toggle hashtag and path color rules with immediate live rendering and persistence to `.context-vault.yaml`.
 - **FR-042**: Diagnostic sidebar MUST provide quick action toolbar buttons: "Set as Central Hub", "Fix Broken Links" (which queries all edges where `is_broken: true` and opens a VS Code QuickPick displaying broken links with file and line coordinates for immediate jump-to-editor navigation), and "Rescan Vault".
 - **FR-043**: Webview MUST implement strict CSP with cryptographic nonces and asset loading via `webview.asWebviewUri` (CTaaS GAP-027).
