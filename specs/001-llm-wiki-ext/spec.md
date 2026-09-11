@@ -75,7 +75,7 @@ So that I can visually group semantic domains at a glance without losing visibil
 
 **Why this priority**: Core user-facing deliverable and primary visual interface of the product, combining domain clustering with context window economics.
 
-**Independent Test**: Configure color groups in `.context-vault.yaml` (or via Webview color manager), verify Webview panel renders a 60 FPS force-directed canvas/WebGL graph where nodes matching `#security` take base color `#EF4444` and nodes matching `docs/tests/**` take `#10B981`, with Level 0 rendered at 100% opacity, Level 1 at 60%, Level 2 at 30%, and orphan notes in muted gray on the periphery.
+**Independent Test**: Load workspace with 500+ markdown files, open Webview via `LLM Wiki: Show Knowledge Graph`, verify Webview panel renders a 60 FPS force-directed 2D HTML5 Canvas graph with active files at 100% opacity, hop files decaying to 15%, and broken links in red dashed strokes; add a new `#cluster` tag rule and verify colors update immediately.
 
 **Acceptance Scenarios**:
 1. **Given** an active central hub (e.g. `AGENTS.md` or `CLAUDE.md`),  
@@ -174,7 +174,7 @@ So that cross-project architecture references do not generate false-positive dea
 - **FR-003**: System MUST ignore markdown link syntax occurring inside inline code spans (` `...` `) and fenced code blocks (` ```...``` `).
 - **FR-004**: System MUST resolve relative file paths relative to the directory of the source markdown file.
 - **FR-005**: System MUST detect dead links pointing to non-existent files or directories and flag them with `is_broken: true`.
-- **FR-006**: System MUST extract document headers (`# Title`) to derive default human-readable labels when YAML frontmatter is absent.
+- **FR-006**: System MUST extract document headers (`# Title`) to derive default human-readable labels when YAML frontmatter is absent (falling back to file basename if no header exists).
 - **FR-007**: System MUST extract inline hashtags (`#tag`) and YAML frontmatter tags (`tags: [...]`) from Markdown AST, normalizing them into a tags collection on the node entity.
 
 #### 2. Graph Topology & Centrality Resolver

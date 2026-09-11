@@ -122,6 +122,7 @@ Represents a directed reference between two markdown documents.
 | `is_broken` | `bool` | Dead link indicator | `true` if target file does not exist on disk OR if `#anchor` does not match any heading in target AST (Principle V) |
 | `raw_text` | `String` | Exact link text extracted from AST | Raw AST string |
 | `anchor` | `Option<String>` | Section anchor if specified | e.g. `#section-heading` or `None` (validated against target note AST) |
+| `line` | `Option<u32>` | 1-based line number in source file | Derived from AST byte offset / newline count for direct QuickPick editor jumping |
 
 ---
 

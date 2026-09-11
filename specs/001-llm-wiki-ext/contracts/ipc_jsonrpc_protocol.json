@@ -120,7 +120,8 @@
         "target": { "type": "string" },
         "is_broken": { "type": "boolean" },
         "link_type": { "enum": ["markdown", "wikilink"] },
-        "anchor": { "type": ["string", "null"] }
+        "anchor": { "type": ["string", "null"] },
+        "line": { "type": ["integer", "null"] }
       },
       "required": ["id", "source", "target", "is_broken", "link_type"]
     },

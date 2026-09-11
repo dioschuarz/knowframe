@@ -49,7 +49,7 @@
 - [ ] T014 [P] [US1] Implement `pulldown-cmark` streaming pull parser ignoring links in code blocks (`CodeBlock`) and code spans, splitting URL anchor fragments (`#section`) into `NoteEdge.anchor` in `crates/core/src/ast/parser.rs`
 - [ ] T015 [P] [US1] Implement Obsidian wikilink tokenizer (`[[target|label]]`) and anchor parser (`#section`) in `crates/core/src/ast/wikilink.rs`
 - [ ] T016 [P] [US1] Implement hashtag and YAML frontmatter tag extractor normalizing to lowercase in `crates/core/src/ast/tags.rs`
-- [ ] T017 [US1] Implement relative file path resolver and dead link detector (verifying disk existence and validating `#section` heading anchors against target note AST, setting `is_broken: true`) in `crates/core/src/graph/resolver.rs`
+- [ ] T017 [US1] Implement relative file path resolver and dead link detector (verifying disk existence, recording 1-based source line numbers in `NoteEdge.line`, and validating `#section` heading anchors against target note AST, setting `is_broken: true`) in `crates/core/src/graph/resolver.rs`
 - [ ] T018 [US1] Implement `petgraph::DiGraph` graph builder mapping parsed notes and edges in `crates/core/src/graph/builder.rs`
 - [ ] T019 [US1] Implement Brandes betweenness centrality algorithm and degree calculator in `crates/core/src/graph/centrality.rs`
 - [ ] T020 [US1] Implement BFS shortest-path hop resolver assigning Level 0 (Hub), Level 1, Level 2, Level 3+, and Orphan (-1) in `crates/core/src/graph/hops.rs`
