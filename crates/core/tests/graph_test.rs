@@ -5,10 +5,10 @@ use llm_wiki_core::model::{LinkType, NodeStatus, NoteEdge, NoteNode};
 fn test_degrees_and_betweenness_centrality() {
     let mut topology = GraphTopology::new();
 
-    let mut n1 = NoteNode::new("hub.md", "/repo/hub.md", "Hub");
-    let mut n2 = NoteNode::new("bridge.md", "/repo/bridge.md", "Bridge");
-    let mut n3 = NoteNode::new("leaf.md", "/repo/leaf.md", "Leaf");
-    let mut orphan = NoteNode::new("orphan.md", "/repo/orphan.md", "Orphan");
+    let n1 = NoteNode::new("hub.md", "/repo/hub.md", "Hub");
+    let n2 = NoteNode::new("bridge.md", "/repo/bridge.md", "Bridge");
+    let n3 = NoteNode::new("leaf.md", "/repo/leaf.md", "Leaf");
+    let orphan = NoteNode::new("orphan.md", "/repo/orphan.md", "Orphan");
 
     topology.add_node(n1);
     topology.add_node(n2);
