@@ -68,7 +68,7 @@ export class IpcClient implements vscode.Disposable {
     });
   }
 
-  public sendRequest<T = any>(method: string, params?: unknown, timeoutMs = 15000): Promise<T> {
+  public sendRequest<T = any>(method: string, params?: unknown, timeoutMs = 90000): Promise<T> {
     if (this.isDisposed || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
       return Promise.reject(new Error('IPC WebSocket is not connected or client is disposed'));
     }

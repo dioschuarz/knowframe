@@ -82,11 +82,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         GraphPanelManager.currentPanel.setIpcClient(ipcClient);
       }
 
-      statusBarItem.text = `$(graph) LLM Wiki: Online (Port ${port})`;
+      statusBarItem.text = `$(sync~spin) LLM Wiki: Scanning Vault...`;
       outputChannel.appendLine(`[EXTENSION] Sidecar connected on port ${port}. Requesting initial workspace/scan...`);
 
-      // Initial scan
-      latestScanResult = await ipcClient.sendRequest<ScanResultPayload>('workspace/scan');
+      // Initial scan (120s timeout for large vaults)
+      latestScanResult = await ipcClient.sendRequest<ScanResultPayload>('workspace/scan', undefined, 120000);
       outputChannel.appendLine(`[EXTENSION] Scan completed. Nodes: ${latestScanResult.nodes.length}, Edges: ${latestScanResult.edges.length}`);
       onScanResultUpdated(latestScanResult);
       outputChannel.appendLine(`[EXTENSION] Knowledge graph and status bar ready.`);
