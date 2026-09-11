@@ -305,25 +305,43 @@ export function renderActionsToolbar(
     if (activePopover !== 'none') return;
     const title = btn.getAttribute('data-tooltip-title');
     const desc = btn.getAttribute('data-tooltip-desc');
-    if (!title || !tooltipEl || !toolbarWrapper) return;
+    if (!title || !tooltipEl) return;
 
     ttTitle.textContent = title;
     ttDesc.textContent = desc || '';
 
-    const btnRect = btn.getBoundingClientRect();
-    const wrapperRect = toolbarWrapper.getBoundingClientRect();
-
-    const left = (btnRect.left - wrapperRect.left) + (btnRect.width / 2);
-    const top = btnRect.bottom - wrapperRect.top + 6;
-
-    tooltipEl.style.left = `${left}px`;
-    tooltipEl.style.top = `${top}px`;
+    // Render offscreen/hidden first to measure actual rendered bounding box
+    tooltipEl.style.visibility = 'hidden';
     tooltipEl.style.display = 'block';
+
+    const btnRect = btn.getBoundingClientRect();
+    const tooltipRect = tooltipEl.getBoundingClientRect();
+
+    // Calculate ideal horizontal center below button
+    const btnCenterX = btnRect.left + (btnRect.width / 2);
+    let left = btnCenterX - (tooltipRect.width / 2);
+
+    // Dynamically clamp horizontally within viewport with 12px safety padding
+    const padding = 12;
+    const maxLeft = window.innerWidth - tooltipRect.width - padding;
+    const minLeft = padding;
+    left = Math.max(minLeft, Math.min(left, maxLeft));
+
+    // Vertical positioning: place below button, flip above if overflowing bottom
+    let top = btnRect.bottom + 8;
+    if (top + tooltipRect.height > window.innerHeight - padding) {
+      top = btnRect.top - tooltipRect.height - 8;
+    }
+
+    tooltipEl.style.left = `${Math.round(left)}px`;
+    tooltipEl.style.top = `${Math.round(top)}px`;
+    tooltipEl.style.visibility = 'visible';
   }
 
   function hideTooltip(): void {
     if (tooltipEl) {
       tooltipEl.style.display = 'none';
+      tooltipEl.style.visibility = 'hidden';
     }
   }
 
