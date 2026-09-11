@@ -32,6 +32,13 @@ export class WebviewRpcBridge {
     }
   }
 
+  public send(type: WebviewInboundType, payload?: unknown): void {
+    this.sendMessage({
+      type,
+      payload,
+    });
+  }
+
   public on(type: string, handler: (payload: any) => void): () => void {
     let set = this.messageHandlers.get(type);
     if (!set) {

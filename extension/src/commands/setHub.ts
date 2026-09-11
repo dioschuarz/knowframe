@@ -23,18 +23,39 @@ export function registerSetHubCommand(
         return;
       }
 
-      const items = scan.nodes.map((n) => ({
-        label: n.label,
-        description: n.id,
-        detail: `Tokens: ${n.tokens.toLocaleString()} | Centrality: ${n.betweenness.toFixed(3)}`,
-      }));
+      // Sort nodes by total connections (in_degree + out_degree) desc, then betweenness desc, then tokens desc
+      const sortedNodes = [...scan.nodes].sort((a, b) => {
+        const totalA = (a.in_degree || 0) + (a.out_degree || 0);
+        const totalB = (b.in_degree || 0) + (b.out_degree || 0);
+        if (totalB !== totalA) {
+          return totalB - totalA;
+        }
+        if (b.betweenness !== a.betweenness) {
+          return b.betweenness - a.betweenness;
+        }
+        return b.tokens - a.tokens;
+      });
+
+      const items = sortedNodes.map((n, idx) => {
+        const totalLinks = (n.in_degree || 0) + (n.out_degree || 0);
+        const isCurrentHub = n.hop_distance === 0 || n.id === scan.recommended_hub;
+        const prefix = isCurrentHub ? '⭐ [Current Hub] ' : (idx < 3 && totalLinks > 0 ? '📌 ' : '');
+        return {
+          label: `${prefix}${n.label}`,
+          description: `Links: ${totalLinks} (In: ${n.in_degree || 0} / Out: ${n.out_degree || 0}) • ${n.id}`,
+          detail: `Centrality: ${(n.betweenness || 0).toFixed(4)} | Tokens: ${n.tokens.toLocaleString()}${n.tags && n.tags.length > 0 ? ' | Tags: ' + n.tags.join(', ') : ''}`,
+          hubId: n.id,
+        };
+      });
 
       const selected = await vscode.window.showQuickPick(items, {
-        placeHolder: 'Select a Markdown note to designate as central Level 0 Hub',
+        placeHolder: 'Select a Markdown note to designate as central Level 0 Hub (ordered by connectivity)',
+        matchOnDescription: true,
+        matchOnDetail: true,
       });
 
       if (!selected) return;
-      hubId = selected.description;
+      hubId = selected.hubId;
     }
 
     try {

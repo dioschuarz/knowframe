@@ -78,12 +78,25 @@ const renderer = new CanvasRenderer({
     const isSticky = toolbarController ? toolbarController.isStickyDrag() : true;
     physics.onDragEnd(node, x, y, isSticky);
     toolbarController?.updatePinnedCount(physics.getPinnedCount());
+    persistState();
   },
   onNodeDoubleClick: (node) => {
     physics.unpinNode(node);
     toolbarController?.updatePinnedCount(physics.getPinnedCount());
+    persistState();
+  },
+  onViewTransformChange: () => {
+    persistState();
   },
 });
+
+// Restore saved pan/zoom transform
+if (savedState?.viewTransform) {
+  renderer.setViewTransform(savedState.viewTransform);
+}
+if (savedState?.colorGroups && Array.isArray(savedState.colorGroups) && savedState.colorGroups.length > 0) {
+  colorGroups = savedState.colorGroups;
+}
 
 window.addEventListener('resize', () => {
   renderer.resize(window.innerWidth, window.innerHeight);
@@ -91,11 +104,58 @@ window.addEventListener('resize', () => {
 });
 
 function persistState(): void {
+  const pinnedNodes = nodes
+    .filter((n) => n.fx !== null && n.fx !== undefined)
+    .map((n) => ({ id: n.id, fx: n.fx, fy: n.fy }));
+
   rpc.setState({
     tokenSummary: lastTokenSummary,
     physicsParams: currentPhysicsParams,
     labelsMode: currentLabelsMode,
+    colorGroups,
+    viewTransform: renderer.getViewTransform(),
+    pinnedNodes,
   });
+}
+
+function applyClientSideColorGroups(nodeList: NoteNode[], groups: ClusterColorGroup[]): void {
+  for (const node of nodeList) {
+    let matchedColor: string | null = null;
+    for (const group of groups) {
+      if (!group.enabled) continue;
+      if (group.query.startsWith('tag:')) {
+        const pat = group.query.slice(4).trim().toLowerCase().replace(/^#/, '');
+        if (node.tags?.some((t) => t.toLowerCase().replace(/^#/, '') === pat)) {
+          matchedColor = group.color;
+          break;
+        }
+      } else if (group.query.startsWith('path:')) {
+        let pat = group.query.slice(5).trim();
+        const nodePath = node.filePath || node.id;
+        if (pat.endsWith('/**')) {
+          const prefix = pat.slice(0, -3);
+          if (nodePath.startsWith(prefix)) {
+            matchedColor = group.color;
+            break;
+          }
+        } else {
+          try {
+            const regexStr = '^' + pat.replace(/\./g, '\\.').replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*') + '$';
+            const re = new RegExp(regexStr);
+            if (re.test(nodePath)) {
+              matchedColor = group.color;
+              break;
+            }
+          } catch {
+            // ignore
+          }
+        }
+      }
+    }
+    if (matchedColor) {
+      node.color = matchedColor;
+    }
+  }
 }
 
 // Render Actions Toolbar with Icon Popovers and Physics Controls
@@ -104,7 +164,7 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
     if (selectedNode) {
       rpc.setHub(selectedNode.id);
     } else {
-      alert('Please click a note on the graph first to select it as Hub.');
+      rpc.send('triggerSetHubQuickPick');
     }
   },
   onRescanVault: () => {
@@ -133,17 +193,26 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
   onUnpinAll: () => {
     physics.unpinAll();
     toolbarController.updatePinnedCount(0);
+    persistState();
   },
   onToggleColorManager: () => {
-    renderColorManager(colorModalContainer, colorGroups, {
-      onSaveGroups: (newGroups) => {
-        colorGroups = newGroups;
-        rpc.updateColorGroups(newGroups);
+    renderColorManager(
+      colorModalContainer,
+      colorGroups,
+      {
+        onSaveGroups: (newGroups) => {
+          colorGroups = newGroups;
+          rpc.updateColorGroups(newGroups);
+          applyClientSideColorGroups(nodes, newGroups);
+          renderer.draw();
+          persistState();
+        },
+        onClose: () => {
+          colorModalContainer.innerHTML = '';
+        },
       },
-      onClose: () => {
-        colorModalContainer.innerHTML = '';
-      },
-    });
+      nodes,
+    );
   },
 });
 
@@ -155,7 +224,25 @@ toolbarController.setLabelsMode(currentLabelsMode);
 rpc.on('graphDataUpdate', (data: any) => {
   nodes = data.nodes || [];
   edges = data.edges || [];
-  colorGroups = data.color_groups || [];
+  if (data.color_groups && data.color_groups.length > 0) {
+    colorGroups = data.color_groups;
+  }
+
+  // Restore any saved pinned positions if not already set
+  if (savedState?.pinnedNodes && Array.isArray(savedState.pinnedNodes)) {
+    const pinMap = new Map<string, any>(savedState.pinnedNodes.map((p: any) => [p.id, p]));
+    for (const n of nodes) {
+      if (pinMap.has(n.id) && (n.fx === undefined || n.fx === null)) {
+        const pin = pinMap.get(n.id);
+        n.fx = pin.fx;
+        n.fy = pin.fy;
+      }
+    }
+  }
+
+  if (colorGroups.length > 0) {
+    applyClientSideColorGroups(nodes, colorGroups);
+  }
 
   renderer.setData(nodes, edges);
   physics.updateData(nodes, edges);
@@ -165,6 +252,7 @@ rpc.on('graphDataUpdate', (data: any) => {
     toolbarController.updateTokenSummary(data.tokenSummary);
   }
 
+  toolbarController.updatePinnedCount(physics.getPinnedCount());
   persistState();
 });
 
@@ -173,3 +261,7 @@ if (savedState && savedState.tokenSummary) {
   lastTokenSummary = savedState.tokenSummary;
   toolbarController.updateTokenSummary(savedState.tokenSummary);
 }
+
+// Request initial or refreshed graph data from Extension Host
+rpc.send('requestGraphData');
+

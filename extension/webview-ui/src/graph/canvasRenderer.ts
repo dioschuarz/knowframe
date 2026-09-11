@@ -10,6 +10,7 @@ export interface CanvasRendererOptions {
   onNodeDrag?: (node: NoteNode, x: number, y: number) => void;
   onNodeDragEnd?: (node: NoteNode, x: number, y: number) => void;
   onNodeDoubleClick?: (node: NoteNode) => void;
+  onViewTransformChange?: (transform: { scale: number; offsetX: number; offsetY: number }) => void;
 }
 
 export class CanvasRenderer {
@@ -43,6 +44,7 @@ export class CanvasRenderer {
   private onNodeDrag?: (node: NoteNode, x: number, y: number) => void;
   private onNodeDragEnd?: (node: NoteNode, x: number, y: number) => void;
   private onNodeDoubleClick?: (node: NoteNode) => void;
+  private onViewTransformChange?: (transform: { scale: number; offsetX: number; offsetY: number }) => void;
 
   constructor(options: CanvasRendererOptions) {
     this.canvas = options.canvas;
@@ -53,6 +55,7 @@ export class CanvasRenderer {
     this.onNodeDrag = options.onNodeDrag;
     this.onNodeDragEnd = options.onNodeDragEnd;
     this.onNodeDoubleClick = options.onNodeDoubleClick;
+    this.onViewTransformChange = options.onViewTransformChange;
 
     this.labelsMode = options.initialLabelsMode || 'hover';
 
@@ -78,6 +81,19 @@ export class CanvasRenderer {
     this.scale = 1;
     this.offsetX = 0;
     this.offsetY = 0;
+    this.onViewTransformChange?.({ scale: this.scale, offsetX: this.offsetX, offsetY: this.offsetY });
+  }
+
+  public getViewTransform(): { scale: number; offsetX: number; offsetY: number } {
+    return { scale: this.scale, offsetX: this.offsetX, offsetY: this.offsetY };
+  }
+
+  public setViewTransform(transform: { scale: number; offsetX: number; offsetY: number }): void {
+    if (transform && typeof transform.scale === 'number') {
+      this.scale = transform.scale;
+      this.offsetX = transform.offsetX || 0;
+      this.offsetY = transform.offsetY || 0;
+    }
   }
 
   public resize(width: number, height: number): void {
@@ -167,7 +183,11 @@ export class CanvasRenderer {
         this.isNodeDragging = false;
         this.hasMoved = false;
       }
+      const wasPanning = this.isPanning;
       this.isPanning = false;
+      if (wasPanning) {
+        this.onViewTransformChange?.({ scale: this.scale, offsetX: this.offsetX, offsetY: this.offsetY });
+      }
       const hit = this.findNodeAt(e.clientX, e.clientY);
       this.canvas.style.cursor = hit ? 'grab' : 'default';
     });
@@ -191,6 +211,7 @@ export class CanvasRenderer {
       this.offsetX -= (mouseX - this.offsetX) * (newScale / this.scale - 1);
       this.offsetY -= (mouseY - this.offsetY) * (newScale / this.scale - 1);
       this.scale = newScale;
+      this.onViewTransformChange?.({ scale: this.scale, offsetX: this.offsetX, offsetY: this.offsetY });
     });
   }
 

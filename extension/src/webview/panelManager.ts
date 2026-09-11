@@ -34,12 +34,15 @@ export class GraphPanelManager implements vscode.Disposable {
 
     const panel = vscode.window.createWebviewPanel(
       GraphPanelManager.viewType,
-      'LLM Wiki: Knowledge Graph',
+      'LLM Wiki Knowledge Graph',
       column || vscode.ViewColumn.One,
       {
         enableScripts: true,
-        retainContextWhenHidden: false, // Enforce Constitution: state preserved via setState/getState
-        localResourceRoots: [vscode.Uri.joinPath(extensionUri, 'dist')],
+        retainContextWhenHidden: true, // Keep Webview state and canvas simulation intact when navigating away
+        localResourceRoots: [
+          vscode.Uri.joinPath(extensionUri, 'dist'),
+          vscode.Uri.joinPath(extensionUri, 'media'),
+        ],
       }
     );
 
@@ -52,6 +55,7 @@ export class GraphPanelManager implements vscode.Disposable {
     extensionUri: vscode.Uri,
     ipcClient: IpcClient | null
   ): GraphPanelManager {
+    panel.title = 'LLM Wiki Knowledge Graph';
     GraphPanelManager.currentPanel = new GraphPanelManager(panel, extensionUri, ipcClient, null);
     return GraphPanelManager.currentPanel;
   }
@@ -67,11 +71,25 @@ export class GraphPanelManager implements vscode.Disposable {
     this.ipcClient = ipcClient;
     this.currentScanResult = scanResult;
 
-    this.panel.iconPath = vscode.Uri.joinPath(extensionUri, 'dist', 'favicon.ico');
+    this.panel.title = 'LLM Wiki Knowledge Graph';
+    this.panel.iconPath = {
+      light: vscode.Uri.joinPath(extensionUri, 'media', 'sidebar-icon.svg'),
+      dark: vscode.Uri.joinPath(extensionUri, 'media', 'sidebar-icon.svg'),
+    };
 
     this.updateHtml();
 
     this.panel.onDidDispose(() => this.dispose(), null, this.disposables);
+
+    this.panel.onDidChangeViewState(
+      (e) => {
+        if (e.webviewPanel.visible && this.currentScanResult) {
+          this.updateData(this.currentScanResult);
+        }
+      },
+      null,
+      this.disposables
+    );
 
     this.panel.webview.onDidReceiveMessage(
       (message: WebviewInboundMessage) => this.handleWebviewMessage(message),
@@ -159,6 +177,16 @@ export class GraphPanelManager implements vscode.Disposable {
         }
         break;
       }
+      case 'requestGraphData': {
+        if (this.currentScanResult) {
+          this.updateData(this.currentScanResult);
+        }
+        break;
+      }
+      case 'triggerSetHubQuickPick': {
+        await vscode.commands.executeCommand('llmWiki.setHub');
+        break;
+      }
     }
   }
 
@@ -174,7 +202,10 @@ export class GraphPanelManager implements vscode.Disposable {
       }
 
       const doc = await vscode.workspace.openTextDocument(uri);
-      const editor = await vscode.window.showTextDocument(doc, { preview: true });
+      const editor = await vscode.window.showTextDocument(doc, {
+        viewColumn: vscode.ViewColumn.Beside,
+        preview: true,
+      });
 
       if (line && line > 0) {
         const pos = new vscode.Position(line - 1, 0);

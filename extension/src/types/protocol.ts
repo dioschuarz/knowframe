@@ -103,7 +103,9 @@ export type WebviewInboundType =
   | 'setHub'
   | 'updateColorGroups'
   | 'fixBrokenLinks'
-  | 'rescanVault';
+  | 'rescanVault'
+  | 'requestGraphData'
+  | 'triggerSetHubQuickPick';
 
 export interface WebviewInboundMessage {
   requestId?: string;
