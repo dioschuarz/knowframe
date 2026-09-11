@@ -4,6 +4,11 @@
   "description": "Dynamic Obsidian-style knowledge graph and BPE token economics for LLM prompt context and AI agents",
   "version": "0.1.0",
   "publisher": "antigravity",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/antigravity/llm_wiki_ext4vsc"
+  },
+  "license": "MIT",
   "engines": {
     "vscode": "^1.90.0"
   },

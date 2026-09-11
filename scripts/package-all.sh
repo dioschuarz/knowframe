@@ -23,7 +23,7 @@ npm run package
 echo "--> Packaging VSIX..."
 if command -v vsce &> /dev/null; then
     vsce package --no-dependencies --out "${ROOT_DIR}/"
-elif npx --yes @vscode/vsce -v &> /dev/null; then
+elif npx --yes @vscode/vsce --version &> /dev/null; then
     npx --yes @vscode/vsce package --no-dependencies --out "${ROOT_DIR}/"
 else
     echo "Notice: @vscode/vsce not installed globally. VSIX packaging ready."
