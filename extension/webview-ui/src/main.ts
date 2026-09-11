@@ -215,6 +215,19 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
     toolbarController.updatePinnedCount(0);
     persistState();
   },
+  onResetLayout: () => {
+    physics.resetDisposition();
+    currentPhysicsParams = { ...DEFAULT_PHYSICS_PARAMS };
+    toolbarController.setPhysicsParameters(currentPhysicsParams);
+    toolbarController.updatePinnedCount(0);
+    renderer.resetZoom();
+    if (savedState) {
+      savedState.pinnedNodes = [];
+    }
+    persistState();
+    applySearchFilter();
+    renderer.draw();
+  },
   onToggleColorManager: () => {
     renderColorManager(
       colorModalContainer,
@@ -258,6 +271,7 @@ rpc.on('graphDataUpdate', (data: any) => {
         n.fy = pin.fy;
       }
     }
+    savedState.pinnedNodes = [];
   }
 
   if (colorGroups.length > 0) {

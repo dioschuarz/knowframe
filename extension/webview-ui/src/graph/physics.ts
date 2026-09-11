@@ -14,6 +14,7 @@ export interface PhysicsSimulation {
   unpinNode: (node: NoteNode) => void;
   unpinAll: () => void;
   getPinnedCount: () => number;
+  resetDisposition: () => void;
   restart: (alpha?: number) => void;
   stop: () => void;
 }
@@ -24,6 +25,8 @@ export function createPhysicsSimulation(
   onTick: () => void,
   initialParams?: Partial<PhysicsParameters>,
 ): PhysicsSimulation {
+  let currentWidth = width;
+  let currentHeight = height;
   let params: PhysicsParameters = { ...DEFAULT_PHYSICS_PARAMS, ...initialParams };
   let currentNodes: NoteNode[] = [];
   let currentEdges: NoteEdge[] = [];
@@ -108,6 +111,8 @@ export function createPhysicsSimulation(
     },
     getParameters: () => ({ ...params }),
     resize: (newWidth: number, newHeight: number) => {
+      currentWidth = newWidth;
+      currentHeight = newHeight;
       center.x(newWidth / 2).y(newHeight / 2);
       forceX.x(newWidth / 2);
       forceY.y(newHeight / 2);
@@ -147,6 +152,32 @@ export function createPhysicsSimulation(
     },
     getPinnedCount: () => {
       return currentNodes.filter((n) => n.fx !== null && n.fx !== undefined).length;
+    },
+    resetDisposition: () => {
+      params = { ...DEFAULT_PHYSICS_PARAMS };
+      manyBody.strength(-params.repulsion);
+      forceX.strength(params.centerGravity);
+      forceY.strength(params.centerGravity);
+      link.distance(params.linkDistance);
+      collide.radius((d) => params.collisionRadius + (d.betweenness || 0) * 12 + (d.hopDistance === 0 ? 10 : 0));
+
+      const centerX = currentWidth / 2;
+      const centerY = currentHeight / 2;
+      for (let i = 0; i < currentNodes.length; i++) {
+        const n = currentNodes[i];
+        n.fx = null;
+        n.fy = null;
+        const angle = i * 2.399963229728653; // Golden ratio angle
+        const r = 10 * Math.sqrt(0.5 + i);
+        n.x = centerX + r * Math.cos(angle);
+        n.y = centerY + r * Math.sin(angle);
+        n.vx = 0;
+        n.vy = 0;
+      }
+
+      simulation.nodes(currentNodes);
+      applyEdges();
+      simulation.alpha(1).restart();
     },
     restart: (alpha = 0.5) => {
       simulation.alpha(alpha).restart();

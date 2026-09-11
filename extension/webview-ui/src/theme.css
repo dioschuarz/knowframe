@@ -526,6 +526,18 @@ body, html {
   color: var(--fg-color);
 }
 
+.physics-action-primary {
+  border-color: rgba(56, 189, 248, 0.4);
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+.physics-action-primary:hover {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+  color: #7dd3fc;
+}
+
 /* Actions Menu Popover */
 .actions-menu-popover {
   min-width: 280px;

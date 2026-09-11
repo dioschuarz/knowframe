@@ -19,6 +19,7 @@ export interface ActionsToolbarCallbacks {
   onStickyToggle?: (enabled: boolean) => void;
   onToggleLabelsMode?: (mode: LabelsMode) => void;
   onSearchChange?: (query: string, exact: boolean) => void;
+  onResetLayout?: () => void;
 }
 
 export interface ActionsToolbarController {
@@ -101,6 +102,14 @@ export function renderActionsToolbar(
         <button id="btn-reset-zoom" class="tb-icon-btn" aria-label="Reset Zoom & Center View" data-tooltip-title="Reset View" data-tooltip-desc="Reset pan coordinates and zoom scale back to centered 100%">
           <svg class="tb-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M1 5V1h4M15 5V1h-4M1 11v4h4M15 11v4h-4"/>
+          </svg>
+        </button>
+
+        <!-- Reset Graph Disposition Button -->
+        <button id="btn-reset-layout" class="tb-icon-btn" aria-label="Reset Graph Disposition" data-tooltip-title="Reset Graph Disposition" data-tooltip-desc="Return all nodes to default positions, unpin all notes, restore balanced gravity & re-center view">
+          <svg class="tb-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 2.5a5.5 5.5 0 1 1-3.9 1.6L2 2"/>
+            <path d="M2 6V2h4"/>
           </svg>
         </button>
 
@@ -248,7 +257,8 @@ export function renderActionsToolbar(
 
           <div class="physics-footer">
             <button id="btn-reheat-sim" class="physics-action-btn" title="Re-simulate node positions">⚡ Reheat</button>
-            <button id="btn-reset-physics" class="physics-action-btn" title="Reset all sliders to defaults">↺ Reset Defaults</button>
+            <button id="btn-reset-physics" class="physics-action-btn" title="Reset all sliders to defaults">⚙️ Defaults</button>
+            <button id="btn-reset-disposition" class="physics-action-btn physics-action-primary" title="Restore default node layout, unpin all notes, and re-center view">↺ Reset Layout</button>
           </div>
         </div>
       </div>
@@ -311,6 +321,13 @@ export function renderActionsToolbar(
           <div class="m-text">
             <div class="m-title">Reset Canvas View</div>
             <div class="m-desc">Center graph and reset zoom level</div>
+          </div>
+        </div>
+        <div class="menu-item" id="menu-act-reset-layout">
+          <span class="m-icon">↺</span>
+          <div class="m-text">
+            <div class="m-title">Reset Graph Disposition</div>
+            <div class="m-desc">Restore default node positions, unpin all, and re-center</div>
           </div>
         </div>
       </div>
@@ -494,6 +511,28 @@ export function renderActionsToolbar(
     if (badgeDistance) badgeDistance.textContent = `${params.linkDistance}px`;
     if (badgeRepulsion) badgeRepulsion.textContent = params.repulsion.toString();
     if (badgeCollision) badgeCollision.textContent = `${params.collisionRadius}px`;
+
+    if (
+      params.centerGravity === PHYSICS_PRESETS.compact.centerGravity &&
+      params.linkDistance === PHYSICS_PRESETS.compact.linkDistance &&
+      params.repulsion === PHYSICS_PRESETS.compact.repulsion
+    ) {
+      updatePresetButtons('compact');
+    } else if (
+      params.centerGravity === PHYSICS_PRESETS.spacious.centerGravity &&
+      params.linkDistance === PHYSICS_PRESETS.spacious.linkDistance &&
+      params.repulsion === PHYSICS_PRESETS.spacious.repulsion
+    ) {
+      updatePresetButtons('spacious');
+    } else if (
+      params.centerGravity === PHYSICS_PRESETS.balanced.centerGravity &&
+      params.linkDistance === PHYSICS_PRESETS.balanced.linkDistance &&
+      params.repulsion === PHYSICS_PRESETS.balanced.repulsion
+    ) {
+      updatePresetButtons('balanced');
+    } else {
+      updatePresetButtons('custom');
+    }
   }
 
   function handleSliderInput(): void {
@@ -628,6 +667,10 @@ export function renderActionsToolbar(
     closeAllPopovers();
     callbacks.onResetZoom?.();
   });
+  container.querySelector('#btn-reset-layout')?.addEventListener('click', () => {
+    closeAllPopovers();
+    callbacks.onResetLayout?.();
+  });
   container.querySelector('#btn-actions-menu')?.addEventListener('click', toggleActionsDropdown);
 
   // Instant hover tooltips for all toolbar buttons
@@ -687,6 +730,11 @@ export function renderActionsToolbar(
     callbacks.onPhysicsChange?.(preset);
   });
 
+  container.querySelector('#btn-reset-disposition')?.addEventListener('click', () => {
+    closeAllPopovers();
+    callbacks.onResetLayout?.();
+  });
+
   // Sticky placement and unpin controls
   const chkStickyDrag = container.querySelector('#chk-sticky-drag') as HTMLInputElement;
   const badgePinnedCount = container.querySelector('#badge-pinned-count') as HTMLElement;
@@ -726,6 +774,10 @@ export function renderActionsToolbar(
   container.querySelector('#menu-act-reset-zoom')?.addEventListener('click', () => {
     closeAllPopovers();
     callbacks.onResetZoom?.();
+  });
+  container.querySelector('#menu-act-reset-layout')?.addEventListener('click', () => {
+    closeAllPopovers();
+    callbacks.onResetLayout?.();
   });
 
   // Click outside to dismiss

@@ -265,5 +265,84 @@ suite('Graph Physics & Gravity Configuration Test Suite', () => {
 
     sim.stop();
   });
+
+  test('resetDisposition restores default parameters, unpins all nodes, and re-centers coordinates', () => {
+    const sim = createPhysicsSimulation(800, 600, () => {});
+    const node1: NoteNode = {
+      id: 'n1',
+      label: 'N1',
+      filePath: 'n1.md',
+      tags: [],
+      color: '#3B82F6',
+      status: 'active',
+      tokens: 10,
+      hopDistance: 0,
+      inDegree: 1,
+      outDegree: 0,
+      betweenness: 0,
+      brokenLinks: 0,
+      x: 10,
+      y: 10,
+    };
+    const node2: NoteNode = {
+      id: 'n2',
+      label: 'N2',
+      filePath: 'n2.md',
+      tags: [],
+      color: '#64748B',
+      status: 'connected_inactive',
+      tokens: 10,
+      hopDistance: 1,
+      inDegree: 0,
+      outDegree: 1,
+      betweenness: 0,
+      brokenLinks: 0,
+      x: 20,
+      y: 20,
+    };
+
+    sim.updateData([node1, node2], []);
+
+    // 1. Alter parameters and pin nodes far away
+    sim.updateParameters({
+      centerGravity: 0.4,
+      linkDistance: 200,
+      repulsion: 600,
+      collisionRadius: 35,
+    });
+    sim.onDragStart(node1);
+    sim.onDragEnd(node1, 700, 500, true);
+    assert.strictEqual(sim.getPinnedCount(), 1);
+    assert.strictEqual(node1.fx, 700);
+    assert.strictEqual(node1.fy, 500);
+
+    // 2. Call resetDisposition
+    sim.resetDisposition();
+
+    // 3. Verify defaults restored
+    const params = sim.getParameters();
+    assert.strictEqual(params.centerGravity, DEFAULT_PHYSICS_PARAMS.centerGravity);
+    assert.strictEqual(params.linkDistance, DEFAULT_PHYSICS_PARAMS.linkDistance);
+    assert.strictEqual(params.repulsion, DEFAULT_PHYSICS_PARAMS.repulsion);
+    assert.strictEqual(params.collisionRadius, DEFAULT_PHYSICS_PARAMS.collisionRadius);
+
+    // 4. Verify all nodes unpinned
+    assert.strictEqual(sim.getPinnedCount(), 0);
+    assert.strictEqual(node1.fx, null);
+    assert.strictEqual(node1.fy, null);
+    assert.strictEqual(node2.fx, null);
+    assert.strictEqual(node2.fy, null);
+
+    // 5. Verify coordinates re-centered around (400, 300)
+    assert.ok(node1.x !== undefined && Math.abs(node1.x - 400) < 50);
+    assert.ok(node1.y !== undefined && Math.abs(node1.y - 300) < 50);
+    assert.strictEqual(node1.vx, 0);
+    assert.strictEqual(node1.vy, 0);
+
+    // 6. Verify simulation restarted with high alpha
+    assert.ok(sim.simulation.alpha() > 0.8);
+
+    sim.stop();
+  });
 });
 
