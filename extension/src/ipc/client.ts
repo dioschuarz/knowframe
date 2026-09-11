@@ -81,6 +81,8 @@ export class IpcClient implements vscode.Disposable {
       params,
     };
 
+    this.outputChannel?.appendLine(`[IPC CLIENT] Sending request: id=${id}, method=${method}`);
+
     return new Promise<T>((resolve, reject) => {
       const timer = setTimeout(() => {
         this.pendingRequests.delete(id);
@@ -128,6 +130,7 @@ export class IpcClient implements vscode.Disposable {
   private handleIncomingMessage(text: string): void {
     try {
       const parsed = JSON.parse(text);
+      this.outputChannel?.appendLine(`[IPC CLIENT] Incoming message id=${parsed.id}, method=${parsed.method}`);
 
       // 1. Check if it's a response
       if (parsed.id !== undefined && this.pendingRequests.has(parsed.id)) {

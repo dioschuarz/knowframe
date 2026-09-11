@@ -74,16 +74,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
 
       statusBarItem.text = `$(graph) LLM Wiki: Online (Port ${port})`;
+      outputChannel.appendLine(`[EXTENSION] Sidecar connected on port ${port}. Requesting initial workspace/scan...`);
 
       // Initial scan
       latestScanResult = await ipcClient.sendRequest<ScanResultPayload>('workspace/scan');
+      outputChannel.appendLine(`[EXTENSION] Scan completed. Nodes: ${latestScanResult.nodes.length}, Edges: ${latestScanResult.edges.length}`);
       onScanResultUpdated(latestScanResult);
+      outputChannel.appendLine(`[EXTENSION] Knowledge graph and status bar ready.`);
     } catch (err: any) {
       outputChannel.appendLine(`[EXTENSION ERROR] Sidecar initialization failed: ${err.message}`);
       statusBarItem.text = '$(error) LLM Wiki: Offline';
       statusBarItem.tooltip = `Sidecar error: ${err.message}`;
     }
   } else {
+    outputChannel.appendLine('[EXTENSION] No open workspace folder detected.');
     statusBarItem.text = '$(graph) LLM Wiki: No Workspace';
   }
 }
