@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "GitHookDeltaPayload",
+  "description": "Payload emitted by llm-wiki-core git-delta command to update knowledge graph incrementally",
+  "type": "object",
+  "properties": {
+    "repo_path": { "type": "string" },
+    "commit_hash": { "type": "string" },
+    "branch": { "type": "string" },
+    "changed_files": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "path": { "type": "string" },
+          "status": {
+            "type": "string",
+            "enum": ["added", "modified", "deleted"]
+          }
+        },
+        "required": ["path", "status"]
+      }
+    }
+  },
+  "required": ["repo_path", "changed_files"]
+}

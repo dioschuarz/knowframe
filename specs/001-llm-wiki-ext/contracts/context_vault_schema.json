@@ -1,0 +1,79 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "ContextVaultConfig",
+  "description": "JSON Schema definition for .context-vault.yaml workspace configuration",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "default": "1.0"
+    },
+    "vault": {
+      "type": "object",
+      "properties": {
+        "name": { "type": "string" },
+        "mode": {
+          "type": "string",
+          "enum": ["single-repo", "multi-repo", "vault"],
+          "default": "single-repo"
+        },
+        "auto_discovered_hub": { "type": "string" },
+        "hubs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["AGENTS.md", "CLAUDE.md"]
+        }
+      },
+      "required": ["mode", "hubs"]
+    },
+    "include": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["**/*.md"]
+    },
+    "exclude": {
+      "type": "array",
+      "items": { "type": "string" },
+      "default": ["node_modules/**", ".git/**", "target/**", "dist/**"]
+    },
+    "token_budget": {
+      "type": "object",
+      "properties": {
+        "warning_threshold": {
+          "type": "integer",
+          "default": 60000
+        },
+        "critical_threshold": {
+          "type": "integer",
+          "default": 100000
+        }
+      },
+      "required": ["warning_threshold", "critical_threshold"]
+    },
+    "color_groups": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string",
+            "pattern": "^(tag:#[a-zA-Z0-9_/-]+|path:.+)$"
+          },
+          "color": {
+            "type": "string",
+            "pattern": "^#[0-9a-fA-F]{6}$"
+          },
+          "label": {
+            "type": "string"
+          },
+          "enabled": {
+            "type": "boolean",
+            "default": true
+          }
+        },
+        "required": ["query", "color", "label"]
+      }
+    }
+  },
+  "required": ["version", "vault", "include", "exclude", "token_budget"]
+}

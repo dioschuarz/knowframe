@@ -1,0 +1,74 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLMWikiWebviewRPC",
+  "description": "Typed RPC message schema between VS Code Extension Host and sandboxed Webview panel",
+  "type": "object",
+  "definitions": {
+    "WebviewInboundMessage": {
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string" },
+        "command": {
+          "enum": [
+            "openFile",
+            "setHub",
+            "updateColorGroups",
+            "rescanVault",
+            "installGitHooks",
+            "webviewReady"
+          ]
+        },
+        "payload": {
+          "type": "object"
+        }
+      },
+      "required": ["requestId", "command"]
+    },
+    "OpenFilePayload": {
+      "type": "object",
+      "properties": {
+        "file_path": { "type": "string" },
+        "line": { "type": "integer" }
+      },
+      "required": ["file_path"]
+    },
+    "UpdateColorGroupsPayload": {
+      "type": "object",
+      "properties": {
+        "color_groups": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "query": { "type": "string" },
+              "color": { "type": "string" },
+              "label": { "type": "string" },
+              "enabled": { "type": "boolean" }
+            },
+            "required": ["query", "color", "label"]
+          }
+        }
+      },
+      "required": ["color_groups"]
+    },
+    "WebviewOutboundMessage": {
+      "type": "object",
+      "properties": {
+        "requestId": { "type": ["string", "null"] },
+        "type": {
+          "enum": [
+            "graphDataUpdate",
+            "deltaUpdate",
+            "tokenBudgetAlert",
+            "sidecarStatus",
+            "error"
+          ]
+        },
+        "payload": {
+          "type": "object"
+        }
+      },
+      "required": ["type", "payload"]
+    }
+  }
+}

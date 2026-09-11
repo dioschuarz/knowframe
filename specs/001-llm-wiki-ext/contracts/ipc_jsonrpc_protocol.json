@@ -1,0 +1,139 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "LLMWikiSidecarJSONRPC",
+  "description": "JSON-RPC 2.0 interface contracts for llm-wiki-core sidecar daemon",
+  "type": "object",
+  "definitions": {
+    "ScanWorkspaceRequest": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": ["string", "number"] },
+        "method": { "const": "workspace/scan" },
+        "params": {
+          "type": "object",
+          "properties": {
+            "workspace_path": { "type": "string" },
+            "config_path": { "type": "string" },
+            "hub_override": { "type": "string" }
+          },
+          "required": ["workspace_path"]
+        }
+      },
+      "required": ["jsonrpc", "id", "method", "params"]
+    },
+    "ScanWorkspaceResponse": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": ["string", "number"] },
+        "result": {
+          "type": "object",
+          "properties": {
+            "hub_id": { "type": "string" },
+            "total_files": { "type": "integer" },
+            "total_links": { "type": "integer" },
+            "broken_links_count": { "type": "integer" },
+            "scan_duration_ms": { "type": "number" },
+            "token_summary": { "$ref": "#/definitions/TokenSummaryPayload" },
+            "nodes": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/NodePayload" }
+            },
+            "edges": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/EdgePayload" }
+            }
+          },
+          "required": ["hub_id", "total_files", "total_links", "token_summary", "nodes", "edges"]
+        }
+      },
+      "required": ["jsonrpc", "id", "result"]
+    },
+    "GitCommitDeltaNotification": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "method": { "const": "git/commitDelta" },
+        "params": {
+          "type": "object",
+          "properties": {
+            "repo_path": { "type": "string" },
+            "commit_hash": { "type": "string" },
+            "branch": { "type": "string" },
+            "changed_files": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "path": { "type": "string" },
+                  "status": { "enum": ["added", "modified", "deleted"] }
+                },
+                "required": ["path", "status"]
+              }
+            }
+          },
+          "required": ["repo_path", "changed_files"]
+        }
+      },
+      "required": ["jsonrpc", "method", "params"]
+    },
+    "SetHubRequest": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": ["string", "number"] },
+        "method": { "const": "graph/setHub" },
+        "params": {
+          "type": "object",
+          "properties": {
+            "hub_id": { "type": "string" }
+          },
+          "required": ["hub_id"]
+        }
+      },
+      "required": ["jsonrpc", "id", "method", "params"]
+    },
+    "NodePayload": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "label": { "type": "string" },
+        "file_path": { "type": "string" },
+        "tags": { "type": "array", "items": { "type": "string" } },
+        "color": { "type": "string" },
+        "status": { "enum": ["active", "connected_inactive", "orphan"] },
+        "tokens": { "type": "integer" },
+        "hop_distance": { "type": "integer" },
+        "in_degree": { "type": "integer" },
+        "out_degree": { "type": "integer" },
+        "betweenness": { "type": "number" },
+        "broken_links": { "type": "integer" }
+      },
+      "required": ["id", "label", "file_path", "tags", "color", "status", "tokens", "hop_distance", "in_degree", "out_degree", "betweenness", "broken_links"]
+    },
+    "EdgePayload": {
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "source": { "type": "string" },
+        "target": { "type": "string" },
+        "is_broken": { "type": "boolean" },
+        "link_type": { "enum": ["markdown", "wikilink"] },
+        "anchor": { "type": ["string", "null"] }
+      },
+      "required": ["id", "source", "target", "is_broken", "link_type"]
+    },
+    "TokenSummaryPayload": {
+      "type": "object",
+      "properties": {
+        "active_harness_tokens": { "type": "integer" },
+        "subcall_accessible_tokens": { "type": "integer" },
+        "warning_threshold": { "type": "integer" },
+        "critical_threshold": { "type": "integer" },
+        "status": { "enum": ["normal", "warning", "critical"] }
+      },
+      "required": ["active_harness_tokens", "subcall_accessible_tokens", "warning_threshold", "critical_threshold", "status"]
+    }
+  }
+}
