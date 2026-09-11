@@ -38,7 +38,7 @@ export function renderActionsToolbar(
     <div class="floating-toolbar-wrapper">
       <div class="floating-toolbar">
         <!-- Token Economics Icon Button -->
-        <button id="btn-token-toggle" class="tb-icon-btn tb-token-btn" title="Token Economics & Context Budget">
+        <button id="btn-token-toggle" class="tb-icon-btn tb-token-btn" aria-label="Token Economics" data-tooltip-title="Token Economics" data-tooltip-desc="Active prompt tokens (L0) and subcall context (L1+) against budget">
           <svg class="tb-svg" viewBox="0 0 16 16" fill="currentColor">
             <path d="M7 1L1 9h5l-1 6 7-8h-5l1-6z"/>
           </svg>
@@ -47,8 +47,8 @@ export function renderActionsToolbar(
 
         <div class="tb-divider"></div>
 
-        <!-- Gravity & Spacing Settings Icon Button -->
-        <button id="btn-physics-toggle" class="tb-icon-btn" title="Graph Gravity & Spacing Settings">
+        <!-- Gravity & Spacing Settings Button -->
+        <button id="btn-physics-toggle" class="tb-icon-btn" aria-label="Gravity & Spacing" data-tooltip-title="Gravity & Spacing" data-tooltip-desc="Tune center gravity, node distance, repulsion force, and presets">
           <svg class="tb-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
             <line x1="2" y1="4" x2="14" y2="4"/>
             <line x1="2" y1="8" x2="14" y2="8"/>
@@ -57,10 +57,11 @@ export function renderActionsToolbar(
             <circle cx="11" cy="8" r="1.6" fill="currentColor"/>
             <circle cx="7" cy="12" r="1.6" fill="currentColor"/>
           </svg>
+          <span class="tb-btn-label">Gravity</span>
         </button>
 
-        <!-- Set Hub Icon Button -->
-        <button id="btn-set-hub" class="tb-icon-btn" title="Set Selected Note as Central Hub">
+        <!-- Set Hub Button -->
+        <button id="btn-set-hub" class="tb-icon-btn" aria-label="Set Central Hub" data-tooltip-title="Set Central Hub" data-tooltip-desc="Select a note on graph first, then click here to set as Level 0 hub">
           <svg class="tb-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
             <circle cx="8" cy="8" r="6"/>
             <circle cx="8" cy="8" r="2" fill="currentColor"/>
@@ -69,39 +70,50 @@ export function renderActionsToolbar(
             <line x1="1" y1="8" x2="3" y2="8"/>
             <line x1="13" y1="8" x2="15" y2="8"/>
           </svg>
+          <span class="tb-btn-label">Set Hub</span>
         </button>
 
-        <!-- Clusters Icon Button -->
-        <button id="btn-toggle-colors" class="tb-icon-btn" title="Manage Chromatic Cluster Rules">
+        <!-- Clusters Button -->
+        <button id="btn-toggle-colors" class="tb-icon-btn" aria-label="Manage Clusters" data-tooltip-title="Cluster Colors" data-tooltip-desc="Configure chromatic cluster rules mapped to #tags or directory paths">
           <svg class="tb-svg" viewBox="0 0 16 16" fill="currentColor">
             <path d="M8 0a8 8 0 1 0 8 8 8 8 0 0 0-8-8zm-4.5 9.5a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm2-4a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm5 0a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5zm2 4a1.5 1.5 0 1 1 1.5-1.5 1.5 1.5 0 0 1-1.5 1.5z"/>
           </svg>
+          <span class="tb-btn-label">Clusters</span>
         </button>
 
         <!-- Labels Mode Toggle Button -->
-        <button id="btn-toggle-labels" class="tb-icon-btn" title="Toggle File Names: Hover Only (Clean) / Show All">
+        <button id="btn-toggle-labels" class="tb-icon-btn" aria-label="File Names" data-tooltip-title="File Names: Hover Only (Clean)" data-tooltip-desc="Click to switch to Show All mode and display all note names">
           <svg class="tb-svg" viewBox="0 0 16 16" fill="currentColor">
             <path d="M2.5 3A1.5 1.5 0 0 0 1 4.5v7A1.5 1.5 0 0 0 2.5 13h11a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 13.5 3h-11zm2.854 7.354l1.5-4a.5.5 0 0 1 .94 0l1.5 4a.5.5 0 0 1-.936.352L7.886 9.5H6.468l-.472 1.206a.5.5 0 1 1-.936-.352zM7.177 7.7l-.469 1.2h.944l-.475-1.2zM11 7a.5.5 0 0 1 .5.5v3a.5.5 0 0 1-1 0v-3A.5.5 0 0 1 11 7z"/>
           </svg>
+          <span id="tb-label-text" class="tb-btn-label">Labels</span>
         </button>
 
-        <!-- Reset Zoom Icon Button -->
-        <button id="btn-reset-zoom" class="tb-icon-btn" title="Reset Zoom & Center View">
+        <!-- Reset Zoom Button -->
+        <button id="btn-reset-zoom" class="tb-icon-btn" aria-label="Reset Zoom & Center View" data-tooltip-title="Reset View" data-tooltip-desc="Reset pan coordinates and zoom scale back to centered 100%">
           <svg class="tb-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5">
             <path d="M1 5V1h4M15 5V1h-4M1 11v4h4M15 11v4h-4"/>
           </svg>
+          <span class="tb-btn-label">Reset</span>
         </button>
 
         <div class="tb-divider"></div>
 
         <!-- Actions Menu Dropdown Button -->
-        <button id="btn-actions-menu" class="tb-icon-btn" title="Vault Actions & Tools">
+        <button id="btn-actions-menu" class="tb-icon-btn" aria-label="Vault Actions" data-tooltip-title="Vault Actions & Tools" data-tooltip-desc="Rescan vault, fix broken links, install git hooks, and unpin notes">
           <svg class="tb-svg" viewBox="0 0 16 16" fill="currentColor">
             <circle cx="8" cy="3" r="1.5"/>
             <circle cx="8" cy="8" r="1.5"/>
             <circle cx="8" cy="13" r="1.5"/>
           </svg>
+          <span class="tb-btn-label">Actions ▾</span>
         </button>
+      </div>
+
+      <!-- Instant Hover Tooltip -->
+      <div id="toolbar-tooltip" class="tb-hover-tooltip" style="display: none;">
+        <div class="tb-tt-title" id="tb-tt-title"></div>
+        <div class="tb-tt-desc" id="tb-tt-desc"></div>
       </div>
 
       <!-- Token Economics Popover Window -->
@@ -289,11 +301,44 @@ export function renderActionsToolbar(
   const btnBalanced = container.querySelector('#preset-balanced') as HTMLButtonElement;
   const btnSpacious = container.querySelector('#preset-spacious') as HTMLButtonElement;
 
+  // Tooltip elements
+  const tooltipEl = container.querySelector('#toolbar-tooltip') as HTMLElement;
+  const ttTitle = container.querySelector('#tb-tt-title') as HTMLElement;
+  const ttDesc = container.querySelector('#tb-tt-desc') as HTMLElement;
+  const toolbarWrapper = container.querySelector('.floating-toolbar-wrapper') as HTMLElement;
+
+  function showTooltip(btn: HTMLElement): void {
+    if (activePopover !== 'none') return;
+    const title = btn.getAttribute('data-tooltip-title');
+    const desc = btn.getAttribute('data-tooltip-desc');
+    if (!title || !tooltipEl || !toolbarWrapper) return;
+
+    ttTitle.textContent = title;
+    ttDesc.textContent = desc || '';
+
+    const btnRect = btn.getBoundingClientRect();
+    const wrapperRect = toolbarWrapper.getBoundingClientRect();
+
+    const left = (btnRect.left - wrapperRect.left) + (btnRect.width / 2);
+    const top = btnRect.bottom - wrapperRect.top + 6;
+
+    tooltipEl.style.left = `${left}px`;
+    tooltipEl.style.top = `${top}px`;
+    tooltipEl.style.display = 'block';
+  }
+
+  function hideTooltip(): void {
+    if (tooltipEl) {
+      tooltipEl.style.display = 'none';
+    }
+  }
+
   function closeAllPopovers(): void {
     tokenPopover.style.display = 'none';
     physicsPopover.style.display = 'none';
     actionsDropdown.style.display = 'none';
     activePopover = 'none';
+    hideTooltip();
   }
 
   function toggleTokenPopover(e: Event): void {
@@ -406,19 +451,24 @@ export function renderActionsToolbar(
     const btnHover = container.querySelector('#btn-lbl-hover') as HTMLElement;
     const btnAll = container.querySelector('#btn-lbl-all') as HTMLElement;
     const tbBtn = container.querySelector('#btn-toggle-labels') as HTMLElement;
+    const tbLabelText = container.querySelector('#tb-label-text') as HTMLElement;
     const menuTitle = container.querySelector('#menu-title-labels') as HTMLElement;
 
     if (mode === 'hover') {
       btnHover?.classList.add('active');
       btnAll?.classList.remove('active');
       tbBtn?.classList.remove('active');
-      if (tbBtn) tbBtn.title = 'File Names: Hover Only (Clean) — Click to Show All';
+      if (tbLabelText) tbLabelText.textContent = 'Labels';
+      tbBtn?.setAttribute('data-tooltip-title', 'File Names: Hover Only (Clean)');
+      tbBtn?.setAttribute('data-tooltip-desc', 'Click to switch to Show All mode and display names for all notes.');
       if (menuTitle) menuTitle.textContent = 'File Names: Hover Only (Clean)';
     } else {
       btnHover?.classList.remove('active');
       btnAll?.classList.add('active');
       tbBtn?.classList.add('active');
-      if (tbBtn) tbBtn.title = 'File Names: Showing All — Click for Hover Only';
+      if (tbLabelText) tbLabelText.textContent = 'Labels: All';
+      tbBtn?.setAttribute('data-tooltip-title', 'File Names: Show All');
+      tbBtn?.setAttribute('data-tooltip-desc', 'Click to switch to Hover Only mode for a clean noise-free graph.');
       if (menuTitle) menuTitle.textContent = 'File Names: Show All';
     }
   }
@@ -452,6 +502,13 @@ export function renderActionsToolbar(
     callbacks.onResetZoom?.();
   });
   container.querySelector('#btn-actions-menu')?.addEventListener('click', toggleActionsDropdown);
+
+  // Instant hover tooltips for all toolbar buttons
+  container.querySelectorAll('.tb-icon-btn').forEach((btn) => {
+    btn.addEventListener('mouseenter', () => showTooltip(btn as HTMLElement));
+    btn.addEventListener('mouseleave', hideTooltip);
+    btn.addEventListener('click', hideTooltip);
+  });
 
   // Close buttons
   container.querySelector('#close-token-popover')?.addEventListener('click', (e) => {
