@@ -1,0 +1,127 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "ObservatoryRpcProtocol",
+  "description": "JSON-RPC 2.0 interface contracts for AI Context Observatory & Curated Exclusions",
+  "definitions": {
+    "PreviewExclusionRequest": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "method", "params"],
+      "properties": {
+        "jsonrpc": { "type": "string", "const": "2.0" },
+        "id": { "type": "string" },
+        "method": { "type": "string", "const": "graph/previewExclusion" },
+        "params": {
+          "type": "object",
+          "required": ["pattern"],
+          "properties": {
+            "pattern": { "type": "string", "description": "Glob pattern to test against workspace files" }
+          }
+        }
+      }
+    },
+    "PreviewExclusionResponse": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "result"],
+      "properties": {
+        "jsonrpc": { "type": "string", "const": "2.0" },
+        "id": { "type": "string" },
+        "result": {
+          "type": "object",
+          "required": ["matchingCount", "samplePaths"],
+          "properties": {
+            "matchingCount": { "type": "integer", "minimum": 0 },
+            "samplePaths": {
+              "type": "array",
+              "items": { "type": "string" },
+              "maxItems": 10
+            }
+          }
+        }
+      }
+    },
+    "ExcludePathRequest": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "method", "params"],
+      "properties": {
+        "jsonrpc": { "type": "string", "const": "2.0" },
+        "id": { "type": "string" },
+        "method": { "type": "string", "const": "graph/excludePath" },
+        "params": {
+          "type": "object",
+          "required": ["pattern", "scope"],
+          "properties": {
+            "pattern": { "type": "string" },
+            "scope": { "type": "string", "enum": ["scan", "graph"] }
+          }
+        }
+      }
+    },
+    "SuggestExclusionsRequest": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "method"],
+      "properties": {
+        "jsonrpc": { "type": "string", "const": "2.0" },
+        "id": { "type": "string" },
+        "method": { "type": "string", "const": "graph/suggestExclusions" }
+      }
+    },
+    "SuggestExclusionsResponse": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "result"],
+      "properties": {
+        "jsonrpc": { "type": "string", "const": "2.0" },
+        "id": { "type": "string" },
+        "result": {
+          "type": "object",
+          "required": ["suggestions"],
+          "properties": {
+            "suggestions": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "required": ["pattern", "matchingCount", "reason", "recommended"],
+                "properties": {
+                  "pattern": { "type": "string" },
+                  "matchingCount": { "type": "integer", "minimum": 1 },
+                  "reason": { "type": "string" },
+                  "recommended": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "SetFocusModeNotification": {
+      "type": "object",
+      "required": ["jsonrpc", "method", "params"],
+      "properties": {
+        "jsonrpc": { "type": "string", "const": "2.0" },
+        "method": { "type": "string", "const": "webview/setFocusMode" },
+        "params": {
+          "type": "object",
+          "required": ["focusMode"],
+          "properties": {
+            "focusMode": { "type": "string", "enum": ["hub", "1_hop", "2_hops", "all"] }
+          }
+        }
+      }
+    },
+    "OpenFileNotification": {
+      "type": "object",
+      "required": ["jsonrpc", "method", "params"],
+      "properties": {
+        "jsonrpc": { "type": "string", "const": "2.0" },
+        "method": { "type": "string", "const": "webview/openFile" },
+        "params": {
+          "type": "object",
+          "required": ["filePath"],
+          "properties": {
+            "filePath": { "type": "string" },
+            "lineNumber": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    }
+  }
+}
