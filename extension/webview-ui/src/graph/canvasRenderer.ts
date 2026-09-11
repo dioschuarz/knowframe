@@ -5,6 +5,10 @@ export interface CanvasRendererOptions {
   canvas: HTMLCanvasElement;
   onNodeClick?: (node: NoteNode) => void;
   onNodeHover?: (node: NoteNode | null, x: number, y: number) => void;
+  onNodeDragStart?: (node: NoteNode, x: number, y: number) => void;
+  onNodeDrag?: (node: NoteNode, x: number, y: number) => void;
+  onNodeDragEnd?: (node: NoteNode, x: number, y: number) => void;
+  onNodeDoubleClick?: (node: NoteNode) => void;
 }
 
 export class CanvasRenderer {
@@ -18,7 +22,14 @@ export class CanvasRenderer {
   private scale = 1;
   private offsetX = 0;
   private offsetY = 0;
-  private isDragging = false;
+
+  // Interaction State
+  private isPanning = false;
+  private draggedNode: NoteNode | null = null;
+  private isNodeDragging = false;
+  private dragStartX = 0;
+  private dragStartY = 0;
+  private hasMoved = false;
   private lastMouseX = 0;
   private lastMouseY = 0;
 
@@ -26,12 +37,20 @@ export class CanvasRenderer {
   private animFrameId: number | null = null;
   private onNodeClick?: (node: NoteNode) => void;
   private onNodeHover?: (node: NoteNode | null, x: number, y: number) => void;
+  private onNodeDragStart?: (node: NoteNode, x: number, y: number) => void;
+  private onNodeDrag?: (node: NoteNode, x: number, y: number) => void;
+  private onNodeDragEnd?: (node: NoteNode, x: number, y: number) => void;
+  private onNodeDoubleClick?: (node: NoteNode) => void;
 
   constructor(options: CanvasRendererOptions) {
     this.canvas = options.canvas;
     this.ctx = options.canvas.getContext('2d')!;
     this.onNodeClick = options.onNodeClick;
     this.onNodeHover = options.onNodeHover;
+    this.onNodeDragStart = options.onNodeDragStart;
+    this.onNodeDrag = options.onNodeDrag;
+    this.onNodeDragEnd = options.onNodeDragEnd;
+    this.onNodeDoubleClick = options.onNodeDoubleClick;
 
     this.setupDpr();
     this.setupEvents();
@@ -66,29 +85,52 @@ export class CanvasRenderer {
 
   private setupEvents(): void {
     this.canvas.addEventListener('mousedown', (e) => {
-      this.isDragging = true;
       this.lastMouseX = e.clientX;
       this.lastMouseY = e.clientY;
 
       const hit = this.findNodeAt(e.clientX, e.clientY);
-      if (hit && this.onNodeClick) {
-        this.onNodeClick(hit);
+      if (hit) {
+        this.draggedNode = hit;
+        this.isNodeDragging = false;
+        this.dragStartX = e.clientX;
+        this.dragStartY = e.clientY;
+        this.hasMoved = false;
+      } else {
+        this.isPanning = true;
       }
     });
 
     window.addEventListener('mousemove', (e) => {
-      if (this.isDragging) {
+      if (this.draggedNode) {
+        const dist = Math.hypot(e.clientX - this.dragStartX, e.clientY - this.dragStartY);
+        if (dist > 3) {
+          const rect = this.canvas.getBoundingClientRect();
+          const canvasX = e.clientX - rect.left;
+          const canvasY = e.clientY - rect.top;
+          const worldX = (canvasX - this.offsetX) / this.scale;
+          const worldY = (canvasY - this.offsetY) / this.scale;
+
+          if (!this.isNodeDragging) {
+            this.isNodeDragging = true;
+            this.canvas.style.cursor = 'grabbing';
+            this.onNodeDragStart?.(this.draggedNode, worldX, worldY);
+          }
+          this.hasMoved = true;
+          this.onNodeDrag?.(this.draggedNode, worldX, worldY);
+        }
+      } else if (this.isPanning) {
         const dx = e.clientX - this.lastMouseX;
         const dy = e.clientY - this.lastMouseY;
         this.offsetX += dx;
         this.offsetY += dy;
         this.lastMouseX = e.clientX;
         this.lastMouseY = e.clientY;
+        this.canvas.style.cursor = 'grabbing';
       } else {
         const hit = this.findNodeAt(e.clientX, e.clientY);
         if (hit !== this.hoveredNode) {
           this.hoveredNode = hit;
-          this.canvas.style.cursor = hit ? 'pointer' : 'default';
+          this.canvas.style.cursor = hit ? 'grab' : 'default';
         }
         if (this.onNodeHover) {
           this.onNodeHover(hit, e.clientX, e.clientY);
@@ -96,8 +138,33 @@ export class CanvasRenderer {
       }
     });
 
-    window.addEventListener('mouseup', () => {
-      this.isDragging = false;
+    window.addEventListener('mouseup', (e) => {
+      if (this.draggedNode) {
+        if (this.isNodeDragging && this.hasMoved) {
+          const rect = this.canvas.getBoundingClientRect();
+          const canvasX = e.clientX - rect.left;
+          const canvasY = e.clientY - rect.top;
+          const worldX = (canvasX - this.offsetX) / this.scale;
+          const worldY = (canvasY - this.offsetY) / this.scale;
+          this.onNodeDragEnd?.(this.draggedNode, worldX, worldY);
+        } else {
+          // Clean click without dragging -> open note
+          this.onNodeClick?.(this.draggedNode);
+        }
+        this.draggedNode = null;
+        this.isNodeDragging = false;
+        this.hasMoved = false;
+      }
+      this.isPanning = false;
+      const hit = this.findNodeAt(e.clientX, e.clientY);
+      this.canvas.style.cursor = hit ? 'grab' : 'default';
+    });
+
+    this.canvas.addEventListener('dblclick', (e) => {
+      const hit = this.findNodeAt(e.clientX, e.clientY);
+      if (hit && this.onNodeDoubleClick) {
+        this.onNodeDoubleClick(hit);
+      }
     });
 
     this.canvas.addEventListener('wheel', (e) => {
@@ -217,10 +284,22 @@ export class CanvasRenderer {
         this.ctx.lineWidth = 2;
         this.ctx.strokeStyle = '#EF4444';
         this.ctx.stroke();
+      } else if (node.fx !== null && node.fx !== undefined) {
+        this.ctx.lineWidth = 2.5;
+        this.ctx.strokeStyle = '#F59E0B';
+        this.ctx.stroke();
       } else {
         this.ctx.lineWidth = 1;
         this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
         this.ctx.stroke();
+      }
+
+      // Small amber pin indicator for manually positioned nodes
+      if (node.fx !== null && node.fx !== undefined) {
+        this.ctx.beginPath();
+        this.ctx.arc(node.x + r * 0.7, node.y - r * 0.7, Math.max(2, 3 / this.scale), 0, 2 * Math.PI);
+        this.ctx.fillStyle = '#F59E0B';
+        this.ctx.fill();
       }
     }
 

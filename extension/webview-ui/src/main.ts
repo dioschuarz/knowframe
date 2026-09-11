@@ -31,30 +31,6 @@ let currentPhysicsParams: PhysicsParameters = savedState?.physicsParams
   ? { ...DEFAULT_PHYSICS_PARAMS, ...savedState.physicsParams }
   : { ...DEFAULT_PHYSICS_PARAMS };
 
-const renderer = new CanvasRenderer({
-  canvas,
-  onNodeClick: (node) => {
-    selectedNode = node;
-    rpc.openFile(node.filePath);
-  },
-  onNodeHover: (node, x, y) => {
-    if (node) {
-      tooltip.style.display = 'block';
-      tooltip.style.left = `${x + 12}px`;
-      tooltip.style.top = `${y + 12}px`;
-      tooltip.innerHTML = `
-        <div class="tooltip-title">${node.label}</div>
-        <div class="tooltip-meta">Tokens: ${node.tokens.toLocaleString()}</div>
-        <div class="tooltip-meta">Hop Depth: ${node.hopDistance >= 0 ? 'Level ' + node.hopDistance : 'Orphan'}</div>
-        <div class="tooltip-meta">Degree: In ${node.inDegree} / Out ${node.outDegree}</div>
-        ${node.brokenLinks > 0 ? `<div class="tooltip-warn">Broken links: ${node.brokenLinks}</div>` : ''}
-      `;
-    } else {
-      tooltip.style.display = 'none';
-    }
-  },
-});
-
 const physics = createPhysicsSimulation(
   window.innerWidth,
   window.innerHeight,
@@ -63,6 +39,48 @@ const physics = createPhysicsSimulation(
   },
   currentPhysicsParams,
 );
+
+const renderer = new CanvasRenderer({
+  canvas,
+  onNodeClick: (node) => {
+    selectedNode = node;
+    rpc.openFile(node.filePath);
+  },
+  onNodeHover: (node, x, y) => {
+    if (node) {
+      const isPinned = node.fx !== null && node.fx !== undefined;
+      tooltip.style.display = 'block';
+      tooltip.style.left = `${x + 12}px`;
+      tooltip.style.top = `${y + 12}px`;
+      tooltip.innerHTML = `
+        <div class="tooltip-title">${node.label}</div>
+        <div class="tooltip-meta">Tokens: ${node.tokens.toLocaleString()}</div>
+        <div class="tooltip-meta">Hop Depth: ${node.hopDistance >= 0 ? 'Level ' + node.hopDistance : 'Orphan'}</div>
+        <div class="tooltip-meta">Degree: In ${node.inDegree} / Out ${node.outDegree}</div>
+        ${isPinned ? '<div class="tooltip-meta" style="color: #F59E0B; font-weight: bold;">📌 Position Fixed (Double-click to unpin)</div>' : ''}
+        ${node.brokenLinks > 0 ? `<div class="tooltip-warn">Broken links: ${node.brokenLinks}</div>` : ''}
+      `;
+    } else {
+      tooltip.style.display = 'none';
+    }
+  },
+  onNodeDragStart: (node) => {
+    tooltip.style.display = 'none';
+    physics.onDragStart(node);
+  },
+  onNodeDrag: (node, x, y) => {
+    physics.onDrag(node, x, y);
+  },
+  onNodeDragEnd: (node, x, y) => {
+    const isSticky = toolbarController ? toolbarController.isStickyDrag() : true;
+    physics.onDragEnd(node, x, y, isSticky);
+    toolbarController?.updatePinnedCount(physics.getPinnedCount());
+  },
+  onNodeDoubleClick: (node) => {
+    physics.unpinNode(node);
+    toolbarController?.updatePinnedCount(physics.getPinnedCount());
+  },
+});
 
 window.addEventListener('resize', () => {
   renderer.resize(window.innerWidth, window.innerHeight);
@@ -103,6 +121,10 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
   },
   onReheat: () => {
     physics.restart(0.5);
+  },
+  onUnpinAll: () => {
+    physics.unpinAll();
+    toolbarController.updatePinnedCount(0);
   },
   onToggleColorManager: () => {
     renderColorManager(colorModalContainer, colorGroups, {

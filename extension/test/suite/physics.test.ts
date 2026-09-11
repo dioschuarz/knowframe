@@ -125,4 +125,79 @@ suite('Graph Physics & Gravity Configuration Test Suite', () => {
 
     sim.stop();
   });
+
+  test('Node dragging, pinning, and unpinning lifecycle', () => {
+    const sim = createPhysicsSimulation(800, 600, () => {});
+    const mockNodes: NoteNode[] = [
+      {
+        id: 'n1',
+        label: 'Node 1',
+        filePath: 'n1.md',
+        tags: [],
+        color: '#3B82F6',
+        status: 'active',
+        tokens: 10,
+        hopDistance: 0,
+        inDegree: 0,
+        outDegree: 0,
+        betweenness: 0,
+        brokenLinks: 0,
+        x: 100,
+        y: 100,
+      },
+      {
+        id: 'n2',
+        label: 'Node 2',
+        filePath: 'n2.md',
+        tags: [],
+        color: '#64748B',
+        status: 'orphan',
+        tokens: 10,
+        hopDistance: -1,
+        inDegree: 0,
+        outDegree: 0,
+        betweenness: 0,
+        brokenLinks: 0,
+        x: 200,
+        y: 200,
+      },
+    ];
+
+    sim.updateData(mockNodes, []);
+
+    // 1. Drag start
+    sim.onDragStart(mockNodes[0]);
+    assert.strictEqual(mockNodes[0].fx, 100);
+    assert.strictEqual(mockNodes[0].fy, 100);
+
+    // 2. Drag move
+    sim.onDrag(mockNodes[0], 150, 175);
+    assert.strictEqual(mockNodes[0].fx, 150);
+    assert.strictEqual(mockNodes[0].fy, 175);
+
+    // 3. Drag end with pinning
+    sim.onDragEnd(mockNodes[0], 150, 175, true);
+    assert.strictEqual(mockNodes[0].fx, 150);
+    assert.strictEqual(mockNodes[0].fy, 175);
+    assert.strictEqual(sim.getPinnedCount(), 1);
+
+    // 4. Pin second node
+    sim.onDragStart(mockNodes[1]);
+    sim.onDragEnd(mockNodes[1], 300, 350, true);
+    assert.strictEqual(sim.getPinnedCount(), 2);
+
+    // 5. Unpin single node
+    sim.unpinNode(mockNodes[0]);
+    assert.strictEqual(mockNodes[0].fx, null);
+    assert.strictEqual(mockNodes[0].fy, null);
+    assert.strictEqual(sim.getPinnedCount(), 1);
+
+    // 6. Unpin all
+    sim.unpinAll();
+    assert.strictEqual(mockNodes[1].fx, null);
+    assert.strictEqual(mockNodes[1].fy, null);
+    assert.strictEqual(sim.getPinnedCount(), 0);
+
+    sim.stop();
+  });
 });

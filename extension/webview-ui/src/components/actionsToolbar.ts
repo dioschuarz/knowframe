@@ -14,11 +14,15 @@ export interface ActionsToolbarCallbacks {
   onResetZoom?: () => void;
   onPhysicsChange?: (params: PhysicsParameters) => void;
   onReheat?: () => void;
+  onUnpinAll?: () => void;
+  onStickyToggle?: (enabled: boolean) => void;
 }
 
 export interface ActionsToolbarController {
   updateTokenSummary: (summary: TokenSummary) => void;
   setPhysicsParameters: (params: PhysicsParameters) => void;
+  updatePinnedCount: (count: number) => void;
+  isStickyDrag: () => boolean;
 }
 
 export function renderActionsToolbar(
@@ -174,6 +178,16 @@ export function renderActionsToolbar(
             <div class="physics-hint">Minimum clearance padding around nodes</div>
           </div>
 
+          <div class="physics-toggle-row">
+            <label class="physics-checkbox-lbl" title="Keep moved nodes pinned in place until released">
+              <input type="checkbox" id="chk-sticky-drag" checked>
+              <span>Sticky Placement</span>
+            </label>
+            <button id="btn-unpin-all" class="physics-action-btn" title="Unpin all manually positioned notes">
+              📌 Unpin (<span id="badge-pinned-count">0</span>)
+            </button>
+          </div>
+
           <div class="physics-footer">
             <button id="btn-reheat-sim" class="physics-action-btn" title="Re-simulate node positions">⚡ Reheat</button>
             <button id="btn-reset-physics" class="physics-action-btn" title="Reset all sliders to defaults">↺ Reset Defaults</button>
@@ -188,6 +202,13 @@ export function renderActionsToolbar(
           <div class="m-text">
             <div class="m-title">Gravity & Spacing</div>
             <div class="m-desc">Tune node repulsion, link distance & center pull</div>
+          </div>
+        </div>
+        <div class="menu-item" id="menu-act-unpin">
+          <span class="m-icon">📌</span>
+          <div class="m-text">
+            <div class="m-title">Unpin All Nodes</div>
+            <div class="m-desc">Release all manually positioned notes</div>
           </div>
         </div>
         <div class="menu-divider"></div>
@@ -406,6 +427,23 @@ export function renderActionsToolbar(
     callbacks.onPhysicsChange?.(preset);
   });
 
+  // Sticky placement and unpin controls
+  const chkStickyDrag = container.querySelector('#chk-sticky-drag') as HTMLInputElement;
+  const badgePinnedCount = container.querySelector('#badge-pinned-count') as HTMLElement;
+
+  chkStickyDrag?.addEventListener('change', () => {
+    callbacks.onStickyToggle?.(chkStickyDrag.checked);
+  });
+
+  container.querySelector('#btn-unpin-all')?.addEventListener('click', () => {
+    callbacks.onUnpinAll?.();
+  });
+
+  container.querySelector('#menu-act-unpin')?.addEventListener('click', () => {
+    closeAllPopovers();
+    callbacks.onUnpinAll?.();
+  });
+
   // Action Menu Items
   container.querySelector('#menu-act-physics')?.addEventListener('click', (e) => {
     e.stopPropagation();
@@ -498,6 +536,16 @@ export function renderActionsToolbar(
 
     setPhysicsParameters(params: PhysicsParameters) {
       applyPhysicsToUi(params);
+    },
+
+    updatePinnedCount(count: number) {
+      if (badgePinnedCount) {
+        badgePinnedCount.textContent = count.toString();
+      }
+    },
+
+    isStickyDrag() {
+      return chkStickyDrag ? chkStickyDrag.checked : true;
     },
   };
 }

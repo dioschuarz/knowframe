@@ -8,6 +8,12 @@ export interface PhysicsSimulation {
   updateParameters: (params: Partial<PhysicsParameters>) => void;
   getParameters: () => PhysicsParameters;
   resize: (width: number, height: number) => void;
+  onDragStart: (node: NoteNode) => void;
+  onDrag: (node: NoteNode, x: number, y: number) => void;
+  onDragEnd: (node: NoteNode, x: number, y: number, pin?: boolean) => void;
+  unpinNode: (node: NoteNode) => void;
+  unpinAll: () => void;
+  getPinnedCount: () => number;
   restart: (alpha?: number) => void;
   stop: () => void;
 }
@@ -62,6 +68,21 @@ export function createPhysicsSimulation(
   return {
     simulation,
     updateData: (nodes: NoteNode[], edges: NoteEdge[]) => {
+      // Preserve any user-pinned coordinates across reloads
+      const existingPins = new Map<string, { fx: number; fy: number }>();
+      for (const n of currentNodes) {
+        if (n.fx !== null && n.fx !== undefined && n.fy !== null && n.fy !== undefined) {
+          existingPins.set(n.id, { fx: n.fx, fy: n.fy });
+        }
+      }
+      for (const n of nodes) {
+        const pin = existingPins.get(n.id);
+        if (pin) {
+          n.fx = pin.fx;
+          n.fy = pin.fy;
+        }
+      }
+
       currentNodes = nodes;
       currentEdges = edges;
       simulation.nodes(nodes);
@@ -83,6 +104,41 @@ export function createPhysicsSimulation(
       forceX.x(newWidth / 2);
       forceY.y(newHeight / 2);
       simulation.alpha(0.15).restart();
+    },
+    onDragStart: (node: NoteNode) => {
+      simulation.alphaTarget(0.3).restart();
+      node.fx = node.x ?? null;
+      node.fy = node.y ?? null;
+    },
+    onDrag: (node: NoteNode, x: number, y: number) => {
+      node.fx = x;
+      node.fy = y;
+    },
+    onDragEnd: (node: NoteNode, x: number, y: number, pin: boolean = true) => {
+      simulation.alphaTarget(0);
+      if (pin) {
+        node.fx = x;
+        node.fy = y;
+        simulation.alpha(0.2).restart();
+      } else {
+        node.fx = null;
+        node.fy = null;
+      }
+    },
+    unpinNode: (node: NoteNode) => {
+      node.fx = null;
+      node.fy = null;
+      simulation.alpha(0.35).restart();
+    },
+    unpinAll: () => {
+      for (const n of currentNodes) {
+        n.fx = null;
+        n.fy = null;
+      }
+      simulation.alpha(0.4).restart();
+    },
+    getPinnedCount: () => {
+      return currentNodes.filter((n) => n.fx !== null && n.fx !== undefined).length;
     },
     restart: (alpha = 0.5) => {
       simulation.alpha(alpha).restart();

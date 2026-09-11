@@ -324,12 +324,37 @@ body, html {
   line-height: 1.2;
 }
 
+.physics-toggle-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin: 10px 0 6px 0;
+  padding: 6px 0;
+  border-top: 1px solid var(--border-color);
+  border-bottom: 1px solid var(--border-color);
+}
+
+.physics-checkbox-lbl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--vscode-editor-foreground, #d4d4d4);
+  cursor: pointer;
+  user-select: none;
+}
+
+.physics-checkbox-lbl input[type="checkbox"] {
+  accent-color: var(--vscode-button-background, #0e639c);
+  cursor: pointer;
+  margin: 0;
+}
+
 .physics-footer {
   display: flex;
   justify-content: space-between;
-  margin-top: 12px;
-  padding-top: 8px;
-  border-top: 1px solid var(--border-color);
+  margin-top: 10px;
+  padding-top: 4px;
 }
 
 .physics-action-btn {
