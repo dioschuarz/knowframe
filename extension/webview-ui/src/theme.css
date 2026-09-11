@@ -288,6 +288,51 @@ body, html {
   color: var(--fg-color, #ffffff);
 }
 
+.search-options-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 6px 3px 6px;
+  border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+  margin-top: 4px;
+  gap: 8px;
+}
+
+.search-mode-group {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  background: var(--vscode-editor-background, rgba(0, 0, 0, 0.25));
+  padding: 2px;
+  border-radius: 4px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.08));
+}
+
+.search-mode-btn {
+  background: transparent;
+  border: none;
+  border-radius: 3px;
+  color: var(--vscode-descriptionForeground, #888888);
+  font-size: 10.5px;
+  font-weight: 500;
+  padding: 2px 7px;
+  cursor: pointer;
+  transition: all 0.12s ease;
+  user-select: none;
+  line-height: 1.3;
+}
+
+.search-mode-btn:hover {
+  color: var(--fg-color, #ffffff);
+  background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.08));
+}
+
+.search-mode-btn.active {
+  background: var(--vscode-button-background, #0e639c);
+  color: var(--vscode-button-foreground, #ffffff);
+  font-weight: 600;
+}
+
 .popover-header {
   display: flex;
   justify-content: space-between;
@@ -524,18 +569,6 @@ body, html {
 .physics-action-btn:hover {
   background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1));
   color: var(--fg-color);
-}
-
-.physics-action-primary {
-  border-color: rgba(56, 189, 248, 0.4);
-  color: #38bdf8;
-  font-weight: 600;
-}
-
-.physics-action-primary:hover {
-  background: rgba(56, 189, 248, 0.15);
-  border-color: #38bdf8;
-  color: #7dd3fc;
 }
 
 /* Actions Menu Popover */

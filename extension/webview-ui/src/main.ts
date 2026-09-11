@@ -3,7 +3,7 @@ import { createPhysicsSimulation } from './graph/physics';
 import { WebviewRpcBridge } from './rpc/webviewRpc';
 import { renderActionsToolbar } from './components/actionsToolbar';
 import { renderColorManager } from './components/colorManager';
-import { filterNodesByQuery } from './graph/searchMatcher';
+import { filterNodesByQuery, SearchMatchOptions } from './graph/searchMatcher';
 import {
   NoteNode,
   NoteEdge,
@@ -160,10 +160,10 @@ function applyClientSideColorGroups(nodeList: NoteNode[], groups: ClusterColorGr
 }
 
 let currentSearchQuery = '';
-let currentSearchExact = false;
+let currentSearchOptions: SearchMatchOptions = { mode: 'contains', caseSensitive: false };
 
 function applySearchFilter(): void {
-  const matchedIds = filterNodesByQuery(nodes, currentSearchQuery, { exact: currentSearchExact });
+  const matchedIds = filterNodesByQuery(nodes, currentSearchQuery, currentSearchOptions);
   renderer.setSearchFilter(matchedIds);
   if (matchedIds !== null) {
     toolbarController.setSearchMatchCount(matchedIds.size, nodes.length);
@@ -202,9 +202,9 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
     renderer.draw();
     persistState();
   },
-  onSearchChange: (query: string, exact: boolean) => {
+  onSearchChange: (query: string, options: SearchMatchOptions) => {
     currentSearchQuery = query;
-    currentSearchExact = exact;
+    currentSearchOptions = options;
     applySearchFilter();
   },
   onReheat: () => {
@@ -214,19 +214,6 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
     physics.unpinAll();
     toolbarController.updatePinnedCount(0);
     persistState();
-  },
-  onResetLayout: () => {
-    physics.resetDisposition();
-    currentPhysicsParams = { ...DEFAULT_PHYSICS_PARAMS };
-    toolbarController.setPhysicsParameters(currentPhysicsParams);
-    toolbarController.updatePinnedCount(0);
-    renderer.resetZoom();
-    if (savedState) {
-      savedState.pinnedNodes = [];
-    }
-    persistState();
-    applySearchFilter();
-    renderer.draw();
   },
   onToggleColorManager: () => {
     renderColorManager(

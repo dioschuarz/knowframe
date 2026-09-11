@@ -91,13 +91,66 @@ suite('Graph Search Matcher Test Suite', () => {
   });
 
   test('Exact match distinguishes specific folder or tag', () => {
-    const exactFolder = filterNodesByQuery(sampleNodes, '00_meta', { exact: true });
+    const exactFolder = filterNodesByQuery(sampleNodes, '00_meta', { mode: 'exact' });
     assert.ok(exactFolder);
     assert.strictEqual(exactFolder.size, 1);
     assert.ok(exactFolder.has('00_meta/wiki_index.md'));
 
-    const nonExact = filterNodesByQuery(sampleNodes, '00_met', { exact: true });
+    const nonExact = filterNodesByQuery(sampleNodes, '00_met', { mode: 'exact' });
     assert.ok(nonExact);
     assert.strictEqual(nonExact.size, 0);
+
+    const exactStem = filterNodesByQuery(sampleNodes, 'active_context', { mode: 'exact' });
+    assert.ok(exactStem);
+    assert.strictEqual(exactStem.size, 1);
+    assert.ok(exactStem.has('02_memory/active_context.md'));
+  });
+
+  test('Contains mode fails on separated keywords', () => {
+    // "client architecture" does not exist as a contiguous substring in "Client App Architecture"
+    const matched = filterNodesByQuery(sampleNodes, 'client architecture', { mode: 'contains' });
+    assert.ok(matched);
+    assert.strictEqual(matched.size, 0);
+  });
+
+  test('Keywords mode matches separated keys like "client architecture" in "Client App Architecture"', () => {
+    const matched = filterNodesByQuery(sampleNodes, 'client architecture', { mode: 'keywords' });
+    assert.ok(matched);
+    assert.strictEqual(matched.size, 1);
+    assert.ok(matched.has('01_projects/client_app.md'));
+  });
+
+  test('Keywords mode matches keys across folder path, filename, and tags', () => {
+    // "studies k8s" -> folder "06_studies" + tag "#k8s"
+    const matched = filterNodesByQuery(sampleNodes, 'studies k8s', { mode: 'keywords' });
+    assert.ok(matched);
+    assert.strictEqual(matched.size, 1);
+    assert.ok(matched.has('06_studies/k8s/01_index.md'));
+
+    // Rejects if one keyword is missing
+    const missing = filterNodesByQuery(sampleNodes, 'studies nonexisting', { mode: 'keywords' });
+    assert.ok(missing);
+    assert.strictEqual(missing.size, 0);
+  });
+
+  test('Case sensitive search toggles case sensitivity across modes', () => {
+    // Case insensitive contains: 'CLIENT' matches 'client_app.md'
+    const caseInsensitiveHit = filterNodesByQuery(sampleNodes, 'CLIENT', { mode: 'contains', caseSensitive: false });
+    assert.ok(caseInsensitiveHit);
+    assert.strictEqual(caseInsensitiveHit.size, 1);
+
+    // Case sensitive contains: 'CLIENT' (all caps) does not match 'Client' or 'client'
+    const caseSensitiveMiss = filterNodesByQuery(sampleNodes, 'CLIENT', { mode: 'contains', caseSensitive: true });
+    assert.ok(caseSensitiveMiss);
+    assert.strictEqual(caseSensitiveMiss.size, 0);
+
+    // Case sensitive keywords
+    const kwHit = filterNodesByQuery(sampleNodes, 'Client Architecture', { mode: 'keywords', caseSensitive: true });
+    assert.ok(kwHit);
+    assert.strictEqual(kwHit.size, 1);
+
+    const kwMiss = filterNodesByQuery(sampleNodes, 'CLIENT ARCHITECTURE', { mode: 'keywords', caseSensitive: true });
+    assert.ok(kwMiss);
+    assert.strictEqual(kwMiss.size, 0);
   });
 });

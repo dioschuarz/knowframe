@@ -5,6 +5,7 @@ import {
   PHYSICS_PRESETS,
   LabelsMode,
 } from '../../../src/types/graph';
+import type { SearchMatchOptions, SearchMode } from '../graph/searchMatcher';
 
 export interface ActionsToolbarCallbacks {
   onSetHub: () => void;
@@ -18,8 +19,7 @@ export interface ActionsToolbarCallbacks {
   onUnpinAll?: () => void;
   onStickyToggle?: (enabled: boolean) => void;
   onToggleLabelsMode?: (mode: LabelsMode) => void;
-  onSearchChange?: (query: string, exact: boolean) => void;
-  onResetLayout?: () => void;
+  onSearchChange?: (query: string, options: SearchMatchOptions) => void;
 }
 
 export interface ActionsToolbarController {
@@ -31,6 +31,7 @@ export interface ActionsToolbarController {
   setSearchMatchCount: (matchingCount: number, totalCount: number) => void;
   openSearch: () => void;
   closeSearch: () => void;
+  getSearchOptions: () => SearchMatchOptions;
 }
 
 export function renderActionsToolbar(
@@ -105,14 +106,6 @@ export function renderActionsToolbar(
           </svg>
         </button>
 
-        <!-- Reset Graph Disposition Button -->
-        <button id="btn-reset-layout" class="tb-icon-btn" aria-label="Reset Graph Disposition" data-tooltip-title="Reset Graph Disposition" data-tooltip-desc="Return all nodes to default positions, unpin all notes, restore balanced gravity & re-center view">
-          <svg class="tb-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M8 2.5a5.5 5.5 0 1 1-3.9 1.6L2 2"/>
-            <path d="M2 6V2h4"/>
-          </svg>
-        </button>
-
         <div class="tb-divider"></div>
 
         <!-- Actions Menu Dropdown Button -->
@@ -147,8 +140,15 @@ export function renderActionsToolbar(
             spellcheck="false"
           />
           <span id="tb-search-count" class="search-match-badge" style="display: none;">0 matches</span>
-          <button id="btn-search-exact" class="search-option-btn" title="Toggle: Substring contains (default) vs Exact match">Aa</button>
           <button id="btn-search-clear" class="search-clear-btn" title="Clear search (Esc)" style="display: none;">✕</button>
+        </div>
+        <div class="search-options-row">
+          <div class="search-mode-group">
+            <button id="btn-mode-contains" class="search-mode-btn active" title="Contains: Match contiguous substring anywhere in note (Default)">Contains</button>
+            <button id="btn-mode-keywords" class="search-mode-btn" title="Keywords: Match all separate words in any order (e.g. 'vs extension' matches 'vs code extension')">Keywords</button>
+            <button id="btn-mode-exact" class="search-mode-btn" title="Exact: Match exact note title, filename stem, or folder name">Exact</button>
+          </div>
+          <button id="btn-search-case" class="search-option-btn" title="Match Case (Case Sensitive)">Aa</button>
         </div>
       </div>
 
@@ -250,15 +250,14 @@ export function renderActionsToolbar(
               <input type="checkbox" id="chk-sticky-drag" checked>
               <span>Sticky Placement</span>
             </label>
-            <button id="btn-unpin-all" class="physics-action-btn" title="Unpin all manually positioned notes">
-              📌 Unpin (<span id="badge-pinned-count">0</span>)
+            <button id="btn-unpin-all" class="physics-action-btn" title="Reset disposition by releasing all pinned notes">
+              📌 Reset Disposition (<span id="badge-pinned-count">0</span>)
             </button>
           </div>
 
           <div class="physics-footer">
             <button id="btn-reheat-sim" class="physics-action-btn" title="Re-simulate node positions">⚡ Reheat</button>
-            <button id="btn-reset-physics" class="physics-action-btn" title="Reset all sliders to defaults">⚙️ Defaults</button>
-            <button id="btn-reset-disposition" class="physics-action-btn physics-action-primary" title="Restore default node layout, unpin all notes, and re-center view">↺ Reset Layout</button>
+            <button id="btn-reset-physics" class="physics-action-btn" title="Reset all sliders to defaults">↺ Reset Defaults</button>
           </div>
         </div>
       </div>
@@ -289,8 +288,8 @@ export function renderActionsToolbar(
         <div class="menu-item" id="menu-act-unpin">
           <span class="m-icon">📌</span>
           <div class="m-text">
-            <div class="m-title">Unpin All Nodes</div>
-            <div class="m-desc">Release all manually positioned notes</div>
+            <div class="m-title">Reset Disposition</div>
+            <div class="m-desc">Unpin all manually moved notes and return to simulation layout</div>
           </div>
         </div>
         <div class="menu-divider"></div>
@@ -323,13 +322,6 @@ export function renderActionsToolbar(
             <div class="m-desc">Center graph and reset zoom level</div>
           </div>
         </div>
-        <div class="menu-item" id="menu-act-reset-layout">
-          <span class="m-icon">↺</span>
-          <div class="m-text">
-            <div class="m-title">Reset Graph Disposition</div>
-            <div class="m-desc">Restore default node positions, unpin all, and re-center</div>
-          </div>
-        </div>
       </div>
     </div>
   `;
@@ -342,8 +334,11 @@ export function renderActionsToolbar(
   const searchInput = container.querySelector('#tb-search-input') as HTMLInputElement;
   const searchMatchBadge = container.querySelector('#tb-search-count') as HTMLElement;
   const btnSearchToggle = container.querySelector('#btn-search-toggle') as HTMLElement;
-  const btnSearchExact = container.querySelector('#btn-search-exact') as HTMLElement;
-  const btnSearchClear = container.querySelector('#btn-search-clear') as HTMLElement;
+  const btnModeContains = container.querySelector('#btn-mode-contains') as HTMLButtonElement;
+  const btnModeKeywords = container.querySelector('#btn-mode-keywords') as HTMLButtonElement;
+  const btnModeExact = container.querySelector('#btn-mode-exact') as HTMLButtonElement;
+  const btnSearchCase = container.querySelector('#btn-search-case') as HTMLButtonElement;
+  const btnSearchClear = container.querySelector('#btn-search-clear') as HTMLButtonElement;
 
   const sliderGravity = container.querySelector('#slider-gravity') as HTMLInputElement;
   const sliderDistance = container.querySelector('#slider-distance') as HTMLInputElement;
@@ -419,11 +414,15 @@ export function renderActionsToolbar(
     hideTooltip();
   }
 
-  let isExactMatch = false;
+  let currentSearchMode: SearchMode = 'contains';
+  let isCaseSensitive = false;
 
   function emitSearch(): void {
     const query = searchInput.value;
-    callbacks.onSearchChange?.(query, isExactMatch);
+    callbacks.onSearchChange?.(query, {
+      mode: currentSearchMode,
+      caseSensitive: isCaseSensitive,
+    });
     if (query.trim().length > 0) {
       btnSearchClear.style.display = 'inline-block';
       btnSearchToggle.classList.add('active');
@@ -432,6 +431,14 @@ export function renderActionsToolbar(
       searchMatchBadge.style.display = 'none';
       btnSearchToggle.classList.remove('active');
     }
+  }
+
+  function updateSearchModeUi(mode: SearchMode): void {
+    currentSearchMode = mode;
+    btnModeContains?.classList.toggle('active', mode === 'contains');
+    btnModeKeywords?.classList.toggle('active', mode === 'keywords');
+    btnModeExact?.classList.toggle('active', mode === 'exact');
+    emitSearch();
   }
 
   function openSearch(): void {
@@ -592,12 +599,31 @@ export function renderActionsToolbar(
     emitSearch();
   });
 
-  btnSearchExact?.addEventListener('click', (e) => {
+  btnModeContains?.addEventListener('click', (e) => {
     e.stopPropagation();
-    isExactMatch = !isExactMatch;
-    btnSearchExact.classList.toggle('active', isExactMatch);
-    btnSearchExact.title = isExactMatch ? 'Exact match (active)' : 'Substring contains (default)';
+    updateSearchModeUi('contains');
+    searchInput.focus();
+  });
+
+  btnModeKeywords?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    updateSearchModeUi('keywords');
+    searchInput.focus();
+  });
+
+  btnModeExact?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    updateSearchModeUi('exact');
+    searchInput.focus();
+  });
+
+  btnSearchCase?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isCaseSensitive = !isCaseSensitive;
+    btnSearchCase.classList.toggle('active', isCaseSensitive);
+    btnSearchCase.title = isCaseSensitive ? 'Match Case (Case Sensitive: Active)' : 'Match Case (Case Sensitive)';
     emitSearch();
+    searchInput.focus();
   });
 
   btnSearchClear?.addEventListener('click', (e) => {
@@ -667,10 +693,6 @@ export function renderActionsToolbar(
     closeAllPopovers();
     callbacks.onResetZoom?.();
   });
-  container.querySelector('#btn-reset-layout')?.addEventListener('click', () => {
-    closeAllPopovers();
-    callbacks.onResetLayout?.();
-  });
   container.querySelector('#btn-actions-menu')?.addEventListener('click', toggleActionsDropdown);
 
   // Instant hover tooltips for all toolbar buttons
@@ -730,11 +752,6 @@ export function renderActionsToolbar(
     callbacks.onPhysicsChange?.(preset);
   });
 
-  container.querySelector('#btn-reset-disposition')?.addEventListener('click', () => {
-    closeAllPopovers();
-    callbacks.onResetLayout?.();
-  });
-
   // Sticky placement and unpin controls
   const chkStickyDrag = container.querySelector('#chk-sticky-drag') as HTMLInputElement;
   const badgePinnedCount = container.querySelector('#badge-pinned-count') as HTMLElement;
@@ -774,10 +791,6 @@ export function renderActionsToolbar(
   container.querySelector('#menu-act-reset-zoom')?.addEventListener('click', () => {
     closeAllPopovers();
     callbacks.onResetZoom?.();
-  });
-  container.querySelector('#menu-act-reset-layout')?.addEventListener('click', () => {
-    closeAllPopovers();
-    callbacks.onResetLayout?.();
   });
 
   // Click outside to dismiss
@@ -901,6 +914,10 @@ export function renderActionsToolbar(
 
     closeSearch() {
       closeSearch();
+    },
+
+    getSearchOptions() {
+      return { mode: currentSearchMode, caseSensitive: isCaseSensitive };
     },
   };
 }
