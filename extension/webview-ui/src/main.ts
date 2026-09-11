@@ -3,6 +3,7 @@ import { createPhysicsSimulation } from './graph/physics';
 import { WebviewRpcBridge } from './rpc/webviewRpc';
 import { renderActionsToolbar } from './components/actionsToolbar';
 import { renderColorManager } from './components/colorManager';
+import { filterNodesByQuery } from './graph/searchMatcher';
 import {
   NoteNode,
   NoteEdge,
@@ -158,6 +159,20 @@ function applyClientSideColorGroups(nodeList: NoteNode[], groups: ClusterColorGr
   }
 }
 
+let currentSearchQuery = '';
+let currentSearchExact = false;
+
+function applySearchFilter(): void {
+  const matchedIds = filterNodesByQuery(nodes, currentSearchQuery, { exact: currentSearchExact });
+  renderer.setSearchFilter(matchedIds);
+  if (matchedIds !== null) {
+    toolbarController.setSearchMatchCount(matchedIds.size, nodes.length);
+  } else {
+    toolbarController.setSearchMatchCount(0, nodes.length);
+  }
+  renderer.draw();
+}
+
 // Render Actions Toolbar with Icon Popovers and Physics Controls
 const toolbarController = renderActionsToolbar(toolbarContainer, {
   onSetHub: () => {
@@ -186,6 +201,11 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
     renderer.setLabelsMode(mode);
     renderer.draw();
     persistState();
+  },
+  onSearchChange: (query: string, exact: boolean) => {
+    currentSearchQuery = query;
+    currentSearchExact = exact;
+    applySearchFilter();
   },
   onReheat: () => {
     physics.restart(0.5);
@@ -246,6 +266,7 @@ rpc.on('graphDataUpdate', (data: any) => {
 
   renderer.setData(nodes, edges);
   physics.updateData(nodes, edges);
+  applySearchFilter();
 
   if (data.tokenSummary) {
     lastTokenSummary = data.tokenSummary;

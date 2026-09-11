@@ -20,6 +20,7 @@ export class CanvasRenderer {
   private edges: NoteEdge[] = [];
   private dpr = window.devicePixelRatio || 1;
   private labelsMode: LabelsMode = 'hover';
+  private matchedNodeIds: Set<string> | null = null;
 
   // Zoom & Pan
   private scale = 1;
@@ -75,6 +76,14 @@ export class CanvasRenderer {
 
   public getLabelsMode(): LabelsMode {
     return this.labelsMode;
+  }
+
+  public setSearchFilter(matchedIds: Set<string> | null): void {
+    this.matchedNodeIds = matchedIds;
+  }
+
+  public getSearchFilter(): Set<string> | null {
+    return this.matchedNodeIds;
   }
 
   public resetZoom(): void {
@@ -268,6 +277,8 @@ export class CanvasRenderer {
       nodeMap.set(node.id, node);
     }
 
+    const isSearchActive = this.matchedNodeIds !== null;
+
     // 1. Draw Edges
     for (const edge of this.edges) {
       const srcId = typeof edge.source === 'object' ? (edge.source as NoteNode).id : (edge.source as string);
@@ -277,6 +288,9 @@ export class CanvasRenderer {
       const tgtNode = tgtId ? nodeMap.get(tgtId) : undefined;
 
       if (!srcNode || srcNode.x === undefined || srcNode.y === undefined) continue;
+
+      const srcMatched = !isSearchActive || this.matchedNodeIds!.has(srcId);
+      const tgtMatched = !isSearchActive || this.matchedNodeIds!.has(tgtId);
 
       this.ctx.beginPath();
       this.ctx.moveTo(srcNode.x, srcNode.y);
@@ -288,10 +302,20 @@ export class CanvasRenderer {
         this.ctx.lineTo(srcNode.x + 25, srcNode.y + 25);
       }
 
-      if (edge.isBroken) {
+      if (isSearchActive && (!srcMatched || !tgtMatched)) {
+        // Dim edge if either node is outside search results
+        this.ctx.strokeStyle = 'rgba(148, 163, 184, 0.05)';
+        this.ctx.lineWidth = 0.8;
+        this.ctx.setLineDash([]);
+      } else if (edge.isBroken) {
         this.ctx.strokeStyle = '#EF4444'; // Dashed Red for Dead Links
-        this.ctx.lineWidth = 1.5;
+        this.ctx.lineWidth = isSearchActive ? 2 : 1.5;
         this.ctx.setLineDash([4, 4]);
+      } else if (isSearchActive && srcMatched && tgtMatched) {
+        // Bright active edge between search hits
+        this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.75)';
+        this.ctx.lineWidth = 1.8;
+        this.ctx.setLineDash([]);
       } else {
         this.ctx.strokeStyle = 'rgba(148, 163, 184, 0.35)';
         this.ctx.lineWidth = 1.2;
@@ -306,10 +330,28 @@ export class CanvasRenderer {
     for (const node of this.nodes) {
       if (node.x === undefined || node.y === undefined) continue;
 
+      const isMatched = !isSearchActive || this.matchedNodeIds!.has(node.id);
       const r = this.getNodeRadius(node);
+
+      if (isSearchActive && !isMatched) {
+        // Faded / Dimmed node: low opacity so search hits stand out cleanly
+        this.ctx.beginPath();
+        this.ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
+        this.ctx.fillStyle = 'rgba(100, 116, 139, 0.08)';
+        this.ctx.fill();
+
+        this.ctx.lineWidth = 0.8;
+        this.ctx.strokeStyle = 'rgba(255, 255, 255, 0.04)';
+        this.ctx.stroke();
+        continue;
+      }
+
+      // Matched node (or normal mode)
       const isCustomCluster =
         node.color !== '#6B7280' && node.color !== '#64748B' && node.color !== '#3B82F6';
-      const fillColor = resolveNodeColor(node.color, node.hopDistance, isCustomCluster);
+      const fillColor = isSearchActive
+        ? resolveNodeColor(node.color, Math.min(node.hopDistance, 1), isCustomCluster)
+        : resolveNodeColor(node.color, node.hopDistance, isCustomCluster);
 
       this.ctx.beginPath();
       this.ctx.arc(node.x, node.y, r, 0, 2 * Math.PI);
@@ -317,7 +359,19 @@ export class CanvasRenderer {
       this.ctx.fill();
 
       // Node border
-      if (node.hopDistance === 0) {
+      if (isSearchActive) {
+        // Vivid cyan highlight ring for search matches
+        this.ctx.lineWidth = 2.5;
+        this.ctx.strokeStyle = '#38BDF8';
+        this.ctx.stroke();
+
+        // Outer glow halo ring
+        this.ctx.beginPath();
+        this.ctx.arc(node.x, node.y, r + 3, 0, 2 * Math.PI);
+        this.ctx.lineWidth = 1.5;
+        this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
+        this.ctx.stroke();
+      } else if (node.hopDistance === 0) {
         this.ctx.lineWidth = 3;
         this.ctx.strokeStyle = '#3B82F6';
         this.ctx.stroke();
@@ -351,26 +405,29 @@ export class CanvasRenderer {
     for (const node of this.nodes) {
       if (node.x === undefined || node.y === undefined) continue;
 
+      const isMatched = !isSearchActive || this.matchedNodeIds!.has(node.id);
       const isHub = node.hopDistance === 0;
       const isHovered = node === this.hoveredNode;
       const isProminent = (node.inDegree || 0) + (node.outDegree || 0) >= 4 || node.hopDistance === 1;
 
       // Label visibility:
-      // In 'hover' mode (clean default): ONLY show label for hovered node and the central Hub!
-      // In 'all' mode: show labels for all nodes (unless drastically zoomed out)
-      const shouldDraw = this.labelsMode === 'all'
-        ? (this.scale >= 0.35 || isHovered || isHub || isProminent)
-        : (isHovered || isHub);
+      // When search is active, show labels ONLY for matching nodes (and hovered node)
+      // When search is inactive, follow normal labelsMode ('hover' or 'all')
+      const shouldDraw = isSearchActive
+        ? (isMatched || isHovered)
+        : (this.labelsMode === 'all'
+            ? (this.scale >= 0.35 || isHovered || isHub || isProminent)
+            : (isHovered || isHub));
 
       if (!shouldDraw) continue;
 
       const r = this.getNodeRadius(node);
-      const targetScreenPx = isHub ? 13 : (isHovered ? 12 : 11);
+      const targetScreenPx = (isSearchActive && isMatched) ? 12.5 : (isHub ? 13 : (isHovered ? 12 : 11));
       // Scale-adaptive font size in world units so on-screen size remains steady and legible
       const worldFontPx = Math.max(4, Math.min(22, targetScreenPx / this.scale));
       const labelY = node.y + r + (4 / this.scale);
 
-      this.ctx.font = `${isHub || isHovered ? 'bold ' : ''}${Math.round(worldFontPx)}px sans-serif`;
+      this.ctx.font = `${isHub || isHovered || (isSearchActive && isMatched) ? 'bold ' : ''}${Math.round(worldFontPx)}px sans-serif`;
 
       // Dark background outline/stroke for maximum legibility across complex graphs
       this.ctx.lineWidth = 3.5 / this.scale;
@@ -379,7 +436,9 @@ export class CanvasRenderer {
       this.ctx.strokeText(node.label, node.x, labelY);
 
       // Label foreground text
-      if (isHub) {
+      if (isSearchActive && isMatched) {
+        this.ctx.fillStyle = '#38BDF8';
+      } else if (isHub) {
         this.ctx.fillStyle = '#60A5FA';
       } else if (isHovered) {
         this.ctx.fillStyle = '#38BDF8';

@@ -18,6 +18,7 @@ export interface ActionsToolbarCallbacks {
   onUnpinAll?: () => void;
   onStickyToggle?: (enabled: boolean) => void;
   onToggleLabelsMode?: (mode: LabelsMode) => void;
+  onSearchChange?: (query: string, exact: boolean) => void;
 }
 
 export interface ActionsToolbarController {
@@ -26,6 +27,9 @@ export interface ActionsToolbarController {
   updatePinnedCount: (count: number) => void;
   isStickyDrag: () => boolean;
   setLabelsMode: (mode: LabelsMode) => void;
+  setSearchMatchCount: (matchingCount: number, totalCount: number) => void;
+  openSearch: () => void;
+  closeSearch: () => void;
 }
 
 export function renderActionsToolbar(
@@ -46,6 +50,14 @@ export function renderActionsToolbar(
         </button>
 
         <div class="tb-divider"></div>
+
+        <!-- Search Notes Button -->
+        <button id="btn-search-toggle" class="tb-icon-btn" aria-label="Search Graph" data-tooltip-title="Search Graph (Ctrl+F)" data-tooltip-desc="Filter nodes by title, filename, folder path, or tag with match highlighting">
+          <svg class="tb-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7" cy="7" r="4.5"/>
+            <line x1="10.5" y1="10.5" x2="14.5" y2="14.5"/>
+          </svg>
+        </button>
 
         <!-- Gravity & Spacing Settings Button -->
         <button id="btn-physics-toggle" class="tb-icon-btn" aria-label="Gravity & Spacing" data-tooltip-title="Gravity & Spacing" data-tooltip-desc="Tune center gravity, node distance, repulsion force, and presets">
@@ -108,6 +120,27 @@ export function renderActionsToolbar(
       <div id="toolbar-tooltip" class="tb-hover-tooltip" style="display: none;">
         <div class="tb-tt-title" id="tb-tt-title"></div>
         <div class="tb-tt-desc" id="tb-tt-desc"></div>
+      </div>
+
+      <!-- Search Bar Popover Window -->
+      <div id="search-popover" class="floating-popover search-popover" style="display: none;">
+        <div class="search-bar-inner">
+          <svg class="search-input-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="7" cy="7" r="4.5"/>
+            <line x1="10.5" y1="10.5" x2="14.5" y2="14.5"/>
+          </svg>
+          <input
+            id="tb-search-input"
+            type="text"
+            class="search-input"
+            placeholder="Search title, filename, folder, or #tag..."
+            autocomplete="off"
+            spellcheck="false"
+          />
+          <span id="tb-search-count" class="search-match-badge" style="display: none;">0 matches</span>
+          <button id="btn-search-exact" class="search-option-btn" title="Toggle: Substring contains (default) vs Exact match">Aa</button>
+          <button id="btn-search-clear" class="search-clear-btn" title="Clear search (Esc)" style="display: none;">✕</button>
+        </div>
       </div>
 
       <!-- Token Economics Popover Window -->
@@ -222,6 +255,13 @@ export function renderActionsToolbar(
 
       <!-- Actions Dropdown Menu Window -->
       <div id="actions-dropdown" class="floating-popover actions-menu-popover" style="display: none;">
+        <div class="menu-item" id="menu-act-search">
+          <span class="m-icon">🔍</span>
+          <div class="m-text">
+            <div class="m-title">Search Graph</div>
+            <div class="m-desc">Filter nodes by title, folder, or tag (Ctrl+F)</div>
+          </div>
+        </div>
         <div class="menu-item" id="menu-act-physics">
           <span class="m-icon">🎛️</span>
           <div class="m-text">
@@ -280,6 +320,13 @@ export function renderActionsToolbar(
   const tokenPopover = container.querySelector('#token-popover') as HTMLElement;
   const physicsPopover = container.querySelector('#physics-popover') as HTMLElement;
   const actionsDropdown = container.querySelector('#actions-dropdown') as HTMLElement;
+  const searchPopover = container.querySelector('#search-popover') as HTMLElement;
+
+  const searchInput = container.querySelector('#tb-search-input') as HTMLInputElement;
+  const searchMatchBadge = container.querySelector('#tb-search-count') as HTMLElement;
+  const btnSearchToggle = container.querySelector('#btn-search-toggle') as HTMLElement;
+  const btnSearchExact = container.querySelector('#btn-search-exact') as HTMLElement;
+  const btnSearchClear = container.querySelector('#btn-search-clear') as HTMLElement;
 
   const sliderGravity = container.querySelector('#slider-gravity') as HTMLInputElement;
   const sliderDistance = container.querySelector('#slider-distance') as HTMLInputElement;
@@ -349,8 +396,53 @@ export function renderActionsToolbar(
     tokenPopover.style.display = 'none';
     physicsPopover.style.display = 'none';
     actionsDropdown.style.display = 'none';
+    searchPopover.style.display = 'none';
     activePopover = 'none';
+    btnSearchToggle?.classList.toggle('active', !!searchInput?.value.trim());
     hideTooltip();
+  }
+
+  let isExactMatch = false;
+
+  function emitSearch(): void {
+    const query = searchInput.value;
+    callbacks.onSearchChange?.(query, isExactMatch);
+    if (query.trim().length > 0) {
+      btnSearchClear.style.display = 'inline-block';
+      btnSearchToggle.classList.add('active');
+    } else {
+      btnSearchClear.style.display = 'none';
+      searchMatchBadge.style.display = 'none';
+      btnSearchToggle.classList.remove('active');
+    }
+  }
+
+  function openSearch(): void {
+    closeAllPopovers();
+    searchPopover.style.display = 'block';
+    btnSearchToggle.classList.add('active');
+    activePopover = 'search';
+    setTimeout(() => {
+      searchInput.focus();
+      searchInput.select();
+    }, 40);
+  }
+
+  function closeSearch(): void {
+    searchPopover.style.display = 'none';
+    if (activePopover === 'search') {
+      activePopover = 'none';
+    }
+    btnSearchToggle.classList.toggle('active', !!searchInput.value.trim());
+  }
+
+  function toggleSearchPopover(e: Event): void {
+    e.stopPropagation();
+    if (activePopover === 'search') {
+      closeAllPopovers();
+    } else {
+      openSearch();
+    }
   }
 
   function toggleTokenPopover(e: Event): void {
@@ -445,6 +537,7 @@ export function renderActionsToolbar(
 
   // Bind Toolbar Buttons
   container.querySelector('#btn-token-toggle')?.addEventListener('click', toggleTokenPopover);
+  container.querySelector('#btn-search-toggle')?.addEventListener('click', toggleSearchPopover);
   container.querySelector('#btn-physics-toggle')?.addEventListener('click', togglePhysicsPopover);
   container.querySelector('#btn-set-hub')?.addEventListener('click', () => {
     closeAllPopovers();
@@ -453,6 +546,31 @@ export function renderActionsToolbar(
   container.querySelector('#btn-toggle-colors')?.addEventListener('click', () => {
     closeAllPopovers();
     callbacks.onToggleColorManager();
+  });
+
+  // Bind Search Box controls
+  searchInput?.addEventListener('input', () => {
+    emitSearch();
+  });
+
+  btnSearchExact?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    isExactMatch = !isExactMatch;
+    btnSearchExact.classList.toggle('active', isExactMatch);
+    btnSearchExact.title = isExactMatch ? 'Exact match (active)' : 'Substring contains (default)';
+    emitSearch();
+  });
+
+  btnSearchClear?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    searchInput.value = '';
+    emitSearch();
+    searchInput.focus();
+  });
+
+  container.querySelector('#menu-act-search')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    openSearch();
   });
 
   // Labels mode state and wiring
@@ -618,10 +736,24 @@ export function renderActionsToolbar(
     }
   });
 
-  // Escape key to dismiss
+  // Keyboard shortcuts (Ctrl+F for search, Escape to close/clear)
   window.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'f') {
+      e.preventDefault();
+      openSearch();
+      return;
+    }
     if (e.key === 'Escape') {
-      closeAllPopovers();
+      if (activePopover === 'search') {
+        if (searchInput.value.trim().length > 0) {
+          searchInput.value = '';
+          emitSearch();
+        } else {
+          closeAllPopovers();
+        }
+      } else {
+        closeAllPopovers();
+      }
     }
   });
 
@@ -692,6 +824,31 @@ export function renderActionsToolbar(
 
     setLabelsMode(mode: LabelsMode) {
       updateLabelsModeUi(mode);
+    },
+
+    setSearchMatchCount(matchingCount: number, totalCount: number) {
+      if (!searchInput || !searchInput.value.trim()) {
+        searchMatchBadge.style.display = 'none';
+        return;
+      }
+      searchMatchBadge.style.display = 'inline-block';
+      if (matchingCount === 0) {
+        searchMatchBadge.textContent = '0 matches';
+        searchMatchBadge.style.color = '#ef4444';
+        searchMatchBadge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
+      } else {
+        searchMatchBadge.textContent = `${matchingCount} / ${totalCount}`;
+        searchMatchBadge.style.color = '#38bdf8';
+        searchMatchBadge.style.backgroundColor = 'rgba(56, 189, 248, 0.15)';
+      }
+    },
+
+    openSearch() {
+      openSearch();
+    },
+
+    closeSearch() {
+      closeSearch();
     },
   };
 }
