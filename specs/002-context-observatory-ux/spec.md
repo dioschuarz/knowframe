@@ -176,11 +176,11 @@ So that configuration tools are accessible when needed but never clutter the pri
 1. **Given** the `[⋯]` button on the floating toolbar,  
    **When** clicked,  
    **Then** a clean dropdown menu opens containing:
-     - **Graph**: `Reset view`, `Reset disposition`, `Export graph (SVG/PNG)`.
-     - **Knowledge**: `Rebuild index`, `Review broken links`.
-     - **Configuration**: `Central hub rules`, `Excluded paths`, `Cluster color groups`.
-     - **Integrations**: `Git synchronization (prek)`.
-     - **Diagnostics**: `Sidecar metrics`, `Copy graph state`.
+      - **Graph**: `Reset view`, `Export graph (SVG/PNG)`.
+      - **Knowledge**: `Rebuild index`, `Review broken links`.
+      - **Configuration**: `Central hub rules`, `Excluded paths`, `Cluster color groups`.
+      - **Integrations**: `Git synchronization (prek)`.
+      - **Diagnostics**: `Sidecar metrics`, `Copy graph state`.
 2. **Given** the user selects `Git synchronization (prek)`,  
    **When** opened,  
    **Then** a modal or drawer displays current hook status (`● Installed via prek`, `Last commit delta: 14s ago`), hook latency, and a `[Reinstall]` button.
@@ -190,21 +190,21 @@ So that configuration tools are accessible when needed but never clutter the pri
 
 ---
 
-## Functional Requirements (FR-046 through FR-065)
+## Functional Requirements (FR-046 through FR-066)
 
 ### Information Architecture & Action Hierarchy
 - **FR-046**: The Webview interface MUST organize all presentation around three distinct pillars: **Knowledge** (topology), **AI Context** (tokens & reachability), and **Health & Issues** (broken links, orphans, sync).
 - **FR-047**: The left sidebar MUST NOT contain duplicate action buttons that also exist in the floating toolbar or context menus. Specifically, `Open Knowledge Graph`, `Set Central Hub`, `Rescan Vault`, `Fix Broken Links`, and `Install Git Hooks` MUST be removed as standalone primary sidebar buttons.
 - **FR-048**: Administrative and remediation actions MUST emerge contextually from displayed system states:
-  - Broken link issues MUST appear as a status metric with a single `[Review issues]` action.
+  - Broken link issues MUST appear as a status metric with a single `[Review issues]` action opening the Settings Drawer `Knowledge` tab highlighting all broken links.
   - Background synchronization MUST appear as a quiet status badge (`● Synced · 12s ago`), with index rebuild accessible via secondary menus.
   - Central Hub MUST be displayed as an active entity with a contextual `[Change]` workflow.
 - **FR-049**: The floating toolbar inside the Webview canvas MUST be constrained strictly to view-manipulation tools: Token status pill, Multi-mode search, Focus mode selector, Reset disposition button, and More (`⋯`) dropdown.
 
 ### Contextual Selection Inspector
-- **FR-050**: The Webview MUST provide a collapsible Contextual Inspector drawer that activates whenever a node, edge, or health metric is selected.
-- **FR-051**: When a node is selected, the inspector MUST display: note title, relative file path, context tier (Level 0 through 3+ or Orphan), exact BPE token count, incoming links count, outgoing links count, and primary actions `[Open file]`, `[Set as hub]`, and `[Exclude from graph]`.
-- **FR-052**: When a broken link edge is selected, the inspector MUST display: source file path, line number, missing link text, error classification, and actions `[Open source]` and `[Fix reference]`.
+- **FR-050**: The Webview MUST provide a collapsible Contextual Inspector drawer that activates whenever a node, edge, or token status metric is selected.
+- **FR-051**: When a node is selected, the inspector MUST display: note title, relative file path, context tier (Level 0 through 3+ or Orphan), exact BPE token count, incoming links count, outgoing links count, and primary actions `[Open file]` (opening side-by-side tab via `ViewColumn.Beside`), `[Set as hub]` (persisting `hub.primary_hub` in `.context-vault.yaml` and triggering BFS hop recomputation), and `[Exclude from graph]` (opening exclusion preview modal).
+- **FR-052**: When a broken link edge is selected, the inspector MUST display: source file path, line number, missing link text, error classification, and actions `[Open source]` (opening editor to line number) and `[Fix reference]` (opening VS Code QuickPick note picker to replace target link destination).
 - **FR-053**: When the token pill is activated, the inspector MUST display a breakdown of Active Prompt Load (Level 0) versus Reachable On-Demand Context (Level 1+), along with warning/critical threshold indicators.
 
 ### Noise Management & Curated Graph Exclusions
@@ -223,6 +223,14 @@ So that configuration tools are accessible when needed but never clutter the pri
 - **FR-064**: Node rendering geometry MUST scale semantically by context tier: Level 0 hubs rendered largest ($r=14\text{px}$), Level 1 medium ($r=9\text{px}$), Level 2 compact ($r=6\text{px}$), Level 3+ subtle ($r=4\text{px}$), and Orphans muted ($r=4\text{px}$).
 - **FR-065**: The Filter popover MUST include a `Show orphans` toggle that allows users to completely hide unlinked notes from the visualization.
 
+### Progressive Disclosure & Settings Drawer
+- **FR-066**: The Webview MUST provide an Advanced Settings slide-over drawer accessible via `⋯ More → Settings` containing dedicated configuration tabs:
+  1. `Knowledge`: Broken links list with line coordinates and one-click jump.
+  2. `Excluded Paths`: Active rule list, match counts, glob testing input, and `[+ Add pattern]` / `[Delete]` actions persisting to `.context-vault.yaml`.
+  3. `Cluster Groups`: Chromatic group configuration and hashtag/path color rules.
+  4. `Git Sync`: `prek` hook installation status, last commit delta latency, and reinstall action.
+  5. `Diagnostics`: Sidecar RSS memory, IPC socket status, and graph state export.
+
 ---
 
 ## Success Criteria (SC-008 through SC-014)
@@ -231,9 +239,9 @@ So that configuration tools are accessible when needed but never clutter the pri
 - **SC-009 (Dashboard Calmness)**: Primary left sidebar height and visual clutter are reduced by $\ge 50\%$, presenting clear metrics across the three pillars (Knowledge, AI Context, Health).
 - **SC-010 (Noise Reduction on Monorepos)**: Applying suggested exclusions on repositories with multiple package READMEs reduces orphan note count by $\ge 70\%$ without generating any false-positive broken links.
 - **SC-011 (Exclusion Link Integrity)**: 100% of internal links targeting `graph.exclude` files resolve successfully with zero spurious broken link notifications.
-- **SC-012 (Focus Mode Responsiveness)**: Toggling between Focus modes (`Hub`, `1 hop`, `2 hops`, `All`) renders in $\le 50\text{ ms}$ with smooth D3 force transition.
+- **SC-012 (Focus Mode Responsiveness)**: Client-side subgraph array filtering for Focus modes (`Hub`, `1 hop`, `2 hops`, `All`) executes in $\le 16\text{ ms}$ (60 FPS single frame), with smooth D3 simulation force relaxation completing within $\le 50\text{ ms}$.
 - **SC-013 (Inspector Opening Latency)**: Clicking any graph node or broken edge opens the Contextual Inspector with file metadata and token stats in $\le 30\text{ ms}$.
-- **SC-014 (Exclusion Preview Accuracy)**: The exclusion preview dialog computes exact matching file counts across 5,000 files in $\le 50\text{ ms}$ using Rust `globset`.
+- **SC-014 (Exclusion Preview Accuracy)**: The exclusion preview dialog computes exact matching file counts across 5,000 files in $\le 10\text{ ms}$ using Rust `globset`.
 
 ---
 

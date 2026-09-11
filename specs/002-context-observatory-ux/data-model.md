@@ -164,6 +164,18 @@ Aggregated vault health, token load, and topology metrics displayed in the left 
 - `syncStatus` (`String`, required, enum: `["synced", "syncing", "error"]`).
 - `lastSyncTimestamp` (`u64`, required): Epoch milliseconds of last synchronization.
 
+### 2.7 `FocusMode` Serialization Mapping
+Maps discrete hop view horizons to wire protocol and configuration values:
+- `Hub`: `"hub"` — Level 0 active hub only ($r=14\text{px}$, 100% opacity).
+- `OneHop`: `"1_hop"` (`#[serde(rename = "1_hop")]`) — Hub + Level 1 direct hops.
+- `TwoHops`: `"2_hops"` (`#[serde(rename = "2_hops")]`) — Hub + Level 1 + Level 2 transitive hops.
+- `All`: `"all"` — Full vault graph.
+
+### 2.8 Contextual Inspector Action Envelopes
+- `OpenFileAction`: Dispatches `webview/openFile` with target `filePath` and `lineNumber` to open editor tab in `ViewColumn.Beside`.
+- `SetCentralHubAction`: Dispatches `graph/setCentralHub` with `hubPath` updating `.context-vault.yaml` and recalculating BFS hops.
+- `FixBrokenLinkAction`: Dispatches `webview/fixBrokenLink` with `sourcePath`, `targetPath`, and `lineNumber` to open QuickPick target picker in VS Code.
+
 ---
 
 ## 3. State Transitions & Invariants

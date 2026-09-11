@@ -56,6 +56,32 @@
         }
       }
     },
+    "ExcludePathResponse": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "result"],
+      "properties": {
+        "jsonrpc": { "type": "string", "const": "2.0" },
+        "id": { "type": "string" },
+        "result": {
+          "type": "object",
+          "required": ["success", "affectedFilesCount", "updatedSummary"],
+          "properties": {
+            "success": { "type": "boolean" },
+            "affectedFilesCount": { "type": "integer", "minimum": 0 },
+            "updatedSummary": {
+              "type": "object",
+              "required": ["totalNotes", "connectedNotes", "orphanNotes", "excludedNotes"],
+              "properties": {
+                "totalNotes": { "type": "integer", "minimum": 0 },
+                "connectedNotes": { "type": "integer", "minimum": 0 },
+                "orphanNotes": { "type": "integer", "minimum": 0 },
+                "excludedNotes": { "type": "integer", "minimum": 0 }
+              }
+            }
+          }
+        }
+      }
+    },
     "SuggestExclusionsRequest": {
       "type": "object",
       "required": ["jsonrpc", "id", "method"],
@@ -82,7 +108,7 @@
                 "required": ["pattern", "matchingCount", "reason", "recommended"],
                 "properties": {
                   "pattern": { "type": "string" },
-                  "matchingCount": { "type": "integer", "minimum": 1 },
+                  "matchingCount": { "type": "integer", "minimum": 5 },
                   "reason": { "type": "string" },
                   "recommended": { "type": "boolean" }
                 }
@@ -119,6 +145,55 @@
           "properties": {
             "filePath": { "type": "string" },
             "lineNumber": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "FixBrokenLinkNotification": {
+      "type": "object",
+      "required": ["jsonrpc", "method", "params"],
+      "properties": {
+        "jsonrpc": { "type": "string", "const": "2.0" },
+        "method": { "type": "string", "const": "webview/fixBrokenLink" },
+        "params": {
+          "type": "object",
+          "required": ["sourcePath", "targetPath", "lineNumber"],
+          "properties": {
+            "sourcePath": { "type": "string" },
+            "targetPath": { "type": "string" },
+            "lineNumber": { "type": "integer", "minimum": 1 }
+          }
+        }
+      }
+    },
+    "SetCentralHubRequest": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "method", "params"],
+      "properties": {
+        "jsonrpc": { "type": "string", "const": "2.0" },
+        "id": { "type": "string" },
+        "method": { "type": "string", "const": "graph/setCentralHub" },
+        "params": {
+          "type": "object",
+          "required": ["hubPath"],
+          "properties": {
+            "hubPath": { "type": "string" }
+          }
+        }
+      }
+    },
+    "SetCentralHubResponse": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "result"],
+      "properties": {
+        "jsonrpc": { "type": "string", "const": "2.0" },
+        "id": { "type": "string" },
+        "result": {
+          "type": "object",
+          "required": ["success", "primaryHub"],
+          "properties": {
+            "success": { "type": "boolean" },
+            "primaryHub": { "type": "string" }
           }
         }
       }
