@@ -186,15 +186,16 @@ export class GraphPanelManager implements vscode.Disposable {
         break;
       }
       case 'fixBrokenLink': {
-        const payload = message.payload as { source: string; line?: number; target: string };
-        if (payload && this.currentScanResult) {
+        const payload = message.payload as { source?: string; filePath?: string; line?: number; target: string };
+        const source = payload?.source || payload?.filePath;
+        if (source && payload.target && this.currentScanResult) {
           const notes = this.currentScanResult.nodes.map((n) => n.file_path || n.id);
           const picked = await vscode.window.showQuickPick(notes, {
-            placeHolder: `Select replacement target for "${payload.target}" in ${payload.source}`,
+            placeHolder: `Select replacement target for "${payload.target}" in ${source}`,
           });
           if (picked) {
-            await this.replaceLinkInFile(payload.source, payload.line, payload.target, picked);
-            vscode.window.showInformationMessage(`Updated link in ${payload.source} to [[${picked}]]`);
+            await this.replaceLinkInFile(source, payload.line, payload.target, picked);
+            vscode.window.showInformationMessage(`Updated link in ${source} to [[${picked}]]`);
             vscode.commands.executeCommand('llmWiki.rescanVault');
           }
         }
@@ -296,7 +297,19 @@ export class GraphPanelManager implements vscode.Disposable {
       } else {
         const root = vscode.workspace.workspaceFolders?.[0]?.uri;
         if (!root) {return;}
-        uri = vscode.Uri.joinPath(root, sourcePath);
+        let candidateUri = vscode.Uri.joinPath(root, sourcePath);
+        try {
+          await vscode.workspace.fs.stat(candidateUri);
+          uri = candidateUri;
+        } catch {
+          const notesUri = vscode.Uri.joinPath(root, 'notes', sourcePath);
+          try {
+            await vscode.workspace.fs.stat(notesUri);
+            uri = notesUri;
+          } catch {
+            uri = candidateUri;
+          }
+        }
       }
       const doc = await vscode.workspace.openTextDocument(uri);
       const text = doc.getText();
@@ -324,7 +337,19 @@ export class GraphPanelManager implements vscode.Disposable {
       } else {
         const root = vscode.workspace.workspaceFolders?.[0]?.uri;
         if (!root) {return;}
-        uri = vscode.Uri.joinPath(root, filePath);
+        let candidateUri = vscode.Uri.joinPath(root, filePath);
+        try {
+          await vscode.workspace.fs.stat(candidateUri);
+          uri = candidateUri;
+        } catch {
+          const notesUri = vscode.Uri.joinPath(root, 'notes', filePath);
+          try {
+            await vscode.workspace.fs.stat(notesUri);
+            uri = notesUri;
+          } catch {
+            uri = candidateUri;
+          }
+        }
       }
 
       const doc = await vscode.workspace.openTextDocument(uri);
