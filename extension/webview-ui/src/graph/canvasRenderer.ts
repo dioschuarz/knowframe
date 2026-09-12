@@ -466,7 +466,7 @@ export class CanvasRenderer {
 
       // Matched node (or normal mode)
       const isCustomCluster =
-        node.color !== '#6B7280' && node.color !== '#64748B' && node.color !== '#3B82F6';
+        node.color !== '#6B7280' && node.color !== '#64748B' && node.color !== '#475569';
       const fillColor = isSearchActive
         ? resolveNodeColor(node.color, Math.min(node.hopDistance, 1), isCustomCluster)
         : resolveNodeColor(node.color, node.hopDistance, isCustomCluster);

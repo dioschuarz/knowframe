@@ -164,10 +164,8 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
             node.color = color;
         } else if node.status == crate::model::NodeStatus::Excluded {
             node.color = "#475569".to_string(); // Excluded Slate/Ghost
-        } else if node.hop_distance == 0 {
-            node.color = "#3B82F6".to_string(); // Active Hub Blue
-        } else if node.hop_distance > 0 {
-            node.color = "#64748B".to_string(); // Connected Slate
+        } else if node.hop_distance >= 0 {
+            node.color = "#64748B".to_string(); // Default Connected Slate Grey (Hub has active blue ring in renderer)
         } else {
             node.color = "#6B7280".to_string(); // Orphan Muted Gray
         }

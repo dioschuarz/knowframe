@@ -8,6 +8,13 @@ suite('Hue + Opacity Color Resolver Test Suite', () => {
     assert.strictEqual(color, 'rgba(59, 130, 246, 1)');
   });
 
+  test('Default grey node has 100% solid opacity at hop 0 and 60% at hop 1', () => {
+    const hubGrey = resolveNodeColor('#64748B', 0, false);
+    assert.strictEqual(hubGrey, 'rgba(100, 116, 139, 1)');
+    const hop1Grey = resolveNodeColor('#64748B', 1, false);
+    assert.strictEqual(hop1Grey, 'rgba(100, 116, 139, 0.6)');
+  });
+
   test('Level 1 direct hop has 60% opacity', () => {
     const color = resolveNodeColor('#8B5CF6', 1, true);
     assert.strictEqual(color, 'rgba(139, 92, 246, 0.6)');

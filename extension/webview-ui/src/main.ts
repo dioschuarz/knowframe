@@ -285,8 +285,12 @@ function applyClientSideColorGroups(nodeList: NoteNode[], groups: ClusterColorGr
     }
     if (matchedColor) {
       node.color = matchedColor;
+    } else if (node.status === 'excluded') {
+      node.color = '#475569';
+    } else if (node.hopDistance < 0) {
+      node.color = '#6B7280';
     } else {
-      node.color = '#3B82F6';
+      node.color = '#64748B'; // Default grey: indicates no custom color rule set
     }
   }
 }
@@ -412,9 +416,8 @@ rpc.on('graphDataUpdate', (data: any) => {
     savedState.pinnedNodes = [];
   }
 
-  if (colorGroups.length > 0) {
-    applyClientSideColorGroups(rawNodes, colorGroups);
-  }
+  // Apply cluster color rules, or ensure default grey for unassigned nodes
+  applyClientSideColorGroups(rawNodes, colorGroups);
 
   applyFocusFilter(0.4);
 
