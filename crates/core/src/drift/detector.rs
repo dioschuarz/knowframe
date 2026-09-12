@@ -107,3 +107,118 @@ pub fn detect_technical_drift(
 
     (findings, signatures)
 }
+
+/// Detects all technical drift and broken code citations across all notes in the knowledge graph.
+pub fn detect_all_drifts_in_graph(
+    topology: &crate::graph::builder::GraphTopology,
+    workspace_root: &Path,
+) -> Vec<TechnicalDriftFinding> {
+    use rayon::prelude::*;
+
+    let nodes: Vec<_> = topology.nodes.values().cloned().collect();
+    if nodes.is_empty() {
+        return Vec::new();
+    }
+
+    let home_dir = std::env::var("HOME").ok();
+
+    let findings: Vec<TechnicalDriftFinding> = nodes
+        .par_iter()
+        .flat_map(|node| {
+            let mut file_path = workspace_root.join(&node.file_path);
+            if !file_path.exists() {
+                let alt = workspace_root.join(&node.id);
+                if alt.exists() {
+                    file_path = alt;
+                } else {
+                    let notes_alt = workspace_root.join("notes").join(&node.file_path);
+                    if notes_alt.exists() {
+                        file_path = notes_alt;
+                    }
+                }
+            }
+
+            let content = match std::fs::read_to_string(&file_path) {
+                Ok(c) => c,
+                Err(_) => return Vec::new(),
+            };
+
+            let citations = extract_code_citations(&node.id, &content);
+            let mut node_drifts = Vec::new();
+            let mut seen_targets = HashSet::new();
+
+            for cit in citations {
+                if cit.code_path.is_empty() {
+                    continue;
+                }
+                let target = &cit.code_path;
+
+                // Skip documentation template placeholders and globs
+                if target.contains('[')
+                    || target.contains(']')
+                    || target.contains('<')
+                    || target.contains('>')
+                    || target.contains('$')
+                    || target.contains('*')
+                    || target.contains("...")
+                {
+                    continue;
+                }
+
+                if seen_targets.contains(target) {
+                    continue;
+                }
+
+                let mut exists = false;
+
+                // 1. Direct path from workspace root
+                if workspace_root.join(target).exists()
+                    || workspace_root.join("notes").join(target).exists()
+                    || Path::new(target).exists()
+                {
+                    exists = true;
+                }
+
+                // 2. Relative to the note's own directory
+                if !exists {
+                    if let Some(parent) = file_path.parent() {
+                        if parent.join(target).exists() {
+                            exists = true;
+                        }
+                    }
+                }
+
+                // 3. Home directory expansion
+                if !exists && target.starts_with('~') {
+                    if let Some(ref home) = home_dir {
+                        let expanded = target.replacen('~', home, 1);
+                        if Path::new(&expanded).exists() {
+                            exists = true;
+                        }
+                    }
+                }
+
+                if !exists {
+                    seen_targets.insert(target.clone());
+                    node_drifts.push(TechnicalDriftFinding {
+                        doc_id: node.id.clone(),
+                        code_target: cit.code_path.clone(),
+                        symbol_name: cit.symbol.clone(),
+                        citation_line: cit.line_number,
+                        drift_type: DriftType::DeletedCodeFile,
+                        confidence: DriftConfidence::High,
+                        explanation: format!(
+                            "Referenced code/config file '{}' at line {} does not exist in workspace",
+                            cit.code_path, cit.line_number
+                        ),
+                    });
+                }
+            }
+
+            node_drifts
+        })
+        .collect();
+
+    findings
+}
+

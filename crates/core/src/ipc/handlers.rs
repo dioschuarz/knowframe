@@ -279,7 +279,9 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 topology.compute_hops(&hub);
             }
             let baseline = crate::debt::baseline::load_baseline(&root).ok().flatten();
-            let quality = crate::quality::calculate_quality_score(&topology, baseline.as_ref(), &[], &[]);
+            let collisions = crate::collision::detect_collisions_in_graph(&topology, &root, 0.70);
+            let drifts = crate::drift::detect_all_drifts_in_graph(&topology, &root);
+            let quality = crate::quality::calculate_quality_score(&topology, baseline.as_ref(), &collisions, &drifts);
             JsonRpcResponse::success(req.id, json!({
                 "overall_score": quality.overall_score,
                 "integrity_score": quality.integrity_score,
@@ -333,8 +335,10 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 }
             }
             let baseline = crate::debt::baseline::load_baseline(&root).ok().flatten();
-            let quality = crate::quality::calculate_quality_score(&topology, baseline.as_ref(), &[], &[]);
-            let all_issues = crate::quality::extract_all_issues(&topology, &[], &[]);
+            let collisions = crate::collision::detect_collisions_in_graph(&topology, &root, 0.70);
+            let drifts = crate::drift::detect_all_drifts_in_graph(&topology, &root);
+            let quality = crate::quality::calculate_quality_score(&topology, baseline.as_ref(), &collisions, &drifts);
+            let all_issues = crate::quality::extract_all_issues(&topology, &collisions, &drifts);
 
             let integrity_count = all_issues.iter().filter(|i| i.pillar == "integrity").count();
             let consistency_count = all_issues.iter().filter(|i| i.pillar == "consistency").count();

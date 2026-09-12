@@ -50,8 +50,10 @@ pub fn execute_issues(
     }
 
     let baseline = load_baseline(workspace_root).ok().flatten();
-    let quality = calculate_quality_score(&topology, baseline.as_ref(), &[], &[]);
-    let all_issues = extract_all_issues(&topology, &[], &[]);
+    let collisions = crate::collision::detect_collisions_in_graph(&topology, workspace_root, 0.70);
+    let drifts = crate::drift::detect_all_drifts_in_graph(&topology, workspace_root);
+    let quality = calculate_quality_score(&topology, baseline.as_ref(), &collisions, &drifts);
+    let all_issues = extract_all_issues(&topology, &collisions, &drifts);
 
     let integrity_count = all_issues.iter().filter(|i| i.pillar == "integrity").count();
     let consistency_count = all_issues.iter().filter(|i| i.pillar == "consistency").count();

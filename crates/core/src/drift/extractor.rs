@@ -21,12 +21,17 @@ pub fn is_code_path(target: &str) -> bool {
     let clean = target
         .trim()
         .trim_start_matches("file://")
+        .trim_start_matches("file:")
         .split('#')
         .next()
         .unwrap_or("")
         .split('?')
         .next()
         .unwrap_or("");
+
+    if clean.starts_with("http://") || clean.starts_with("https://") {
+        return false;
+    }
 
     if let Some(ext) = Path::new(clean).extension().and_then(|e| e.to_str()) {
         CODE_EXTENSIONS.contains(&ext.to_lowercase().as_str())

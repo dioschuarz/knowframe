@@ -163,3 +163,108 @@ pub fn detect_collisions_in_candidate(
 
     (high_collisions, signatures, warnings)
 }
+
+/// Detects semantic collisions across all notes in the knowledge graph topology.
+pub fn detect_collisions_in_graph(
+    topology: &crate::graph::builder::GraphTopology,
+    workspace_root: &Path,
+    threshold: f32,
+) -> Vec<SemanticCollision> {
+    use rayon::prelude::*;
+
+    let nodes: Vec<_> = topology.nodes.values().cloned().collect();
+    if nodes.is_empty() {
+        return Vec::new();
+    }
+
+    // Extract fingerprints in parallel across all notes in topology
+    let fingerprints: Vec<DocumentFingerprint> = nodes
+        .par_iter()
+        .map(|node| {
+            let mut file_path = workspace_root.join(&node.file_path);
+            if !file_path.exists() {
+                let alt = workspace_root.join(&node.id);
+                if alt.exists() {
+                    file_path = alt;
+                } else {
+                    let notes_alt = workspace_root.join("notes").join(&node.file_path);
+                    if notes_alt.exists() {
+                        file_path = notes_alt;
+                    }
+                }
+            }
+            let content = std::fs::read_to_string(&file_path).unwrap_or_default();
+            extract_fingerprint(&node.id, &content, &[], &node.tags)
+        })
+        .collect();
+
+    let mut index = InvertedIndex::new();
+    for fp in fingerprints {
+        index.insert(fp);
+    }
+
+    let entrypoint_citations: HashSet<String> = topology
+        .edges
+        .iter()
+        .filter(|e| {
+            e.source == "AGENTS.md"
+                || e.source == "README.md"
+                || e.source == "CLAUDE.md"
+                || e.source.ends_with("wiki_index.md")
+        })
+        .map(|e| e.target.clone())
+        .collect();
+
+    let mut collisions: Vec<SemanticCollision> = index
+        .doc_to_fingerprint
+        .par_iter()
+        .flat_map(|(doc_id, fp)| {
+            let candidates = index.query_candidates(fp, 30);
+            let mut doc_cols = Vec::new();
+            for cand_id in candidates {
+                if doc_id >= &cand_id {
+                    continue;
+                }
+
+                if let Some(cand_fp) = index.doc_to_fingerprint.get(&cand_id) {
+                    if let Some(mut col) = score_collision(fp, cand_fp, threshold) {
+                        let node_a = topology.nodes.get(doc_id);
+                        let node_b = topology.nodes.get(&cand_id);
+
+                        let ctx_a = DocumentMetadataContext {
+                            doc_id: doc_id.as_str(),
+                            is_entrypoint_referenced: entrypoint_citations.contains(doc_id),
+                            degree: node_a.map(|n| n.in_degree + n.out_degree).unwrap_or(0),
+                            betweenness: node_a.map(|n| n.betweenness as f32).unwrap_or(0.0),
+                            heading_count: fp.heading_tokens.len(),
+                            token_count: node_a.map(|n| n.tokens).unwrap_or(0),
+                            commit_timestamp: None,
+                        };
+
+                        let ctx_b = DocumentMetadataContext {
+                            doc_id: cand_id.as_str(),
+                            is_entrypoint_referenced: entrypoint_citations.contains(&cand_id),
+                            degree: node_b.map(|n| n.in_degree + n.out_degree).unwrap_or(0),
+                            betweenness: node_b.map(|n| n.betweenness as f32).unwrap_or(0.0),
+                            heading_count: cand_fp.heading_tokens.len(),
+                            token_count: node_b.map(|n| n.tokens).unwrap_or(0),
+                            commit_timestamp: None,
+                        };
+
+                        enrich_collision_with_canonical(&mut col, &ctx_a, &ctx_b);
+                        doc_cols.push(col);
+                    }
+                }
+            }
+            doc_cols
+        })
+        .collect();
+
+    collisions.sort_by(|a, b| {
+        b.composite_similarity
+            .partial_cmp(&a.composite_similarity)
+            .unwrap_or(std::cmp::Ordering::Equal)
+    });
+    collisions
+}
+

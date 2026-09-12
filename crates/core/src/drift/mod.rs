@@ -4,6 +4,8 @@ pub mod extractor;
 pub mod index;
 pub mod detector;
 
+pub use detector::*;
+
 use std::collections::{HashMap, HashSet};
 use serde::{Deserialize, Serialize};
 

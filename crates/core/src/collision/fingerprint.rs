@@ -32,6 +32,7 @@ pub fn extract_char_ngrams(text: &str, n: usize) -> HashSet<String> {
     let mut ngrams = HashSet::new();
     let filtered: Vec<char> = text
         .chars()
+        .take(4000)
         .filter(|c| c.is_alphanumeric())
         .flat_map(|c| c.to_lowercase())
         .collect();
@@ -55,18 +56,41 @@ pub fn extract_fingerprint(
     headings: &[String],
     tags: &[String],
 ) -> DocumentFingerprint {
-    // 1. Title tokens
+    // 1. Title tokens (file stem + first H1 heading in markdown)
     let file_stem = Path::new(doc_id)
         .file_stem()
         .map(|s| s.to_string_lossy().to_string())
         .unwrap_or_else(|| doc_id.to_string());
-    let title_tokens: HashSet<String> = tokenize(&file_stem).into_iter().collect();
+    let mut title_tokens: HashSet<String> = tokenize(&file_stem).into_iter().collect();
+
+    for line in content.lines() {
+        let trimmed = line.trim();
+        if trimmed.starts_with("# ") {
+            let h1_text = trimmed.trim_start_matches("# ").trim();
+            for t in tokenize(h1_text) {
+                title_tokens.insert(t);
+            }
+            break;
+        }
+    }
 
     // 2. Heading tokens
     let mut heading_tokens = HashSet::new();
-    for h in headings {
-        for t in tokenize(h) {
-            heading_tokens.insert(t);
+    if headings.is_empty() {
+        for line in content.lines() {
+            let trimmed = line.trim();
+            if trimmed.starts_with('#') {
+                let h_text = trimmed.trim_start_matches('#').trim();
+                for t in tokenize(h_text) {
+                    heading_tokens.insert(t);
+                }
+            }
+        }
+    } else {
+        for h in headings {
+            for t in tokenize(h) {
+                heading_tokens.insert(t);
+            }
         }
     }
 
@@ -172,9 +196,16 @@ impl InvertedIndex {
             }
         }
 
-        // Body term frequency matches weighted 1.0
-        for (term, tf) in &query_fp.term_frequencies {
-            if let Some(docs) = self.term_to_docs.get(term) {
+        // Body term frequency matches: query top 25 highest-TF terms and skip ubiquitous terms (>20% of corpus)
+        let max_doc_freq = (self.doc_to_fingerprint.len() / 5).max(10);
+        let mut top_terms: Vec<(&String, &f32)> = query_fp.term_frequencies.iter().collect();
+        top_terms.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
+
+        for (term, tf) in top_terms.into_iter().take(25) {
+            if let Some(docs) = self.term_to_docs.get(term.as_str()) {
+                if docs.len() > max_doc_freq {
+                    continue; // Skip ubiquitous common words
+                }
                 for doc in docs {
                     if doc != &query_fp.doc_id {
                         *doc_scores.entry(doc.clone()).or_insert(0.0) += 1.0 * tf;

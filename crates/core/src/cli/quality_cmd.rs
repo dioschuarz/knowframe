@@ -47,7 +47,9 @@ pub fn execute_quality(
     }
 
     let baseline = load_baseline(workspace_root).ok().flatten();
-    let quality = calculate_quality_score(&topology, baseline.as_ref(), &[], &[]);
+    let collisions = crate::collision::detect_collisions_in_graph(&topology, workspace_root, 0.70);
+    let drifts = crate::drift::detect_all_drifts_in_graph(&topology, workspace_root);
+    let quality = calculate_quality_score(&topology, baseline.as_ref(), &collisions, &drifts);
 
     if json_output {
         println!("{}", serde_json::to_string_pretty(&quality)?);
