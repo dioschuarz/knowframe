@@ -1,6 +1,6 @@
 pub mod scorer;
 
-pub use scorer::{calculate_quality_score, calculate_topological_weight};
+pub use scorer::{calculate_quality_score, calculate_topological_weight, extract_all_issues};
 
 use serde::{Deserialize, Serialize};
 
@@ -45,3 +45,31 @@ pub struct QualityDegradationFactor {
     pub deduction_points: f32,
     pub description: String,
 }
+
+/// Detailed knowledge issue finding categorized by pillar.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct KnowledgeIssue {
+    pub id: String,
+    pub pillar: String, // "integrity" | "consistency" | "discoverability" | "freshness"
+    pub category: String,
+    pub file_path: String,
+    pub line_number: Option<u32>,
+    pub target: Option<String>,
+    pub deduction_points: f32,
+    pub weight: f32,
+    pub description: String,
+    pub remediation_hint: String,
+}
+
+/// Comprehensive issues report with counts per pillar.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct KnowledgeIssuesReport {
+    pub overall_score: f32,
+    pub total_issues: usize,
+    pub integrity_count: usize,
+    pub consistency_count: usize,
+    pub discoverability_count: usize,
+    pub freshness_count: usize,
+    pub issues: Vec<KnowledgeIssue>,
+}
+

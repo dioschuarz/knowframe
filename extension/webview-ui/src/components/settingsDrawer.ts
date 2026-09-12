@@ -11,6 +11,7 @@
  */
 
 import type { ClusterColorGroup, NoteNode } from '../../../src/types/graph.ts';
+import type { KnowledgeIssue, KnowledgeIssuesReport } from '../../../src/types/admission.ts';
 import {
   discoverVaultSuggestions,
   countMatchingNotes,
@@ -41,6 +42,8 @@ export interface SettingsDrawerProps {
   connectedNotes?: number;
   orphanNotes?: number;
   excludedNotes?: number;
+  issuesReport?: KnowledgeIssuesReport | null;
+  selectedPillarFilter?: string;
 }
 
 export interface SettingsDrawerCallbacks {
@@ -55,6 +58,9 @@ export interface SettingsDrawerCallbacks {
   onInstallGitHooks?: () => void;
   onCaptureBaseline?: () => void;
   onToggleThreshold?: (key: string, enabled: boolean) => void;
+  onOpenFile?: (filePath: string, line?: number) => void;
+  onFixBrokenLink?: (source: string, target: string, line?: number) => void;
+  onRequestIssues?: (pillar?: string) => void;
   onClose?: () => void;
 }
 
@@ -394,9 +400,169 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
       break;
     }
 
-    case 'diagnostics':
+    case 'diagnostics': {
+      const report = props.issuesReport;
+      const totalIssues = report?.total_issues ?? brokenLinksCount;
+      const overallScore = report ? Math.round(report.overall_score) : 100;
+      const integrityCount = report?.integrity_count ?? brokenLinksCount;
+      const consistencyCount = report?.consistency_count ?? 0;
+      const discoverabilityCount = report?.discoverability_count ?? orphanNotes;
+      const freshnessCount = report?.freshness_count ?? 0;
+      const issues = report?.issues ?? [];
+      const currentPillar = props.selectedPillarFilter || 'all';
+
+      const scoreClass = overallScore >= 90 ? 'diag-score-good' : overallScore >= 75 ? 'diag-score-warn' : 'diag-score-bad';
+
+      const pillarDefs = [
+        { id: 'integrity', label: 'Integrity', count: integrityCount },
+        { id: 'consistency', label: 'Consistency', count: consistencyCount },
+        { id: 'discoverability', label: 'Discoverability', count: discoverabilityCount },
+        { id: 'freshness', label: 'Freshness', count: freshnessCount },
+      ];
+
+      const visiblePillars = currentPillar === 'all'
+        ? pillarDefs
+        : pillarDefs.filter((p) => p.id === currentPillar);
+
+      let accordionsHtml = '';
+      if (issues.length === 0 && !report) {
+        accordionsHtml = `
+          <div class="diag-empty-box">
+            <svg viewBox="0 0 16 16" width="24" height="24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;">
+              <circle cx="8" cy="8" r="7"/>
+              <line x1="8" y1="4" x2="8" y2="9"/>
+              <circle cx="8" cy="12" r="0.5" fill="#38bdf8"/>
+            </svg>
+            <div>Loading knowledge issues from engine...</div>
+          </div>
+        `;
+      } else if (totalIssues === 0) {
+        accordionsHtml = `
+          <div class="diag-empty-box" style="border-color: #22c55e; color: #22c55e;">
+            <svg viewBox="0 0 16 16" width="24" height="24" fill="none" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;">
+              <circle cx="8" cy="8" r="7"/>
+              <polyline points="5 8 7.5 10.5 11 5.5"/>
+            </svg>
+            <div style="font-weight: 600; font-size: 13px;">Zero Defects Detected</div>
+            <div style="font-size: 11px; opacity: 0.8; margin-top: 4px;">Knowledge graph is in full architectural compliance.</div>
+          </div>
+        `;
+      } else {
+        for (const p of visiblePillars) {
+          const pillarIssues = issues.filter((i) => i.pillar.toLowerCase() === p.id);
+          if (currentPillar === 'all' && pillarIssues.length === 0) continue;
+
+          const issuesHtml = pillarIssues.map((issue) => {
+            const catClass = `cat-${issue.category.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
+            const targetHtml = issue.target ? `<span class="diag-arrow">→</span><span class="diag-target-text" title="${issue.target}">${issue.target}</span>` : '';
+            const lineStr = issue.line_number ? `:${issue.line_number}` : '';
+            const fixBtnHtml = issue.category === 'broken_link'
+              ? `<button type="button" class="btn-tiny btn-primary diag-fix-ref-btn" data-file="${issue.file_path}" data-target="${issue.target || ''}" data-line="${issue.line_number ?? ''}">Fix Reference</button>`
+              : '';
+
+            return `
+              <div class="diag-issue-card">
+                <div class="diag-issue-top">
+                  <span class="diag-cat-badge ${catClass}">${issue.category}</span>
+                  <span class="diag-penalty-badge">-${issue.deduction_points.toFixed(1)} pts (${issue.weight.toFixed(2)}x)</span>
+                </div>
+                <div class="diag-issue-loc">
+                  <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; opacity: 0.7;">
+                    <path d="M9 1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5L9 1z"/>
+                    <polyline points="9 1 9 5 13 5"/>
+                  </svg>
+                  <span class="diag-file-clickable" data-file="${issue.file_path}" data-line="${issue.line_number ?? ''}" title="Click to open ${issue.file_path}${lineStr}">
+                    ${issue.file_path}${lineStr}
+                  </span>
+                  ${targetHtml}
+                </div>
+                <div class="diag-issue-desc">${issue.description}</div>
+                <div class="diag-issue-hint">💡 ${issue.remediation_hint}</div>
+                <div class="diag-issue-actions">
+                  <button type="button" class="btn-tiny diag-open-doc-btn" data-file="${issue.file_path}" data-line="${issue.line_number ?? ''}">Open Note</button>
+                  ${fixBtnHtml}
+                </div>
+              </div>
+            `;
+          }).join('');
+
+          accordionsHtml += `
+            <div class="diag-accordion-group">
+              <div class="diag-accordion-header" data-pillar="${p.id}">
+                <div class="diag-accordion-title">
+                  <span>${p.label.toUpperCase()}</span>
+                  <span class="diag-count-badge">${pillarIssues.length}</span>
+                </div>
+                <span class="diag-accordion-chevron">
+                  <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                    <polyline points="4 6 8 10 12 6"></polyline>
+                  </svg>
+                </span>
+              </div>
+              <div class="diag-accordion-body" id="diag-body-${p.id}">
+                ${issuesHtml || '<div style="color:var(--vscode-descriptionForeground); font-size:11px; padding:4px;">No issues in this pillar.</div>'}
+              </div>
+            </div>
+          `;
+        }
+      }
+
       tabContentHtml = `
         <div class="settings-section">
+          <div class="settings-sec-title">Knowledge Quality Diagnostics</div>
+          <p class="settings-desc">
+            Itemized findings detected from last sync across all 4 quality pillars. Inspect issues one-by-one and resolve them in editor.
+          </p>
+
+          <div class="diag-overview-card">
+            <div class="diag-overview-header">
+              <span class="diag-overview-title">Quality & Defect Overview</span>
+              <span class="diag-score-badge ${scoreClass}">${overallScore}/100</span>
+            </div>
+            <div class="diag-pillar-chips">
+              <div class="diag-pillar-chip" title="Integrity defects (broken links)">
+                <span class="diag-chip-val" style="color: ${integrityCount > 0 ? '#ef4444' : 'inherit'};">${integrityCount}</span>
+                <span class="diag-chip-lbl">Integrity</span>
+              </div>
+              <div class="diag-pillar-chip" title="Consistency defects (collisions)">
+                <span class="diag-chip-val" style="color: ${consistencyCount > 0 ? '#f472b6' : 'inherit'};">${consistencyCount}</span>
+                <span class="diag-chip-lbl">Consistency</span>
+              </div>
+              <div class="diag-pillar-chip" title="Discoverability defects (orphans/high hops)">
+                <span class="diag-chip-val" style="color: ${discoverabilityCount > 0 ? '#eab308' : 'inherit'};">${discoverabilityCount}</span>
+                <span class="diag-chip-lbl">Discovery</span>
+              </div>
+              <div class="diag-pillar-chip" title="Freshness defects (technical drift)">
+                <span class="diag-chip-val" style="color: ${freshnessCount > 0 ? '#c084fc' : 'inherit'};">${freshnessCount}</span>
+                <span class="diag-chip-lbl">Freshness</span>
+              </div>
+            </div>
+
+            <div class="diag-filter-bar">
+              <button type="button" class="diag-filter-btn ${currentPillar === 'all' ? 'active' : ''}" data-filter="all">
+                All (${totalIssues})
+              </button>
+              <button type="button" class="diag-filter-btn ${currentPillar === 'integrity' ? 'active' : ''}" data-filter="integrity">
+                Integrity (${integrityCount})
+              </button>
+              <button type="button" class="diag-filter-btn ${currentPillar === 'consistency' ? 'active' : ''}" data-filter="consistency">
+                Consistency (${consistencyCount})
+              </button>
+              <button type="button" class="diag-filter-btn ${currentPillar === 'discoverability' ? 'active' : ''}" data-filter="discoverability">
+                Discovery (${discoverabilityCount})
+              </button>
+              <button type="button" class="diag-filter-btn ${currentPillar === 'freshness' ? 'active' : ''}" data-filter="freshness">
+                Freshness (${freshnessCount})
+              </button>
+            </div>
+          </div>
+
+          <div class="diag-issues-list">
+            ${accordionsHtml}
+          </div>
+        </div>
+
+        <div class="settings-section" style="margin-top: 12px;">
           <div class="settings-sec-title">Engine Diagnostics</div>
           <div class="settings-diag-grid">
             <div class="diag-item">
@@ -427,6 +593,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
         </div>
       `;
       break;
+    }
   }
 
   return `
@@ -521,6 +688,9 @@ export function renderSettingsDrawer(
         if (tab && tab !== state.activeTab) {
           state.activeTab = tab;
           callbacks.onChangeTab?.(tab);
+          if (tab === 'diagnostics') {
+            callbacks.onRequestIssues?.(state.selectedPillarFilter);
+          }
           render();
         }
       });
@@ -897,11 +1067,70 @@ export function renderSettingsDrawer(
         }
       });
     });
+
+    // Diagnostics pillar filter buttons
+    container.querySelectorAll('.diag-filter-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const filter = btn.getAttribute('data-filter') || 'all';
+        state.selectedPillarFilter = filter;
+        render();
+      });
+    });
+
+    // Diagnostics pillar accordions
+    container.querySelectorAll('.diag-accordion-header').forEach((header) => {
+      header.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const pillar = header.getAttribute('data-pillar');
+        const body = container.querySelector(`#diag-body-${pillar}`);
+        if (body) {
+          const isCollapsed = header.classList.contains('collapsed');
+          if (isCollapsed) {
+            header.classList.remove('collapsed');
+            body.classList.remove('collapsed');
+          } else {
+            header.classList.add('collapsed');
+            body.classList.add('collapsed');
+          }
+        }
+      });
+    });
+
+    // Diagnostics Open Note buttons & clickable file links
+    container.querySelectorAll('.diag-open-doc-btn, .diag-file-clickable').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const file = el.getAttribute('data-file');
+        const lineAttr = el.getAttribute('data-line');
+        const line = lineAttr ? parseInt(lineAttr, 10) : undefined;
+        if (file) {
+          callbacks.onOpenFile?.(file, line);
+        }
+      });
+    });
+
+    // Diagnostics Fix Reference buttons
+    container.querySelectorAll('.diag-fix-ref-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const file = btn.getAttribute('data-file');
+        const target = btn.getAttribute('data-target') || '';
+        const lineAttr = btn.getAttribute('data-line');
+        const line = lineAttr ? parseInt(lineAttr, 10) : undefined;
+        if (file) {
+          callbacks.onFixBrokenLink?.(file, target, line);
+        }
+      });
+    });
   }
 
   function open(tab?: SettingsTab): void {
     if (tab) state.activeTab = tab;
     isVisible = true;
+    if (state.activeTab === 'diagnostics') {
+      callbacks.onRequestIssues?.(state.selectedPillarFilter);
+    }
     render();
   }
 

@@ -2523,6 +2523,317 @@ body, html {
   color: var(--vscode-descriptionForeground);
 }
 
+/* Diagnostics Issues View Styles */
+.diag-overview-card {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  padding: 10px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.diag-overview-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.diag-overview-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fg-color);
+}
+
+.diag-score-badge {
+  font-size: 12px;
+  font-weight: 700;
+  padding: 2px 8px;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.diag-score-good {
+  background: rgba(34, 197, 94, 0.15);
+  color: #22c55e;
+  border-color: rgba(34, 197, 94, 0.4);
+}
+
+.diag-score-warn {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border-color: rgba(245, 158, 11, 0.4);
+}
+
+.diag-score-bad {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border-color: rgba(239, 68, 68, 0.4);
+}
+
+.diag-pillar-chips {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 4px;
+}
+
+.diag-pillar-chip {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 4px 2px;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 4px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.diag-chip-val {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--fg-color);
+}
+
+.diag-chip-lbl {
+  font-size: 8px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  color: var(--vscode-descriptionForeground);
+}
+
+.diag-filter-bar {
+  display: flex;
+  gap: 4px;
+  overflow-x: auto;
+  padding-bottom: 2px;
+  margin-top: 4px;
+}
+
+.diag-filter-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid var(--border-color);
+  color: var(--vscode-descriptionForeground);
+  border-radius: 4px;
+  padding: 4px 8px;
+  font-size: 11px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: all 0.15s ease;
+}
+
+.diag-filter-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--fg-color);
+}
+
+.diag-filter-btn.active {
+  background: rgba(56, 189, 248, 0.15);
+  border-color: #38bdf8;
+  color: #38bdf8;
+  font-weight: 600;
+}
+
+.diag-issues-list {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.diag-accordion-group {
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.02);
+  overflow: hidden;
+}
+
+.diag-accordion-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.04);
+  cursor: pointer;
+  user-select: none;
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--fg-color);
+  transition: background 0.12s ease;
+}
+
+.diag-accordion-header:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.diag-accordion-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.diag-count-badge {
+  font-size: 10px;
+  font-weight: 600;
+  padding: 1px 5px;
+  border-radius: 3px;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--vscode-descriptionForeground);
+}
+
+.diag-accordion-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--vscode-descriptionForeground);
+  transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.diag-accordion-header.collapsed .diag-accordion-chevron {
+  transform: rotate(-90deg);
+}
+
+.diag-accordion-body {
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.diag-accordion-body.collapsed {
+  display: none;
+}
+
+.diag-issue-card {
+  background: var(--vscode-editor-background, #1e1e1e);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 5px;
+  padding: 8px 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  transition: border-color 0.15s ease;
+}
+
+.diag-issue-card:hover {
+  border-color: rgba(56, 189, 248, 0.4);
+}
+
+.diag-issue-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.diag-cat-badge {
+  font-size: 9.5px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 3px;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.cat-broken_link {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.cat-orphan_node {
+  background: rgba(245, 158, 11, 0.15);
+  color: #f59e0b;
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.cat-high_hop_distance, .cat-disconnected_subgraph {
+  background: rgba(234, 179, 8, 0.15);
+  color: #eab308;
+  border: 1px solid rgba(234, 179, 8, 0.3);
+}
+
+.cat-technical_drift {
+  background: rgba(168, 85, 247, 0.15);
+  color: #c084fc;
+  border: 1px solid rgba(168, 85, 247, 0.3);
+}
+
+.cat-collision {
+  background: rgba(236, 72, 153, 0.15);
+  color: #f472b6;
+  border: 1px solid rgba(236, 72, 153, 0.3);
+}
+
+.diag-penalty-badge {
+  font-size: 10px;
+  font-weight: 600;
+  color: #ef4444;
+  font-variant-numeric: tabular-nums;
+}
+
+.diag-issue-loc {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 11px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.diag-file-clickable {
+  color: var(--vscode-textLink-foreground, #38bdf8);
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+.diag-file-clickable:hover {
+  text-decoration: underline;
+}
+
+.diag-arrow {
+  color: var(--vscode-descriptionForeground);
+  font-size: 10px;
+}
+
+.diag-target-text {
+  color: #ef4444;
+  font-weight: 500;
+}
+
+.diag-issue-desc {
+  font-size: 11px;
+  color: var(--vscode-editor-foreground);
+  line-height: 1.35;
+}
+
+.diag-issue-hint {
+  font-size: 10.5px;
+  color: var(--vscode-descriptionForeground);
+  background: rgba(255, 255, 255, 0.02);
+  padding: 3px 6px;
+  border-radius: 3px;
+  border-left: 2px solid #38bdf8;
+  line-height: 1.3;
+}
+
+.diag-issue-actions {
+  display: flex;
+  gap: 6px;
+  margin-top: 3px;
+}
+
+.diag-empty-box {
+  text-align: center;
+  padding: 24px 12px;
+  color: var(--vscode-descriptionForeground);
+  font-size: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px dashed var(--border-color);
+  border-radius: 6px;
+}
+
 
 
 

@@ -4,6 +4,7 @@ import type {
   ContextTraceParams,
   ContextTraceResult,
   KnowledgeDebtBaselineDetails,
+  KnowledgeIssuesReport,
   KnowledgeQualityScore,
   UpdateBaselineParams,
   UpdateBaselineResult,
@@ -72,6 +73,19 @@ export class AdmissionManager {
   public async getQualityScore(): Promise<KnowledgeQualityScore> {
     return this.ipcClient.sendRequest<KnowledgeQualityScore>(
       'workspace/getQualityScore',
+    );
+  }
+
+  /**
+   * Fetches comprehensive itemized knowledge issues list categorized by pillar.
+   */
+  public async getIssues(params?: {
+    pillar?: string;
+    limit?: number;
+  }): Promise<KnowledgeIssuesReport> {
+    return this.ipcClient.sendRequest<KnowledgeIssuesReport>(
+      'workspace/getIssues',
+      params || {},
     );
   }
 }

@@ -47,6 +47,8 @@ fn default_scan_exclude() -> Vec<String> {
         "**/dist/**".to_string(),
         "**/out/**".to_string(),
         "**/build/**".to_string(),
+        "**/.venv/**".to_string(),
+        "**/venv/**".to_string(),
     ]
 }
 

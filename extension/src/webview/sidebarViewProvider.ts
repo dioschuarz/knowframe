@@ -36,9 +36,11 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     webviewView.webview.onDidReceiveMessage(async (data) => {
       switch (data.type) {
         case 'openGraph':
-        case 'reviewIssues':
         case 'reviewSuggestions':
           vscode.commands.executeCommand('llmWiki.showKnowledgeGraph');
+          break;
+        case 'reviewIssues':
+          vscode.commands.executeCommand('llmWiki.reviewIssues');
           break;
         case 'changeHub':
         case 'setHub':
@@ -211,64 +213,43 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       margin-bottom: 8px;
       text-transform: uppercase;
     }
-    .metrics-grid {
+    .quality-pills-row {
       display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 6px;
-    }
-    .metric-item {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      background: rgba(255, 255, 255, 0.03);
+      grid-template-columns: repeat(4, 1fr);
+      gap: 4px;
+      background: rgba(255, 255, 255, 0.02);
       border: 1px solid rgba(255, 255, 255, 0.05);
       border-radius: 4px;
-      padding: 6px 4px;
+      padding: 5px 3px;
       text-align: center;
+      margin-bottom: 6px;
     }
-    .metric-value {
-      font-size: 15px;
-      font-weight: 700;
-      color: var(--vscode-editor-foreground, #fff);
-    }
-    .metric-label {
-      font-size: 9.5px;
-      color: var(--vscode-descriptionForeground, #888);
-      margin-top: 2px;
-    }
-    .token-metrics {
+    .pill-stat {
       display: flex;
       flex-direction: column;
-      gap: 6px;
-    }
-    .token-row {
-      display: flex;
-      justify-content: space-between;
       align-items: center;
-      font-size: 11.5px;
+      min-width: 0;
     }
-    .token-row-label {
-      color: var(--vscode-descriptionForeground, #aaa);
-    }
-    .token-row-value {
-      font-weight: 600;
+    .pill-value {
+      font-size: 12px;
+      font-weight: 700;
       color: var(--vscode-editor-foreground, #fff);
-    }
-    .reachable-row {
-      font-size: 11px;
-      opacity: 0.85;
-    }
-    .token-progress-track {
-      height: 4px;
-      background: rgba(255, 255, 255, 0.1);
-      border-radius: 2px;
+      white-space: nowrap;
       overflow: hidden;
-      margin: 2px 0;
+      text-overflow: ellipsis;
     }
-    .token-progress-fill {
-      height: 100%;
-      border-radius: 2px;
-      transition: width 0.3s ease;
+    .pill-label {
+      font-size: 8px;
+      color: var(--vscode-descriptionForeground, #888);
+      margin-top: 1px;
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      white-space: nowrap;
+    }
+    .factors-section {
+      margin-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 6px;
     }
     .hub-info-row {
       display: flex;
@@ -599,72 +580,10 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       <button class="dash-action-link" id="dash-btn-review-suggestions">Review suggestions</button>
     </div>
 
-    <!-- Pillar 1: Knowledge Base -->
-    <div class="dashboard-pillar pillar-knowledge">
-      <div class="pillar-title">KNOWLEDGE</div>
-      <div class="metrics-grid">
-        <div class="metric-item">
-          <span class="metric-value" id="val-connected">0</span>
-          <span class="metric-label">Connected</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-value" id="val-orphans">0</span>
-          <span class="metric-label">Orphans</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-value" id="val-excluded">0</span>
-          <span class="metric-label">Excluded</span>
-        </div>
-        <div class="metric-item">
-          <span class="metric-value" id="val-links">0</span>
-          <span class="metric-label">Total Links</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Pillar 2: AI Context -->
-    <div class="dashboard-pillar pillar-ai-context">
-      <div class="pillar-title">AI CONTEXT</div>
-      <div class="token-metrics">
-        <div class="token-row">
-          <span class="token-row-label">Active Prompt Load (L0)</span>
-          <span class="token-row-value" id="val-l0-tokens">0 tok</span>
-        </div>
-        <div class="token-progress-track">
-          <div class="token-progress-fill" id="val-token-fill" style="width: 0%; background-color: var(--vscode-charts-blue, #3b82f6);"></div>
-        </div>
-        <div class="token-row reachable-row">
-          <span class="token-row-label">Reachable (L1-L2)</span>
-          <span class="token-row-value" id="val-reachable-tokens">0 tok</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Pillar 3: Central Hub & Health -->
-    <div class="dashboard-pillar pillar-hub-health">
-      <div class="pillar-title">CENTRAL HUB & HEALTH</div>
-      <div class="hub-info-row">
-        <div class="hub-details">
-          <span class="hub-icon">
-            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="8" cy="8" r="6"/>
-              <circle cx="8" cy="8" r="2.5" fill="#38bdf8"/>
-            </svg>
-          </span>
-          <span class="hub-path-link" id="dash-hub-link" title="Scanning vault...">Scanning vault...</span>
-        </div>
-        <button class="dash-action-link" id="dash-btn-change-hub">Change</button>
-      </div>
-      <div class="sync-status-row">
-        <span class="sync-indicator-dot"></span>
-        <span class="sync-status-text">Synced</span>
-      </div>
-    </div>
-
-    <!-- Pillar 4: Quality & Admission -->
+    <!-- Pillar 1: Quality (At the top) -->
     <div class="dashboard-pillar pillar-quality" id="pillar-quality">
       <div class="pillar-header">
-        <div class="pillar-title">QUALITY & ADMISSION</div>
+        <div class="pillar-title">QUALITY</div>
         <button class="quality-refresh-btn" id="dash-btn-refresh-quality" title="Recalculate Knowledge Quality Score">
           <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <path d="M1.5 8a6.5 6.5 0 1 0 1.9-4.6L1.5 5.5"/>
@@ -710,24 +629,80 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         </div>
       </div>
 
-      <div class="debt-accounting-row">
-        <div class="debt-stat" title="Baseline accepted brownfield debt">
-          <span class="debt-value" id="val-debt-legacy">0</span>
-          <span class="debt-label">Legacy</span>
+      <!-- Knowledge Stats Row (Compact Pills) -->
+      <div class="quality-pills-row" title="Knowledge Base Network Metrics">
+        <div class="pill-stat" title="Connected Notes">
+          <span class="pill-value" id="val-connected">0</span>
+          <span class="pill-label">Connected</span>
         </div>
-        <div class="debt-stat" id="box-debt-regr" title="New regressions exceeding baseline">
-          <span class="debt-value" id="val-debt-regr">0</span>
-          <span class="debt-label">New Regr.</span>
+        <div class="pill-stat" title="Orphan Notes">
+          <span class="pill-value" id="val-orphans">0</span>
+          <span class="pill-label">Orphans</span>
         </div>
-        <div class="debt-stat" title="Resolved legacy defects">
-          <span class="debt-value" id="val-debt-resolved" style="color: var(--vscode-charts-green, #22c55e);">0</span>
-          <span class="debt-label">Resolved</span>
+        <div class="pill-stat" title="Excluded Notes">
+          <span class="pill-value" id="val-excluded">0</span>
+          <span class="pill-label">Excluded</span>
+        </div>
+        <div class="pill-stat" title="Total Links">
+          <span class="pill-value" id="val-links">0</span>
+          <span class="pill-label">Links</span>
         </div>
       </div>
 
-      <div class="quality-factors-list" id="quality-factors-container" style="display: none;">
-        <div class="factors-title">Top Degradation Factors</div>
-        <div id="quality-factors-items"></div>
+      <!-- Debt & Broken Stats Row (Compact Pills) -->
+      <div class="quality-pills-row" title="Knowledge Debt & Link Integrity">
+        <div class="pill-stat" id="box-broken" title="Broken References">
+          <span class="pill-value" id="val-broken-count" style="color: var(--vscode-charts-red, #ef4444);">0</span>
+          <span class="pill-label">Broken</span>
+        </div>
+        <div class="pill-stat" title="Baseline accepted brownfield debt">
+          <span class="pill-value" id="val-debt-legacy">0</span>
+          <span class="pill-label">Legacy</span>
+        </div>
+        <div class="pill-stat" id="box-debt-regr" title="New regressions exceeding baseline">
+          <span class="pill-value" id="val-debt-regr">0</span>
+          <span class="pill-label">New Regr.</span>
+        </div>
+        <div class="pill-stat" title="Resolved legacy defects">
+          <span class="pill-value" id="val-debt-resolved" style="color: var(--vscode-charts-green, #22c55e);">0</span>
+          <span class="pill-label">Resolved</span>
+        </div>
+      </div>
+
+      <!-- Top Degradation Factors (Collapsible, closed by default) -->
+      <div class="factors-section" id="factors-section" style="display: none;">
+        <div class="collapsible-header collapsed" id="factors-header" title="Toggle top degradation factors">
+          <span class="factors-title" style="margin: 0; cursor: pointer;">Top Degradation Factors</span>
+          <span class="collapsible-chevron" id="factors-chevron">
+            <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 6 8 10 12 6"></polyline>
+            </svg>
+          </span>
+        </div>
+        <div class="quality-factors-list" id="quality-factors-container" style="display: none;">
+          <div id="quality-factors-items"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pillar 2: Central Hub & Health -->
+    <div class="dashboard-pillar pillar-hub-health">
+      <div class="pillar-title">CENTRAL HUB & HEALTH</div>
+      <div class="hub-info-row">
+        <div class="hub-details">
+          <span class="hub-icon">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="8" r="6"/>
+              <circle cx="8" cy="8" r="2.5" fill="#38bdf8"/>
+            </svg>
+          </span>
+          <span class="hub-path-link" id="dash-hub-link" title="Scanning vault...">Scanning vault...</span>
+        </div>
+        <button class="dash-action-link" id="dash-btn-change-hub">Change</button>
+      </div>
+      <div class="sync-status-row">
+        <span class="sync-indicator-dot"></span>
+        <span class="sync-status-text">Synced</span>
       </div>
     </div>
 
@@ -773,6 +748,22 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         } else {
           topNotesHeader.classList.remove('collapsed');
           topNotesList.style.display = 'block';
+        }
+      });
+    }
+
+    let isFactorsCollapsed = true;
+    const factorsHeader = document.getElementById('factors-header');
+    const factorsContainer = document.getElementById('quality-factors-container');
+    if (factorsHeader && factorsContainer) {
+      factorsHeader.addEventListener('click', () => {
+        isFactorsCollapsed = !isFactorsCollapsed;
+        if (isFactorsCollapsed) {
+          factorsHeader.classList.add('collapsed');
+          factorsContainer.style.display = 'none';
+        } else {
+          factorsHeader.classList.remove('collapsed');
+          factorsContainer.style.display = 'block';
         }
       });
     }
@@ -870,6 +861,9 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       document.getElementById('val-excluded').textContent = formatCompactNumber(excludedNotes);
       document.getElementById('val-links').textContent = formatCompactNumber(totalLinks);
 
+      const brokenPill = document.getElementById('val-broken-count');
+      if (brokenPill) brokenPill.textContent = formatCompactNumber(brokenCount);
+
       const brokenAlert = document.getElementById('dash-broken-alert');
       const brokenText = document.getElementById('dash-broken-text');
       if (brokenCount > 0) {
@@ -877,21 +871,6 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         brokenText.textContent = formatCompactNumber(brokenCount) + (brokenCount === 1 ? ' broken link' : ' broken links');
       } else {
         brokenAlert.style.display = 'none';
-      }
-
-      document.getElementById('val-l0-tokens').textContent = formatCompactNumber(activeTokens) + ' tok';
-      document.getElementById('val-reachable-tokens').textContent = formatCompactNumber(reachableTokens) + ' tok';
-
-      const critThreshold = summary.critical_threshold || 100000;
-      const budgetPct = Math.min(100, Math.round((activeTokens / critThreshold) * 100));
-      const fill = document.getElementById('val-token-fill');
-      fill.style.width = budgetPct + '%';
-      if (budgetPct >= 90) {
-        fill.style.backgroundColor = 'var(--vscode-charts-red, #ef4444)';
-      } else if (budgetPct >= 60) {
-        fill.style.backgroundColor = 'var(--vscode-charts-yellow, #f59e0b)';
-      } else {
-        fill.style.backgroundColor = 'var(--vscode-charts-blue, #3b82f6)';
       }
 
       const hubEl = document.getElementById('dash-hub-link');
@@ -980,15 +959,17 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       }
       if (resEl) resEl.textContent = formatCompactNumber(q.resolved_debt_count || 0);
 
+      const factorsSection = document.getElementById('factors-section');
       const factorsContainer = document.getElementById('quality-factors-container');
       const factorsItems = document.getElementById('quality-factors-items');
       const factors = q.top_degradation_factors || [];
 
-      if (factorsContainer && factorsItems) {
+      if (factorsSection && factorsContainer && factorsItems) {
         if (factors.length > 0) {
-          factorsContainer.style.display = 'block';
+          factorsSection.style.display = 'block';
+          factorsContainer.style.display = isFactorsCollapsed ? 'none' : 'block';
           factorsItems.innerHTML = '';
-          for (const f of factors.slice(0, 3)) {
+          for (const f of factors.slice(0, 5)) {
             const item = document.createElement('div');
             item.className = 'quality-factor-item';
             item.title = (f.affected_node || '') + ': ' + (f.description || '');
@@ -1002,7 +983,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             factorsItems.appendChild(item);
           }
         } else {
-          factorsContainer.style.display = 'none';
+          factorsSection.style.display = 'none';
         }
       }
     }

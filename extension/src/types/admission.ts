@@ -113,3 +113,26 @@ export interface KnowledgeQualityScore {
   central_hub_id?: string;
   top_degradation_factors: QualityDegradationFactor[];
 }
+
+export interface KnowledgeIssue {
+  id: string;
+  pillar: "integrity" | "consistency" | "discoverability" | "freshness" | string;
+  category: string;
+  file_path: string;
+  line_number?: number | null;
+  target?: string | null;
+  deduction_points: number;
+  weight: number;
+  description: string;
+  remediation_hint: string;
+}
+
+export interface KnowledgeIssuesReport {
+  overall_score: number;
+  total_issues: number;
+  integrity_count: number;
+  consistency_count: number;
+  discoverability_count: number;
+  freshness_count: number;
+  issues: KnowledgeIssue[];
+}

@@ -4,6 +4,7 @@ use clap::{Parser, Subcommand};
 use llm_wiki_core::cli::baseline_cmd::{execute_baseline_init, execute_baseline_reset};
 use llm_wiki_core::cli::delta::execute_git_delta;
 use llm_wiki_core::cli::scan::{execute_scan, ScanOptions};
+use llm_wiki_core::cli::issues_cmd::execute_issues;
 use llm_wiki_core::cli::validate::execute_validate;
 use llm_wiki_core::ipc::server::start_ipc_server;
 use std::path::PathBuf;
@@ -153,12 +154,40 @@ enum Commands {
         json: bool,
     },
 
+    /// List detected knowledge issues from last sync, categorized and filterable by pillar
+    Issues {
+        /// Workspace root directory (flag)
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Workspace root directory (path flag alias)
+        #[arg(long)]
+        path: Option<PathBuf>,
+
+        /// Positional workspace root directory
+        #[arg(index = 1)]
+        positional_root: Option<PathBuf>,
+
+        /// Filter issues by pillar (all, integrity, consistency, discoverability, freshness)
+        #[arg(short, long, default_value = "all")]
+        pillar: String,
+
+        /// Limit maximum number of issues to display
+        #[arg(short, long)]
+        limit: Option<usize>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
     /// Manage knowledge debt baseline (.context-vault/baseline.json)
     Baseline {
         #[command(subcommand)]
         subcommand: BaselineCommands,
     },
 }
+
 
 #[derive(Subcommand)]
 enum BaselineCommands {
@@ -308,6 +337,23 @@ async fn main() -> anyhow::Result<()> {
                 .unwrap_or_else(|| PathBuf::from("."));
             if let Err(e) = llm_wiki_core::cli::quality_cmd::execute_quality(&workspace_root, json) {
                 eprintln!("Error computing quality score: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Issues {
+            root,
+            path,
+            positional_root,
+            pillar,
+            limit,
+            json,
+        } => {
+            let workspace_root = path
+                .or(root)
+                .or(positional_root)
+                .unwrap_or_else(|| PathBuf::from("."));
+            if let Err(e) = execute_issues(&workspace_root, &pillar, limit, json) {
+                eprintln!("Error retrieving knowledge issues: {}", e);
                 std::process::exit(1);
             }
         }

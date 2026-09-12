@@ -84,6 +84,15 @@ const settingsDrawer = renderSettingsDrawer(
     onInstallGitHooks: () => {
       rpc.sendMessage({ type: 'installHooks' });
     },
+    onOpenFile: (filePath, line) => {
+      rpc.openFile(filePath, line);
+    },
+    onFixBrokenLink: (source, target, line) => {
+      rpc.fixBrokenLink(source, line, target);
+    },
+    onRequestIssues: (pillar) => {
+      rpc.sendMessage({ type: 'requestIssues', payload: { pillar } });
+    },
   },
 );
 
@@ -463,6 +472,16 @@ rpc.on('exclusionPreviewResult', (data: any) => {
     matchingCount,
     samplePaths,
     scope: 'graph',
+  });
+});
+
+rpc.on('openSettingsDrawer', (data: any) => {
+  settingsDrawer.open(data?.tab || 'diagnostics');
+});
+
+rpc.on('issuesReportUpdate', (data: any) => {
+  settingsDrawer.updateProps({
+    issuesReport: data,
   });
 });
 

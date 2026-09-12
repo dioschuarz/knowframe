@@ -103,4 +103,61 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(html.includes('input-cluster-query'), 'Must still offer add form when empty');
     assert.ok(html.includes('suggestion-chip'), 'Must still offer suggestions when empty');
   });
+
+  test('renders Diagnostics tab with itemized issues, pillar accordions, and action buttons', () => {
+    const html = renderSettingsDrawerHtml({
+      ...sampleProps,
+      activeTab: 'diagnostics',
+      issuesReport: {
+        overall_score: 82.5,
+        total_issues: 2,
+        integrity_count: 1,
+        consistency_count: 0,
+        discoverability_count: 1,
+        freshness_count: 0,
+        issues: [
+          {
+            id: 'broken:00_meta/wiki_index.md:86',
+            pillar: 'integrity',
+            category: 'broken_link',
+            file_path: '00_meta/wiki_index.md',
+            line_number: 86,
+            target: 'missing_target.md',
+            deduction_points: 6.5,
+            weight: 1.3,
+            description: "Broken link referencing missing target 'missing_target.md'",
+            remediation_hint: "Create target note or update link",
+          },
+          {
+            id: 'orphan:notes/lonely.md',
+            pillar: 'discoverability',
+            category: 'orphan_node',
+            file_path: 'notes/lonely.md',
+            line_number: null,
+            target: null,
+            deduction_points: 8.0,
+            weight: 1.0,
+            description: 'Isolated orphan node without incoming or outgoing links',
+            remediation_hint: 'Add wiki links to connect this note',
+          },
+        ],
+      },
+    });
+
+    // 1. Overview card & scores
+    assert.ok(html.includes('Quality &amp; Defect Overview') || html.includes('Quality & Defect Overview'), 'Must display Quality & Defect Overview');
+    assert.ok(html.includes('83/100') || html.includes('82.5'), 'Must render score');
+    assert.ok(html.includes('All (2)'), 'Must render All (2) filter');
+    assert.ok(html.includes('Integrity (1)'), 'Must render Integrity (1) filter');
+    assert.ok(html.includes('Discovery (1)'), 'Must render Discovery (1) filter');
+
+    // 2. Accordions & issues
+    assert.ok(html.includes('INTEGRITY'), 'Must render Integrity accordion');
+    assert.ok(html.includes('DISCOVERABILITY'), 'Must render Discoverability accordion');
+    assert.ok(html.includes('00_meta/wiki_index.md:86'), 'Must display exact file location with line');
+    assert.ok(html.includes('missing_target.md'), 'Must display target reference');
+    assert.ok(html.includes('Open Note'), 'Must offer Open Note action button');
+    assert.ok(html.includes('Fix Reference'), 'Must offer Fix Reference action button for broken links');
+  });
 });
+

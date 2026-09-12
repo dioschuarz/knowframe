@@ -46,13 +46,6 @@ pub fn execute_quality(
         topology.add_edge(e);
     }
 
-    // Compute betweenness and BFS hops if not already populated
-    topology.compute_degrees();
-    topology.compute_betweenness();
-    if let Some(hub) = topology.suggest_hub() {
-        topology.compute_hops(&hub);
-    }
-
     let baseline = load_baseline(workspace_root).ok().flatten();
     let quality = calculate_quality_score(&topology, baseline.as_ref(), &[], &[]);
 

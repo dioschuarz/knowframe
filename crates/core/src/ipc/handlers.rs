@@ -293,6 +293,91 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 "top_degradation_factors": quality.top_degradation_factors,
             }))
         }
+        "workspace/getIssues" => {
+            let (root, mut topology) = {
+                let st = state.read().await;
+                (st.workspace_root.clone(), st.topology.clone())
+            };
+            if topology.nodes.is_empty() {
+                if let Ok(scan_res) = execute_scan(ScanOptions {
+                    workspace_root: root.clone(),
+                    hub: None,
+                    pretty: false,
+                }) {
+                    for node in scan_res.nodes {
+                        let mut n = crate::model::NoteNode::new(node.id.clone(), node.file_path, node.label);
+                        n.tags = node.tags;
+                        n.tokens = node.tokens;
+                        n.status = node.status;
+                        n.color = node.color;
+                        topology.add_node(n);
+                    }
+                    for edge in scan_res.edges {
+                        let mut e = crate::model::NoteEdge::new(
+                            edge.source,
+                            edge.target,
+                            edge.link_type,
+                            String::new(),
+                            edge.anchor,
+                            edge.line,
+                        );
+                        e.is_broken = edge.is_broken;
+                        e.resolution_status = edge.resolution_status;
+                        topology.add_edge(e);
+                    }
+                    topology.compute_degrees();
+                    topology.compute_betweenness();
+                    if let Some(hub) = topology.suggest_hub() {
+                        topology.compute_hops(&hub);
+                    }
+                }
+            }
+            let baseline = crate::debt::baseline::load_baseline(&root).ok().flatten();
+            let quality = crate::quality::calculate_quality_score(&topology, baseline.as_ref(), &[], &[]);
+            let all_issues = crate::quality::extract_all_issues(&topology, &[], &[]);
+
+            let integrity_count = all_issues.iter().filter(|i| i.pillar == "integrity").count();
+            let consistency_count = all_issues.iter().filter(|i| i.pillar == "consistency").count();
+            let discoverability_count = all_issues.iter().filter(|i| i.pillar == "discoverability").count();
+            let freshness_count = all_issues.iter().filter(|i| i.pillar == "freshness").count();
+            let total_issues = all_issues.len();
+
+            let pillar_filter = req.params.as_ref()
+                .and_then(|p| p.get("pillar"))
+                .and_then(|v| v.as_str())
+                .unwrap_or("all")
+                .to_lowercase();
+
+            let limit = req.params.as_ref()
+                .and_then(|p| p.get("limit"))
+                .and_then(|v| v.as_u64())
+                .map(|v| v as usize);
+
+            let filtered_issues: Vec<_> = if pillar_filter == "all" || pillar_filter.is_empty() {
+                all_issues
+            } else {
+                all_issues
+                    .into_iter()
+                    .filter(|i| i.pillar.to_lowercase() == pillar_filter)
+                    .collect()
+            };
+
+            let report_issues = if let Some(lim) = limit {
+                filtered_issues.into_iter().take(lim).collect()
+            } else {
+                filtered_issues
+            };
+
+            JsonRpcResponse::success(req.id, json!({
+                "overall_score": quality.overall_score,
+                "total_issues": total_issues,
+                "integrity_count": integrity_count,
+                "consistency_count": consistency_count,
+                "discoverability_count": discoverability_count,
+                "freshness_count": freshness_count,
+                "issues": report_issues,
+            }))
+        }
         "workspace/getBaseline" => {
             let root = {
                 let st = state.read().await;

@@ -53,6 +53,19 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
                 || name == "target"
                 || name == "dist"
                 || name == "out"
+                || name == "build"
+                || name == ".venv"
+                || name == "venv"
+                || name == ".tox"
+                || name == ".mypy_cache"
+                || name == ".pytest_cache"
+                || name == ".next"
+                || name == ".nuxt"
+                || name == ".cache"
+                || name == ".turbo"
+                || name == ".code-review-graph"
+                || name == ".understand-anything"
+                || name == "coverage"
             {
                 return false;
             }

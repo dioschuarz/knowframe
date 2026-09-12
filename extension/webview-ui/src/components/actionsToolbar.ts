@@ -222,7 +222,7 @@ export function renderActionsToolbar(
             <strong id="popover-active-tokens" class="p-val">0</strong>
           </div>
           <div class="popover-metric-row">
-            <span class="p-lbl">Accessible Subcall (L1+):</span>
+            <span class="p-lbl">Reachable Context (L1-L2):</span>
             <strong id="popover-subcall-tokens" class="p-val">0</strong>
           </div>
           <div class="popover-bar-bg">
@@ -232,6 +232,7 @@ export function renderActionsToolbar(
             <span>Warning: <strong id="popover-warn-limit">60,000</strong></span>
             <span>Critical: <strong id="popover-crit-limit">100,000</strong></span>
           </div>
+          <button type="button" class="btn-primary" id="btn-token-popover-breakdown" style="width: 100%; margin-top: 10px; font-size: 11px;">View Detailed Breakdown</button>
         </div>
       </div>
 
@@ -837,6 +838,11 @@ export function renderActionsToolbar(
   container.querySelector('#close-token-popover')?.addEventListener('click', (e) => {
     e.stopPropagation();
     closeAllPopovers();
+  });
+  container.querySelector('#btn-token-popover-breakdown')?.addEventListener('click', (e) => {
+    e.stopPropagation();
+    closeAllPopovers();
+    callbacks.onOpenTokenBreakdown?.();
   });
   container.querySelector('#close-physics-popover')?.addEventListener('click', (e) => {
     e.stopPropagation();

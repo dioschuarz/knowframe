@@ -143,6 +143,25 @@ export class GraphPanelManager implements vscode.Disposable {
     });
   }
 
+  public async openDiagnosticsTab(): Promise<void> {
+    this.panel.reveal();
+    this.panel.webview.postMessage({
+      type: 'openSettingsDrawer',
+      tab: 'diagnostics',
+    });
+    if (this.ipcClient) {
+      try {
+        const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', {});
+        this.panel.webview.postMessage({
+          type: 'issuesReportUpdate',
+          payload: issuesReport,
+        });
+      } catch (err: any) {
+        console.error('Failed to fetch issues report:', err);
+      }
+    }
+  }
+
   private async handleWebviewMessage(message: WebviewInboundMessage): Promise<void> {
     if (!message || !message.type) {return;}
 
@@ -249,6 +268,21 @@ export class GraphPanelManager implements vscode.Disposable {
       }
       case 'triggerSetHubQuickPick': {
         await vscode.commands.executeCommand('llmWiki.setHub');
+        break;
+      }
+      case 'requestIssues': {
+        if (this.ipcClient) {
+          try {
+            const payload = (message.payload || {}) as { pillar?: string; limit?: number };
+            const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', payload);
+            this.panel.webview.postMessage({
+              type: 'issuesReportUpdate',
+              payload: issuesReport,
+            });
+          } catch (err: any) {
+            console.error('Failed to get issues report:', err);
+          }
+        }
         break;
       }
     }

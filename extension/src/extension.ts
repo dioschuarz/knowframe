@@ -88,6 +88,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           `LLM Wiki Knowledge Quality: ${q.overall_score.toFixed(0)}/100 (Integrity: ${q.integrity_score.toFixed(0)}%, Consistency: ${q.consistency_score.toFixed(0)}%, Discoverability: ${q.discoverability_score.toFixed(0)}%, Freshness: ${q.freshness_score.toFixed(0)}%)`
         );
       }
+    }),
+    vscode.commands.registerCommand('llmWiki.reviewIssues', async () => {
+      const panel = GraphPanelManager.createOrShow(context.extensionUri, ipcClient, latestScanResult);
+      await panel.openDiagnosticsTab();
     })
   );
 
