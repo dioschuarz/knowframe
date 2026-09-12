@@ -34,7 +34,7 @@ export class GraphPanelManager implements vscode.Disposable {
 
     const panel = vscode.window.createWebviewPanel(
       GraphPanelManager.viewType,
-      'LLM Wiki Knowledge Graph',
+      'LLM Wiki - Graph',
       column || vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -55,7 +55,7 @@ export class GraphPanelManager implements vscode.Disposable {
     extensionUri: vscode.Uri,
     ipcClient: IpcClient | null
   ): GraphPanelManager {
-    panel.title = 'LLM Wiki Knowledge Graph';
+    panel.title = 'LLM Wiki - Graph';
     GraphPanelManager.currentPanel = new GraphPanelManager(panel, extensionUri, ipcClient, null);
     return GraphPanelManager.currentPanel;
   }

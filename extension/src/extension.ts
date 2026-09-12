@@ -29,7 +29,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.command = 'llmWiki.showKnowledgeGraph';
   statusBarItem.text = '$(graph) LLM Wiki: Initializing';
-  statusBarItem.tooltip = 'Click to open LLM Wiki Knowledge Graph';
+  statusBarItem.tooltip = 'Click to open LLM Wiki - Graph';
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 

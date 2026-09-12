@@ -93,7 +93,7 @@
       "activitybar": [
         {
           "id": "llm-wiki-sidebar",
-          "title": "LLM Wiki",
+          "title": "LLM Wiki - Manager",
           "icon": "media/sidebar-icon.svg"
         }
       ]
@@ -102,8 +102,7 @@
       "llm-wiki-sidebar": [
         {
           "type": "webview",
-          "id": "llmWiki.sidebarView",
-          "name": "Knowledge Base"
+          "id": "llmWiki.sidebarView"
         }
       ]
     },
