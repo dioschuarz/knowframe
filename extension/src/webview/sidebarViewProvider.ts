@@ -631,7 +631,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
           totalConns: (n.in_degree || 0) + (n.out_degree || 0)
         }))
         .sort((a, b) => b.totalConns - a.totalConns || (b.tokens || 0) - (a.tokens || 0))
-        .slice(0, 8);
+        .slice(0, 5);
 
       const listEl = document.getElementById('top-notes-list');
       listEl.innerHTML = '';
