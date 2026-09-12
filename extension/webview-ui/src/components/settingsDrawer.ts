@@ -15,6 +15,7 @@ import {
   discoverVaultSuggestions,
   countMatchingNotes,
   DEFAULT_PALETTE,
+  CLUSTER_PALETTE_SWATCHES,
 } from './colorManager.ts';
 
 export type SettingsTab = 'knowledge' | 'exclusions' | 'clusters' | 'git_sync' | 'diagnostics';
@@ -206,7 +207,9 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
             return `
               <div class="settings-rule-item cluster-rule-row" data-idx="${idx}">
                 <input type="checkbox" class="chk-cluster-enabled" data-idx="${idx}" ${g.enabled ? 'checked' : ''} title="Toggle rule active" />
-                <input type="color" class="inp-cluster-color" data-idx="${idx}" value="${g.color}" title="Change cluster color" />
+                <div class="cluster-color-btn-wrapper" data-idx="${idx}">
+                  <button type="button" class="cluster-color-swatch-btn btn-rule-color-swatch" data-idx="${idx}" style="background-color: ${g.color};" title="Click to choose color from palette" aria-label="Change color for ${label}"></button>
+                </div>
                 <span class="rule-name" title="${label}">${label}</span>
                 <span class="rule-pattern" title="${g.query}">${g.query}</span>
                 <span class="rule-match-count" title="${matchCount} notes currently match this rule">${matchCount} note${matchCount === 1 ? '' : 's'}</span>
@@ -241,8 +244,9 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
 
           <div class="settings-subheading">Add Color Group</div>
           <div class="settings-add-cluster-box">
-            <div class="cluster-color-picker-wrap" title="Select cluster color">
-              <input type="color" id="input-cluster-color" class="cluster-color-input" value="${nextColor}" />
+            <div class="cluster-color-btn-wrapper" id="add-cluster-color-wrapper">
+              <button type="button" class="cluster-color-swatch-btn" id="btn-add-cluster-color" style="background-color: ${nextColor};" title="Click to choose color from palette" aria-label="Select cluster color"></button>
+              <input type="hidden" id="input-cluster-color" value="${nextColor}" />
             </div>
             <input type="text" id="input-cluster-label" class="settings-input cluster-input-label" placeholder="Label (e.g. Memory)" />
             <input type="text" id="input-cluster-query" class="settings-input cluster-input-query" placeholder="Query: path:folder/** or tag:#tag" />
@@ -279,6 +283,24 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
             Click any suggestion to add it as an active color group:
           </p>
           ${suggestionsChipsHtml}
+
+          <!-- Floating Palette Popover -->
+          <div class="cluster-palette-popover" id="cluster-palette-popover" style="display: none;">
+            <div class="palette-popover-header">
+              <span class="palette-popover-title">Choose Color</span>
+              <button type="button" class="palette-close-btn" id="btn-close-palette" aria-label="Close palette">✕</button>
+            </div>
+            <div class="palette-grid">
+              ${CLUSTER_PALETTE_SWATCHES.map((c) => `
+                <button type="button" class="palette-swatch-item" data-color="${c}" style="background-color: ${c};" title="${c}"></button>
+              `).join('')}
+            </div>
+            <div class="palette-hex-row">
+              <span class="palette-hex-prefix">#</span>
+              <input type="text" class="palette-hex-input" id="palette-hex-input" placeholder="3B82F6" maxlength="7" />
+              <button type="button" class="btn-tiny palette-hex-apply-btn" id="btn-palette-apply-hex">Set</button>
+            </div>
+          </div>
         </div>
       `;
       break;
@@ -634,16 +656,148 @@ export function renderSettingsDrawer(
       });
     });
 
-    container.querySelectorAll('.inp-cluster-color').forEach((inp) => {
-      inp.addEventListener('change', (e) => {
-        e.stopPropagation();
-        const idx = Number((e.target as HTMLElement).getAttribute('data-idx'));
-        if (!isNaN(idx) && state.colorGroups[idx]) {
-          state.colorGroups[idx].color = (e.target as HTMLInputElement).value;
-          callbacks.onSaveColorGroups?.(state.colorGroups);
-          render();
+    // Color Palette Popover Logic
+    const palettePopover = container.querySelector('#cluster-palette-popover') as HTMLElement;
+    const paletteHexInput = container.querySelector('#palette-hex-input') as HTMLInputElement;
+    const btnPaletteApplyHex = container.querySelector('#btn-palette-apply-hex');
+    const btnClosePalette = container.querySelector('#btn-close-palette');
+
+    let paletteTargetType: 'add' | 'rule' | null = null;
+    let paletteTargetIdx: number = -1;
+
+    const closePalette = () => {
+      if (palettePopover) {
+        palettePopover.style.display = 'none';
+        paletteTargetType = null;
+        paletteTargetIdx = -1;
+      }
+    };
+
+    btnClosePalette?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      closePalette();
+    });
+
+    const openPaletteFor = (wrapper: HTMLElement, type: 'add' | 'rule', idx: number = -1) => {
+      if (!palettePopover) return;
+      paletteTargetType = type;
+      paletteTargetIdx = idx;
+
+      // Move popover inside this wrapper so absolute positioning anchors to it
+      wrapper.appendChild(palettePopover);
+
+      // Check vertical room
+      const rect = wrapper.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      if (spaceBelow < 180 && rect.top > 180) {
+        palettePopover.style.top = 'auto';
+        palettePopover.style.bottom = 'calc(100% + 4px)';
+      } else {
+        palettePopover.style.top = 'calc(100% + 4px)';
+        palettePopover.style.bottom = 'auto';
+      }
+
+      // Pre-fill current color in hex input
+      const currentColor = type === 'add'
+        ? (container.querySelector('#input-cluster-color') as HTMLInputElement)?.value || '#3B82F6'
+        : state.colorGroups[idx]?.color || '#3B82F6';
+      if (paletteHexInput) {
+        paletteHexInput.value = currentColor.replace(/^#/, '');
+      }
+
+      // Highlight active swatch in grid
+      palettePopover.querySelectorAll('.palette-swatch-item').forEach((swatch) => {
+        const c = swatch.getAttribute('data-color');
+        if (c?.toLowerCase() === currentColor.toLowerCase()) {
+          swatch.classList.add('selected');
+        } else {
+          swatch.classList.remove('selected');
         }
       });
+
+      palettePopover.style.display = 'block';
+    };
+
+    const applyChosenColor = (color: string) => {
+      if (!color) return;
+      const cleanHex = color.trim().replace(/^#/, '');
+      if (!/^[0-9A-Fa-f]{3,6}$/.test(cleanHex)) return;
+      const normalizedColor = `#${cleanHex}`;
+
+      if (paletteTargetType === 'add') {
+        const swatchBtn = container.querySelector('#btn-add-cluster-color') as HTMLElement;
+        const hiddenInp = container.querySelector('#input-cluster-color') as HTMLInputElement;
+        if (swatchBtn) swatchBtn.style.backgroundColor = normalizedColor;
+        if (hiddenInp) hiddenInp.value = normalizedColor;
+        closePalette();
+      } else if (paletteTargetType === 'rule' && paletteTargetIdx >= 0 && state.colorGroups[paletteTargetIdx]) {
+        state.colorGroups[paletteTargetIdx].color = normalizedColor;
+        closePalette();
+        callbacks.onSaveColorGroups?.(state.colorGroups);
+        render();
+      }
+    };
+
+    // Open palette for Add Rule color swatch
+    const btnAddColor = container.querySelector('#btn-add-cluster-color');
+    const addColorWrapper = container.querySelector('#add-cluster-color-wrapper') as HTMLElement;
+    btnAddColor?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (palettePopover && palettePopover.style.display === 'block' && paletteTargetType === 'add') {
+        closePalette();
+      } else if (addColorWrapper) {
+        openPaletteFor(addColorWrapper, 'add');
+      }
+    });
+
+    // Open palette for Configured Rules swatches
+    container.querySelectorAll('.btn-rule-color-swatch').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = Number((e.target as HTMLElement).getAttribute('data-idx'));
+        const wrapper = (e.target as HTMLElement).closest('.cluster-color-btn-wrapper') as HTMLElement;
+        if (palettePopover && palettePopover.style.display === 'block' && paletteTargetType === 'rule' && paletteTargetIdx === idx) {
+          closePalette();
+        } else if (wrapper && !isNaN(idx)) {
+          openPaletteFor(wrapper, 'rule', idx);
+        }
+      });
+    });
+
+    // Swatch click inside palette
+    palettePopover?.querySelectorAll('.palette-swatch-item').forEach((swatch) => {
+      swatch.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const color = (e.target as HTMLElement).getAttribute('data-color');
+        if (color) applyChosenColor(color);
+      });
+    });
+
+    // Hex apply button inside palette
+    btnPaletteApplyHex?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const val = paletteHexInput?.value.trim();
+      if (val) applyChosenColor(val);
+    });
+
+    paletteHexInput?.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        const val = paletteHexInput?.value.trim();
+        if (val) applyChosenColor(val);
+      }
+    });
+
+    palettePopover?.addEventListener('click', (e) => e.stopPropagation());
+
+    document.addEventListener('click', (e) => {
+      if (palettePopover && palettePopover.style.display === 'block') {
+        const target = e.target as HTMLElement;
+        if (!palettePopover.contains(target) && !target.closest('.cluster-color-btn-wrapper')) {
+          closePalette();
+        }
+      }
     });
 
     container.querySelectorAll('.btn-delete-cluster').forEach((btn) => {
