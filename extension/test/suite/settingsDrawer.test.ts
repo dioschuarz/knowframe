@@ -47,4 +47,60 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(html.includes('Installed') || html.includes('Active'), 'Must show hook status');
     assert.ok(html.includes('Reinstall') || html.includes('Install'), 'Must have install/reinstall button');
   });
+
+  test('renders Cluster Groups tab with Add Rule form, configured groups, and vault suggestions', () => {
+    const sampleNodes = [
+      { id: '00_meta/wiki_index.md', label: 'Wiki Index', filePath: '00_meta/wiki_index.md', tags: ['#meta'], color: '#3B82F6', status: 'active' as const, tokens: 1000, hopDistance: 0, inDegree: 5, outDegree: 5, betweenness: 0.5, brokenLinks: 0 },
+      { id: '01_projects/proj.md', label: 'Project', filePath: '01_projects/proj.md', tags: ['#projects'], color: '#3B82F6', status: 'active' as const, tokens: 800, hopDistance: 1, inDegree: 2, outDegree: 2, betweenness: 0.2, brokenLinks: 0 },
+      { id: '02_memory/context.md', label: 'Context', filePath: '02_memory/context.md', tags: ['#memory'], color: '#3B82F6', status: 'active' as const, tokens: 600, hopDistance: 1, inDegree: 3, outDegree: 1, betweenness: 0.3, brokenLinks: 0 },
+    ];
+
+    const html = renderSettingsDrawerHtml({
+      ...sampleProps,
+      activeTab: 'clusters',
+      nodes: sampleNodes,
+    });
+
+    // 1. Add Group form controls
+    assert.ok(html.includes('Add Color Group'), 'Must display Add Color Group subheading');
+    assert.ok(html.includes('input-cluster-query'), 'Must render query input');
+    assert.ok(html.includes('input-cluster-label'), 'Must render label input');
+    assert.ok(html.includes('input-cluster-color'), 'Must render color picker input');
+    assert.ok(html.includes('+ Add'), 'Must render + Add button');
+
+    // 2. Configured groups
+    assert.ok(html.includes('Configured Groups'), 'Must display Configured Groups subheading');
+    assert.ok(html.includes('Meta'), 'Must render configured group label');
+    assert.ok(html.includes('path:00_meta/**'), 'Must render configured group query');
+    assert.ok(html.includes('chk-cluster-enabled'), 'Must render enable/disable toggle');
+    assert.ok(html.includes('btn-delete-cluster'), 'Must render delete button');
+
+    // 3. Vault suggestions
+    assert.ok(html.includes('Suggestions from Vault'), 'Must display Suggestions from Vault header');
+    assert.ok(html.includes('suggestion-chip'), 'Must render suggestion chips');
+    assert.ok(html.includes('path:01_projects/**') || html.includes('01_projects'), 'Must suggest 01_projects folder');
+    assert.ok(html.includes('path:02_memory/**') || html.includes('02_memory'), 'Must suggest 02_memory folder');
+    assert.ok(html.includes('#projects') || html.includes('#memory'), 'Must suggest discovered tags');
+    assert.ok(html.includes('Auto-Populate'), 'Must offer Auto-Populate action');
+  });
+
+  test('renders empty configured groups message when colorGroups is empty but provides suggestions', () => {
+    const sampleNodes = [
+      { id: '01_projects/proj.md', label: 'Project', filePath: '01_projects/proj.md', tags: ['#projects'], color: '#3B82F6', status: 'active' as const, tokens: 800, hopDistance: 1, inDegree: 2, outDegree: 2, betweenness: 0.2, brokenLinks: 0 },
+    ];
+
+    const html = renderSettingsDrawerHtml({
+      ...sampleProps,
+      activeTab: 'clusters',
+      colorGroups: [],
+      nodes: sampleNodes,
+    });
+
+    assert.ok(
+      html.includes('No custom cluster color groups defined'),
+      'Must display helpful empty state message',
+    );
+    assert.ok(html.includes('input-cluster-query'), 'Must still offer add form when empty');
+    assert.ok(html.includes('suggestion-chip'), 'Must still offer suggestions when empty');
+  });
 });

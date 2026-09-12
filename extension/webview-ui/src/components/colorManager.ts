@@ -13,7 +13,7 @@ export interface ClusterSuggestion {
   type: 'path' | 'tag';
 }
 
-const DEFAULT_PALETTE = [
+export const DEFAULT_PALETTE = [
   '#3B82F6', // Blue
   '#10B981', // Emerald
   '#F59E0B', // Amber
@@ -45,7 +45,7 @@ export function countMatchingNotes(query: string, nodes: NoteNode[]): number {
       const prefix = pat.slice(0, -3);
       return nodes.filter((n) => {
         const p = n.filePath || n.id;
-        return p.startsWith(prefix);
+        return p.startsWith(prefix) || p.replace(/^notes\//, '').startsWith(prefix);
       }).length;
     }
     const regexStr =
@@ -57,7 +57,10 @@ export function countMatchingNotes(query: string, nodes: NoteNode[]): number {
       '$';
     try {
       const re = new RegExp(regexStr);
-      return nodes.filter((n) => re.test(n.filePath || n.id)).length;
+      return nodes.filter((n) => {
+        const p = n.filePath || n.id;
+        return re.test(p) || re.test(p.replace(/^notes\//, ''));
+      }).length;
     } catch {
       return 0;
     }
@@ -74,7 +77,7 @@ export function discoverVaultSuggestions(nodes: NoteNode[]): ClusterSuggestion[]
 
   for (const n of nodes) {
     // 1. Folder path discovery
-    const path = n.filePath || n.id;
+    const path = (n.filePath || n.id).replace(/^\/+/, '');
     if (path) {
       const parts = path.split('/');
       if (parts.length > 1) {
@@ -104,7 +107,15 @@ export function discoverVaultSuggestions(nodes: NoteNode[]): ClusterSuggestion[]
 
   // Folder suggestions
   const sortedFolders = Array.from(folderCounts.entries())
-    .filter(([folder, count]) => count >= 1 && !folder.startsWith('.'))
+    .filter(([folder, count]) => {
+      if (count < 1 || folder.startsWith('.')) return false;
+      // If a single top-level folder contains all nodes and has subfolders (e.g. 'notes/'), skip the umbrella
+      if (nodes.length > 3 && count === nodes.length && !folder.includes('/')) {
+        const hasSubfolders = Array.from(folderCounts.keys()).some((k) => k.startsWith(`${folder}/`));
+        if (hasSubfolders) return false;
+      }
+      return true;
+    })
     .sort((a, b) => b[1] - a[1]);
 
   for (const [folder, count] of sortedFolders) {

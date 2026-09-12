@@ -2288,6 +2288,98 @@ body, html {
   color: #ef4444;
 }
 
+.settings-add-cluster-box {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 4px;
+}
+
+.cluster-color-picker-wrap {
+  position: relative;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+  border-radius: 4px;
+  overflow: hidden;
+  border: 1px solid var(--vscode-input-border, #3c3c3c);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--vscode-input-background, #1e1e1e);
+}
+
+.cluster-color-input {
+  position: absolute;
+  top: -8px;
+  left: -8px;
+  width: 44px;
+  height: 44px;
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+}
+
+.cluster-input-label {
+  max-width: 120px;
+  flex-shrink: 0;
+}
+
+.cluster-input-query {
+  flex: 1;
+}
+
+.cluster-rule-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.chk-cluster-enabled {
+  cursor: pointer;
+  accent-color: #38bdf8;
+  margin: 0;
+  width: 14px;
+  height: 14px;
+  flex-shrink: 0;
+}
+
+.inp-cluster-color {
+  width: 20px;
+  height: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+  padding: 0;
+  cursor: pointer;
+  background: none;
+  flex-shrink: 0;
+}
+
+.rule-match-count {
+  font-size: 10px;
+  color: #94a3b8;
+  background: rgba(148, 163, 184, 0.1);
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
+}
+
+.cluster-quick-actions {
+  display: flex;
+  gap: 4px;
+}
+
+.chip-plus {
+  font-size: 11px;
+  font-weight: bold;
+  opacity: 0.6;
+  margin-left: 2px;
+}
+
 .settings-empty-msg {
   font-size: 11.5px;
   font-style: italic;

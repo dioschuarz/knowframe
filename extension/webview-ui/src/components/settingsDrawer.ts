@@ -10,7 +10,12 @@
  * - Diagnostics (Node counts, protocol metrics, cache stats)
  */
 
-import type { ClusterColorGroup } from '../../../src/types/graph.ts';
+import type { ClusterColorGroup, NoteNode } from '../../../src/types/graph.ts';
+import {
+  discoverVaultSuggestions,
+  countMatchingNotes,
+  DEFAULT_PALETTE,
+} from './colorManager.ts';
 
 export type SettingsTab = 'knowledge' | 'exclusions' | 'clusters' | 'git_sync' | 'diagnostics';
 
@@ -21,6 +26,7 @@ export interface SettingsDrawerProps {
   scanExclusions: string[];
   graphExclusions: string[];
   colorGroups: ClusterColorGroup[];
+  nodes?: NoteNode[];
   gitHooksInstalled?: boolean;
   gitCommitLatencyMs?: number;
   totalNotes?: number;
@@ -57,6 +63,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
     scanExclusions = [],
     graphExclusions = [],
     colorGroups = [],
+    nodes = [],
     gitHooksInstalled = true,
     gitCommitLatencyMs = 15,
     totalNotes = 0,
@@ -183,26 +190,99 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
       `;
       break;
 
-    case 'clusters':
+    case 'clusters': {
+      const allSuggestions = discoverVaultSuggestions(nodes);
+      const existingQueries = new Set(colorGroups.map((g) => g.query.trim().toLowerCase()));
+      const unaddedSuggestions = allSuggestions.filter(
+        (s) => !existingQueries.has(s.query.trim().toLowerCase()),
+      );
+      const nextColor = DEFAULT_PALETTE[colorGroups.length % DEFAULT_PALETTE.length];
+      const activeCount = colorGroups.filter((g) => g.enabled).length;
+
       const colorRulesHtml = colorGroups.length > 0
-        ? colorGroups.map((g) => `
-            <div class="settings-rule-item">
-              <span class="color-swatch-dot" style="background-color: ${g.color};"></span>
-              <span class="rule-name">${g.name}</span>
-              <span class="rule-pattern">${g.query}</span>
-              <span class="rule-tier-tag">${g.enabled ? 'Active' : 'Disabled'}</span>
+        ? colorGroups.map((g, idx) => {
+            const matchCount = countMatchingNotes(g.query, nodes);
+            const label = g.label || (g as any).name || g.query;
+            return `
+              <div class="settings-rule-item cluster-rule-row" data-idx="${idx}">
+                <input type="checkbox" class="chk-cluster-enabled" data-idx="${idx}" ${g.enabled ? 'checked' : ''} title="Toggle rule active" />
+                <input type="color" class="inp-cluster-color" data-idx="${idx}" value="${g.color}" title="Change cluster color" />
+                <span class="rule-name" title="${label}">${label}</span>
+                <span class="rule-pattern" title="${g.query}">${g.query}</span>
+                <span class="rule-match-count" title="${matchCount} notes currently match this rule">${matchCount} note${matchCount === 1 ? '' : 's'}</span>
+                <button class="rule-del-btn btn-delete-cluster" data-idx="${idx}" title="Delete rule">✕</button>
+              </div>
+            `;
+          }).join('')
+        : '<div class="settings-empty-msg">No custom cluster color groups defined. Add a rule above or pick a suggestion below.</div>';
+
+      const suggestionsChipsHtml = unaddedSuggestions.length > 0
+        ? `
+            <div class="suggestions-list" style="max-height: 140px; overflow-y: auto;">
+              ${unaddedSuggestions.map((s) => `
+                <button type="button" class="suggestion-chip btn-add-suggestion" data-query="${s.query}" data-label="${s.label}" data-color="${s.color}" title="Add ${s.query} (${s.count} notes)">
+                  <span class="chip-dot" style="background-color: ${s.color};"></span>
+                  <span class="chip-label">${s.label}</span>
+                  <span class="chip-count">${s.count}</span>
+                  <span class="chip-plus">+</span>
+                </button>
+              `).join('')}
             </div>
-          `).join('')
-        : '<div class="settings-empty-msg">No custom cluster color groups defined</div>';
+          `
+        : '<div class="settings-empty-msg" style="font-size: 11px;">All detected vault folders and tags are currently configured.</div>';
 
       tabContentHtml = `
         <div class="settings-section">
           <div class="settings-sec-title">Cluster Color Groups</div>
-          <p class="settings-desc">Semantic color groups categorizing notes by tag (#tag) or folder path (path:folder/**).</p>
+          <p class="settings-desc">
+            Categorize and color graph nodes by tag (<code>tag:#tag</code>) or folder path (<code>path:folder/**</code>).
+            Active rules tint nodes on canvas; opacity decays with hop distance from the hub.
+          </p>
+
+          <div class="settings-subheading">Add Color Group</div>
+          <div class="settings-add-cluster-box">
+            <div class="cluster-color-picker-wrap" title="Select cluster color">
+              <input type="color" id="input-cluster-color" class="cluster-color-input" value="${nextColor}" />
+            </div>
+            <input type="text" id="input-cluster-label" class="settings-input cluster-input-label" placeholder="Label (e.g. Memory)" />
+            <input type="text" id="input-cluster-query" class="settings-input cluster-input-query" placeholder="Query: path:folder/** or tag:#tag" />
+            <button class="btn-primary" id="btn-add-cluster-group">+ Add</button>
+          </div>
+
+          <div class="settings-subheading" style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+            <span>Configured Groups (${activeCount} of ${colorGroups.length} active)</span>
+            ${colorGroups.length > 0 ? `
+              <div class="cluster-quick-actions">
+                <button type="button" class="btn-tiny" id="btn-clusters-select-all">Select All</button>
+                <button type="button" class="btn-tiny" id="btn-clusters-deselect-all">Deselect All</button>
+                <button type="button" class="btn-tiny" id="btn-clusters-clear-all" style="color: #ef4444;">Clear All</button>
+              </div>
+            ` : ''}
+          </div>
           <div class="settings-rules-list">${colorRulesHtml}</div>
+
+          <div class="settings-subheading" style="margin-top: 16px; display: flex; justify-content: space-between; align-items: center;">
+            <span style="display: flex; align-items: center; gap: 4px;">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M8 1.5a5 5 0 0 0-3.5 8.5c.7.7 1 1.5 1 2.5h5c0-1 .3-1.8 1-2.5A5 5 0 0 0 8 1.5z"/>
+                <line x1="6.5" y1="14.5" x2="9.5" y2="14.5"/>
+              </svg>
+              Suggestions from Vault
+            </span>
+            ${unaddedSuggestions.length > 0 ? `
+              <button type="button" class="btn-tiny" id="btn-cluster-autopopulate" title="Add top 6 suggestions automatically">
+                ⚡ Auto-Populate
+              </button>
+            ` : ''}
+          </div>
+          <p class="settings-desc" style="margin-bottom: 8px;">
+            Click any suggestion to add it as an active color group:
+          </p>
+          ${suggestionsChipsHtml}
         </div>
       `;
       break;
+    }
 
     case 'git_sync':
       tabContentHtml = `
@@ -412,6 +492,167 @@ export function renderSettingsDrawer(
           } else {
             state.scanExclusions = state.scanExclusions.filter((r) => r !== pat);
           }
+          render();
+        }
+      });
+    });
+
+    // Cluster Groups event wiring
+    const addClusterBtn = container.querySelector('#btn-add-cluster-group');
+    const clusterQueryInput = container.querySelector('#input-cluster-query') as HTMLInputElement;
+    const clusterLabelInput = container.querySelector('#input-cluster-label') as HTMLInputElement;
+    const clusterColorInput = container.querySelector('#input-cluster-color') as HTMLInputElement;
+
+    const doAddClusterGroup = () => {
+      let query = clusterQueryInput?.value.trim();
+      let label = clusterLabelInput?.value.trim();
+      const color = clusterColorInput?.value || DEFAULT_PALETTE[state.colorGroups.length % DEFAULT_PALETTE.length];
+
+      if (!query) return;
+
+      if (!query.startsWith('path:') && !query.startsWith('tag:')) {
+        if (query.startsWith('#')) {
+          query = `tag:${query}`;
+        } else {
+          query = `path:${query}`;
+        }
+      }
+
+      if (!label) {
+        if (query.startsWith('tag:')) {
+          label = query.slice(4).trim();
+        } else if (query.startsWith('path:')) {
+          const p = query.slice(5).trim().replace(/\/\*\*$/, '');
+          label = p.split('/').pop() || p;
+        } else {
+          label = query;
+        }
+      }
+
+      state.colorGroups.push({
+        query,
+        label,
+        name: label,
+        color,
+        enabled: true,
+      });
+      callbacks.onSaveColorGroups?.(state.colorGroups);
+      render();
+    };
+
+    addClusterBtn?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      doAddClusterGroup();
+    });
+
+    clusterQueryInput?.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        doAddClusterGroup();
+      }
+    });
+
+    clusterLabelInput?.addEventListener('keydown', (e: KeyboardEvent) => {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        e.stopPropagation();
+        doAddClusterGroup();
+      }
+    });
+
+    container.querySelectorAll('.btn-add-suggestion').forEach((chip) => {
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const query = chip.getAttribute('data-query') || '';
+        const label = chip.getAttribute('data-label') || '';
+        const color = chip.getAttribute('data-color') || DEFAULT_PALETTE[state.colorGroups.length % DEFAULT_PALETTE.length];
+        if (query) {
+          state.colorGroups.push({
+            query,
+            label: label || query,
+            name: label || query,
+            color,
+            enabled: true,
+          });
+          callbacks.onSaveColorGroups?.(state.colorGroups);
+          render();
+        }
+      });
+    });
+
+    container.querySelector('#btn-cluster-autopopulate')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const suggestions = discoverVaultSuggestions(state.nodes || []);
+      const existingQueries = new Set(state.colorGroups.map((g) => g.query.trim().toLowerCase()));
+      const toAdd = suggestions.filter((s) => !existingQueries.has(s.query.trim().toLowerCase())).slice(0, 6);
+      if (toAdd.length > 0) {
+        for (const s of toAdd) {
+          state.colorGroups.push({
+            query: s.query,
+            label: s.label,
+            name: s.label,
+            color: s.color,
+            enabled: true,
+          });
+        }
+        callbacks.onSaveColorGroups?.(state.colorGroups);
+        render();
+      }
+    });
+
+    container.querySelector('#btn-clusters-select-all')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.colorGroups.forEach((g) => (g.enabled = true));
+      callbacks.onSaveColorGroups?.(state.colorGroups);
+      render();
+    });
+
+    container.querySelector('#btn-clusters-deselect-all')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.colorGroups.forEach((g) => (g.enabled = false));
+      callbacks.onSaveColorGroups?.(state.colorGroups);
+      render();
+    });
+
+    container.querySelector('#btn-clusters-clear-all')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.colorGroups = [];
+      callbacks.onSaveColorGroups?.(state.colorGroups);
+      render();
+    });
+
+    container.querySelectorAll('.chk-cluster-enabled').forEach((chk) => {
+      chk.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const idx = Number((e.target as HTMLElement).getAttribute('data-idx'));
+        if (!isNaN(idx) && state.colorGroups[idx]) {
+          state.colorGroups[idx].enabled = (e.target as HTMLInputElement).checked;
+          callbacks.onSaveColorGroups?.(state.colorGroups);
+          render();
+        }
+      });
+    });
+
+    container.querySelectorAll('.inp-cluster-color').forEach((inp) => {
+      inp.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const idx = Number((e.target as HTMLElement).getAttribute('data-idx'));
+        if (!isNaN(idx) && state.colorGroups[idx]) {
+          state.colorGroups[idx].color = (e.target as HTMLInputElement).value;
+          callbacks.onSaveColorGroups?.(state.colorGroups);
+          render();
+        }
+      });
+    });
+
+    container.querySelectorAll('.btn-delete-cluster').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const idx = Number((e.target as HTMLElement).getAttribute('data-idx'));
+        if (!isNaN(idx) && state.colorGroups[idx]) {
+          state.colorGroups.splice(idx, 1);
+          callbacks.onSaveColorGroups?.(state.colorGroups);
           render();
         }
       });

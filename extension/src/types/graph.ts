@@ -61,6 +61,7 @@ export interface ClusterColorGroup {
   query: string;
   color: string;
   label: string;
+  name?: string;
   enabled: boolean;
 }
 

@@ -57,6 +57,7 @@ const settingsDrawer = renderSettingsDrawer(
     scanExclusions: [],
     graphExclusions: [],
     colorGroups: colorGroups,
+    nodes: rawNodes,
     gitHooksInstalled: true,
     gitCommitLatencyMs: 15,
   },
@@ -72,6 +73,13 @@ const settingsDrawer = renderSettingsDrawer(
     },
     onAddExclusion: (pattern, scope) => {
       rpc.excludePath(pattern, scope);
+    },
+    onSaveColorGroups: (newGroups) => {
+      colorGroups = newGroups;
+      rpc.updateColorGroups(newGroups);
+      applyClientSideColorGroups(rawNodes, newGroups);
+      applyFocusFilter(0.2);
+      persistState();
     },
     onInstallGitHooks: () => {
       rpc.sendMessage({ type: 'installHooks' });
@@ -257,7 +265,7 @@ function applyClientSideColorGroups(nodeList: NoteNode[], groups: ClusterColorGr
         const nodePath = node.filePath || node.id;
         if (pat.endsWith('/**')) {
           const prefix = pat.slice(0, -3);
-          if (nodePath.startsWith(prefix)) {
+          if (nodePath.startsWith(prefix) || nodePath.replace(/^notes\//, '').startsWith(prefix)) {
             matchedColor = group.color;
             break;
           }
@@ -265,7 +273,7 @@ function applyClientSideColorGroups(nodeList: NoteNode[], groups: ClusterColorGr
           try {
             const regexStr = '^' + pat.replace(/\./g, '\\.').replace(/\*\*/g, '.*').replace(/\*/g, '[^/]*') + '$';
             const re = new RegExp(regexStr);
-            if (re.test(nodePath)) {
+            if (re.test(nodePath) || re.test(nodePath.replace(/^notes\//, ''))) {
               matchedColor = group.color;
               break;
             }
@@ -277,6 +285,8 @@ function applyClientSideColorGroups(nodeList: NoteNode[], groups: ClusterColorGr
     }
     if (matchedColor) {
       node.color = matchedColor;
+    } else {
+      node.color = '#3B82F6';
     }
   }
 }
@@ -337,6 +347,10 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
     persistState();
   },
   onOpenSettings: (tab) => {
+    settingsDrawer.updateProps({
+      nodes: rawNodes,
+      colorGroups,
+    });
     settingsDrawer.open((tab as SettingsTab) || 'knowledge');
   },
   onOpenTokenBreakdown: () => {
@@ -417,6 +431,7 @@ rpc.on('graphDataUpdate', (data: any) => {
     orphanNotes: orphanCount,
     excludedNotes: excludedCount,
     colorGroups,
+    nodes: rawNodes,
   });
 
   if (data.tokenSummary) {
