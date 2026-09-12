@@ -154,10 +154,23 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
 
           <div class="settings-add-rule-box">
             <input type="text" id="input-new-rule" class="settings-input" placeholder="e.g. packages/**/README.md or vendor/**" />
-            <select id="select-rule-scope" class="settings-select">
-              <option value="graph">Graph Tier</option>
-              <option value="scan">Scan Tier</option>
-            </select>
+            <div class="settings-scope-dropdown" id="scope-dropdown">
+              <button type="button" class="settings-scope-btn" id="btn-scope-toggle" aria-haspopup="listbox">
+                <span id="label-scope-selected">Graph Tier</span>
+                <span class="scope-dropdown-arrow">▾</span>
+              </button>
+              <div class="settings-scope-menu" id="menu-scope-options" style="display: none;">
+                <div class="scope-menu-item active" data-value="graph">
+                  <div class="scope-item-title">Graph Tier</div>
+                  <div class="scope-item-desc">Hides from graph canvas, preserves link resolution</div>
+                </div>
+                <div class="scope-menu-item" data-value="scan">
+                  <div class="scope-item-title">Scan Tier</div>
+                  <div class="scope-item-desc">Completely skips parsing during vault index</div>
+                </div>
+              </div>
+              <input type="hidden" id="select-rule-scope" value="graph" />
+            </div>
             <button class="btn-primary" id="btn-add-rule">+ Add Rule</button>
           </div>
 
@@ -297,14 +310,51 @@ export function renderSettingsDrawer(
     const drawer = container.querySelector('#settings-drawer') as HTMLElement;
     if (drawer) {
       drawer.style.display = isVisible ? 'flex' : 'none';
+      drawer.addEventListener('mousedown', (e) => e.stopPropagation());
+      drawer.addEventListener('mouseup', (e) => e.stopPropagation());
+      drawer.addEventListener('click', (e) => e.stopPropagation());
     }
 
-    container.querySelector('#settings-btn-close')?.addEventListener('click', () => {
+    container.querySelector('#settings-btn-close')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       close();
     });
 
+    // Wire custom scope dropdown in Excluded Paths tab
+    const scopeBtn = container.querySelector('#btn-scope-toggle') as HTMLElement;
+    const scopeMenu = container.querySelector('#menu-scope-options') as HTMLElement;
+    const scopeLabel = container.querySelector('#label-scope-selected') as HTMLElement;
+    const scopeHidden = container.querySelector('#select-rule-scope') as HTMLInputElement;
+
+    if (scopeBtn && scopeMenu) {
+      scopeBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const isOpen = scopeMenu.style.display === 'block';
+        scopeMenu.style.display = isOpen ? 'none' : 'block';
+      });
+
+      scopeMenu.querySelectorAll('.scope-menu-item').forEach((item) => {
+        item.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const val = item.getAttribute('data-value') as 'scan' | 'graph';
+          if (val && scopeHidden && scopeLabel) {
+            scopeHidden.value = val;
+            scopeLabel.textContent = val === 'graph' ? 'Graph Tier' : 'Scan Tier';
+            scopeMenu.querySelectorAll('.scope-menu-item').forEach((i) => i.classList.remove('active'));
+            item.classList.add('active');
+            scopeMenu.style.display = 'none';
+          }
+        });
+      });
+
+      document.addEventListener('click', () => {
+        if (scopeMenu) scopeMenu.style.display = 'none';
+      });
+    }
+
     container.querySelectorAll('.settings-tab-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
         const tab = btn.getAttribute('data-tab') as SettingsTab;
         if (tab && tab !== state.activeTab) {
           state.activeTab = tab;
@@ -314,25 +364,30 @@ export function renderSettingsDrawer(
       });
     });
 
-    container.querySelector('#btn-settings-change-hub')?.addEventListener('click', () => {
+    container.querySelector('#btn-settings-change-hub')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       callbacks.onChangeHub?.();
     });
 
-    container.querySelector('#btn-settings-fix-broken')?.addEventListener('click', () => {
+    container.querySelector('#btn-settings-fix-broken')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       callbacks.onFixBrokenLinks?.();
     });
 
-    container.querySelector('#btn-settings-rescan')?.addEventListener('click', () => {
+    container.querySelector('#btn-settings-rescan')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       callbacks.onRescanVault?.();
     });
 
-    container.querySelector('#btn-reinstall-hooks')?.addEventListener('click', () => {
+    container.querySelector('#btn-reinstall-hooks')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       callbacks.onInstallGitHooks?.();
     });
 
-    container.querySelector('#btn-add-rule')?.addEventListener('click', () => {
+    container.querySelector('#btn-add-rule')?.addEventListener('click', (e) => {
+      e.stopPropagation();
       const input = container.querySelector('#input-new-rule') as HTMLInputElement;
-      const select = container.querySelector('#select-rule-scope') as HTMLSelectElement;
+      const select = container.querySelector('#select-rule-scope') as HTMLInputElement;
       const pat = input?.value.trim();
       const scope = (select?.value as 'scan' | 'graph') || 'graph';
       if (pat) {

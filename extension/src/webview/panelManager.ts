@@ -73,8 +73,8 @@ export class GraphPanelManager implements vscode.Disposable {
 
     this.panel.title = 'LLM Wiki Knowledge Graph';
     this.panel.iconPath = {
-      light: vscode.Uri.joinPath(extensionUri, 'media', 'sidebar-icon.svg'),
-      dark: vscode.Uri.joinPath(extensionUri, 'media', 'sidebar-icon.svg'),
+      light: vscode.Uri.joinPath(extensionUri, 'media', 'tab-icon-light.svg'),
+      dark: vscode.Uri.joinPath(extensionUri, 'media', 'tab-icon-dark.svg'),
     };
 
     this.updateHtml();
@@ -280,6 +280,10 @@ export class GraphPanelManager implements vscode.Disposable {
 
   private async openDocument(filePath: string, line?: number): Promise<void> {
     try {
+      if (!filePath) { return; }
+      if (typeof filePath !== 'string') {
+        filePath = (filePath as any).filePath || (filePath as any).id || String(filePath);
+      }
       let uri: vscode.Uri;
       if (path.isAbsolute(filePath)) {
         uri = vscode.Uri.file(filePath);

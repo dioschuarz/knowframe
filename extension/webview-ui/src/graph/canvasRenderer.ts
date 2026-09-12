@@ -38,6 +38,7 @@ export class CanvasRenderer {
   private hasMoved = false;
   private lastMouseX = 0;
   private lastMouseY = 0;
+  private isCanvasMouseDown = false;
 
   private hoveredNode: NoteNode | null = null;
   private animFrameId: number | null = null;
@@ -147,23 +148,24 @@ export class CanvasRenderer {
 
   private setupEvents(): void {
     this.canvas.addEventListener('mousedown', (e) => {
+      this.isCanvasMouseDown = true;
       this.lastMouseX = e.clientX;
       this.lastMouseY = e.clientY;
+      this.dragStartX = e.clientX;
+      this.dragStartY = e.clientY;
+      this.hasMoved = false;
 
       const hit = this.findNodeAt(e.clientX, e.clientY);
       if (hit) {
         this.draggedNode = hit;
         this.isNodeDragging = false;
-        this.dragStartX = e.clientX;
-        this.dragStartY = e.clientY;
-        this.hasMoved = false;
       } else {
         this.isPanning = true;
       }
     });
 
     window.addEventListener('mousemove', (e) => {
-      if (this.draggedNode) {
+      if (this.draggedNode && this.isCanvasMouseDown) {
         const dist = Math.hypot(e.clientX - this.dragStartX, e.clientY - this.dragStartY);
         if (dist > 3) {
           const rect = this.canvas.getBoundingClientRect();
@@ -180,15 +182,26 @@ export class CanvasRenderer {
           this.hasMoved = true;
           this.onNodeDrag?.(this.draggedNode, worldX, worldY);
         }
-      } else if (this.isPanning) {
+      } else if (this.isPanning && this.isCanvasMouseDown) {
         const dx = e.clientX - this.lastMouseX;
         const dy = e.clientY - this.lastMouseY;
+        if (Math.hypot(dx, dy) > 2) {
+          this.hasMoved = true;
+        }
         this.offsetX += dx;
         this.offsetY += dy;
         this.lastMouseX = e.clientX;
         this.lastMouseY = e.clientY;
         this.canvas.style.cursor = 'grabbing';
       } else {
+        // Only trigger node hover when hovering directly over the canvas element
+        if (e.target !== this.canvas) {
+          if (this.hoveredNode) {
+            this.hoveredNode = null;
+          }
+          this.onNodeHover?.(null, e.clientX, e.clientY);
+          return;
+        }
         const hit = this.findNodeAt(e.clientX, e.clientY);
         if (hit !== this.hoveredNode) {
           this.hoveredNode = hit;
@@ -201,6 +214,11 @@ export class CanvasRenderer {
     });
 
     window.addEventListener('mouseup', (e) => {
+      if (!this.isCanvasMouseDown) {
+        return;
+      }
+      this.isCanvasMouseDown = false;
+
       if (this.draggedNode) {
         if (this.isNodeDragging && this.hasMoved) {
           const rect = this.canvas.getBoundingClientRect();
@@ -210,13 +228,14 @@ export class CanvasRenderer {
           const worldY = (canvasY - this.offsetY) / this.scale;
           this.onNodeDragEnd?.(this.draggedNode, worldX, worldY);
         } else {
-          // Clean click without dragging -> open note
+          // Clean click on node without dragging -> open note
           this.onNodeClick?.(this.draggedNode);
         }
         this.draggedNode = null;
         this.isNodeDragging = false;
         this.hasMoved = false;
-      } else if (!this.hasMoved && !this.isPanning) {
+      } else if (!this.hasMoved && this.isPanning) {
+        // Clean click on canvas background without panning/dragging
         const hitEdge = this.findEdgeAt(e.clientX, e.clientY);
         if (hitEdge) {
           this.onEdgeClick?.(hitEdge);
@@ -224,6 +243,7 @@ export class CanvasRenderer {
       }
       const wasPanning = this.isPanning;
       this.isPanning = false;
+      this.hasMoved = false;
       if (wasPanning) {
         this.onViewTransformChange?.({ scale: this.scale, offsetX: this.offsetX, offsetY: this.offsetY });
       }

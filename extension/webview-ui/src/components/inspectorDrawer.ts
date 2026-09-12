@@ -325,6 +325,12 @@ export function renderInspectorDrawer(
   const content = container.querySelector('#inspector-drawer-content') as HTMLElement;
   let visible = false;
 
+  if (drawer) {
+    drawer.addEventListener('mousedown', (e) => e.stopPropagation());
+    drawer.addEventListener('mouseup', (e) => e.stopPropagation());
+    drawer.addEventListener('click', (e) => e.stopPropagation());
+  }
+
   function open(): void {
     if (drawer) {
       drawer.style.display = 'flex';
@@ -341,19 +347,23 @@ export function renderInspectorDrawer(
   }
 
   function wireContentEvents(): void {
-    content.querySelector('#insp-btn-close')?.addEventListener('click', () => {
+    content.querySelector('#insp-btn-close')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      e.preventDefault();
       close();
     });
 
     content.querySelectorAll('.insp-link-item').forEach((item) => {
-      item.addEventListener('click', () => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
         const link = item.getAttribute('data-link');
         if (link) callbacks.onNavigateLink?.(link);
       });
     });
 
     content.querySelectorAll('.insp-consumer-item').forEach((item) => {
-      item.addEventListener('click', () => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
         const p = item.getAttribute('data-path');
         if (p) callbacks.onOpenFile?.(p);
       });
@@ -365,14 +375,19 @@ export function renderInspectorDrawer(
       content.innerHTML = renderNodeInspectionHtml({ node, inLinks, outLinks, isHub });
       wireContentEvents();
 
-      content.querySelector('#insp-btn-open-file')?.addEventListener('click', () => {
-        callbacks.onOpenFile?.(node.filePath);
+      content.querySelector('#insp-btn-open-file')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const p = typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id;
+        callbacks.onOpenFile?.(p);
       });
-      content.querySelector('#insp-btn-set-hub')?.addEventListener('click', () => {
+      content.querySelector('#insp-btn-set-hub')?.addEventListener('click', (e) => {
+        e.stopPropagation();
         callbacks.onSetHub?.(node.id);
       });
-      content.querySelector('#insp-btn-exclude')?.addEventListener('click', () => {
-        callbacks.onExclude?.(node.filePath);
+      content.querySelector('#insp-btn-exclude')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const p = typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id;
+        callbacks.onExclude?.(p);
       });
 
       open();
@@ -382,10 +397,15 @@ export function renderInspectorDrawer(
       content.innerHTML = renderEdgeInspectionHtml({ edge, sourceLabel });
       wireContentEvents();
 
-      content.querySelector('#insp-btn-open-source')?.addEventListener('click', () => {
-        callbacks.onOpenSource?.(edge.source, edge.line ?? undefined);
+      const srcPath = typeof edge.source === 'object'
+        ? (edge.source as any).filePath || (edge.source as any).id
+        : edge.source;
+      content.querySelector('#insp-btn-open-source')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        callbacks.onOpenSource?.(srcPath, edge.line ?? undefined);
       });
-      content.querySelector('#insp-btn-fix-reference')?.addEventListener('click', () => {
+      content.querySelector('#insp-btn-fix-reference')?.addEventListener('click', (e) => {
+        e.stopPropagation();
         callbacks.onFixReference?.(edge);
       });
 

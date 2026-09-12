@@ -99,10 +99,12 @@ function inspectNode(node: NoteNode): void {
 
 const inspectorDrawer = renderInspectorDrawer(inspectorContainer, {
   onOpenFile: (filePath) => {
-    rpc.openFile(filePath);
+    const p = typeof filePath === 'object' ? (filePath as any).filePath || (filePath as any).id : filePath;
+    rpc.openFile(p);
   },
   onOpenSource: (sourcePath, line) => {
-    rpc.openFile(sourcePath, line);
+    const p = typeof sourcePath === 'object' ? (sourcePath as any).filePath || (sourcePath as any).id : sourcePath;
+    rpc.openFile(p, line);
   },
   onSetHub: (hubId) => {
     rpc.setHub(hubId);
