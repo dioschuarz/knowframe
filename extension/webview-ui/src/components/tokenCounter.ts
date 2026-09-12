@@ -1,10 +1,11 @@
 import { TokenSummary } from '../../../src/types/graph';
+import { formatCompactNumber } from '../utils/numberFormat';
 
 export function renderTokenCounter(container: HTMLElement, summary: TokenSummary): void {
-  const activeFormatted = summary.activeHarnessTokens.toLocaleString();
-  const subcallFormatted = summary.subcallAccessibleTokens.toLocaleString();
-  const warnFormatted = summary.warningThreshold.toLocaleString();
-  const critFormatted = summary.criticalThreshold.toLocaleString();
+  const activeFormatted = formatCompactNumber(summary.activeHarnessTokens);
+  const subcallFormatted = formatCompactNumber(summary.subcallAccessibleTokens);
+  const warnFormatted = formatCompactNumber(summary.warningThreshold);
+  const critFormatted = formatCompactNumber(summary.criticalThreshold);
 
   let statusBadgeColor = '#10B981'; // Green
   let statusText = 'NORMAL';

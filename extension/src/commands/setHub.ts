@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { IpcClient } from '../ipc/client';
 import { ScanResultPayload } from '../types/protocol';
+import { formatCompactNumber } from '../utils/numberFormat';
 
 export function registerSetHubCommand(
   getIpcClient: () => IpcClient | null,
@@ -42,8 +43,8 @@ export function registerSetHubCommand(
         const prefix = isCurrentHub ? '$(star-full) [Current Hub] ' : (idx < 3 && totalLinks > 0 ? '$(pinned) ' : '');
         return {
           label: `${prefix}${n.label}`,
-          description: `Links: ${totalLinks} (In: ${n.in_degree || 0} / Out: ${n.out_degree || 0}) • ${n.id}`,
-          detail: `Centrality: ${(n.betweenness || 0).toFixed(4)} | Tokens: ${n.tokens.toLocaleString()}${n.tags && n.tags.length > 0 ? ' | Tags: ' + n.tags.join(', ') : ''}`,
+          description: `Links: ${formatCompactNumber(totalLinks)} (In: ${formatCompactNumber(n.in_degree || 0)} / Out: ${formatCompactNumber(n.out_degree || 0)}) • ${n.id}`,
+          detail: `Centrality: ${(n.betweenness || 0).toFixed(4)} | Tokens: ${formatCompactNumber(n.tokens)}${n.tags && n.tags.length > 0 ? ' | Tags: ' + n.tags.join(', ') : ''}`,
           hubId: n.id,
         };
       });

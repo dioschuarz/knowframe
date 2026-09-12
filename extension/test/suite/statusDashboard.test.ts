@@ -32,7 +32,7 @@ suite('StatusDashboard MVP Test Suite', () => {
 
     // Pillar 2: AI Context
     assert.ok(html.includes('AI CONTEXT'), 'Must contain AI CONTEXT header');
-    assert.ok(html.includes('4.9k') || html.includes('4,920'), 'Must show active prompt load');
+    assert.ok(html.includes('4.92k') || html.includes('4.9k') || html.includes('4,920'), 'Must show active prompt load');
     assert.ok(html.includes('18.2k') || html.includes('18,240'), 'Must show reachable context load');
 
     // Pillar 3: Central Hub & Health

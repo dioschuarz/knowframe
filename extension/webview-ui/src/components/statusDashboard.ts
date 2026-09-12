@@ -10,6 +10,7 @@
  */
 
 import type { ObservatorySummaryPayload } from '../../../src/types/protocol.ts';
+import { formatCompactNumber } from '../utils/numberFormat.ts';
 
 export interface StatusDashboardProps {
   summary: ObservatorySummaryPayload | {
@@ -34,10 +35,7 @@ export interface StatusDashboardProps {
 }
 
 export function formatTokenCount(tokens: number): string {
-  if (tokens >= 1000) {
-    return (tokens / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-  }
-  return tokens.toLocaleString();
+  return formatCompactNumber(tokens);
 }
 
 export function renderStatusDashboardHtml(props: StatusDashboardProps): string {
@@ -67,7 +65,7 @@ export function renderStatusDashboardHtml(props: StatusDashboardProps): string {
             <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
           </svg>
         </span>
-        <span class="attention-title">${brokenCount} broken links</span>
+        <span class="attention-title">${formatCompactNumber(brokenCount)} broken links</span>
       </div>
       <button class="dash-action-link" id="dash-btn-review-broken">Review issues</button>
     </div>`
@@ -82,7 +80,7 @@ export function renderStatusDashboardHtml(props: StatusDashboardProps): string {
             <path d="M6 13h4M6.5 15h3M4.5 6.5a3.5 3.5 0 1 1 7 0c0 1.5-1 2.5-1.5 3.5h-4C5.5 9 4.5 8 4.5 6.5Z"/>
           </svg>
         </span>
-        <span class="attention-title">${suggestionsCount} noise patterns</span>
+        <span class="attention-title">${formatCompactNumber(suggestionsCount)} noise patterns</span>
       </div>
       <button class="dash-action-link" id="dash-btn-review-suggestions">Review suggestions</button>
     </div>`
@@ -98,19 +96,19 @@ export function renderStatusDashboardHtml(props: StatusDashboardProps): string {
     <div class="pillar-title">KNOWLEDGE</div>
     <div class="metrics-grid">
       <div class="metric-item">
-        <span class="metric-value" id="val-connected">${summary.connectedNotes.toLocaleString()}</span>
+        <span class="metric-value" id="val-connected">${formatCompactNumber(summary.connectedNotes)}</span>
         <span class="metric-label">Connected</span>
       </div>
       <div class="metric-item">
-        <span class="metric-value" id="val-orphans">${summary.orphanNotes.toLocaleString()}</span>
+        <span class="metric-value" id="val-orphans">${formatCompactNumber(summary.orphanNotes)}</span>
         <span class="metric-label">Orphans</span>
       </div>
       <div class="metric-item">
-        <span class="metric-value" id="val-excluded">${summary.excludedNotes.toLocaleString()}</span>
+        <span class="metric-value" id="val-excluded">${formatCompactNumber(summary.excludedNotes)}</span>
         <span class="metric-label">Excluded</span>
       </div>
       <div class="metric-item">
-        <span class="metric-value" id="val-links">${totalLinks.toLocaleString()}</span>
+        <span class="metric-value" id="val-links">${formatCompactNumber(totalLinks)}</span>
         <span class="metric-label">Total Links</span>
       </div>
     </div>

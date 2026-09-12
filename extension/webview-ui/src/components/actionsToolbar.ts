@@ -7,6 +7,7 @@ import {
   FocusMode,
 } from '../../../src/types/graph.ts';
 import type { SearchMatchOptions, SearchMode } from '../graph/searchMatcher.ts';
+import { formatCompactNumber } from '../utils/numberFormat.ts';
 
 export interface ActionsToolbarCallbacks {
   onSetHub?: () => void;
@@ -81,7 +82,7 @@ export function renderActionsToolbar(
               <line x1="1" y1="8" x2="3" y2="8"/>
               <line x1="13" y1="8" x2="15" y2="8"/>
             </svg>
-            <span id="tb-focus-label" class="tb-focus-label">Focus: All</span>
+            <span id="tb-focus-label" class="tb-focus-label">All Notes</span>
             <span class="tb-dropdown-arrow">▾</span>
           </button>
           <div id="focus-dropdown-menu" class="floating-popover focus-menu-popover" style="display: none;">
@@ -661,14 +662,14 @@ export function renderActionsToolbar(
   function updateFocusUi(mode: FocusMode): void {
     currentFocusMode = mode;
     const labelMap: Record<FocusMode, string> = {
-      all: 'Focus: All',
-      '3_hops': 'Focus: 3 Hops',
-      '2_hops': 'Focus: 2 Hops',
-      '1_hop': 'Focus: 1 Hop',
-      hub: 'Focus: 1 Hop',
+      all: 'All Notes',
+      '3_hops': '3 Hops',
+      '2_hops': '2 Hops',
+      '1_hop': '1 Hop',
+      hub: '1 Hop',
     };
     if (tbFocusLabel) {
-      tbFocusLabel.textContent = labelMap[mode] || 'Focus: All';
+      tbFocusLabel.textContent = labelMap[mode] || 'All Notes';
     }
     const checkAll = container.querySelector('#check-focus-all') as HTMLElement;
     const check3Hops = container.querySelector('#check-focus-3_hops') as HTMLElement;
@@ -941,10 +942,10 @@ export function renderActionsToolbar(
 
   return {
     updateTokenSummary(summary: TokenSummary) {
-      const activeFormatted = summary.activeHarnessTokens.toLocaleString();
-      const subcallFormatted = summary.subcallAccessibleTokens.toLocaleString();
-      const warnFormatted = summary.warningThreshold.toLocaleString();
-      const critFormatted = summary.criticalThreshold.toLocaleString();
+      const activeFormatted = formatCompactNumber(summary.activeHarnessTokens);
+      const subcallFormatted = formatCompactNumber(summary.subcallAccessibleTokens);
+      const warnFormatted = formatCompactNumber(summary.warningThreshold);
+      const critFormatted = formatCompactNumber(summary.criticalThreshold);
 
       let badgeColor = '#10B981';
       let statusText = 'NORMAL';
@@ -959,10 +960,7 @@ export function renderActionsToolbar(
       // Update Toolbar Pill
       const pill = container.querySelector('#tb-token-pill') as HTMLElement;
       if (pill) {
-        const countStr = summary.activeHarnessTokens >= 1000
-          ? (summary.activeHarnessTokens / 1000).toFixed(1).replace(/\.0$/, '') + 'k'
-          : summary.activeHarnessTokens.toString();
-        pill.textContent = `${countStr} active`;
+        pill.textContent = `${activeFormatted} tok`;
         pill.style.borderColor = badgeColor;
         pill.style.color = badgeColor;
       }
@@ -981,10 +979,10 @@ export function renderActionsToolbar(
       if (subcallEl) subcallEl.textContent = `${subcallFormatted} tok`;
 
       const warnEl = container.querySelector('#popover-warn-limit');
-      if (warnEl) warnEl.textContent = warnFormatted;
+      if (warnEl) warnEl.textContent = `${warnFormatted} tok`;
 
       const critEl = container.querySelector('#popover-crit-limit');
-      if (critEl) critEl.textContent = critFormatted;
+      if (critEl) critEl.textContent = `${critFormatted} tok`;
 
       const fill = container.querySelector('#popover-token-bar-fill') as HTMLElement;
       if (fill) {
@@ -999,14 +997,15 @@ export function renderActionsToolbar(
     },
 
     updatePinnedCount(count: number) {
+      const compactCount = formatCompactNumber(count);
       if (badgePinnedCount) {
-        badgePinnedCount.textContent = count.toString();
+        badgePinnedCount.textContent = compactCount;
       }
       const tbBadge = container.querySelector('#tb-pinned-badge') as HTMLElement;
       const tbBtn = container.querySelector('#btn-reset-disposition-tb') as HTMLElement;
       if (tbBadge) {
         if (count > 0) {
-          tbBadge.textContent = count.toString();
+          tbBadge.textContent = compactCount;
           tbBadge.style.display = 'flex';
           tbBtn?.classList.add('has-pinned');
         } else {
@@ -1035,7 +1034,7 @@ export function renderActionsToolbar(
         searchMatchBadge.style.color = '#ef4444';
         searchMatchBadge.style.backgroundColor = 'rgba(239, 68, 68, 0.15)';
       } else {
-        searchMatchBadge.textContent = `${matchingCount} / ${totalCount}`;
+        searchMatchBadge.textContent = `${formatCompactNumber(matchingCount)} / ${formatCompactNumber(totalCount)}`;
         searchMatchBadge.style.color = '#38bdf8';
         searchMatchBadge.style.backgroundColor = 'rgba(56, 189, 248, 0.15)';
       }

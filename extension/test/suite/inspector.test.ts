@@ -49,7 +49,7 @@ describe('InspectorDrawer Test Suite', () => {
 
     // Check tier and token weight
     assert.ok(html.includes('Level 1 (Direct Reference)'), 'Should display correct tier');
-    assert.ok(html.includes('4.3k tok') || html.includes('4,250 tok'), 'Should display tokens');
+    assert.ok(html.includes('4.25k tok') || html.includes('4.3k tok') || html.includes('4,250 tok'), 'Should display tokens');
 
     // Check links
     assert.ok(html.includes('index.md'), 'Should list incoming link');
@@ -108,9 +108,9 @@ describe('InspectorDrawer Test Suite', () => {
     });
 
     assert.ok(html.includes('Active Prompt Load'), 'Should display L0 title');
-    assert.ok(html.includes('4.9k') || html.includes('4,920'), 'Should display active tokens');
+    assert.ok(html.includes('4.92k') || html.includes('4.9k') || html.includes('4,920'), 'Should display active tokens');
     assert.ok(html.includes('18.5k') || html.includes('18,500'), 'Should display reachable tokens');
     assert.ok(html.includes('Active Context'), 'Should list top consumer node');
-    assert.ok(html.includes('2.8k') || html.includes('2,800'), 'Should display top consumer tokens');
+    assert.ok(html.includes('2.80k') || html.includes('2.8k') || html.includes('2,800'), 'Should display top consumer tokens');
   });
 });

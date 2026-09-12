@@ -7,6 +7,7 @@
  */
 
 import type { NoteNode, NoteEdge, TokenSummary } from '../../../src/types/graph.ts';
+import { formatCompactNumber } from '../utils/numberFormat.ts';
 
 export function formatHopTier(hopDistance: number): string {
   if (hopDistance === 0) return 'Level 0 (Central Hub)';
@@ -17,11 +18,7 @@ export function formatHopTier(hopDistance: number): string {
 }
 
 function formatTokens(tokens: number): string {
-  if (!tokens) return '0';
-  if (tokens >= 1000) {
-    return (tokens / 1000).toFixed(1).replace(/\.0$/, '') + 'k';
-  }
-  return tokens.toLocaleString();
+  return formatCompactNumber(tokens);
 }
 
 export interface NodeInspectionProps {
@@ -63,7 +60,7 @@ export interface InspectorDrawerController {
 export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
   const { node, inLinks, outLinks, isHub } = props;
   const tierName = formatHopTier(node.hopDistance);
-  const tokenFormatted = node.tokens.toLocaleString() + ' tok';
+  const tokenFormatted = formatCompactNumber(node.tokens) + ' tok';
 
   const inLinksList = inLinks.length > 0
     ? inLinks.map((l) => `<li class="insp-link-item" data-link="${l}"><span class="insp-link-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8L10 4"/></svg></span><span class="insp-link-text" title="${l}">${l}</span></li>`).join('')
@@ -94,9 +91,9 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
       <button class="insp-close-btn" id="insp-btn-close" title="Close Inspector">✕</button>
     </div>
 
-    <div class="insp-body">
-      <!-- Section: Tier & Token Weight -->
-      <div class="insp-section">
+    <div class="insp-body insp-body-node">
+      <!-- Section: Tier & Token Weight (Fixed header) -->
+      <div class="insp-section insp-section-fixed">
         <div class="insp-section-header">CONTEXT OBSERVER TIER</div>
         <div class="insp-tier-badge ${node.hopDistance === 0 ? 'tier-hub' : node.hopDistance === 1 ? 'tier-1' : node.hopDistance === 2 ? 'tier-2' : node.hopDistance > 2 ? 'tier-deep' : 'tier-orphan'}">
           ${tierName}
@@ -107,7 +104,7 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
             <span class="insp-m-lbl">BPE Tokens</span>
           </div>
           <div class="insp-metric-col">
-            <span class="insp-m-val">${node.inDegree} / ${node.outDegree}</span>
+            <span class="insp-m-val">${formatCompactNumber(node.inDegree)} / ${formatCompactNumber(node.outDegree)}</span>
             <span class="insp-m-lbl">In / Out Degree</span>
           </div>
           <div class="insp-metric-col">
@@ -117,21 +114,21 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
         </div>
       </div>
 
-      <!-- Section: Tags -->
-      <div class="insp-section">
+      <!-- Section: Tags (1/3 of remaining space, scrollable) -->
+      <div class="insp-section insp-section-third">
         <div class="insp-section-header">TAGS</div>
         <div class="insp-tags-row">${tagsChips}</div>
       </div>
 
-      <!-- Section: Incoming References -->
-      <div class="insp-section">
-        <div class="insp-section-header">INCOMING REFERENCES (${inLinks.length})</div>
+      <!-- Section: Incoming References (1/3 of remaining space, scrollable) -->
+      <div class="insp-section insp-section-third">
+        <div class="insp-section-header">INCOMING REFERENCES (${formatCompactNumber(inLinks.length)})</div>
         <ul class="insp-links-list">${inLinksList}</ul>
       </div>
 
-      <!-- Section: Outgoing References -->
-      <div class="insp-section">
-        <div class="insp-section-header">OUTGOING REFERENCES (${outLinks.length})</div>
+      <!-- Section: Outgoing References (1/3 of remaining space, scrollable) -->
+      <div class="insp-section insp-section-third">
+        <div class="insp-section-header">OUTGOING REFERENCES (${formatCompactNumber(outLinks.length)})</div>
         <ul class="insp-links-list">${outLinksList}</ul>
       </div>
     </div>

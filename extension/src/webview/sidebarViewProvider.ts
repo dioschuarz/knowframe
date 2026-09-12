@@ -292,6 +292,29 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       margin: 12px 0 6px 0;
       text-transform: uppercase;
     }
+    .collapsible-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      user-select: none;
+      padding: 3px 2px;
+      border-radius: 4px;
+      transition: background 0.12s ease;
+    }
+    .collapsible-header:hover {
+      background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05));
+    }
+    .collapsible-chevron {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--vscode-descriptionForeground, #888);
+      transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .collapsible-header.collapsed .collapsible-chevron {
+      transform: rotate(-90deg);
+    }
     .top-notes {
       list-style: none;
       padding: 0;
@@ -327,16 +350,27 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     .note-conns-badge {
       font-size: 10px;
       font-weight: 600;
-      padding: 1px 5px;
+      padding: 1px 6px;
       border-radius: 3px;
       background: rgba(56, 189, 248, 0.12);
       color: #38bdf8;
       border: 1px solid rgba(56, 189, 248, 0.25);
+      width: 62px;
+      min-width: 62px;
+      text-align: right;
+      display: inline-block;
+      box-sizing: border-box;
+      font-variant-numeric: tabular-nums;
     }
     .note-tokens {
       font-size: 10.5px;
       color: var(--vscode-descriptionForeground);
       white-space: nowrap;
+      width: 52px;
+      min-width: 52px;
+      text-align: right;
+      display: inline-block;
+      font-variant-numeric: tabular-nums;
     }
   </style>
 </head>
@@ -431,7 +465,14 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       </div>
     </div>
 
-    <div class="section-title">Top Connected Notes</div>
+    <div class="section-title collapsible-header" id="top-notes-header" title="Toggle collapse">
+      <span>Top Connected Notes</span>
+      <span class="collapsible-chevron" id="top-notes-chevron">
+        <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <polyline points="4 6 8 10 12 6"></polyline>
+        </svg>
+      </span>
+    </div>
     <ul id="top-notes-list" class="top-notes">
       <li style="color: var(--vscode-descriptionForeground); font-size: 11px; padding: 4px;">Loading top hubs...</li>
     </ul>
@@ -450,6 +491,22 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       vscode.postMessage({ type: 'changeHub' });
     });
 
+    let isTopNotesCollapsed = false;
+    const topNotesHeader = document.getElementById('top-notes-header');
+    const topNotesList = document.getElementById('top-notes-list');
+    if (topNotesHeader && topNotesList) {
+      topNotesHeader.addEventListener('click', () => {
+        isTopNotesCollapsed = !isTopNotesCollapsed;
+        if (isTopNotesCollapsed) {
+          topNotesHeader.classList.add('collapsed');
+          topNotesList.style.display = 'none';
+        } else {
+          topNotesHeader.classList.remove('collapsed');
+          topNotesList.style.display = 'block';
+        }
+      });
+    }
+
     let currentData = ${initialData};
     renderData(currentData);
 
@@ -461,12 +518,38 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       }
     });
 
-    function formatTokenCount(tokens) {
-      if (!tokens) return '0';
-      if (tokens >= 1000) {
-        return (tokens / 1000).toFixed(1).replace(/\\.0$/, '') + 'k';
+    function formatCompactNumber(n) {
+      if (n == null || isNaN(n) || n <= 0) return '0';
+      if (n < 1000) return Math.round(n).toString();
+      if (n < 10000) {
+        const val = (n / 1000).toFixed(2);
+        if (parseFloat(val) >= 10) return (n / 1000).toFixed(1) + 'k';
+        return val + 'k';
       }
-      return tokens.toLocaleString();
+      if (n < 100000) {
+        const val = (n / 1000).toFixed(1);
+        if (parseFloat(val) >= 100) return '0.10M';
+        return val + 'k';
+      }
+      if (n < 1000000) {
+        const val = (n / 1000000).toFixed(2);
+        if (parseFloat(val) >= 1) return '1.00M';
+        return val + 'M';
+      }
+      if (n < 10000000) {
+        const val = (n / 1000000).toFixed(2);
+        if (parseFloat(val) >= 10) return (n / 1000000).toFixed(1) + 'M';
+        return val + 'M';
+      }
+      if (n < 100000000) {
+        const val = (n / 1000000).toFixed(1);
+        if (parseFloat(val) >= 100) return '100M';
+        return val + 'M';
+      }
+      if (n < 1000000000) {
+        return Math.round(n / 1000000) + 'M';
+      }
+      return (n / 1000000000).toFixed(1) + 'B';
     }
 
     function renderData(data) {
@@ -501,22 +584,22 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         reachableTokens = summary.subcall_accessible_tokens || 0;
       }
 
-      document.getElementById('val-connected').textContent = connectedNotes.toLocaleString();
-      document.getElementById('val-orphans').textContent = orphanNotes.toLocaleString();
-      document.getElementById('val-excluded').textContent = excludedNotes.toLocaleString();
-      document.getElementById('val-links').textContent = totalLinks.toLocaleString();
+      document.getElementById('val-connected').textContent = formatCompactNumber(connectedNotes);
+      document.getElementById('val-orphans').textContent = formatCompactNumber(orphanNotes);
+      document.getElementById('val-excluded').textContent = formatCompactNumber(excludedNotes);
+      document.getElementById('val-links').textContent = formatCompactNumber(totalLinks);
 
       const brokenAlert = document.getElementById('dash-broken-alert');
       const brokenText = document.getElementById('dash-broken-text');
       if (brokenCount > 0) {
         brokenAlert.style.display = 'flex';
-        brokenText.textContent = brokenCount + ' broken links';
+        brokenText.textContent = formatCompactNumber(brokenCount) + (brokenCount === 1 ? ' broken link' : ' broken links');
       } else {
         brokenAlert.style.display = 'none';
       }
 
-      document.getElementById('val-l0-tokens').textContent = formatTokenCount(activeTokens) + ' tok';
-      document.getElementById('val-reachable-tokens').textContent = formatTokenCount(reachableTokens) + ' tok';
+      document.getElementById('val-l0-tokens').textContent = formatCompactNumber(activeTokens) + ' tok';
+      document.getElementById('val-reachable-tokens').textContent = formatCompactNumber(reachableTokens) + ' tok';
 
       const critThreshold = summary.critical_threshold || 100000;
       const budgetPct = Math.min(100, Math.round((activeTokens / critThreshold) * 100));
@@ -557,8 +640,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         li.className = 'note-item';
         li.innerHTML = '<span class="note-name" title="' + node.id + '">' + node.label + '</span>' +
           '<span class="note-meta-badges">' +
-            '<span class="note-conns-badge" title="' + (node.in_degree || 0) + ' incoming, ' + (node.out_degree || 0) + ' outgoing">' + node.totalConns + ' links</span>' +
-            '<span class="note-tokens">' + formatTokenCount(node.tokens || 0) + ' tok</span>' +
+            '<span class="note-conns-badge" title="' + (node.in_degree || 0) + ' incoming, ' + (node.out_degree || 0) + ' outgoing">' + formatCompactNumber(node.totalConns) + ' links</span>' +
+            '<span class="note-tokens">' + formatCompactNumber(node.tokens || 0) + ' tok</span>' +
           '</span>';
         li.onclick = () => {
           vscode.postMessage({ type: 'openFile', filePath: node.file_path });
