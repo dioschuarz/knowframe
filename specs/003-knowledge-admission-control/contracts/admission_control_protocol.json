@@ -1,0 +1,188 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LLM Wiki Admission Control & Quality JSON-RPC Protocol",
+  "version": "1.0.0",
+  "description": "JSON-RPC 2.0 contracts for pre-commit candidate validation, baseline debt management, context trace, and quality scoring between Extension Host and Rust Sidecar.",
+  "methods": {
+    "workspace/validateCandidate": {
+      "description": "Evaluates staged Git changes against an in-memory Candidate Graph and compares findings with the debt baseline.",
+      "request": {
+        "type": "object",
+        "required": ["staged_files"],
+        "properties": {
+          "staged_files": {
+            "type": "array",
+            "description": "List of paths staged for commit with their staging status (added, modified, deleted)",
+            "items": {
+              "type": "object",
+              "required": ["path", "status"],
+              "properties": {
+                "path": { "type": "string" },
+                "status": { "type": "string", "enum": ["added", "modified", "deleted", "renamed"] },
+                "old_path": { "type": "string" }
+              }
+            }
+          },
+          "base_commit": {
+            "type": "string",
+            "description": "Optional current HEAD commit hash"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["base_commit", "decision", "exit_code", "summary", "regressions", "resolved_findings", "warnings"],
+        "properties": {
+          "base_commit": { "type": "string" },
+          "decision": { "type": "string", "enum": ["pass", "warn", "block"] },
+          "exit_code": { "type": "integer", "enum": [0, 1] },
+          "summary": {
+            "type": "object",
+            "required": ["total_debt", "legacy_debt", "new_debt", "resolved_debt", "regressions"],
+            "properties": {
+              "total_debt": { "type": "integer" },
+              "legacy_debt": { "type": "integer" },
+              "new_debt": { "type": "integer" },
+              "resolved_debt": { "type": "integer" },
+              "regressions": { "type": "integer" }
+            }
+          },
+          "regressions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "category", "severity", "file_path", "message", "remediation_hint"],
+              "properties": {
+                "id": { "type": "string" },
+                "category": { "type": "string", "enum": ["broken_reference", "invalid_heading_anchor", "semantic_collision", "technical_drift_contradiction"] },
+                "severity": { "type": "string", "enum": ["blocker", "warning"] },
+                "file_path": { "type": "string" },
+                "line_number": { "type": "integer" },
+                "message": { "type": "string" },
+                "remediation_hint": { "type": "string" }
+              }
+            }
+          },
+          "resolved_findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "category", "file_path", "description"],
+              "properties": {
+                "id": { "type": "string" },
+                "category": { "type": "string" },
+                "file_path": { "type": "string" },
+                "description": { "type": "string" }
+              }
+            }
+          },
+          "warnings": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "workspace/getBaseline": {
+      "description": "Fetches current Knowledge Debt Baseline details and counts.",
+      "request": {
+        "type": "object",
+        "properties": {}
+      },
+      "response": {
+        "type": "object",
+        "required": ["baseline_commit", "timestamp", "broken_links_count", "orphan_nodes_count", "collisions_count", "drifts_count", "total_debt"],
+        "properties": {
+          "baseline_commit": { "type": "string" },
+          "timestamp": { "type": "string" },
+          "broken_links_count": { "type": "integer" },
+          "orphan_nodes_count": { "type": "integer" },
+          "collisions_count": { "type": "integer" },
+          "drifts_count": { "type": "integer" },
+          "total_debt": { "type": "integer" }
+        }
+      }
+    },
+    "workspace/updateBaseline": {
+      "description": "Captures a new baseline snapshot or ratchets down resolved debt after commit.",
+      "request": {
+        "type": "object",
+        "properties": {
+          "force_new_commit": { "type": "string" }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["baseline_commit", "total_debt", "previous_total_debt"],
+        "properties": {
+          "baseline_commit": { "type": "string" },
+          "total_debt": { "type": "integer" },
+          "previous_total_debt": { "type": "integer" }
+        }
+      }
+    },
+    "workspace/traceContext": {
+      "description": "Performs graph-constrained Context Trace from entry point to query targets.",
+      "request": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "entrypoint": { "type": "string", "default": "AGENTS.md" }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["query", "entrypoint", "target_node", "path", "depth", "path_quality_score", "cumulative_bpe_tokens", "relevant_tokens", "latency_ms"],
+        "properties": {
+          "query": { "type": "string" },
+          "entrypoint": { "type": "string" },
+          "target_node": { "type": "string" },
+          "path": { "type": "array", "items": { "type": "string" } },
+          "depth": { "type": "integer" },
+          "path_quality_score": { "type": "number" },
+          "cumulative_bpe_tokens": { "type": "integer" },
+          "relevant_tokens": { "type": "integer" },
+          "weak_intermediate_nodes": { "type": "array", "items": { "type": "string" } },
+          "latency_ms": { "type": "integer" }
+        }
+      }
+    },
+    "workspace/getQualityScore": {
+      "description": "Computes network-aware 4-pillar Knowledge Quality Score.",
+      "request": {
+        "type": "object",
+        "properties": {}
+      },
+      "response": {
+        "type": "object",
+        "required": ["overall_score", "integrity_score", "consistency_score", "discoverability_score", "freshness_score", "legacy_debt_count", "regressions_count"],
+        "properties": {
+          "overall_score": { "type": "number" },
+          "integrity_score": { "type": "number" },
+          "consistency_score": { "type": "number" },
+          "discoverability_score": { "type": "number" },
+          "freshness_score": { "type": "number" },
+          "legacy_debt_count": { "type": "integer" },
+          "regressions_count": { "type": "integer" },
+          "resolved_debt_count": { "type": "integer" },
+          "central_hub_id": { "type": "string" },
+          "top_degradation_factors": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["category", "affected_node", "betweenness_weight", "deduction_points", "description"],
+              "properties": {
+                "category": { "type": "string" },
+                "affected_node": { "type": "string" },
+                "betweenness_weight": { "type": "number" },
+                "deduction_points": { "type": "number" },
+                "description": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}

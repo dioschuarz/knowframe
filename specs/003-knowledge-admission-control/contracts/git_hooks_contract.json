@@ -1,0 +1,71 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LLM Wiki Git Hooks CLI Contract",
+  "version": "1.0.0",
+  "description": "CLI interface specification for pre-commit validator (llm-wiki-validate) and post-commit synchronizer (llm-wiki-sync).",
+  "commands": {
+    "validate": {
+      "command": "llm-wiki-core validate [OPTIONS]",
+      "stage": "pre-commit",
+      "purpose": "Evaluates staged changes against in-memory candidate graph and blocks on new quality regressions.",
+      "arguments": [
+        {
+          "name": "--staged-only",
+          "description": "Evaluate only files currently staged in Git index (default)",
+          "type": "boolean",
+          "default": true
+        },
+        {
+          "name": "--quiet",
+          "description": "Suppress informational output, emitting only regressions and warnings",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "name": "--json",
+          "description": "Emit CandidateValidationReport as machine-readable JSON to stdout",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "name": "--timeout-ms",
+          "description": "Hard timeout in milliseconds before fail-open (default 500ms)",
+          "type": "integer",
+          "default": 500
+        }
+      ],
+      "exit_codes": {
+        "0": "PASS, WARN, or Internal Error/Timeout: No high-confidence regressions introduced, or internal timeout/error encountered (unconditional non-blocking fail-open). Commit proceeds.",
+        "1": "BLOCK: High-confidence regressions introduced (new broken links, high-confidence collisions). Commit is blocked."
+      }
+    },
+    "git-delta": {
+      "command": "llm-wiki-core git-delta [OPTIONS]",
+      "stage": "post-commit",
+      "purpose": "Transmits committed Git SHA and delta to update the persistent Rust Knowledge Graph index.",
+      "arguments": [
+        {
+          "name": "--commit-sha",
+          "description": "SHA of newly created commit (defaults to HEAD)",
+          "type": "string"
+        },
+        {
+          "name": "--quiet",
+          "description": "Suppress standard output",
+          "type": "boolean",
+          "default": false
+        },
+        {
+          "name": "--timeout-ms",
+          "description": "Hard non-blocking timeout (default 500ms)",
+          "type": "integer",
+          "default": 500
+        }
+      ],
+      "exit_codes": {
+        "0": "SUCCESS or non-blocking fail-open exit.",
+        "1": "Error occurred (ignored by Git in post-commit)."
+      }
+    }
+  }
+}
