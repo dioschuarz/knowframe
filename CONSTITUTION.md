@@ -6,39 +6,54 @@
 
 <!--
 === SYNC IMPACT REPORT ===
-Version Change: 1.2.0 -> 1.3.0 (AI Context Observatory & Progressive Disclosure UX)
+Version Change: 1.3.0 -> 1.4.0 (Knowledge Quality Admission Control, Git State Boundary & Brownfield Debt Lifecycle)
 Modified Principles:
-  - Principle III: Organic Discovery & Curated Representation -> Upgraded with "Filesystem is source, knowledge graph is curated representation", tri-state classification (Connected, Orphan, Excluded), and two-tier exclusion architecture (scan.exclude vs graph.exclude) ensuring excluded nodes do not pollute orphan metrics or canvas space while remaining resolvable link targets.
-  - Principle IV: Multi-Tier Context Hierarchy & BPE Token Budgeting -> Formalized the AI Context Observatory paradigm, semantic tier-based node sizing, focus modes (Hub, 1-hop, 2-hops, All), and explicit distinction between Active Prompt Load and Reachable On-Demand Context.
-  - Principle VI: Sandboxed Webview & Zero-Plaintext Security Boundary -> Expanded with strict Action Hierarchy and Progressive Disclosure: zero UI action duplication across sidebar/toolbar/menus, state-driven action emergence, 3 core pillars (Knowledge, AI Context, Health & Issues), and selection-driven contextual inspectors.
-Added Principles: None
-Added Sections: None
-Removed Sections: None
+  - Principle I: Dual-Process Separation & Vertical Optimization -> Reinforced with strict Local Determinism & Zero External AI Invariant (no LLM APIs, remote embeddings, external search, or rerankers).
+  - Principle II: Event-Driven Git Hook Lifecycle -> Upgraded to "Git Knowledge State Boundary, Ephemeral Candidate Graph & Dual Hook Lifecycle" with two non-negotiable invariants:
+      1. The Knowledge Graph MUST represent only committed repository state; working-tree changes analyzed in candidate graph in-memory only without mutating the persistent graph.
+      2. Pre-commit validation MUST prevent new regressions while preserving and exposing legacy debt.
+    Formally established dual hooks: Hook 1 (`llm-wiki-validate`, pre-commit) and Hook 2 (`llm-wiki-sync`, post-commit).
+Added Principles:
+  - Principle VI: Brownfield Debt Baseline & Continuous Regression-Based Admission Control (Baseline creation, legacy debt vs new regressions, PASS/WARN/BLOCK decision engine, debt reduction convergence).
+  - Principle VII: Deterministic Knowledge Drift, Reverse-Index Impact & Semantic Collision Engine (Technical drift via code-to-doc reverse indexes, semantic drift via multi-signal deterministic fingerprints without N×N search, candidate canonical ownership).
+  - Principle VIII: Context Trace & Network-Aware Knowledge Quality Score (Graph-constrained traversal from entry points like AGENTS.md, token accounting, depth & path quality, topology-weighted health scoring).
+Renumbered Principles:
+  - Previous Principle VI (Sandboxed Webview) -> Principle IX.
+  - Previous Principle VII (TDD & Quality Gates) -> Principle X.
 Follow-up TODOs: None deferred.
 ==========================
 -->
 
 ## Core Principles
 
-### I. Dual-Process Separation & Vertical Optimization (NON-NEGOTIABLE)
+### I. Dual-Process Separation, Local Determinism & Zero External AI (NON-NEGOTIABLE)
 The system MUST be architected into two decoupled execution tiers: a lightweight Node.js/TypeScript Extension Host and a standalone Rust Core Engine sidecar (`llm-wiki-core`).
-- **Heavy Compute in Rust**: Parsing Markdown AST (`pulldown-cmark`), computing graph topologies and centrality metrics (`petgraph`), evaluating token economics (`tiktoken-rs` with `cl100k_base`), and parsing Git diff deltas MUST be executed exclusively by the Rust sidecar process.
+- **Heavy Compute in Rust**: Parsing Markdown AST (`pulldown-cmark`), computing graph topologies and centrality metrics (`petgraph`), evaluating token economics (`tiktoken-rs` with `cl100k_base`), maintaining reverse code-doc indexes, evaluating deterministic similarity, and parsing Git diff deltas MUST be executed exclusively by the Rust sidecar process.
 - **Node.js as Lean UI Orchestrator**: The VS Code Extension Host process MUST NOT perform file scraping, heavy AST parsing, or graph math. Its responsibilities are strictly constrained to process lifecycle management, IPC/WebSocket bridging, native VS Code API dispatch, and Webview hosting.
+- **Zero External AI / LLM Invariant**: The product MUST NOT use external LLM APIs, remote embeddings, external cloud semantic search, remote rerankers, or external AI services. All analysis, drift detection, and candidate evaluation MUST be executed locally and deterministically.
 - **Resource Ceiling**: The Rust binary MUST NOT exceed 35 MB of resident RAM in resting state for vaults up to 5,000 Markdown files. Full vault graph calculation for 1,000 notes MUST execute in under 200 ms.
 
-### II. Event-Driven Git Hook Lifecycle with Rust-Native `prek` Orchestration
-The extension MUST NOT employ continuous disk file watchers or background keystroke polling that introduces CPU spikes or typing latency in the editor.
-- **Architectural Motivations for `prek`**:
-  1. *Rust-to-Rust Homogeneity*: Both the Git hook manager (`prek`) and the knowledge graph engine (`llm-wiki-core`) are written in Rust, creating an ultra-lean, zero-runtime systems stack that eliminates Python runtime requirements, virtualenv bootstrapping, and interpreter startup latency.
-  2. *True Parallel Hook Execution*: `prek` executes hooks concurrently across a multi-threaded worker pool. The knowledge graph synchronization (`llm-wiki-sync`) runs in parallel alongside other project linters, formatters, and security checks without inducing sequential lock contention or delaying commits.
-  3. *Pattern Reusability via Standard `.pre-commit-config.yaml`*: Leverages the universal, declarative `.pre-commit-config.yaml` file pattern as a drop-in replacement, requiring zero proprietary configuration DSLs or workflow migration for existing engineering teams.
-  4. *Zero-Overhead File Filtering*: Declarative regex filtering (`files: '(?i)\.md$'`) guarantees that commits modifying only source code bypass hook execution in $< 2\text{ ms}$ without spawning the sidecar.
-- **Multi-Tier Fallback Hierarchy**: Hook installation and dispatch MUST support a 3-tier discovery hierarchy:
-  1. *Tier 1 (Rust-Native / Primary)*: `prek` executing a declarative `.pre-commit-config.yaml` with hook ID `llm-wiki-sync` and stage `post-commit` (or `pre-commit`).
-  2. *Tier 2 (Ecosystem Compatibility)*: Python `pre-commit` or `lefthook` if already integrated in the developer's repository.
-  3. *Tier 3 (Zero-Dependency Direct Script)*: Standalone `.git/hooks/post-commit` shell dispatcher executing `llm-wiki-core git-delta` directly.
-- **Strict Non-Blocking Fail-Open**: All hook invocations MUST enforce a hard non-blocking timeout of $\le 500\text{ ms}$. If the socket is unresponsive, the sidecar is offline, or `prek` encounters an error, the hook MUST immediately exit with code 0 (silent fail-open), never obstructing or delaying developer Git commits.
-- **Delta Processing & Loopback Authorization**: The hook transmits only changed Markdown paths directly to `llm-wiki-core`, enabling instantaneous incremental graph updates ($\le 50\text{ ms}$) without re-indexing unchanged workspace files. Loopback `git/commitDelta` notifications on `127.0.0.1` are write-only notifications carrying Git metadata, accepted without requiring `vscode.SecretStorage` credentials so external terminal commits succeed non-blockingly.
+### II. Git Knowledge State Boundary, Ephemeral Candidate Graph & Dual Hook Lifecycle (NON-NEGOTIABLE)
+The system MUST NOT continuously monitor file saves or keystrokes. The boundary of persistent knowledge is strictly the Git commit.
+- **The Knowledge Graph State Boundary Invariant**:
+  > *The Knowledge Graph MUST represent only committed repository state. Working-tree changes MAY be analyzed in an ephemeral candidate graph during pre-commit validation, but MUST NOT mutate the persistent Knowledge Graph until the corresponding Git commit succeeds.*
+  A file saved in the editor is NOT a knowledge graph update (`file saved ≠ knowledge graph update`).
+- **Dual Analytical Modes**:
+  1. *Mode A (Admission Control)*: Executed during `pre-commit` against an in-memory candidate graph. Answers: *"Can this change enter the knowledge base?"* Potentially blocks or warns.
+  2. *Mode B (Knowledge State Analysis)*: Executed against the persistent committed graph. Answers: *"What is the current state of my knowledge base?"* Never mutates until commit succeeds.
+- **Ephemeral Candidate Graph Construction**:
+  During pre-commit, Rust constructs an ephemeral candidate graph:
+  $$\text{Candidate Graph} = \text{Committed Graph} + \text{Staged Git Delta}$$
+  The candidate graph exists solely in memory. If validation passes, the commit proceeds, and post-commit incorporates the delta into the persistent index. If validation blocks or the user aborts, the candidate graph is discarded without contaminating persistent state.
+- **Dual Hook Architecture via `prek`**:
+  1. *Hook 1 (`llm-wiki-validate`, stage: `pre-commit`)*: Analyzes staged files (Markdown and code), performs reverse impact analysis, checks for regressions against the debt baseline, and returns `PASS`, `WARN`, or `BLOCK`.
+  2. *Hook 2 (`llm-wiki-sync`, stage: `post-commit`)*: Applies the committed Git delta to the persistent Rust Knowledge Graph via incremental patching ($\le 50\text{ ms}$).
+- **Hook Discovery & Execution Fallbacks**:
+  1. *Tier 1 (Rust-Native / Primary)*: `prek` executing declarative `.pre-commit-config.yaml` with parallel hook execution.
+  2. *Tier 2 (Ecosystem Compatibility)*: Python `pre-commit` or `lefthook` if already present in repository.
+  3. *Tier 3 (Zero-Dependency Script)*: Standalone `.git/hooks/` shell dispatchers executing `llm-wiki-core validate` and `llm-wiki-core git-delta`.
+- **Strict Non-Blocking Fail-Open**: All hook invocations MUST enforce a hard non-blocking timeout of $\le 500\text{ ms}$. If the socket is unresponsive, the sidecar is offline, or the daemon encounters an internal error, the hook MUST immediately exit with code 0 (silent fail-open), never obstructing or delaying developer Git commits.
+- **Loopback Authorization**: Loopback `git/validate` and `git/commitDelta` notifications on `127.0.0.1` are write-only notifications carrying Git metadata, accepted without requiring `vscode.SecretStorage` credentials so external terminal commits succeed non-blockingly.
 
 ### III. Organic Discovery, Curated Representation & Noise Exclusion
 The knowledge graph MUST build organically from the user's existing filesystem chaos without demanding YAML frontmatter, rigid directory structures, or canonical entry filenames (`README.md`, `index.md`).
@@ -68,6 +83,7 @@ The extension MUST function as an **AI Context Observatory**, providing instant 
     1. *Cluster Hashtags*: Extracted from inline Markdown hashtags (`#tag`) and YAML frontmatter `tags: [...]`.
     2. *Filesystem Paths*: Directory globs matching note physical paths (e.g. `docs/architecture/**`, `notes/05_secrets/**`).
   - *Hue + Opacity Composition Invariant*: User-defined cluster colors determine the **base hue/saturation** of the node. The **alpha/opacity channel is strictly governed by the hop distance** (Level 0 = 1.0, Level 1 = 0.6, Level 2 = 0.3, Level 3+ = 0.15). This guarantees that custom styling enriches semantic clustering without compromising the visual differentiation between active and secondary LLM context.
+  - *Neutral Grey Baseline*: Unstyled nodes default to neutral grey (`#64748B` for connected, `#6B7280` for orphans). Grey strictly signifies that no custom cluster color rule has been assigned.
 - **BPE Token Accounting**: The Rust engine MUST compute exact BPE tokens (`cl100k_base`) per file and cumulative branch cost. The UI MUST display **Active Prompt Load (L0)** versus **Reachable On-Demand Context (L1+)**, raising warnings at 60,000 tokens and critical alerts at 100,000 tokens.
 
 ### V. Strict Link Integrity & Cross-Submodule Vault Traversal
@@ -75,27 +91,75 @@ The engine MUST enforce 100% internal link validation across both standard Markd
 - **Dead Link Detection**: Links pointing to missing files, broken anchors, or moved targets MUST be immediately flagged with red dashed edges, diagnostic issue cards, and line-precise coordinates.
 - **Multi-Repo & Submodule Boundary Resolution**: In multi-repo and unified vault configurations, relative links crossing Git submodule boundaries MUST be resolved transparently without fragmenting the graph topology.
 
-### VI. Sandboxed Webview, Progressive Disclosure & Zero Action Duplication
+### VI. Brownfield Debt Baseline & Continuous Regression-Based Admission Control (NON-NEGOTIABLE)
+A repository adopted by LLM Wiki may start with legacy broken links, orphans, collisions, and stale documents. The product MUST NOT make adoption impossible by immediately blocking existing problems.
+- **Regression-Based Enforcement Invariant**:
+  > *Pre-commit validation MUST prevent the introduction of new high-confidence knowledge-quality regressions while preserving and exposing pre-existing brownfield debt.*
+- **Knowledge Debt Baseline (`baseline.json`)**:
+  - The Rust Core establishes a baseline of known findings upon initialization or initial scan (`baseline_commit = <sha>`), recording counts of legacy broken links, orphans, collisions, and drift findings.
+  - Existing debt is reported, tracked, and prioritized for remediation, but NEVER blocks developer commits.
+- **Continuous Enforcement Lifecycle**:
+  - New issues introduced by a commit (new broken links, new high-confidence collisions, new technical contradictions) are classified as **New Regressions** and trigger pre-commit `BLOCK`.
+  - When developers fix legacy problems, the baseline progressively ratchets down toward zero ($\Delta < 0$).
+  - The system MUST track five distinct accounting dimensions: $\text{Total Debt}$, $\text{Legacy Debt}$, $\text{New Debt}$, $\text{Resolved Debt}$, and $\text{Regressions}$.
+- **Decision Engine Thresholds**:
+  - `BLOCK`: High-confidence regressions that must not enter the repo (new broken internal references, new invalid heading anchors, high-confidence duplicate with canonical collision).
+  - `WARN`: Ambiguous or potential problems requiring human judgment (moderate semantic similarity $\ge 75\%$, potential fragmentation, potential drift with incomplete evidence).
+  - `PASS`: No regressions introduced, or only improvements/remediation committed.
+
+### VII. Deterministic Knowledge Drift, Reverse-Index Impact & Semantic Collision Engine
+The engine MUST detect divergence between code and documentation and eliminate duplicate conceptual authority without utilizing external LLMs or vector embeddings.
+- **Code-Doc Reverse Impact Index**:
+  - The Rust engine maintains reverse indexes mapping:
+    1. Code file paths $\to$ documentation references citing those symbols/paths.
+    2. Document paths $\to$ related code paths and APIs.
+    3. Document $\to$ inbound and outbound knowledge links.
+  - Staged code changes (e.g. `src/auth/*`) immediately identify the affected documentation surface (`authentication.md`, `oauth.md`) without repository-wide recomputation.
+- **Technical Drift Detection (at Pre-Commit)**:
+  - Technical drift occurs when documented entities (classes, methods, file references) are deleted, renamed, or modified in code while corresponding documentation remains unchanged.
+  - Technical drift MUST be detected at pre-commit so that out-of-sync documentation can be flagged before entering the repository.
+- **Deterministic Semantic Collision Engine (at Pre-Commit)**:
+  - Avoids $O(N^2)$ exhaustive comparison by generating multi-signal search fingerprints: title fingerprint, heading tokens, BM25/TF-IDF term vectors, tag sets, and structural n-grams.
+  - Staged documents retrieve candidate match sets (top 10–50 plausible matches) for detailed deterministic scoring.
+  - Similarity combines title matching, heading overlap, term overlap, n-gram overlap, and reference intersection into a normalized similarity score $[0.0, 1.0]$.
+- **Canonical Knowledge Candidate Identification**:
+  - For overlapping knowledge, the engine proposes canonical candidates based on deterministic signals: Git creation chronology, in-degree centrality, reference by harness entrypoints (`AGENTS.md`), and heading completeness.
+  - *Chronology Invariant*: Git creation date is evidence, NOT infallible authority. The system suggests canonical ownership; the developer confirms.
+
+### VIII. Context Trace & Network-Aware Knowledge Quality Score
+The engine MUST evaluate both structural graph health and agent discoverability to guide developers toward optimal knowledge architecture.
+- **Context Trace Formulation**:
+  - Evaluates: *"Given a concrete task query, how discoverable is the relevant knowledge starting from the project's instruction entry point (e.g. `AGENTS.md`)?"*
+  - Executes deterministically: $\text{Query} \to \text{BM25 Term Match} \to \text{Graph-Constrained Traversal} \to \text{Top-K Candidate Paths} \to \text{Path Scoring \& BPE Token Accounting}$.
+  - Outputs: Discovery path hops, path traversal depth, total relevant BPE tokens, and Path Quality score ($0\text{--}100\%$).
+- **Topological Quality Scoring**:
+  - Overall Knowledge Quality Score ($0\text{--}100$) aggregates four balanced dimensions:
+    1. **Integrity** (broken links, missing anchors, unmapped targets).
+    2. **Consistency** (collisions, canonical conflict, fragmentation).
+    3. **Discoverability** (Context Trace path depth, graph centrality distribution, orphan ratio).
+    4. **Freshness** (technical drift, code-doc staleness).
+  - *Topology Weighting*: Quality deductions are weighted by node centrality (betweenness and degree). A broken link or collision in `AGENTS.md` or a central hub causes significantly higher quality penalties than one in an isolated leaf note.
+  - *Debt vs Regression Clarity*: The Quality Score UI MUST explicitly distinguish between Legacy Debt and New Regressions (e.g. `Quality: 74/100 · 0 new regressions · 42 legacy issues`).
+
+### IX. Sandboxed Webview, Progressive Disclosure & Zero Action Duplication
 All embedded interfaces and runtime interactions MUST adhere to strict information architecture and security principles:
-- **Calm Control Center & The Three Pillars**: The user experience MUST be organized around three calm, distinct pillars:
-  1. **Knowledge**: Structural topology and note relationships.
+- **Calm Control Center & The Four Pillars**: The user experience MUST be organized around four calm, distinct pillars:
+  1. **Knowledge**: Structural topology, cluster groups, and note relationships.
   2. **AI Context**: Prompt token load, reachable context horizons, and budget limits.
   3. **Health & Issues**: Broken links, unmapped orphans, and synchronization status.
-- **Zero Action Duplication**: Administrative actions MUST NOT be duplicated across competing UI surfaces (e.g. sidebar buttons, top toolbar buttons, and dropdown items simultaneously). Primary controls are reserved exclusively for active graph manipulation (Token status, Search, Filter/Focus, Reset Disposition, More).
-- **State-Driven Action Emergence**: High-friction administrative operations MUST emerge naturally from displayed system states rather than existing as permanent clutter:
-  - Broken link issues appear as status metrics (`343 broken links → [Review issues]`).
-  - Vault synchronization appears as a quiet status indicator (`● Synced · 12s ago`), with full index rebuild relegated to advanced menus.
-  - Central Hub selection is displayed as the active entity with a contextual `[Change]` workflow.
-  - Git hook management resides in Settings / Integrations, not as a primary dashboard button.
-- **Selection-Driven Contextual Inspector**: When an element is selected (node, edge, or issue), the Webview MUST present a contextual inspector drawer containing relevant metadata and targeted actions (`[Open file]`, `[Set as hub]`, `[Exclude file/folder]`, `[Fix reference]`).
+  4. **Quality & Admission**: Quality Score, debt baseline, and pre-commit regression audit.
+- **Zero Action Duplication**: Administrative actions MUST NOT be duplicated across competing UI surfaces. Primary controls are reserved exclusively for active graph manipulation.
+- **State-Driven Action Emergence**: High-friction administrative operations MUST emerge naturally from displayed system states rather than existing as permanent clutter.
+- **Selection-Driven Contextual Inspector**: When an element is selected (node, edge, collision, or issue), the Webview MUST present a contextual inspector drawer containing relevant metadata and targeted actions (`[Open file]`, `[Set as hub]`, `[Exclude file/folder]`, `[Fix reference]`, `[Review collision]`).
 - **Webview Sandboxing & CSP**: Webview panels MUST enforce a strict Content Security Policy (CSP) with unique cryptographic nonces (`script-src 'nonce-${nonce}'`). Local assets MUST strictly be loaded via `webview.asWebviewUri` under allowed `localResourceRoots`.
 - **Typed Asynchronous RPC**: Communication between the Extension Host and Webview iframe MUST use strongly typed JSON-RPC 2.0 messages with request-response correlation tokens (`requestId`).
 - **Memory-Safe State Lifecycle**: Webview panel state MUST be serialized via `vscode.setState()` / `vscode.getState()` and `WebviewPanelSerializer`.
 - **Zero Plaintext Secrets**: Any credentials, tokens, or private settings MUST be stored exclusively via `vscode.SecretStorage` (backed by OS Keychains/safeStorage) and NEVER written to plaintext configuration files or disk logs.
 
-### VII. Test-Driven Development (TDD) & Multi-Platform Binary Verification
+### X. Test-Driven Development (TDD) & Multi-Platform Binary Verification
 Quality and cross-platform stability are guaranteed through strict automated test gates before code merge:
-- **Rust Core Test Suite**: 100% test coverage for Markdown AST parsing, wikilink normalization, petgraph centrality computation, and BPE tokenization.
+- **Rust Core Test Suite**: 100% test coverage for Markdown AST parsing, wikilink normalization, petgraph centrality computation, BPE tokenization, baseline debt diffing, reverse code-doc indexing, and deterministic similarity fingerprints.
+- **Pre-Commit Hook Simulation Suite**: Automated end-to-end tests validating candidate graph evaluation, `BLOCK` on new broken links/collisions, and silent fail-open $\le 500\text{ ms}$.
 - **Extension Host Integration Tests**: Headless VS Code extension tests (`@vscode/test-electron`) verifying sidecar process spawning, IPC socket resilience, and Webview message roundtrips.
 - **Multi-Platform Support**: Binaries MUST be built and tested for Linux (x86_64, aarch64), macOS (x86_64, Apple Silicon aarch64), and Windows (x86_64).
 
@@ -104,7 +168,7 @@ Quality and cross-platform stability are guaranteed through strict automated tes
 ## Technology Stack & Performance Standards
 
 ### 1. Technology Matrix
-- **Core Engine (Sidecar)**: Rust 2021/2024 edition, `pulldown-cmark` (AST Markdown parser), `petgraph` (graph data structure and centrality algorithms), `tiktoken-rs` (cl100k BPE token counter), `tokio` (async runtime), `tokio-tungstenite` / Unix Domain Sockets / Windows Named Pipes (IPC/WebSocket transport), `serde` / `serde_json` / `serde_yaml` (data serialization).
+- **Core Engine (Sidecar)**: Rust 2021/2024 edition, `pulldown-cmark` (AST Markdown parser), `petgraph` (graph data structure and centrality algorithms), `tiktoken-rs` (cl100k BPE token counter), `tokio` (async runtime), `tokio-tungstenite` / Unix Domain Sockets / Windows Named Pipes (IPC/WebSocket transport), `serde` / `serde_json` / `serde_yaml` (data serialization), deterministic n-gram and BM25 tokenizers.
 - **Extension Host**: Node.js 20+, TypeScript 5.4+, VS Code Extension API (`^1.90.0`), `ws` / IPC client.
 - **Webview UI**: High-performance 2D HTML5 Canvas force-directed graph renderer (`d3-force`), `@vscode/webview-ui-toolkit` Web Components, CSS custom properties adhering to active VS Code theme tokens.
 - **Configuration Contract**: `.context-vault.yaml` placed at workspace root.
@@ -114,8 +178,10 @@ Quality and cross-platform stability are guaranteed through strict automated tes
 | :--- | :--- | :--- |
 | **Rust Sidecar Memory (Rest)** | $\le$ 35 MB resident RSS for 5,000 files | Valgrind / Heap profiling in CI |
 | **Graph Analysis Latency** | $\le$ 200 ms for 1,000 Markdown files | Criterion microbenchmarks |
-| **Webview Rendering Rate** | Consistent 60 FPS during pan/zoom/drag | Chrome DevTools Frame Meter |
+| **Pre-Commit Candidate Validation** | $\le$ 150 ms for typical staged commit | Criterion microbenchmarks |
 | **Git Hook Timeout Ceiling** | Strict 500 ms non-blocking fail-open | Unit test with hanging socket |
+| **Incremental Graph Patching** | $\le$ 50 ms for single-note delta | Criterion microbenchmarks |
+| **Webview Rendering Rate** | Consistent 60 FPS during pan/zoom/drag | Chrome DevTools Frame Meter |
 | **Packaging Size** | $\le$ 25 MB per platform-specific VSIX | `@vscode/vsce package` artifact audit |
 
 ---
@@ -123,13 +189,14 @@ Quality and cross-platform stability are guaranteed through strict automated tes
 ## Development Workflow, Review Process & Quality Gates
 
 ### 1. Code Quality Gates
-1. **Red-Green-Refactor Cycle**: All new parsers, graph algorithms, or IPC handlers must start with failing unit tests prior to implementation.
+1. **Red-Green-Refactor Cycle**: All new parsers, graph algorithms, drift estimators, or IPC handlers must start with failing unit tests prior to implementation.
 2. **Formatting & Linter Compliance**:
    - Rust: `cargo fmt --check` and `cargo clippy -- -D warnings`.
    - TypeScript: `eslint` with strict type checking and `prettier --check`.
 3. **Packaging Discipline**: Production `.vsix` packaging MUST use platform-specific targets (`vsce package --target <platform>`) and exclude unnecessary build artifacts via `.vscodeignore`.
 
 ### 2. Review Protocol
+- Any PR introducing external LLM API calls, cloud embeddings, or remote AI dependencies MUST be immediately rejected.
 - Any PR introducing filesystem watchers or continuous background polling MUST be rejected.
 - Any PR modifying IPC contracts MUST include synchronized updates and tests in both the Rust engine and TypeScript extension.
 - Every architectural change MUST reference this Constitution and update the decisions log (`decisions_log.md`).
@@ -146,4 +213,4 @@ This Constitution represents the supreme architectural and technical policy for 
   - **MINOR**: Addition of new principles, sections, or materially expanded guidelines.
   - **PATCH**: Clarifications, wording adjustments, or typo fixes.
 
-**Version**: 1.3.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-11
+**Version**: 1.4.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-12
