@@ -10,12 +10,16 @@ import { registerRescanVaultCommand } from './commands/rescanVault';
 import { registerFixBrokenLinksCommand } from './commands/fixBrokenLinks';
 import { registerInstallHooksCommand } from './commands/installHooks';
 import { SidebarViewProvider } from './webview/sidebarViewProvider';
+import { AdmissionManager } from './services/admissionManager';
+import { KnowledgeQualityScore } from './types/admission';
 
 let processManager: ProcessManager | null = null;
 let ipcClient: IpcClient | null = null;
 let statusBarItem: vscode.StatusBarItem | null = null;
 let latestScanResult: ScanResultPayload | null = null;
 let sidebarProvider: SidebarViewProvider | null = null;
+let admissionManager: AdmissionManager | null = null;
+let latestQualityScore: KnowledgeQualityScore | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const outputChannel = vscode.window.createOutputChannel('LLM Wiki');
@@ -34,18 +38,31 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   context.subscriptions.push(statusBarItem);
 
   // Register Sidebar Webview View Provider (Activity Bar)
-  sidebarProvider = new SidebarViewProvider(context.extensionUri, () => latestScanResult);
+  sidebarProvider = new SidebarViewProvider(context.extensionUri, () => latestScanResult, () => latestQualityScore);
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(SidebarViewProvider.viewType, sidebarProvider)
   );
 
+  const refreshQualityScore = async (): Promise<void> => {
+    if (!admissionManager) {return;}
+    try {
+      latestQualityScore = await admissionManager.getQualityScore();
+      outputChannel.appendLine(`[EXTENSION] Quality score updated: ${latestQualityScore.overall_score.toFixed(1)}/100`);
+      sidebarProvider?.updateQuality(latestQualityScore);
+      updateStatusBarWithBudget(latestScanResult, latestQualityScore);
+    } catch (err: any) {
+      outputChannel.appendLine(`[EXTENSION] Failed to compute quality score: ${err.message}`);
+    }
+  };
+
   const onScanResultUpdated = (newResult: ScanResultPayload) => {
     latestScanResult = newResult;
-    updateStatusBarWithBudget(newResult);
+    updateStatusBarWithBudget(newResult, latestQualityScore);
     if (GraphPanelManager.currentPanel) {
       GraphPanelManager.currentPanel.updateData(newResult);
     }
-    sidebarProvider?.updateData(newResult);
+    sidebarProvider?.updateData(newResult, latestQualityScore);
+    refreshQualityScore();
   };
 
   // Register Webview Panel Serializer
@@ -62,7 +79,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     registerSetHubCommand(() => ipcClient, () => latestScanResult, onScanResultUpdated),
     registerRescanVaultCommand(() => ipcClient, onScanResultUpdated),
     registerFixBrokenLinksCommand(() => latestScanResult),
-    registerInstallHooksCommand(outputChannel)
+    registerInstallHooksCommand(outputChannel),
+    vscode.commands.registerCommand('llmWiki.refreshQualityScore', async () => {
+      await refreshQualityScore();
+      if (latestQualityScore) {
+        const q = latestQualityScore;
+        vscode.window.showInformationMessage(
+          `LLM Wiki Knowledge Quality: ${q.overall_score.toFixed(0)}/100 (Integrity: ${q.integrity_score.toFixed(0)}%, Consistency: ${q.consistency_score.toFixed(0)}%, Discoverability: ${q.discoverability_score.toFixed(0)}%, Freshness: ${q.freshness_score.toFixed(0)}%)`
+        );
+      }
+    })
   );
 
   const workspaceFolders = vscode.workspace.workspaceFolders;
@@ -85,10 +111,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       statusBarItem.text = `$(sync~spin) LLM Wiki: Scanning Vault...`;
       outputChannel.appendLine(`[EXTENSION] Sidecar connected on port ${port}. Requesting initial workspace/scan...`);
 
+      admissionManager = new AdmissionManager(ipcClient);
+
       // Initial scan (120s timeout for large vaults)
       latestScanResult = await ipcClient.sendRequest<ScanResultPayload>('workspace/scan', undefined, 120000);
       outputChannel.appendLine(`[EXTENSION] Scan completed. Nodes: ${latestScanResult.nodes.length}, Edges: ${latestScanResult.edges.length}`);
       onScanResultUpdated(latestScanResult);
+      await refreshQualityScore();
       outputChannel.appendLine(`[EXTENSION] Knowledge graph and status bar ready.`);
     } catch (err: any) {
       outputChannel.appendLine(`[EXTENSION ERROR] Sidecar initialization failed: ${err.message}`);
@@ -101,8 +130,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 }
 
-function updateStatusBarWithBudget(scan: ScanResultPayload): void {
+function updateStatusBarWithBudget(scan: ScanResultPayload | null, quality: KnowledgeQualityScore | null): void {
   if (!statusBarItem) {return;}
+  if (!scan) {
+    statusBarItem.text = '$(graph) LLM Wiki';
+    return;
+  }
   const activeTokens = scan.token_summary.active_harness_tokens.toLocaleString();
   const subcallTokens = scan.token_summary.subcall_accessible_tokens.toLocaleString();
   const status = scan.token_summary.status;
@@ -111,8 +144,19 @@ function updateStatusBarWithBudget(scan: ScanResultPayload): void {
   if (status === 'warning') {icon = '$(warning)';}
   if (status === 'critical') {icon = '$(error)';}
 
-  statusBarItem.text = `${icon} Wiki: ${activeTokens} tok (subcall: ${subcallTokens})`;
-  statusBarItem.tooltip = `Active Prompt Load: ${activeTokens} tokens\nAccessible Subcall: ${subcallTokens} tokens\nStatus: ${status.toUpperCase()}`;
+  let qualitySuffix = '';
+  if (quality) {
+    const qScore = Math.round(quality.overall_score);
+    qualitySuffix = ` | Q: ${qScore}/100`;
+  }
+
+  statusBarItem.text = `${icon} Wiki: ${activeTokens} tok${qualitySuffix}`;
+  let tooltipText = `Active Prompt Load: ${activeTokens} tokens\nAccessible Subcall: ${subcallTokens} tokens\nStatus: ${status.toUpperCase()}`;
+  if (quality) {
+    const regrCount = quality.regressions_count ?? (quality as any).new_regressions_count ?? 0;
+    tooltipText += `\n\nKnowledge Quality: ${quality.overall_score.toFixed(0)}/100\n- Integrity: ${quality.integrity_score.toFixed(0)}%\n- Consistency: ${quality.consistency_score.toFixed(0)}%\n- Discoverability: ${quality.discoverability_score.toFixed(0)}%\n- Freshness: ${quality.freshness_score.toFixed(0)}%\n- Debt: ${quality.legacy_debt_count} legacy, ${regrCount} regressions`;
+  }
+  statusBarItem.tooltip = tooltipText;
 }
 
 export async function deactivate(): Promise<void> {

@@ -54,6 +54,12 @@
         "title": "LLM Wiki: Install Git Hooks",
         "category": "LLM Wiki",
         "icon": "$(source-control)"
+      },
+      {
+        "command": "llmWiki.refreshQualityScore",
+        "title": "LLM Wiki: Show Knowledge Quality Score",
+        "category": "LLM Wiki",
+        "icon": "$(dashboard)"
       }
     ],
     "menus": {
@@ -72,6 +78,9 @@
         },
         {
           "command": "llmWiki.installGitHooks"
+        },
+        {
+          "command": "llmWiki.refreshQualityScore"
         }
       ],
       "editor/title": [

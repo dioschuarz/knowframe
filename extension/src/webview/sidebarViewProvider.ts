@@ -2,15 +2,18 @@ import * as vscode from 'vscode';
 import * as path from 'path';
 import { generateNonce, buildCspPolicy } from './cspHelper';
 import { ScanResultPayload } from '../types/protocol';
+import { KnowledgeQualityScore } from '../types/admission';
 
 export class SidebarViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'llmWiki.sidebarView';
   private _view?: vscode.WebviewView;
   private currentScanResult: ScanResultPayload | null = null;
+  private currentQualityScore: KnowledgeQualityScore | null = null;
 
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly getScanResult: () => ScanResultPayload | null
+    private readonly getScanResult: () => ScanResultPayload | null,
+    private readonly getQualityScore?: () => KnowledgeQualityScore | null
   ) {}
 
   public resolveWebviewView(
@@ -27,6 +30,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     };
 
     this.currentScanResult = this.getScanResult();
+    this.currentQualityScore = this.getQualityScore ? this.getQualityScore() : null;
     this.updateHtml();
 
     webviewView.webview.onDidReceiveMessage(async (data) => {
@@ -49,6 +53,14 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         case 'installHooks':
           vscode.commands.executeCommand('llmWiki.installGitHooks');
           break;
+        case 'refreshQuality':
+          vscode.commands.executeCommand('llmWiki.refreshQualityScore');
+          break;
+        case 'openFactorNode':
+          if (data.nodeId) {
+            this.openDocument(data.nodeId);
+          }
+          break;
         case 'openFile':
           if (data.filePath) {
             this.openDocument(data.filePath);
@@ -67,12 +79,26 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  public updateData(scanResult: ScanResultPayload): void {
+  public updateData(scanResult: ScanResultPayload, qualityScore?: KnowledgeQualityScore | null): void {
     this.currentScanResult = scanResult;
+    if (qualityScore !== undefined) {
+      this.currentQualityScore = qualityScore;
+    }
     if (this._view) {
       this._view.webview.postMessage({
         type: 'graphDataUpdate',
         payload: scanResult,
+        qualityScore: this.currentQualityScore,
+      });
+    }
+  }
+
+  public updateQuality(qualityScore: KnowledgeQualityScore): void {
+    this.currentQualityScore = qualityScore;
+    if (this._view) {
+      this._view.webview.postMessage({
+        type: 'qualityUpdate',
+        payload: qualityScore,
       });
     }
   }
@@ -101,6 +127,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     const cspPolicy = buildCspPolicy(nonce, webview.cspSource);
 
     const initialData = JSON.stringify(this.currentScanResult || {});
+    const initialQuality = JSON.stringify(this.currentQualityScore || null);
 
     this._view.webview.html = `<!DOCTYPE html>
 <html lang="en">
@@ -373,6 +400,174 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       display: inline-block;
       font-variant-numeric: tabular-nums;
     }
+    .pillar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    .pillar-header .pillar-title {
+      margin-bottom: 0;
+    }
+    .quality-refresh-btn {
+      background: transparent;
+      border: none;
+      color: var(--vscode-descriptionForeground, #888);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 2px;
+      border-radius: 3px;
+    }
+    .quality-refresh-btn:hover {
+      background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1));
+      color: var(--vscode-foreground, #fff);
+    }
+    .quality-gauge-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 10px;
+    }
+    .quality-score-circle {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      width: 52px;
+      height: 52px;
+      min-width: 52px;
+      border-radius: 50%;
+      border: 3px solid var(--vscode-charts-green, #22c55e);
+      background: rgba(255, 255, 255, 0.02);
+      box-sizing: border-box;
+    }
+    .score-number {
+      font-size: 16px;
+      font-weight: 800;
+      line-height: 1.1;
+      color: var(--vscode-charts-green, #22c55e);
+    }
+    .score-max {
+      font-size: 8.5px;
+      color: var(--vscode-descriptionForeground, #888);
+    }
+    .quality-pillars-mini {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }
+    .pillar-mini-row {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 10px;
+    }
+    .mini-label {
+      width: 68px;
+      min-width: 68px;
+      color: var(--vscode-descriptionForeground, #aaa);
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    .mini-bar-track {
+      flex: 1;
+      height: 4px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 2px;
+      overflow: hidden;
+    }
+    .mini-bar-fill {
+      height: 100%;
+      border-radius: 2px;
+      transition: width 0.3s ease, background-color 0.3s ease;
+    }
+    .mini-val {
+      font-weight: 600;
+      width: 28px;
+      min-width: 28px;
+      text-align: right;
+      font-variant-numeric: tabular-nums;
+      color: var(--vscode-editor-foreground, #fff);
+    }
+    .debt-accounting-row {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 4px;
+      padding: 6px 4px;
+      text-align: center;
+      margin-bottom: 6px;
+    }
+    .debt-stat {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+    .debt-value {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--vscode-editor-foreground, #fff);
+    }
+    .debt-label {
+      font-size: 9px;
+      color: var(--vscode-descriptionForeground, #888);
+      margin-top: 1px;
+    }
+    .quality-factors-list {
+      margin-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding-top: 6px;
+    }
+    .factors-title {
+      font-size: 9.5px;
+      font-weight: 600;
+      color: var(--vscode-descriptionForeground, #888);
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .quality-factor-item {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      font-size: 10.5px;
+      padding: 3px 4px;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+    .quality-factor-item:hover {
+      background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.05));
+    }
+    .factor-badge {
+      font-size: 9px;
+      font-weight: 700;
+      padding: 1px 4px;
+      border-radius: 2px;
+      background: rgba(239, 68, 68, 0.15);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.3);
+    }
+    .factor-node {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+      color: var(--vscode-textLink-foreground, #38bdf8);
+    }
+    .factor-node:hover {
+      text-decoration: underline;
+    }
+    .factor-weight {
+      font-size: 9px;
+      color: var(--vscode-descriptionForeground, #888);
+    }
   </style>
 </head>
 <body>
@@ -466,6 +661,77 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       </div>
     </div>
 
+    <!-- Pillar 4: Quality & Admission -->
+    <div class="dashboard-pillar pillar-quality" id="pillar-quality">
+      <div class="pillar-header">
+        <div class="pillar-title">QUALITY & ADMISSION</div>
+        <button class="quality-refresh-btn" id="dash-btn-refresh-quality" title="Recalculate Knowledge Quality Score">
+          <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M1.5 8a6.5 6.5 0 1 0 1.9-4.6L1.5 5.5"/>
+            <polyline points="1.5 1.5 1.5 5.5 5.5 5.5"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="quality-gauge-row">
+        <div class="quality-score-circle" id="quality-circle" style="border-color: var(--vscode-charts-green, #22c55e);">
+          <span class="score-number" id="val-quality-score">--</span>
+          <span class="score-max">/100</span>
+        </div>
+        <div class="quality-pillars-mini">
+          <div class="pillar-mini-row" title="Integrity (30%) - Broken links and target anchors">
+            <span class="mini-label">Integrity</span>
+            <div class="mini-bar-track">
+              <div class="mini-bar-fill" id="fill-integrity" style="width: 0%; background-color: var(--vscode-charts-green, #22c55e);"></div>
+            </div>
+            <span class="mini-val" id="val-integrity">--%</span>
+          </div>
+          <div class="pillar-mini-row" title="Consistency (25%) - Semantic collisions & duplicates">
+            <span class="mini-label">Consistency</span>
+            <div class="mini-bar-track">
+              <div class="mini-bar-fill" id="fill-consistency" style="width: 0%; background-color: var(--vscode-charts-green, #22c55e);"></div>
+            </div>
+            <span class="mini-val" id="val-consistency">--%</span>
+          </div>
+          <div class="pillar-mini-row" title="Discoverability (25%) - Orphans & hop reachability">
+            <span class="mini-label">Discoverability</span>
+            <div class="mini-bar-track">
+              <div class="mini-bar-fill" id="fill-discoverability" style="width: 0%; background-color: var(--vscode-charts-green, #22c55e);"></div>
+            </div>
+            <span class="mini-val" id="val-discoverability">--%</span>
+          </div>
+          <div class="pillar-mini-row" title="Freshness (20%) - Technical drift & stale code citations">
+            <span class="mini-label">Freshness</span>
+            <div class="mini-bar-track">
+              <div class="mini-bar-fill" id="fill-freshness" style="width: 0%; background-color: var(--vscode-charts-green, #22c55e);"></div>
+            </div>
+            <span class="mini-val" id="val-freshness">--%</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="debt-accounting-row">
+        <div class="debt-stat" title="Baseline accepted brownfield debt">
+          <span class="debt-value" id="val-debt-legacy">0</span>
+          <span class="debt-label">Legacy</span>
+        </div>
+        <div class="debt-stat" id="box-debt-regr" title="New regressions exceeding baseline">
+          <span class="debt-value" id="val-debt-regr">0</span>
+          <span class="debt-label">New Regr.</span>
+        </div>
+        <div class="debt-stat" title="Resolved legacy defects">
+          <span class="debt-value" id="val-debt-resolved" style="color: var(--vscode-charts-green, #22c55e);">0</span>
+          <span class="debt-label">Resolved</span>
+        </div>
+      </div>
+
+      <div class="quality-factors-list" id="quality-factors-container" style="display: none;">
+        <div class="factors-title">Top Degradation Factors</div>
+        <div id="quality-factors-items"></div>
+      </div>
+    </div>
+
+
     <div class="section-title collapsible-header" id="top-notes-header" title="Toggle collapse">
       <span>Top Connected Notes</span>
       <span class="collapsible-chevron" id="top-notes-chevron">
@@ -491,6 +757,9 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     document.getElementById('dash-btn-change-hub')?.addEventListener('click', () => {
       vscode.postMessage({ type: 'changeHub' });
     });
+    document.getElementById('dash-btn-refresh-quality')?.addEventListener('click', () => {
+      vscode.postMessage({ type: 'refreshQuality' });
+    });
 
     let isTopNotesCollapsed = false;
     const topNotesHeader = document.getElementById('top-notes-header');
@@ -509,13 +778,24 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     }
 
     let currentData = ${initialData};
+    let currentQuality = ${initialQuality};
     renderData(currentData);
+    if (currentQuality) {
+      renderQuality(currentQuality);
+    }
 
     window.addEventListener('message', (event) => {
       const msg = event.data;
       if (msg.type === 'graphDataUpdate') {
         currentData = msg.payload;
         renderData(currentData);
+        if (msg.qualityScore) {
+          currentQuality = msg.qualityScore;
+          renderQuality(currentQuality);
+        }
+      } else if (msg.type === 'qualityUpdate') {
+        currentQuality = msg.payload;
+        renderQuality(currentQuality);
       }
     });
 
@@ -650,6 +930,83 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         listEl.appendChild(li);
       }
     }
+
+    function getScoreColor(score) {
+      if (score >= 90) return 'var(--vscode-charts-green, #22c55e)';
+      if (score >= 75) return 'var(--vscode-charts-yellow, #eab308)';
+      return 'var(--vscode-charts-red, #ef4444)';
+    }
+
+    function renderQuality(q) {
+      if (!q) return;
+
+      const overall = Math.round(q.overall_score || 0);
+      const color = getScoreColor(overall);
+
+      const circle = document.getElementById('quality-circle');
+      const scoreNum = document.getElementById('val-quality-score');
+      if (circle) circle.style.borderColor = color;
+      if (scoreNum) {
+        scoreNum.textContent = overall.toString();
+        scoreNum.style.color = color;
+      }
+
+      function updateBar(fillId, valId, val) {
+        const v = Math.round(val != null ? val : 0);
+        const f = document.getElementById(fillId);
+        const l = document.getElementById(valId);
+        if (f) {
+          f.style.width = v + '%';
+          f.style.backgroundColor = getScoreColor(v);
+        }
+        if (l) l.textContent = v + '%';
+      }
+
+      updateBar('fill-integrity', 'val-integrity', q.integrity_score);
+      updateBar('fill-consistency', 'val-consistency', q.consistency_score);
+      updateBar('fill-discoverability', 'val-discoverability', q.discoverability_score);
+      updateBar('fill-freshness', 'val-freshness', q.freshness_score);
+
+      const legEl = document.getElementById('val-debt-legacy');
+      const regrEl = document.getElementById('val-debt-regr');
+      const resEl = document.getElementById('val-debt-resolved');
+
+      if (legEl) legEl.textContent = formatCompactNumber(q.legacy_debt_count || 0);
+
+      const regrCount = q.regressions_count != null ? q.regressions_count : (q.new_regressions_count || 0);
+      if (regrEl) {
+        regrEl.textContent = formatCompactNumber(regrCount);
+        regrEl.style.color = regrCount > 0 ? 'var(--vscode-charts-red, #ef4444)' : 'inherit';
+      }
+      if (resEl) resEl.textContent = formatCompactNumber(q.resolved_debt_count || 0);
+
+      const factorsContainer = document.getElementById('quality-factors-container');
+      const factorsItems = document.getElementById('quality-factors-items');
+      const factors = q.top_degradation_factors || [];
+
+      if (factorsContainer && factorsItems) {
+        if (factors.length > 0) {
+          factorsContainer.style.display = 'block';
+          factorsItems.innerHTML = '';
+          for (const f of factors.slice(0, 3)) {
+            const item = document.createElement('div');
+            item.className = 'quality-factor-item';
+            item.title = (f.affected_node || '') + ': ' + (f.description || '');
+            item.innerHTML =
+              '<span class="factor-badge">-' + (f.deduction_points || 0).toFixed(1) + '</span>' +
+              '<span class="factor-node" title="' + f.affected_node + '">' + f.affected_node + '</span>' +
+              '<span class="factor-weight">' + (f.betweenness_weight || 1.0).toFixed(1) + 'x</span>';
+            item.onclick = () => {
+              vscode.postMessage({ type: 'openFactorNode', nodeId: f.affected_node });
+            };
+            factorsItems.appendChild(item);
+          }
+        } else {
+          factorsContainer.style.display = 'none';
+        }
+      }
+    }
+
   </script>
 </body>
 </html>`;
