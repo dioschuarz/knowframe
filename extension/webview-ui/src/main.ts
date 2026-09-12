@@ -167,7 +167,7 @@ const renderer = new CanvasRenderer({
         <div class="tooltip-meta">Tokens: ${node.tokens.toLocaleString()}</div>
         <div class="tooltip-meta">Hop Depth: ${node.hopDistance >= 0 ? 'Level ' + node.hopDistance : 'Orphan'}</div>
         <div class="tooltip-meta">Degree: In ${node.inDegree} / Out ${node.outDegree}</div>
-        ${isPinned ? '<div class="tooltip-meta" style="color: #F59E0B; font-weight: bold;">📌 Position Fixed (Double-click to unpin)</div>' : ''}
+        ${isPinned ? '<div class="tooltip-meta" style="color: #F59E0B; font-weight: 600; display: flex; align-items: center; gap: 4px;"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="#F59E0B" stroke-width="1.5"><line x1="8" y1="1" x2="8" y2="10"/><circle cx="8" cy="4" r="3"/><line x1="8" y1="10" x2="8" y2="15"/></svg>Position Fixed (Double-click to reset)</div>' : ''}
         ${node.brokenLinks > 0 ? `<div class="tooltip-warn">Broken links: ${node.brokenLinks}</div>` : ''}
       `;
     } else {

@@ -298,13 +298,15 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       margin: 0;
     }
     .note-item {
-      padding: 5px 8px;
+      padding: 6px 8px;
       border-radius: 4px;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
       font-size: 11.5px;
+      gap: 6px;
+      transition: background 0.12s ease;
     }
     .note-item:hover {
       background: var(--vscode-list-hoverBackground);
@@ -313,12 +315,28 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      max-width: 160px;
+      flex: 1;
       color: var(--vscode-editor-foreground);
     }
-    .note-tokens {
+    .note-meta-badges {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .note-conns-badge {
       font-size: 10px;
+      font-weight: 600;
+      padding: 1px 5px;
+      border-radius: 3px;
+      background: rgba(56, 189, 248, 0.12);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.25);
+    }
+    .note-tokens {
+      font-size: 10.5px;
       color: var(--vscode-descriptionForeground);
+      white-space: nowrap;
     }
   </style>
 </head>
@@ -327,7 +345,13 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     <!-- Attention Cards (Conditionally shown) -->
     <div class="dashboard-attention-card broken-links-alert" id="dash-broken-alert" style="display: none;">
       <div class="attention-header">
-        <span class="attention-icon">⚠️</span>
+        <span class="attention-icon">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M8 1.5L14.5 13.5H1.5L8 1.5Z"/>
+            <line x1="8" y1="6" x2="8" y2="9.5"/>
+            <circle cx="8" cy="11.5" r="0.75" fill="currentColor"/>
+          </svg>
+        </span>
         <span class="attention-title" id="dash-broken-text">0 broken links</span>
       </div>
       <button class="dash-action-link" id="dash-btn-review-broken">Review issues</button>
@@ -335,7 +359,11 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
 
     <div class="dashboard-attention-card suggestions-alert" id="dash-suggestions-alert" style="display: none;">
       <div class="attention-header">
-        <span class="attention-icon">💡</span>
+        <span class="attention-icon">
+          <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M6 13h4M6.5 15h3M4.5 6.5a3.5 3.5 0 1 1 7 0c0 1.5-1 2.5-1.5 3.5h-4C5.5 9 4.5 8 4.5 6.5Z"/>
+          </svg>
+        </span>
         <span class="attention-title" id="dash-suggestions-text">Noise detected</span>
       </div>
       <button class="dash-action-link" id="dash-btn-review-suggestions">Review suggestions</button>
@@ -387,7 +415,12 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       <div class="pillar-title">CENTRAL HUB & HEALTH</div>
       <div class="hub-info-row">
         <div class="hub-details">
-          <span class="hub-icon">⭐</span>
+          <span class="hub-icon">
+            <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="8" r="6"/>
+              <circle cx="8" cy="8" r="2.5" fill="#38bdf8"/>
+            </svg>
+          </span>
           <span class="hub-path-link" id="dash-hub-link" title="Scanning vault...">Scanning vault...</span>
         </div>
         <button class="dash-action-link" id="dash-btn-change-hub">Change</button>
@@ -508,14 +541,25 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         };
       }
 
-      // Render top 6 notes by betweenness centrality or degree
-      const sorted = [...nodes].sort((a, b) => (b.betweenness || 0) - (a.betweenness || 0) || (b.in_degree || 0) - (a.in_degree || 0)).slice(0, 6);
+      // Sort nodes strictly from highest number of connections to lower, presenting also number of tokens
+      const sorted = [...nodes]
+        .map(n => ({
+          ...n,
+          totalConns: (n.in_degree || 0) + (n.out_degree || 0)
+        }))
+        .sort((a, b) => b.totalConns - a.totalConns || (b.tokens || 0) - (a.tokens || 0))
+        .slice(0, 8);
+
       const listEl = document.getElementById('top-notes-list');
       listEl.innerHTML = '';
       for (const node of sorted) {
         const li = document.createElement('li');
         li.className = 'note-item';
-        li.innerHTML = '<span class="note-name" title="' + node.id + '">' + node.label + '</span><span class="note-tokens">' + formatTokenCount(node.tokens || 0) + ' tok</span>';
+        li.innerHTML = '<span class="note-name" title="' + node.id + '">' + node.label + '</span>' +
+          '<span class="note-meta-badges">' +
+            '<span class="note-conns-badge" title="' + (node.in_degree || 0) + ' incoming, ' + (node.out_degree || 0) + ' outgoing">' + node.totalConns + ' links</span>' +
+            '<span class="note-tokens">' + formatTokenCount(node.tokens || 0) + ' tok</span>' +
+          '</span>';
         li.onclick = () => {
           vscode.postMessage({ type: 'openFile', filePath: node.file_path });
         };

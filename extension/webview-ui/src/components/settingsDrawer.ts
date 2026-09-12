@@ -74,7 +74,12 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
           <div class="settings-sec-title">Central Hub Note</div>
           <p class="settings-desc">The designated anchor note from which BFS hop horizons and context decay tiers are calculated.</p>
           <div class="settings-hub-card">
-            <span class="settings-hub-icon">⭐</span>
+            <span class="settings-hub-icon">
+              <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="8" cy="8" r="6"/>
+                <circle cx="8" cy="8" r="2.5" fill="#38bdf8"/>
+              </svg>
+            </span>
             <span class="settings-hub-path" title="${primaryHub}">${primaryHub}</span>
             <button class="btn-secondary settings-hub-btn" id="btn-settings-change-hub">Change Hub</button>
           </div>
@@ -85,7 +90,9 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
           <p class="settings-desc">Broken links pointing to nonexistent notes or invalid section anchors.</p>
           <div class="settings-health-row">
             <span class="settings-health-status ${brokenLinksCount === 0 ? 'status-clean' : 'status-warn'}">
-              ${brokenLinksCount === 0 ? '✓ No broken links detected' : `⚠ ${brokenLinksCount} broken references`}
+              ${brokenLinksCount === 0
+                ? `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="#10b981" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:5px;"><path d="M3 8.5L6.5 12L13 4"/></svg>No broken links detected`
+                : `<svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="#ef4444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:5px;"><path d="M8 1.5L14.5 13.5H1.5L8 1.5Z"/><line x1="8" y1="6" x2="8" y2="9.5"/><circle cx="8" cy="11.5" r="0.75" fill="#ef4444"/></svg>${brokenLinksCount} broken references`}
             </span>
             ${brokenLinksCount > 0 ? `<button class="btn-primary" id="btn-settings-fix-broken">Fix References</button>` : ''}
           </div>
@@ -94,7 +101,12 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
         <div class="settings-section">
           <div class="settings-sec-title">Vault Re-indexing</div>
           <p class="settings-desc">Trigger a full AST parse and graph topology rebuild from workspace files.</p>
-          <button class="btn-secondary" id="btn-settings-rescan">🔄 Rescan Vault Now</button>
+          <button class="btn-secondary" id="btn-settings-rescan">
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:5px;">
+              <path d="M2.5 8a5.5 5.5 0 1 1 1.6 3.9L1.5 14M1.5 9.5v4.5h4.5"/>
+            </svg>
+            Rescan Vault Now
+          </button>
         </div>
       `;
       break;
@@ -103,7 +115,13 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
       const graphRulesHtml = graphExclusions.length > 0
         ? graphExclusions.map((rule) => `
             <div class="settings-rule-item">
-              <span class="rule-pattern" title="${rule}">🚫 ${rule}</span>
+              <span class="rule-pattern" title="${rule}">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:5px; opacity:0.75;">
+                  <circle cx="8" cy="8" r="6"/>
+                  <line x1="3.5" y1="3.5" x2="12.5" y2="12.5"/>
+                </svg>
+                ${rule}
+              </span>
               <span class="rule-tier-tag">graph</span>
               <button class="rule-del-btn" data-rule="${rule}" data-scope="graph" title="Remove rule">✕</button>
             </div>
@@ -113,7 +131,13 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
       const scanRulesHtml = scanExclusions.length > 0
         ? scanExclusions.map((rule) => `
             <div class="settings-rule-item">
-              <span class="rule-pattern" title="${rule}">⛔ ${rule}</span>
+              <span class="rule-pattern" title="${rule}">
+                <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:5px; opacity:0.75;">
+                  <circle cx="8" cy="8" r="6"/>
+                  <line x1="4" y1="8" x2="12" y2="8"/>
+                </svg>
+                ${rule}
+              </span>
               <span class="rule-tier-tag">scan</span>
               <button class="rule-del-btn" data-rule="${rule}" data-scope="scan" title="Remove rule">✕</button>
             </div>
@@ -187,7 +211,9 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
             </div>
           </div>
           <button class="btn-secondary" id="btn-reinstall-hooks" style="margin-top: 12px;">
-            ${gitHooksInstalled ? '🔄 Reinstall Git Hooks' : '⚡ Install Git Hooks'}
+            ${gitHooksInstalled
+              ? `<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:5px;"><path d="M2.5 8a5.5 5.5 0 1 1 1.6 3.9L1.5 14M1.5 9.5v4.5h4.5"/></svg>Reinstall Git Hooks`
+              : `<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" style="display:inline-block; vertical-align:middle; margin-right:5px;"><path d="M7 1L1 9h5l-1 6 7-8h-5l1-6z"/></svg>Install Git Hooks`}
           </button>
         </div>
       `;
@@ -232,7 +258,12 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
     <div class="settings-drawer" id="settings-drawer" style="display: none;">
       <div class="settings-header">
         <div class="settings-title-box">
-          <span class="settings-icon">⚙️</span>
+          <span class="settings-icon">
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="8" r="2.5"/>
+              <path d="M8 1v2m0 10v2M1 8h2m10 0h2m-2.05-4.95l-1.41 1.41m-7.08 7.08l-1.41 1.41m0-9.9l1.41 1.41m7.08 7.08l1.41 1.41"/>
+            </svg>
+          </span>
           <h3 class="settings-title">Advanced Settings</h3>
         </div>
         <button class="settings-close-btn" id="settings-btn-close" aria-label="Close Settings">✕</button>

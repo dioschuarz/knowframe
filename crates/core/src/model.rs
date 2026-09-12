@@ -30,6 +30,8 @@ pub enum FocusMode {
     OneHop,
     #[serde(rename = "2_hops")]
     TwoHops,
+    #[serde(rename = "3_hops")]
+    ThreeHops,
     #[serde(rename = "all")]
     #[default]
     All,

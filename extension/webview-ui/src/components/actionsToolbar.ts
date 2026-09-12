@@ -72,43 +72,73 @@ export function renderActionsToolbar(
 
         <!-- Focus Mode Dropdown -->
         <div class="tb-dropdown-container" id="focus-dropdown-container">
-          <button id="btn-focus-toggle" class="tb-icon-btn tb-focus-btn" aria-label="Focus Mode" data-tooltip-title="Focus Mode" data-tooltip-desc="Restrict graph view to Hub, 1 hop, 2 hops, or All">
-            <span class="focus-icon">🎯</span>
+          <button id="btn-focus-toggle" class="tb-icon-btn tb-focus-btn" aria-label="Focus Mode" data-tooltip-title="Focus Mode" data-tooltip-desc="Restrict graph view to 1 hop, 2 hops, 3 hops, or All">
+            <svg class="tb-svg focus-svg" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="8" r="6"/>
+              <circle cx="8" cy="8" r="2.5"/>
+              <line x1="8" y1="1" x2="8" y2="3"/>
+              <line x1="8" y1="13" x2="8" y2="15"/>
+              <line x1="1" y1="8" x2="3" y2="8"/>
+              <line x1="13" y1="8" x2="15" y2="8"/>
+            </svg>
             <span id="tb-focus-label" class="tb-focus-label">Focus: All</span>
             <span class="tb-dropdown-arrow">▾</span>
           </button>
           <div id="focus-dropdown-menu" class="floating-popover focus-menu-popover" style="display: none;">
             <div class="menu-item focus-item" data-focus="all">
-              <span class="m-icon">🌐</span>
+              <span class="m-icon">
+                <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="8" cy="8" r="6.5"/>
+                  <ellipse cx="8" cy="8" rx="2.8" ry="6.5"/>
+                  <line x1="1.5" y1="8" x2="14.5" y2="8"/>
+                </svg>
+              </span>
               <div class="m-text">
                 <div class="m-title">All Notes</div>
                 <div class="m-desc">Complete knowledge graph</div>
               </div>
               <span class="focus-check" id="check-focus-all">✓</span>
             </div>
+            <div class="menu-item focus-item" data-focus="3_hops">
+              <span class="m-icon">
+                <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="8" cy="8" r="6.5"/>
+                  <circle cx="8" cy="8" r="4.2"/>
+                  <circle cx="8" cy="8" r="2" fill="currentColor"/>
+                </svg>
+              </span>
+              <div class="m-text">
+                <div class="m-title">3 Hops</div>
+                <div class="m-desc">Extended community neighborhood</div>
+              </div>
+              <span class="focus-check" id="check-focus-3_hops" style="display: none;">✓</span>
+            </div>
             <div class="menu-item focus-item" data-focus="2_hops">
-              <span class="m-icon">🎯</span>
+              <span class="m-icon">
+                <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="8" cy="8" r="5.5"/>
+                  <circle cx="8" cy="8" r="2" fill="currentColor"/>
+                </svg>
+              </span>
               <div class="m-text">
                 <div class="m-title">2 Hops</div>
-                <div class="m-desc">Extended neighborhood around Hub</div>
+                <div class="m-desc">Secondary context around Central Hub</div>
               </div>
               <span class="focus-check" id="check-focus-2_hops" style="display: none;">✓</span>
             </div>
             <div class="menu-item focus-item" data-focus="1_hop">
-              <span class="m-icon">🔍</span>
+              <span class="m-icon">
+                <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="4.5" cy="8" r="2.5" fill="currentColor"/>
+                  <circle cx="11.5" cy="8" r="2"/>
+                  <line x1="7" y1="8" x2="9.5" y2="8"/>
+                </svg>
+              </span>
               <div class="m-text">
                 <div class="m-title">1 Hop</div>
-                <div class="m-desc">Direct links to/from Hub</div>
+                <div class="m-desc">Direct links to and from Central Hub</div>
               </div>
               <span class="focus-check" id="check-focus-1_hop" style="display: none;">✓</span>
-            </div>
-            <div class="menu-item focus-item" data-focus="hub">
-              <span class="m-icon">⭐</span>
-              <div class="m-text">
-                <div class="m-title">Hub Only</div>
-                <div class="m-desc">Central knowledge anchor only</div>
-              </div>
-              <span class="focus-check" id="check-focus-hub" style="display: none;">✓</span>
             </div>
             <div class="menu-divider"></div>
             <label class="focus-checkbox-item">
@@ -275,13 +305,26 @@ export function renderActionsToolbar(
               <span>Sticky Placement</span>
             </label>
             <button id="btn-unpin-all" class="physics-action-btn" title="Reset disposition by releasing all pinned notes">
-              📌 Reset Disposition (<span id="badge-pinned-count">0</span>)
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                <path d="M4.146.146A.5.5 0 0 1 4.5 0h7a.5.5 0 0 1 .5.5c0 .68-.342 1.174-.646 1.479-.283.282-.63.535-1.01.777C10.288 3.738 10 5.28 10 6.5c0 .35.034.65.088.91l2.42 2.42a.5.5 0 0 1-.354.854H8.5v4.5a.5.5 0 0 1-1 0V10.684H3.846a.5.5 0 0 1-.354-.854l2.42-2.42C5.966 7.15 6 6.85 6 6.5c0-1.22-.288-2.762-.344-3.744-.38-.242-.727-.495-1.01-.777C4.342 1.674 4 1.18 4 .5a.5.5 0 0 1 .146-.354z"/>
+              </svg>
+              Reset Disposition (<span id="badge-pinned-count">0</span>)
             </button>
           </div>
 
           <div class="physics-footer">
-            <button id="btn-reheat-sim" class="physics-action-btn" title="Re-simulate node positions">⚡ Reheat</button>
-            <button id="btn-reset-physics" class="physics-action-btn" title="Reset all sliders to defaults">↺ Reset Defaults</button>
+            <button id="btn-reheat-sim" class="physics-action-btn" title="Re-simulate node positions">
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                <path d="M7 1L1 9h5l-1 6 7-8h-5l1-6z"/>
+              </svg>
+              Reheat
+            </button>
+            <button id="btn-reset-physics" class="physics-action-btn" title="Reset all sliders to defaults">
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display: inline-block; vertical-align: middle; margin-right: 4px;">
+                <path d="M2 8a6 6 0 1 1 1.76 4.24L1 15M1 10v5h5"/>
+              </svg>
+              Reset Defaults
+            </button>
           </div>
         </div>
       </div>
@@ -289,21 +332,38 @@ export function renderActionsToolbar(
       <!-- Actions Dropdown Menu Window -->
       <div id="actions-dropdown" class="floating-popover actions-menu-popover" style="display: none;">
         <div class="menu-item" id="menu-act-physics">
-          <span class="m-icon">🎛️</span>
+          <span class="m-icon">
+            <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="2" y1="4" x2="14" y2="4"/>
+              <line x1="2" y1="12" x2="14" y2="12"/>
+              <circle cx="5" cy="4" r="2" fill="var(--vscode-editorWidget-background, #252526)"/>
+              <circle cx="11" cy="12" r="2" fill="var(--vscode-editorWidget-background, #252526)"/>
+            </svg>
+          </span>
           <div class="m-text">
             <div class="m-title">Gravity & Spacing</div>
             <div class="m-desc">Tune node repulsion, link distance & center pull</div>
           </div>
         </div>
         <div class="menu-item" id="menu-act-toggle-labels">
-          <span class="m-icon">🏷️</span>
+          <span class="m-icon">
+            <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1.5 8.5L8.5 1.5H14.5V7.5L7.5 14.5L1.5 8.5Z"/>
+              <circle cx="11.5" cy="4.5" r="1" fill="currentColor"/>
+            </svg>
+          </span>
           <div class="m-text">
             <div class="m-title" id="menu-title-labels">File Names: Hover Only</div>
             <div class="m-desc">Toggle between clean hover-only and showing all names</div>
           </div>
         </div>
         <div class="menu-item" id="menu-act-reset-zoom">
-          <span class="m-icon">⛶</span>
+          <span class="m-icon">
+            <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M2 5V2H5M11 2H14V5M14 11V14H11M5 14H2V11"/>
+              <circle cx="8" cy="8" r="1.5" fill="currentColor"/>
+            </svg>
+          </span>
           <div class="m-text">
             <div class="m-title">Reset Canvas View</div>
             <div class="m-desc">Center graph and reset zoom level</div>
@@ -311,7 +371,12 @@ export function renderActionsToolbar(
         </div>
         <div class="menu-divider"></div>
         <div class="menu-item" id="menu-act-settings">
-          <span class="m-icon">⚙️</span>
+          <span class="m-icon">
+            <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="8" cy="8" r="2.5"/>
+              <path d="M8 1v2m0 10v2M1 8h2m10 0h2m-2.05-4.95l-1.41 1.41m-7.08 7.08l-1.41 1.41m0-9.9l1.41 1.41m7.08 7.08l1.41 1.41"/>
+            </svg>
+          </span>
           <div class="m-text">
             <div class="m-title">Advanced Settings...</div>
             <div class="m-desc">Hub rules, exclusions, cluster colors, git hooks, diagnostics</div>
@@ -597,22 +662,23 @@ export function renderActionsToolbar(
     currentFocusMode = mode;
     const labelMap: Record<FocusMode, string> = {
       all: 'Focus: All',
+      '3_hops': 'Focus: 3 Hops',
       '2_hops': 'Focus: 2 Hops',
       '1_hop': 'Focus: 1 Hop',
-      hub: 'Focus: Hub',
+      hub: 'Focus: 1 Hop',
     };
     if (tbFocusLabel) {
       tbFocusLabel.textContent = labelMap[mode] || 'Focus: All';
     }
     const checkAll = container.querySelector('#check-focus-all') as HTMLElement;
+    const check3Hops = container.querySelector('#check-focus-3_hops') as HTMLElement;
     const check2Hops = container.querySelector('#check-focus-2_hops') as HTMLElement;
     const check1Hop = container.querySelector('#check-focus-1_hop') as HTMLElement;
-    const checkHub = container.querySelector('#check-focus-hub') as HTMLElement;
 
     if (checkAll) checkAll.style.display = mode === 'all' ? 'inline' : 'none';
+    if (check3Hops) check3Hops.style.display = mode === '3_hops' ? 'inline' : 'none';
     if (check2Hops) check2Hops.style.display = mode === '2_hops' ? 'inline' : 'none';
-    if (check1Hop) check1Hop.style.display = mode === '1_hop' ? 'inline' : 'none';
-    if (checkHub) checkHub.style.display = mode === 'hub' ? 'inline' : 'none';
+    if (check1Hop) check1Hop.style.display = (mode === '1_hop' || mode === 'hub') ? 'inline' : 'none';
   }
 
   function toggleFocusDropdown(e?: MouseEvent): void {

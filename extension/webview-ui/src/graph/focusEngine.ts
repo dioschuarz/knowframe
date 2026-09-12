@@ -33,6 +33,9 @@ export function filterGraphByFocus(
     case '2_hops':
       maxHop = 2;
       break;
+    case '3_hops':
+      maxHop = 3;
+      break;
     case 'all':
     default:
       maxHop = Infinity;

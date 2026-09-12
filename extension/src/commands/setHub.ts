@@ -39,7 +39,7 @@ export function registerSetHubCommand(
       const items = sortedNodes.map((n, idx) => {
         const totalLinks = (n.in_degree || 0) + (n.out_degree || 0);
         const isCurrentHub = n.hop_distance === 0 || n.id === scan.recommended_hub;
-        const prefix = isCurrentHub ? '⭐ [Current Hub] ' : (idx < 3 && totalLinks > 0 ? '📌 ' : '');
+        const prefix = isCurrentHub ? '$(star-full) [Current Hub] ' : (idx < 3 && totalLinks > 0 ? '$(pinned) ' : '');
         return {
           label: `${prefix}${n.label}`,
           description: `Links: ${totalLinks} (In: ${n.in_degree || 0} / Out: ${n.out_degree || 0}) • ${n.id}`,

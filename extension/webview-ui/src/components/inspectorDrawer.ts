@@ -66,11 +66,11 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
   const tokenFormatted = node.tokens.toLocaleString() + ' tok';
 
   const inLinksList = inLinks.length > 0
-    ? inLinks.map((l) => `<li class="insp-link-item" data-link="${l}"><span class="insp-link-icon">⬅️</span><span class="insp-link-text" title="${l}">${l}</span></li>`).join('')
+    ? inLinks.map((l) => `<li class="insp-link-item" data-link="${l}"><span class="insp-link-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8L10 4"/></svg></span><span class="insp-link-text" title="${l}">${l}</span></li>`).join('')
     : '<li class="insp-empty-item">No incoming links</li>';
 
   const outLinksList = outLinks.length > 0
-    ? outLinks.map((l) => `<li class="insp-link-item" data-link="${l}"><span class="insp-link-icon">➡️</span><span class="insp-link-text" title="${l}">${l}</span></li>`).join('')
+    ? outLinks.map((l) => `<li class="insp-link-item" data-link="${l}"><span class="insp-link-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4L10 8L6 12"/></svg></span><span class="insp-link-text" title="${l}">${l}</span></li>`).join('')
     : '<li class="insp-empty-item">No outgoing links</li>';
 
   const tagsChips = (node.tags || []).length > 0
@@ -80,7 +80,12 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
   return `
     <div class="insp-header">
       <div class="insp-title-box">
-        <span class="insp-icon">${isHub ? '⭐' : '📄'}</span>
+        <span class="insp-icon">
+          ${isHub
+            ? `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2.5" fill="#38bdf8"/></svg>`
+            : `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M3 2.5A1.5 1.5 0 0 1 4.5 1h7A1.5 1.5 0 0 1 13 2.5v11a1.5 1.5 0 0 1-1.5 1.5h-7A1.5 1.5 0 0 1 3 13.5v-11Z"/><line x1="5.5" y1="4.5" x2="10.5" y2="4.5"/><line x1="5.5" y1="7.5" x2="10.5" y2="7.5"/></svg>`
+          }
+        </span>
         <div class="insp-header-titles">
           <div class="insp-title" title="${node.label}">${node.label}</div>
           <div class="insp-path" title="${node.filePath}">${node.filePath}</div>
@@ -134,14 +139,17 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
     <!-- Footer Actions -->
     <div class="insp-footer">
       <button class="btn-primary insp-action-btn" id="insp-btn-open-file">
-        <span>📖 Open file</span>
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h8a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H4a1.5 1.5 0 0 1-1.5-1.5v-9Z"/><line x1="5" y1="5.5" x2="11" y2="5.5"/><line x1="5" y1="8.5" x2="11" y2="8.5"/></svg>
+        <span>Open file</span>
       </button>
       ${!isHub ? `
       <button class="btn-secondary insp-action-btn" id="insp-btn-set-hub">
-        <span>⭐ Set as hub</span>
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2.5" fill="currentColor"/></svg>
+        <span>Set as hub</span>
       </button>` : ''}
       <button class="btn-secondary insp-action-btn" id="insp-btn-exclude">
-        <span>🚫 Exclude note</span>
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><circle cx="8" cy="8" r="6"/><line x1="3.5" y1="3.5" x2="12.5" y2="12.5"/></svg>
+        <span>Exclude note</span>
       </button>
     </div>
   `;
@@ -156,7 +164,9 @@ export function renderEdgeInspectionHtml(props: EdgeInspectionProps): string {
   return `
     <div class="insp-header">
       <div class="insp-title-box">
-        <span class="insp-icon">⚠️</span>
+        <span class="insp-icon">
+          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#ef4444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5L14.5 13.5H1.5L8 1.5Z"/><line x1="8" y1="6" x2="8" y2="9.5"/><circle cx="8" cy="11.5" r="0.75" fill="#ef4444"/></svg>
+        </span>
         <div class="insp-header-titles">
           <div class="insp-title">Broken Reference</div>
           <div class="insp-path">${sourceName} : ${lineCoord}</div>
@@ -203,10 +213,12 @@ export function renderEdgeInspectionHtml(props: EdgeInspectionProps): string {
 
     <div class="insp-footer">
       <button class="btn-primary insp-action-btn" id="insp-btn-open-source">
-        <span>📖 Open source (${lineCoord})</span>
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h8a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H4a1.5 1.5 0 0 1-1.5-1.5v-9Z"/><line x1="5" y1="5.5" x2="11" y2="5.5"/><line x1="5" y1="8.5" x2="11" y2="8.5"/></svg>
+        <span>Open source (${lineCoord})</span>
       </button>
       <button class="btn-secondary insp-action-btn" id="insp-btn-fix-reference">
-        <span>🛠️ Fix reference</span>
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><path d="M12.5 1.5a3 3 0 0 0-3.8 3.8L2 12l2 2 6.7-6.7a3 3 0 0 0 3.8-3.8l-2 2-2-2 2-2Z"/></svg>
+        <span>Fix reference</span>
       </button>
     </div>
   `;
@@ -241,7 +253,11 @@ export function renderTokenEconomicsHtml(props: TokenEconomicsProps): string {
   return `
     <div class="insp-header">
       <div class="insp-title-box">
-        <span class="insp-icon">⚡</span>
+        <span class="insp-icon">
+          <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" color="#38bdf8">
+            <path d="M7 1L1 9h5l-1 6 7-8h-5l1-6z"/>
+          </svg>
+        </span>
         <div class="insp-header-titles">
           <div class="insp-title">Token Economics</div>
           <div class="insp-path">Active Prompt vs Reachable Context</div>

@@ -175,9 +175,9 @@ export function renderColorManager(
           </p>
 
           <div class="color-manager-tools">
-            <button id="btn-select-all" class="btn-tiny">✓ Select All</button>
-            <button id="btn-deselect-all" class="btn-tiny">☐ Deselect All</button>
-            <button id="btn-populate-vault" class="btn-tiny">⚡ Auto-Populate from Vault</button>
+            <button id="btn-select-all" class="btn-tiny"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 3px;"><polyline points="3 8 6.5 11.5 13 4.5"/></svg>Select All</button>
+            <button id="btn-deselect-all" class="btn-tiny"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.5" style="vertical-align: -1px; margin-right: 3px;"><rect x="2.5" y="2.5" width="11" height="11" rx="1.5"/></svg>Deselect All</button>
+            <button id="btn-populate-vault" class="btn-tiny"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -1px; margin-right: 3px;"><polygon points="8.5 1.5 3 9 7.5 9 6.5 14.5 13 6.5 8.5 6.5 8.5 1.5"/></svg>Auto-Populate</button>
             <button id="btn-add-group" class="btn-tiny">+ Add Custom Rule</button>
           </div>
 
@@ -208,7 +208,7 @@ export function renderColorManager(
               ? `
             <div class="suggestions-section">
               <div class="suggestions-header">
-                <span class="suggestions-title">💡 Detected Vault Suggestions</span>
+                <span class="suggestions-title"><svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="#3b82f6" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="vertical-align: -2px; margin-right: 4px;"><path d="M8 1.5a5 5 0 0 0-3.5 8.5c.7.7 1 1.5 1 2.5h5c0-1 .3-1.8 1-2.5A5 5 0 0 0 8 1.5z"/><line x1="6.5" y1="14.5" x2="9.5" y2="14.5"/></svg>Detected Vault Suggestions</span>
                 <span class="suggestions-subtitle">Click to add as rule</span>
               </div>
               <div class="suggestions-list">

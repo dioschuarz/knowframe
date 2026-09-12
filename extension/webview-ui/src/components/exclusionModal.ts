@@ -27,7 +27,7 @@ export function renderExclusionModalHtml(props: ExclusionModalProps): string {
   const { pattern, matchingCount, samplePaths, scope } = props;
 
   const sampleItemsHtml = samplePaths.length > 0
-    ? samplePaths.map((p) => `<div class="excl-sample-chip" title="${p}">📄 ${p}</div>`).join('')
+    ? samplePaths.map((p) => `<div class="excl-sample-chip" title="${p}"><svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.4" style="vertical-align: -1px; margin-right: 3px;"><path d="M3 2h6.5l3.5 3.5V14H3V2z"/><path d="M9.5 2v3.5H13"/></svg>${p}</div>`).join('')
     : '<div class="excl-empty-samples">No matching files in workspace</div>';
 
   return `
@@ -35,7 +35,7 @@ export function renderExclusionModalHtml(props: ExclusionModalProps): string {
       <div class="modal-dialog excl-modal-dialog" role="dialog" aria-modal="true" aria-labelledby="excl-modal-title">
         <div class="modal-header">
           <div class="modal-title-row">
-            <span class="modal-icon">🚫</span>
+            <span class="modal-icon"><svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="#ef4444" stroke-width="1.5"><circle cx="8" cy="8" r="6.5"/><line x1="3.5" y1="3.5" x2="12.5" y2="12.5"/></svg></span>
             <h3 id="excl-modal-title" class="modal-title">Exclude from Graph</h3>
           </div>
           <button class="modal-close-btn" id="excl-btn-close" aria-label="Close modal">✕</button>

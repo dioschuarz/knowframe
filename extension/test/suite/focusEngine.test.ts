@@ -41,6 +41,13 @@ suite('FocusEngine Subgraph Filtering & Hop Horizon Test Suite', () => {
     assert.strictEqual(res.edges.length, 2);
   });
 
+  test('FocusMode "3_hops" includes Hub (0), Level 1, Level 2, and Level 3', () => {
+    const res = filterGraphByFocus(sampleNodes, sampleEdges, '3_hops', false);
+    const ids = res.nodes.map((n) => n.id);
+    assert.deepStrictEqual(ids.sort(), ['hop1', 'hop2', 'hop3', 'hub']);
+    assert.strictEqual(res.edges.length, 3);
+  });
+
   test('FocusMode "all" with showOrphans=true includes all nodes and edges', () => {
     const res = filterGraphByFocus(sampleNodes, sampleEdges, 'all', true);
     assert.strictEqual(res.nodes.length, 5);
