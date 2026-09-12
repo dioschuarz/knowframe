@@ -71,7 +71,7 @@ export class GraphPanelManager implements vscode.Disposable {
     this.ipcClient = ipcClient;
     this.currentScanResult = scanResult;
 
-    this.panel.title = 'LLM Wiki Knowledge Graph';
+    this.panel.title = 'LLM Wiki - Graph';
     this.panel.iconPath = {
       light: vscode.Uri.joinPath(extensionUri, 'media', 'tab-icon-light.svg'),
       dark: vscode.Uri.joinPath(extensionUri, 'media', 'tab-icon-dark.svg'),
@@ -339,7 +339,7 @@ export class GraphPanelManager implements vscode.Disposable {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="${cspPolicy}">
-  <title>LLM Wiki Knowledge Graph</title>
+  <title>LLM Wiki - Graph</title>
   <link rel="stylesheet" href="${styleUri}">
 </head>
 <body>
