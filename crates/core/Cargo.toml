@@ -33,6 +33,7 @@ regex = "1.10"
 lazy_static = "1.4"
 chrono = { version = "0.4", features = ["serde"] }
 rayon = "1.10"
+sha2 = "0.10"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["async_tokio"] }
@@ -40,4 +41,20 @@ tempfile = "3.10"
 
 [[bench]]
 name = "graph_bench"
+harness = false
+
+[[bench]]
+name = "trace_benchmark"
+harness = false
+
+[[bench]]
+name = "candidate_benchmark"
+harness = false
+
+[[bench]]
+name = "fingerprint_benchmark"
+harness = false
+
+[[bench]]
+name = "sync_benchmark"
 harness = false

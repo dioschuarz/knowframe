@@ -239,6 +239,220 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
 
             JsonRpcResponse::success(req.id, json!(result))
         }
+        "workspace/getQualityScore" => {
+            let (root, mut topology) = {
+                let st = state.read().await;
+                (st.workspace_root.clone(), st.topology.clone())
+            };
+            if topology.nodes.is_empty() {
+                if let Ok(scan_res) = execute_scan(ScanOptions {
+                    workspace_root: root.clone(),
+                    hub: None,
+                    pretty: false,
+                }) {
+                    for node in scan_res.nodes {
+                        let mut n = crate::model::NoteNode::new(node.id.clone(), node.file_path, node.label);
+                        n.tags = node.tags;
+                        n.tokens = node.tokens;
+                        n.status = node.status;
+                        n.color = node.color;
+                        topology.add_node(n);
+                    }
+                    for edge in scan_res.edges {
+                        let mut e = crate::model::NoteEdge::new(
+                            edge.source,
+                            edge.target,
+                            edge.link_type,
+                            String::new(),
+                            edge.anchor,
+                            edge.line,
+                        );
+                        e.is_broken = edge.is_broken;
+                        e.resolution_status = edge.resolution_status;
+                        topology.add_edge(e);
+                    }
+                }
+            }
+            topology.compute_degrees();
+            topology.compute_betweenness();
+            if let Some(hub) = topology.suggest_hub() {
+                topology.compute_hops(&hub);
+            }
+            let baseline = crate::debt::baseline::load_baseline(&root).ok().flatten();
+            let quality = crate::quality::calculate_quality_score(&topology, baseline.as_ref(), &[], &[]);
+            JsonRpcResponse::success(req.id, json!({
+                "overall_score": quality.overall_score,
+                "integrity_score": quality.integrity_score,
+                "consistency_score": quality.consistency_score,
+                "discoverability_score": quality.discoverability_score,
+                "freshness_score": quality.freshness_score,
+                "legacy_debt_count": quality.legacy_debt_count,
+                "regressions_count": quality.new_regressions_count,
+                "resolved_debt_count": quality.resolved_debt_count,
+                "central_hub_id": quality.central_hub_id,
+                "top_degradation_factors": quality.top_degradation_factors,
+            }))
+        }
+        "workspace/getBaseline" => {
+            let root = {
+                let st = state.read().await;
+                st.workspace_root.clone()
+            };
+            match crate::debt::baseline::load_baseline(&root) {
+                Ok(Some(base)) => {
+                    JsonRpcResponse::success(req.id, json!({
+                        "baseline_commit": base.baseline_commit,
+                        "timestamp": base.timestamp,
+                        "broken_links_count": base.broken_links.len(),
+                        "orphan_nodes_count": base.orphan_nodes.len(),
+                        "collisions_count": base.collisions.len(),
+                        "drifts_count": base.technical_drifts.len(),
+                        "total_debt": base.total_debt,
+                    }))
+                }
+                Ok(None) => {
+                    JsonRpcResponse::success(req.id, json!({
+                        "baseline_commit": "unbaselined",
+                        "timestamp": "",
+                        "broken_links_count": 0,
+                        "orphan_nodes_count": 0,
+                        "collisions_count": 0,
+                        "drifts_count": 0,
+                        "total_debt": 0,
+                    }))
+                }
+                Err(e) => JsonRpcResponse::error(req.id, -32000, format!("Failed to read baseline: {}", e)),
+            }
+        }
+        "workspace/updateBaseline" => {
+            let root = {
+                let st = state.read().await;
+                st.workspace_root.clone()
+            };
+            let prev_total = crate::debt::baseline::load_baseline(&root)
+                .ok()
+                .flatten()
+                .map(|b| b.total_debt)
+                .unwrap_or(0);
+
+            match crate::cli::baseline_cmd::execute_baseline_reset(&root) {
+                Ok(_) => {
+                    let new_base = crate::debt::baseline::load_baseline(&root)
+                        .ok()
+                        .flatten();
+                    let (commit, total) = new_base
+                        .map(|b| (b.baseline_commit, b.total_debt))
+                        .unwrap_or_else(|| ("unknown".to_string(), 0));
+                    JsonRpcResponse::success(req.id, json!({
+                        "baseline_commit": commit,
+                        "total_debt": total,
+                        "previous_total_debt": prev_total,
+                    }))
+                }
+                Err(e) => JsonRpcResponse::error(req.id, -32000, format!("Failed to update baseline: {}", e)),
+            }
+        }
+        "workspace/traceContext" => {
+            let (query, entrypoint) = match req.params {
+                Some(ref p) => (
+                    p.get("query").and_then(|q| q.as_str()).unwrap_or("").to_string(),
+                    p.get("entrypoint").and_then(|e| e.as_str()).map(|s| s.to_string()),
+                ),
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing params"),
+            };
+
+            let (root, mut topology) = {
+                let st = state.read().await;
+                (st.workspace_root.clone(), st.topology.clone())
+            };
+            if topology.nodes.is_empty() {
+                if let Ok(scan_res) = execute_scan(ScanOptions {
+                    workspace_root: root,
+                    hub: None,
+                    pretty: false,
+                }) {
+                    for node in scan_res.nodes {
+                        let mut n = crate::model::NoteNode::new(node.id.clone(), node.file_path, node.label);
+                        n.tags = node.tags;
+                        n.tokens = node.tokens;
+                        n.status = node.status;
+                        n.color = node.color;
+                        topology.add_node(n);
+                    }
+                    for edge in scan_res.edges {
+                        let mut e = crate::model::NoteEdge::new(
+                            edge.source,
+                            edge.target,
+                            edge.link_type,
+                            String::new(),
+                            edge.anchor,
+                            edge.line,
+                        );
+                        e.is_broken = edge.is_broken;
+                        e.resolution_status = edge.resolution_status;
+                        topology.add_edge(e);
+                    }
+                }
+            }
+
+            let trace_res = crate::trace::traversal::execute_context_trace(&topology, &query, entrypoint.as_deref());
+            JsonRpcResponse::success(req.id, json!(trace_res))
+        }
+        "workspace/validateCandidate" => {
+            let (root, base_graph) = {
+                let st = state.read().await;
+                (st.workspace_root.clone(), st.topology.clone())
+            };
+            let staged_delta = match req.params {
+                Some(ref p) => {
+                    let items_json = p.get("staged_files").and_then(|v| v.as_array());
+                    let mut items = Vec::new();
+                    if let Some(arr) = items_json {
+                        for item in arr {
+                            if let (Some(path), Some(status_str)) = (
+                                item.get("path").and_then(|s| s.as_str()),
+                                item.get("status").and_then(|s| s.as_str()),
+                            ) {
+                                let status = match status_str {
+                                    "added" => crate::delta::updater::FileDeltaStatus::Added,
+                                    "deleted" => crate::delta::updater::FileDeltaStatus::Deleted,
+                                    _ => crate::delta::updater::FileDeltaStatus::Modified,
+                                };
+                                items.push(crate::delta::updater::FileDeltaItem {
+                                    path: path.to_string(),
+                                    status,
+                                });
+                            }
+                        }
+                    }
+                    let commit = p.get("base_commit").and_then(|c| c.as_str()).map(|s| s.to_string());
+                    crate::delta::GitDelta {
+                        commit_sha: commit,
+                        items,
+                    }
+                }
+                None => crate::delta::GitDelta {
+                    commit_sha: Some("HEAD".to_string()),
+                    items: Vec::new(),
+                },
+            };
+
+            let baseline = match crate::debt::baseline::load_baseline(&root) {
+                Ok(Some(b)) => b,
+                _ => crate::debt::baseline::capture_initial_baseline(&base_graph, "initial", vec![], vec![]),
+            };
+
+            let overlay = crate::candidate::overlay::CandidateOverlay::new(&base_graph, &root, &staged_delta);
+            let report = crate::candidate::evaluator::evaluate_candidate(
+                &overlay,
+                &baseline,
+                vec![],
+                vec![],
+                crate::candidate::evaluator::AdmissionConfig::default(),
+            );
+
+            JsonRpcResponse::success(req.id, json!(report))
+        }
         _ => JsonRpcResponse::error(req.id, -32601, format!("Method not found: {}", req.method)),
     }
 }

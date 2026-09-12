@@ -12,6 +12,8 @@ async fn test_git_delta_cli_offline_daemon_fail_open() {
     let result = llm_wiki_core::cli::delta::execute_git_delta(
         root,
         &["docs/note.md".to_string()],
+        None,
+        true,
         std::time::Duration::from_millis(500),
     )
     .await;

@@ -29,7 +29,14 @@ export interface SettingsDrawerProps {
   colorGroups: ClusterColorGroup[];
   nodes?: NoteNode[];
   gitHooksInstalled?: boolean;
+  preCommitHookInstalled?: boolean;
+  postCommitHookInstalled?: boolean;
   gitCommitLatencyMs?: number;
+  blockOnBrokenLinks?: boolean;
+  blockOnDuplicateCollision?: boolean;
+  blockOnTechnicalDrift?: boolean;
+  baselineCommit?: string;
+  baselineDebtCount?: number;
   totalNotes?: number;
   connectedNotes?: number;
   orphanNotes?: number;
@@ -46,6 +53,8 @@ export interface SettingsDrawerCallbacks {
   onTestPreview?: (pattern: string) => void;
   onSaveColorGroups?: (groups: ClusterColorGroup[]) => void;
   onInstallGitHooks?: () => void;
+  onCaptureBaseline?: () => void;
+  onToggleThreshold?: (key: string, enabled: boolean) => void;
   onClose?: () => void;
 }
 
@@ -306,33 +315,84 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
       break;
     }
 
-    case 'git_sync':
+    case 'git_sync': {
+      const preActive = props.preCommitHookInstalled ?? gitHooksInstalled;
+      const postActive = props.postCommitHookInstalled ?? gitHooksInstalled;
+      const bBroken = props.blockOnBrokenLinks ?? true;
+      const bDup = props.blockOnDuplicateCollision ?? true;
+      const bDrift = props.blockOnTechnicalDrift ?? false;
+      const baseCommitStr = props.baselineCommit || 'Initial (HEAD)';
+      const baseDebtNum = props.baselineDebtCount ?? 0;
+
       tabContentHtml = `
         <div class="settings-section">
-          <div class="settings-sec-title">Git Hook Integration (prek)</div>
+          <div class="settings-sec-title">Git Hook Integration & Dual Hooks (prek)</div>
           <p class="settings-desc">
-            Ultra-fast non-blocking commit hooks (≤ 500ms fail-open budget) syncing incremental graph deltas.
+            Dual-process enforcement boundary: pre-commit validates in ephemeral RAM; post-commit incorporates git deltas into persistent knowledge graph.
           </p>
+
           <div class="settings-hook-card">
             <div class="settings-hook-row">
-              <span class="hook-label">Hook Status:</span>
-              <span class="hook-status-badge ${gitHooksInstalled ? 'status-clean' : 'status-warn'}">
-                ${gitHooksInstalled ? '● Active & Installed' : '○ Not Installed'}
+              <span class="hook-label">1. Pre-Commit Validation:</span>
+              <span class="hook-status-badge ${preActive ? 'status-clean' : 'status-warn'}">
+                ${preActive ? '● Active (Admission Gate)' : '○ Not Installed'}
               </span>
             </div>
             <div class="settings-hook-row">
-              <span class="hook-label">Last Delta Latency:</span>
-              <span class="hook-val">${gitCommitLatencyMs} ms</span>
+              <span class="hook-label">2. Post-Commit Graph Sync:</span>
+              <span class="hook-status-badge ${postActive ? 'status-clean' : 'status-warn'}">
+                ${postActive ? '● Active (Ratchet Sync)' : '○ Not Installed'}
+              </span>
+            </div>
+            <div class="settings-hook-row">
+              <span class="hook-label">Last Hook Latency:</span>
+              <span class="hook-val">${gitCommitLatencyMs} ms (&le; 500ms ceiling)</span>
             </div>
           </div>
-          <button class="btn-secondary" id="btn-reinstall-hooks" style="margin-top: 12px;">
-            ${gitHooksInstalled
-              ? `<svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:5px;"><path d="M2.5 8a5.5 5.5 0 1 1 1.6 3.9L1.5 14M1.5 9.5v4.5h4.5"/></svg>Reinstall Git Hooks`
-              : `<svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor" style="display:inline-block; vertical-align:middle; margin-right:5px;"><path d="M7 1L1 9h5l-1 6 7-8h-5l1-6z"/></svg>Install Git Hooks`}
+
+          <div class="settings-subheading" style="margin-top: 16px;">Admission Blocking Thresholds</div>
+          <p class="settings-desc">Configure which new regressions abort commits with exit code 1:</p>
+          <div class="threshold-toggles-list">
+            <label class="threshold-toggle-item">
+              <input type="checkbox" id="toggle-block-broken" ${bBroken ? 'checked' : ''} />
+              <span>Block on Broken Links / Nonexistent Anchor Targets</span>
+            </label>
+            <label class="threshold-toggle-item">
+              <input type="checkbox" id="toggle-block-duplicate" ${bDup ? 'checked' : ''} />
+              <span>Block on High Semantic Duplication (&ge; 85% overlap)</span>
+            </label>
+            <label class="threshold-toggle-item">
+              <input type="checkbox" id="toggle-block-drift" ${bDrift ? 'checked' : ''} />
+              <span>Block on Technical Drift (Code target deleted/renamed)</span>
+            </label>
+          </div>
+
+          <div class="settings-subheading" style="margin-top: 16px;">Knowledge Debt Baseline</div>
+          <p class="settings-desc">
+            Accepted brownfield debt in <code>.context-vault/baseline.json</code>. Regressions only block if they exceed this baseline.
+          </p>
+          <div class="baseline-management-card">
+            <div class="baseline-info-row">
+              <span class="baseline-label">Baseline Commit:</span>
+              <code class="baseline-commit-val">${baseCommitStr}</code>
+            </div>
+            <div class="baseline-info-row">
+              <span class="baseline-label">Baseline Debt Count:</span>
+              <span class="baseline-debt-count">${baseDebtNum} finding(s)</span>
+            </div>
+            <div class="baseline-actions-row">
+              <button class="btn-primary" id="btn-capture-baseline">Capture New Baseline</button>
+            </div>
+          </div>
+
+          <button class="btn-secondary" id="btn-reinstall-hooks" style="margin-top: 16px;">
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:5px;"><path d="M2.5 8a5.5 5.5 0 1 1 1.6 3.9L1.5 14M1.5 9.5v4.5h4.5"/></svg>
+            Reinstall Dual Git Hooks
           </button>
         </div>
       `;
       break;
+    }
 
     case 'diagnostics':
       tabContentHtml = `
@@ -484,6 +544,32 @@ export function renderSettingsDrawer(
     container.querySelector('#btn-reinstall-hooks')?.addEventListener('click', (e) => {
       e.stopPropagation();
       callbacks.onInstallGitHooks?.();
+    });
+
+    container.querySelector('#btn-capture-baseline')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callbacks.onCaptureBaseline?.();
+    });
+
+    const toggleBroken = container.querySelector('#toggle-block-broken') as HTMLInputElement | null;
+    toggleBroken?.addEventListener('change', (e) => {
+      e.stopPropagation();
+      state.blockOnBrokenLinks = toggleBroken.checked;
+      callbacks.onToggleThreshold?.('blockOnBrokenLinks', toggleBroken.checked);
+    });
+
+    const toggleDup = container.querySelector('#toggle-block-duplicate') as HTMLInputElement | null;
+    toggleDup?.addEventListener('change', (e) => {
+      e.stopPropagation();
+      state.blockOnDuplicateCollision = toggleDup.checked;
+      callbacks.onToggleThreshold?.('blockOnDuplicateCollision', toggleDup.checked);
+    });
+
+    const toggleDrift = container.querySelector('#toggle-block-drift') as HTMLInputElement | null;
+    toggleDrift?.addEventListener('change', (e) => {
+      e.stopPropagation();
+      state.blockOnTechnicalDrift = toggleDrift.checked;
+      callbacks.onToggleThreshold?.('blockOnTechnicalDrift', toggleDrift.checked);
     });
 
     container.querySelector('#btn-add-rule')?.addEventListener('click', (e) => {

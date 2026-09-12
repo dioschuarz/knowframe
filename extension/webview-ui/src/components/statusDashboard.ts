@@ -10,7 +10,9 @@
  */
 
 import type { ObservatorySummaryPayload } from '../../../src/types/protocol.ts';
+import type { KnowledgeQualityScore, QualityDegradationFactor } from '../../../src/types/admission.ts';
 import { formatCompactNumber } from '../utils/numberFormat.ts';
+import { renderQualityPillarHtml } from './qualityPillar.ts';
 
 export interface StatusDashboardProps {
   summary: ObservatorySummaryPayload | {
@@ -28,10 +30,13 @@ export interface StatusDashboardProps {
   totalLinks?: number;
   criticalThreshold?: number;
   suggestionsCount?: number;
+  qualityScore?: KnowledgeQualityScore | null;
   onOpenHub?: (hubPath: string) => void;
   onChangeHub?: () => void;
   onReviewIssues?: () => void;
   onReviewSuggestions?: () => void;
+  onRefreshQuality?: () => void;
+  onFactorClick?: (factor: QualityDegradationFactor) => void;
 }
 
 export function formatTokenCount(tokens: number): string {
@@ -152,6 +157,9 @@ export function renderStatusDashboardHtml(props: StatusDashboardProps): string {
       <span class="sync-status-text">Synced</span>
     </div>
   </div>
+
+  <!-- Pillar 4: Quality & Admission -->
+  ${props.qualityScore ? renderQualityPillarHtml({ qualityScore: props.qualityScore, onRefreshQuality: props.onRefreshQuality, onFactorClick: props.onFactorClick }) : ''}
 </div>
 `;
 }
@@ -205,5 +213,23 @@ export class StatusDashboard {
         this.currentProps?.onReviewSuggestions?.();
       });
     }
+
+    const refreshQualityBtn = this.container.querySelector('#quality-refresh-btn');
+    if (refreshQualityBtn) {
+      refreshQualityBtn.addEventListener('click', () => {
+        this.currentProps?.onRefreshQuality?.();
+      });
+    }
+
+    const factorItems = this.container.querySelectorAll('.quality-factor-item');
+    factorItems.forEach((el) => {
+      el.addEventListener('click', () => {
+        const idx = parseInt(el.getAttribute('data-index') || '0', 10);
+        const factor = this.currentProps?.qualityScore?.top_degradation_factors[idx];
+        if (factor) {
+          this.currentProps?.onFactorClick?.(factor);
+        }
+      });
+    });
   }
 }

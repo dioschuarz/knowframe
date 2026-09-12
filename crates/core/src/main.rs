@@ -1,13 +1,19 @@
 //! Main entrypoint for llm-wiki-core CLI.
 
 use clap::{Parser, Subcommand};
+use llm_wiki_core::cli::baseline_cmd::{execute_baseline_init, execute_baseline_reset};
+use llm_wiki_core::cli::delta::execute_git_delta;
 use llm_wiki_core::cli::scan::{execute_scan, ScanOptions};
+use llm_wiki_core::cli::validate::execute_validate;
 use llm_wiki_core::ipc::server::start_ipc_server;
 use std::path::PathBuf;
 
 #[derive(Parser)]
 #[command(name = "llm-wiki-core")]
-#[command(about = "Rust core engine for LLM Wiki knowledge graph and context budgeting", long_about = None)]
+#[command(
+    about = "Rust core engine for LLM Wiki knowledge graph, admission control and context budgeting",
+    long_about = None
+)]
 struct Cli {
     #[command(subcommand)]
     command: Commands,
@@ -59,8 +65,127 @@ enum Commands {
         #[arg(short, long, default_value = ".")]
         root: PathBuf,
 
+        /// Commit SHA of newly created commit (defaults to HEAD)
+        #[arg(long)]
+        commit_sha: Option<String>,
+
+        /// Suppress standard output
+        #[arg(short, long)]
+        quiet: bool,
+
+        /// Hard non-blocking timeout in milliseconds (default 500ms)
+        #[arg(long, default_value_t = 500)]
+        timeout_ms: u64,
+
         /// Changed files
         files: Vec<String>,
+    },
+
+    /// Evaluates staged changes against candidate graph (pre-commit hook)
+    Validate {
+        /// Workspace root directory (flag)
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Workspace root directory (path flag alias)
+        #[arg(long)]
+        path: Option<PathBuf>,
+
+        /// Positional workspace root directory
+        #[arg(index = 1)]
+        positional_root: Option<PathBuf>,
+
+        /// Evaluate only files staged in Git index
+        #[arg(long, default_value_t = true)]
+        staged_only: bool,
+
+        /// Suppress informational output
+        #[arg(short, long)]
+        quiet: bool,
+
+        /// Emit CandidateValidationReport as machine-readable JSON
+        #[arg(long)]
+        json: bool,
+
+        /// Hard timeout in milliseconds before non-blocking fail-open (default 500ms)
+        #[arg(long, default_value_t = 500)]
+        timeout_ms: u64,
+    },
+
+    /// Trace context discovery path from entrypoint to query topic
+    Trace {
+        /// Task query or topic to trace
+        query: String,
+
+        /// Workspace root directory (flag)
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Workspace root directory (path flag alias)
+        #[arg(long)]
+        path: Option<PathBuf>,
+
+        /// Entrypoint note identifier (defaults to AGENTS.md or Hub)
+        #[arg(short, long)]
+        entrypoint: Option<String>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Compute 4-pillar network-aware knowledge quality score
+    Quality {
+        /// Workspace root directory (flag)
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Workspace root directory (path flag alias)
+        #[arg(long)]
+        path: Option<PathBuf>,
+
+        /// Positional workspace root directory
+        #[arg(index = 1)]
+        positional_root: Option<PathBuf>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Manage knowledge debt baseline (.context-vault/baseline.json)
+    Baseline {
+        #[command(subcommand)]
+        subcommand: BaselineCommands,
+    },
+}
+
+#[derive(Subcommand)]
+enum BaselineCommands {
+    /// Initialize debt baseline from current repository state
+    Init {
+        /// Workspace root directory
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Positional workspace root directory
+        #[arg(index = 1)]
+        positional_root: Option<PathBuf>,
+
+        /// Force overwrite of existing baseline
+        #[arg(short, long)]
+        force: bool,
+    },
+
+    /// Reset debt baseline to current repository state
+    Reset {
+        /// Workspace root directory
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Positional workspace root directory
+        #[arg(index = 1)]
+        positional_root: Option<PathBuf>,
     },
 }
 
@@ -115,11 +240,104 @@ async fn main() -> anyhow::Result<()> {
             // Wait for termination signal
             tokio::signal::ctrl_c().await?;
         }
-        Commands::GitDelta { root, files } => {
-            let timeout_duration = std::time::Duration::from_millis(500);
-            let _ =
-                llm_wiki_core::cli::delta::execute_git_delta(&root, &files, timeout_duration).await;
+        Commands::GitDelta {
+            root,
+            commit_sha,
+            quiet,
+            timeout_ms,
+            files,
+        } => {
+            let timeout_duration = std::time::Duration::from_millis(timeout_ms);
+            let _ = execute_git_delta(
+                &root,
+                &files,
+                commit_sha.as_deref(),
+                quiet,
+                timeout_duration,
+            )
+            .await;
         }
+        Commands::Validate {
+            root,
+            path,
+            positional_root,
+            staged_only,
+            quiet,
+            json,
+            timeout_ms,
+        } => {
+            let workspace_root = path
+                .or(root)
+                .or(positional_root)
+                .unwrap_or_else(|| PathBuf::from("."));
+            let exit_code =
+                execute_validate(&workspace_root, staged_only, quiet, json, timeout_ms).await;
+            if exit_code != 0 {
+                std::process::exit(exit_code);
+            }
+        }
+        Commands::Trace {
+            query,
+            root,
+            path,
+            entrypoint,
+            json,
+        } => {
+            let workspace_root = path
+                .or(root)
+                .unwrap_or_else(|| PathBuf::from("."));
+            if let Err(e) = llm_wiki_core::cli::trace_cmd::execute_trace(
+                &workspace_root,
+                &query,
+                entrypoint.as_deref(),
+                json,
+            ) {
+                eprintln!("Error executing trace: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Quality {
+            root,
+            path,
+            positional_root,
+            json,
+        } => {
+            let workspace_root = path
+                .or(root)
+                .or(positional_root)
+                .unwrap_or_else(|| PathBuf::from("."));
+            if let Err(e) = llm_wiki_core::cli::quality_cmd::execute_quality(&workspace_root, json) {
+                eprintln!("Error computing quality score: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Baseline { subcommand } => match subcommand {
+            BaselineCommands::Init {
+                root,
+                positional_root,
+                force,
+            } => {
+                let workspace_root = root
+                    .or(positional_root)
+                    .unwrap_or_else(|| PathBuf::from("."));
+                if let Err(e) = execute_baseline_init(&workspace_root, force) {
+                    eprintln!("Error initializing baseline: {}", e);
+                    std::process::exit(1);
+                }
+            }
+            BaselineCommands::Reset {
+                root,
+                positional_root,
+            } => {
+                let workspace_root = root
+                    .or(positional_root)
+                    .unwrap_or_else(|| PathBuf::from("."));
+                if let Err(e) = execute_baseline_reset(&workspace_root) {
+                    eprintln!("Error resetting baseline: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        },
     }
 
     Ok(())

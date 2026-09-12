@@ -45,7 +45,13 @@ impl<'a> ResolverIndex<'a> {
 pub fn resolve_relative_path(source_id: &str, target_path: &str) -> String {
     let source_path = Path::new(source_id);
     let parent = source_path.parent().unwrap_or_else(|| Path::new(""));
-    let combined = parent.join(target_path);
+    let target_p = Path::new(target_path);
+
+    let combined = if parent.as_os_str().is_empty() || target_p.starts_with(parent) {
+        target_p.to_path_buf()
+    } else {
+        parent.join(target_path)
+    };
 
     // Normalize components (e.g. eliminating "." and "..")
     let mut normalized = Vec::new();

@@ -236,3 +236,22 @@ pub struct ObservatorySummary {
     pub sync_status: String,
     pub last_sync_timestamp: u64,
 }
+
+// Re-export Admission Control, Debt Baseline & Quality Models
+pub use crate::candidate::{
+    AdmissionDecision, CandidateGraph, CandidateValidationReport, DebtAccountingSummary,
+    RegressionCategory, RegressionItem, RegressionSeverity, ResolvedItem, WarningItem,
+};
+pub use crate::collision::{
+    CollisionClassification, DocumentFingerprint, SemanticCollision,
+};
+pub use crate::debt::{
+    BrokenLinkSignature, CollisionSignature, DriftSignature, KnowledgeDebtBaseline,
+};
+pub use crate::drift::{
+    DriftConfidence, DriftType, ReverseImpactIndex, TechnicalDriftFinding,
+};
+pub use crate::quality::{
+    KnowledgeQualityScore, QualityDegradationFactor,
+};
+pub use crate::trace::ContextTraceResult;
