@@ -1,0 +1,230 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LLM Wiki Fragment Architecture & 5-Pillar Quality Protocol",
+  "version": "1.0.0",
+  "description": "JSON-RPC 2.0 contracts for fragment metadata, materialized frontmatter, section-level Context Trace, and 5-pillar health scoring between Extension Host and Rust Sidecar.",
+  "methods": {
+    "graph/getTopology": {
+      "description": "Retrieves the complete graph topology of Document Nodes and directed edges with optional fragment targets.",
+      "request": {
+        "type": "object",
+        "properties": {
+          "include_fragments": { "type": "boolean", "default": true }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["nodes", "edges", "central_hub"],
+        "properties": {
+          "central_hub": { "type": "string" },
+          "nodes": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["path", "title", "tokens", "in_degree", "out_degree", "betweenness_centrality", "status", "fragments"],
+              "properties": {
+                "path": { "type": "string" },
+                "title": { "type": "string" },
+                "tokens": { "type": "integer" },
+                "in_degree": { "type": "integer" },
+                "out_degree": { "type": "integer" },
+                "betweenness_centrality": { "type": "number" },
+                "status": { "type": "string", "enum": ["connected", "orphan", "excluded"] },
+                "fragments": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "required": ["anchor", "heading", "start_line", "end_line", "tokens", "inbound", "outbound"],
+                    "properties": {
+                      "anchor": { "type": "string" },
+                      "heading": { "type": "string" },
+                      "start_line": { "type": "integer" },
+                      "end_line": { "type": "integer" },
+                      "tokens": { "type": "integer" },
+                      "inbound": { "type": "integer" },
+                      "outbound": { "type": "integer" }
+                    }
+                  }
+                }
+              }
+            }
+          },
+          "edges": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["source", "target", "status", "source_line"],
+              "properties": {
+                "source": { "type": "string" },
+                "target": { "type": "string" },
+                "target_fragment": { "type": "string", "description": "Optional heading anchor target (e.g. 'authentication')" },
+                "status": { "type": "string", "enum": ["valid", "broken_document", "broken_fragment_anchor", "excluded_target"] },
+                "source_line": { "type": "integer" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "graph/getDocumentFragments": {
+      "description": "Retrieves the ordered list of section fragments belonging to a Document Node.",
+      "request": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": {
+            "type": "string",
+            "description": "Repository-relative path of the Markdown document"
+          }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["path", "total_tokens", "fragments"],
+        "properties": {
+          "path": { "type": "string" },
+          "total_tokens": { "type": "integer", "description": "Raw total BPE tokens" },
+          "fragments": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["anchor", "heading", "start_line", "end_line", "tokens", "inbound", "outbound"],
+              "properties": {
+                "anchor": { "type": "string" },
+                "heading": { "type": "string" },
+                "start_line": { "type": "integer" },
+                "end_line": { "type": "integer" },
+                "tokens": { "type": "integer", "description": "Raw integer token count" },
+                "inbound": { "type": "integer", "description": "Raw integer inbound link count" },
+                "outbound": { "type": "integer", "description": "Raw integer outbound link count" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "graph/materializeFrontmatter": {
+      "description": "Requests the Rust engine to parse the Markdown AST and update the materialized wiki.fragments frontmatter in a document.",
+      "request": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string" },
+          "dry_run": { "type": "boolean", "default": false }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["path", "updated", "fragment_count", "total_tokens"],
+        "properties": {
+          "path": { "type": "string" },
+          "updated": { "type": "boolean" },
+          "fragment_count": { "type": "integer" },
+          "total_tokens": { "type": "integer" },
+          "frontmatter_yaml": { "type": "string", "description": "Generated or modified frontmatter snippet" }
+        }
+      }
+    },
+    "trace/contextTraceSection": {
+      "description": "Performs deterministic constrained beam search from an entry point to discover section-level fragment destinations for a task query.",
+      "request": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "entrypoint": { "type": "string", "description": "Optional entry point note (defaults to AGENTS.md or central hub)" },
+          "max_depth": { "type": "integer", "default": 4 },
+          "beam_width": { "type": "integer", "default": 5 }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["query", "entrypoint", "target_document", "path", "depth", "document_raw_tokens", "context_reduction_percent", "relevance_reasons"],
+        "properties": {
+          "query": { "type": "string" },
+          "entrypoint": { "type": "string" },
+          "target_document": { "type": "string" },
+          "target_fragment": { "type": "string", "description": "Normalized anchor of target section, if resolved" },
+          "path": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "depth": { "type": "integer" },
+          "document_raw_tokens": { "type": "integer" },
+          "fragment_raw_tokens": { "type": "integer" },
+          "context_reduction_percent": { "type": "number" },
+          "relevance_reasons": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "quality/getFivePillarScore": {
+      "description": "Calculates the network-aware 5-pillar quality score across the repository with explainable reasons.",
+      "request": {
+        "type": "object",
+        "properties": {
+          "force_recompute": { "type": "boolean", "default": false }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["overall_score", "integrity_score", "structure_score", "consistency_score", "discoverability_score", "freshness_score", "reasons", "debt_summary"],
+        "properties": {
+          "overall_score": { "type": "number" },
+          "integrity_score": { "type": "number" },
+          "structure_score": { "type": "number" },
+          "consistency_score": { "type": "number" },
+          "discoverability_score": { "type": "number" },
+          "freshness_score": { "type": "number" },
+          "reasons": {
+            "type": "object",
+            "properties": {
+              "integrity": { "type": "array", "items": { "type": "string" } },
+              "structure": { "type": "array", "items": { "type": "string" } },
+              "consistency": { "type": "array", "items": { "type": "string" } },
+              "discoverability": { "type": "array", "items": { "type": "string" } },
+              "freshness": { "type": "array", "items": { "type": "string" } }
+            }
+          },
+          "debt_summary": {
+            "type": "object",
+            "required": ["total_debt", "legacy_debt", "new_debt", "resolved_debt", "regressions"],
+            "properties": {
+              "total_debt": { "type": "integer" },
+              "legacy_debt": { "type": "integer" },
+              "new_debt": { "type": "integer" },
+              "resolved_debt": { "type": "integer" },
+              "regressions": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "quality/getFreshnessEvidence": {
+      "description": "Retrieves the deterministic freshness score and evidence signals for a specific document.",
+      "request": {
+        "type": "object",
+        "required": ["path"],
+        "properties": {
+          "path": { "type": "string" }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["path", "score", "tier", "missing_citations", "code_modified_after_doc", "deleted_symbols", "reasons"],
+        "properties": {
+          "path": { "type": "string" },
+          "score": { "type": "number" },
+          "tier": { "type": "string", "enum": ["fresh", "potentially_stale", "stale"] },
+          "missing_citations": { "type": "array", "items": { "type": "string" } },
+          "code_modified_after_doc": { "type": "array", "items": { "type": "string" } },
+          "deleted_symbols": { "type": "array", "items": { "type": "string" } },
+          "canonical_contradiction": { "type": "string" },
+          "reasons": { "type": "array", "items": { "type": "string" } }
+        }
+      }
+    }
+  }
+}

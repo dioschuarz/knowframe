@@ -1,0 +1,39 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Materialized Frontmatter Schema",
+  "description": "JSON Schema validating the materialized structural metadata under the 'wiki' key in Markdown YAML frontmatter.",
+  "type": "object",
+  "properties": {
+    "wiki": {
+      "type": "object",
+      "required": ["fragments"],
+      "properties": {
+        "fragments": {
+          "type": "object",
+          "description": "Map from normalized heading anchor to fragment metrics",
+          "additionalProperties": {
+            "type": "object",
+            "required": ["tokens", "inbound", "outbound"],
+            "properties": {
+              "tokens": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Complete integer count of BPE tokens in this fragment"
+              },
+              "inbound": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Count of inbound references specifically targeting this fragment anchor"
+              },
+              "outbound": {
+                "type": "integer",
+                "minimum": 0,
+                "description": "Count of outbound references originating inside this fragment"
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+}
