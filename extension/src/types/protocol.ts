@@ -195,6 +195,12 @@ export interface WebviewInboundMessage {
   payload?: unknown;
 }
 
+export interface LoadingProgressPayload {
+  stage: 'initializing' | 'graph' | 'quality' | 'issues' | 'complete';
+  percent: number;
+  message: string;
+}
+
 export type WebviewOutboundType =
   | 'graphDataUpdate'
   | 'deltaUpdate'
@@ -203,6 +209,9 @@ export type WebviewOutboundType =
   | 'exclusionPreviewResult'
   | 'excludePathResult'
   | 'noiseSuggestions'
+  | 'loadingProgress'
+  | 'issuesReportUpdate'
+  | 'openSettingsDrawer'
   | 'error';
 
 export interface WebviewOutboundMessage {

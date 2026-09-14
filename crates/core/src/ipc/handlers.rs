@@ -48,6 +48,39 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 Ok(payload) => {
                     let mut st = state.write().await;
                     st.active_hub = payload.recommended_hub.clone();
+                    st.topology = GraphTopology::new();
+                    for node in &payload.nodes {
+                        let mut n = crate::model::NoteNode::new(node.id.clone(), node.file_path.clone(), node.label.clone());
+                        n.tags = node.tags.clone();
+                        n.tokens = node.tokens;
+                        n.status = node.status;
+                        n.color = node.color.clone();
+                        n.hop_distance = node.hop_distance;
+                        n.in_degree = node.in_degree;
+                        n.out_degree = node.out_degree;
+                        n.betweenness = node.betweenness;
+                        n.broken_links = node.broken_links;
+                        n.fragments = node.fragments.clone();
+                        st.topology.set_headings(
+                            node.id.clone(),
+                            node.fragments.iter().map(|f| f.heading.clone()).collect(),
+                        );
+                        st.topology.add_node(n);
+                    }
+                    for edge in &payload.edges {
+                        let mut e = crate::model::NoteEdge::new(
+                            edge.source.clone(),
+                            edge.target.clone(),
+                            edge.link_type,
+                            String::new(),
+                            edge.anchor.clone(),
+                            edge.line,
+                        );
+                        e.is_broken = edge.is_broken;
+                        e.target_fragment = edge.target_fragment.clone();
+                        e.resolution_status = edge.resolution_status;
+                        st.topology.add_edge(e);
+                    }
                     JsonRpcResponse::success(req.id, json!(payload))
                 }
                 Err(e) => JsonRpcResponse::error(req.id, -32000, format!("Scan failed: {}", e)),

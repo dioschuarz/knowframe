@@ -105,6 +105,8 @@ export class GraphPanelManager implements vscode.Disposable {
     }
   }
 
+  private currentLoadingProgress: { stage: string; percent: number; message: string } | null = null;
+
   public getCurrentScanResult(): ScanResultPayload | null {
     return this.currentScanResult;
   }
@@ -113,8 +115,24 @@ export class GraphPanelManager implements vscode.Disposable {
     this.ipcClient = client;
   }
 
+  public sendLoadingProgress(stage: string, percent: number, message: string): void {
+    this.currentLoadingProgress = { stage, percent, message };
+    this.panel.webview.postMessage({
+      type: 'loadingProgress',
+      payload: this.currentLoadingProgress,
+    });
+  }
+
+  public sendIssuesReport(issuesReport: unknown): void {
+    this.panel.webview.postMessage({
+      type: 'issuesReportUpdate',
+      payload: issuesReport,
+    });
+  }
+
   public updateData(scanResult: ScanResultPayload): void {
     this.currentScanResult = scanResult;
+    this.currentLoadingProgress = { stage: 'complete', percent: 100, message: 'Ready' };
     this.panel.webview.postMessage({
       type: 'graphDataUpdate',
       payload: {
@@ -140,6 +158,10 @@ export class GraphPanelManager implements vscode.Disposable {
         },
         recommendedHub: scanResult.recommended_hub,
       },
+    });
+    this.panel.webview.postMessage({
+      type: 'loadingProgress',
+      payload: { stage: 'complete', percent: 100, message: 'Ready' },
     });
   }
 
@@ -264,6 +286,13 @@ export class GraphPanelManager implements vscode.Disposable {
       case 'requestGraphData': {
         if (this.currentScanResult) {
           this.updateData(this.currentScanResult);
+        } else if (this.currentLoadingProgress) {
+          this.panel.webview.postMessage({
+            type: 'loadingProgress',
+            payload: this.currentLoadingProgress,
+          });
+        } else {
+          this.sendLoadingProgress('graph', 20, 'Scanning vault topology...');
         }
         break;
       }
@@ -405,8 +434,22 @@ export class GraphPanelManager implements vscode.Disposable {
   <div id="toolbar-container"></div>
   <div id="token-container"></div>
   <canvas id="graph-canvas"></canvas>
+  <div id="graph-loading-overlay" class="graph-loading-overlay">
+    <div class="loading-card">
+      <div class="loading-spinner"></div>
+      <div class="loading-title">LLM Wiki Engine</div>
+      <div class="loading-percent" id="loading-percent">0%</div>
+      <div class="loading-stage" id="loading-stage">Initializing knowledge engine...</div>
+      <div class="loading-bar-track">
+        <div class="loading-bar-fill" id="loading-bar-fill" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
   <div id="node-tooltip"></div>
   <div id="color-modal-container"></div>
+  <div id="inspector-container"></div>
+  <div id="settings-container"></div>
+  <div id="exclusion-modal-container"></div>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

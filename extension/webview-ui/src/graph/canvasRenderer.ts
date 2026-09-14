@@ -112,10 +112,10 @@ export class CanvasRenderer {
   }
 
   public setViewTransform(transform: { scale: number; offsetX: number; offsetY: number }): void {
-    if (transform && typeof transform.scale === 'number') {
-      this.scale = transform.scale;
-      this.offsetX = transform.offsetX || 0;
-      this.offsetY = transform.offsetY || 0;
+    if (transform && typeof transform.scale === 'number' && isFinite(transform.scale) && transform.scale > 0.05) {
+      this.scale = Math.max(0.1, Math.min(5, transform.scale));
+      this.offsetX = isFinite(transform.offsetX) ? transform.offsetX : 0;
+      this.offsetY = isFinite(transform.offsetY) ? transform.offsetY : 0;
     }
   }
 
@@ -361,8 +361,12 @@ export class CanvasRenderer {
   }
 
   public draw(): void {
-    const width = this.canvas.clientWidth || 800;
-    const height = this.canvas.clientHeight || 600;
+    const width = this.canvas.clientWidth || window.innerWidth || 800;
+    const height = this.canvas.clientHeight || window.innerHeight || 600;
+
+    if (this.canvas.width !== width * this.dpr || this.canvas.height !== height * this.dpr) {
+      this.resize(width, height);
+    }
 
     this.ctx.clearRect(0, 0, width, height);
 
@@ -385,7 +389,9 @@ export class CanvasRenderer {
       const srcNode = nodeMap.get(srcId);
       const tgtNode = tgtId ? nodeMap.get(tgtId) : undefined;
 
-      if (!srcNode || srcNode.x === undefined || srcNode.y === undefined) continue;
+      if (!srcNode || typeof srcNode.x !== 'number' || !isFinite(srcNode.x) || typeof srcNode.y !== 'number' || !isFinite(srcNode.y)) {
+        continue;
+      }
       if (!this.showExcluded && (srcNode.status === 'excluded' || tgtNode?.status === 'excluded')) continue;
 
       const srcMatched = !isSearchActive || this.matchedNodeIds!.has(srcId);
@@ -394,7 +400,7 @@ export class CanvasRenderer {
       this.ctx.beginPath();
       this.ctx.moveTo(srcNode.x, srcNode.y);
 
-      if (tgtNode && tgtNode.x !== undefined && tgtNode.y !== undefined) {
+      if (tgtNode && typeof tgtNode.x === 'number' && isFinite(tgtNode.x) && typeof tgtNode.y === 'number' && isFinite(tgtNode.y)) {
         this.ctx.lineTo(tgtNode.x, tgtNode.y);
       } else {
         // Floating broken edge pointing slightly outward
@@ -431,7 +437,9 @@ export class CanvasRenderer {
 
     // 2. Draw Nodes (Pass 1: circles & rings)
     for (const node of this.nodes) {
-      if (node.x === undefined || node.y === undefined) continue;
+      if (!node || typeof node.x !== 'number' || !isFinite(node.x) || typeof node.y !== 'number' || !isFinite(node.y)) {
+        continue;
+      }
 
       const r = this.getNodeRadius(node);
 

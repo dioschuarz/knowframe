@@ -11,6 +11,9 @@ export function registerShowGraphCommand(
   return vscode.commands.registerCommand('llmWiki.showKnowledgeGraph', () => {
     const ipc = getIpcClient();
     const scan = getScanResult();
-    GraphPanelManager.createOrShow(context.extensionUri, ipc, scan);
+    const panel = GraphPanelManager.createOrShow(context.extensionUri, ipc, scan);
+    if (!scan) {
+      panel.sendLoadingProgress('graph', 25, 'Scanning vault topology...');
+    }
   });
 }

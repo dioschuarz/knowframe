@@ -11,6 +11,17 @@
   <div id="toolbar-container"></div>
   <div id="token-container"></div>
   <canvas id="graph-canvas"></canvas>
+  <div id="graph-loading-overlay" class="graph-loading-overlay">
+    <div class="loading-card">
+      <div class="loading-spinner"></div>
+      <div class="loading-title">LLM Wiki Engine</div>
+      <div class="loading-percent" id="loading-percent">0%</div>
+      <div class="loading-stage" id="loading-stage">Initializing knowledge engine...</div>
+      <div class="loading-bar-track">
+        <div class="loading-bar-fill" id="loading-bar-fill" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
   <div id="node-tooltip"></div>
   <div id="color-modal-container"></div>
   <div id="inspector-container"></div>

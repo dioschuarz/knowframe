@@ -100,7 +100,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const rootPath = workspaceFolders[0].uri.fsPath;
 
     try {
-      statusBarItem.text = '$(sync~spin) LLM Wiki: Starting Daemon';
+      statusBarItem.text = '$(sync~spin) Wiki: 10% Starting Daemon';
       const port = await processManager.start(rootPath);
       const token = secretManager.getToken() || '';
 
@@ -112,17 +112,55 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         GraphPanelManager.currentPanel.setIpcClient(ipcClient);
       }
 
-      statusBarItem.text = `$(sync~spin) LLM Wiki: Scanning Vault...`;
-      outputChannel.appendLine(`[EXTENSION] Sidecar connected on port ${port}. Requesting initial workspace/scan...`);
-
       admissionManager = new AdmissionManager(ipcClient);
 
-      // Initial scan (120s timeout for large vaults)
-      latestScanResult = await ipcClient.sendRequest<ScanResultPayload>('workspace/scan', undefined, 120000);
-      outputChannel.appendLine(`[EXTENSION] Scan completed. Nodes: ${latestScanResult.nodes.length}, Edges: ${latestScanResult.edges.length}`);
-      onScanResultUpdated(latestScanResult);
-      await refreshQualityScore();
-      outputChannel.appendLine(`[EXTENSION] Knowledge graph and status bar ready.`);
+      // Phase 1: Fast Graph Topology Scan (PRIORITY 1 - Render Graph First and Quickly!)
+      statusBarItem.text = '$(sync~spin) Wiki: 30% Scanning Graph...';
+      GraphPanelManager.currentPanel?.sendLoadingProgress('graph', 30, 'Scanning graph topology...');
+      outputChannel.appendLine(`[EXTENSION] Sidecar connected on port ${port}. Requesting fast workspace/scan...`);
+
+      const scanStart = Date.now();
+      latestScanResult = await ipcClient.sendRequest<ScanResultPayload>('workspace/scan', undefined, 30000);
+      outputChannel.appendLine(`[EXTENSION] Fast scan completed in ${Date.now() - scanStart}ms. Nodes: ${latestScanResult.nodes.length}, Edges: ${latestScanResult.edges.length}`);
+
+      // Render Graph and Sidebar immediately
+      updateStatusBarWithBudget(latestScanResult, latestQualityScore);
+      if (GraphPanelManager.currentPanel) {
+        GraphPanelManager.currentPanel.updateData(latestScanResult);
+      }
+      sidebarProvider?.updateData(latestScanResult, latestQualityScore);
+
+      // Phase 2 & 3: Background Staged Quality Evaluation & Issues Auditing
+      (async () => {
+        try {
+          statusBarItem.text = '$(sync~spin) Wiki: 60% Checking Quality...';
+          GraphPanelManager.currentPanel?.sendLoadingProgress('quality', 60, 'Evaluating 5-pillar health score...');
+
+          latestQualityScore = await admissionManager!.getQualityScore();
+          outputChannel.appendLine(`[EXTENSION] Quality score updated: ${latestQualityScore.overall_score.toFixed(1)}/100`);
+          sidebarProvider?.updateQuality(latestQualityScore);
+          updateStatusBarWithBudget(latestScanResult, latestQualityScore);
+
+          statusBarItem.text = '$(sync~spin) Wiki: 85% Auditing Issues...';
+          GraphPanelManager.currentPanel?.sendLoadingProgress('issues', 85, 'Gathering diagnostic issues...');
+
+          if (GraphPanelManager.currentPanel && ipcClient) {
+            try {
+              const issuesReport = await ipcClient.sendRequest('workspace/getIssues', {});
+              GraphPanelManager.currentPanel.sendIssuesReport(issuesReport);
+            } catch (err: any) {
+              outputChannel.appendLine(`[EXTENSION] Non-fatal issues fetch warning: ${err.message}`);
+            }
+          }
+
+          GraphPanelManager.currentPanel?.sendLoadingProgress('complete', 100, 'Ready');
+          updateStatusBarWithBudget(latestScanResult, latestQualityScore);
+          outputChannel.appendLine('[EXTENSION] Background knowledge pipeline fully ready.');
+        } catch (err: any) {
+          outputChannel.appendLine(`[EXTENSION] Quality check warning: ${err.message}`);
+          updateStatusBarWithBudget(latestScanResult, latestQualityScore);
+        }
+      })();
     } catch (err: any) {
       outputChannel.appendLine(`[EXTENSION ERROR] Sidecar initialization failed: ${err.message}`);
       statusBarItem.text = '$(error) LLM Wiki: Offline';

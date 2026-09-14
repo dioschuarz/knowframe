@@ -1,14 +1,21 @@
 //! Exact BPE token counter using tiktoken-rs (cl100k_base) and token summary calculator.
 
 use crate::model::{NoteNode, TokenSummary};
-use tiktoken_rs::cl100k_base;
+use std::sync::OnceLock;
+use tiktoken_rs::{cl100k_base, CoreBPE};
+
+static BPE_TOKENIZER: OnceLock<CoreBPE> = OnceLock::new();
+
+fn get_bpe_tokenizer() -> &'static CoreBPE {
+    BPE_TOKENIZER.get_or_init(|| cl100k_base().expect("failed to initialize cl100k_base tokenizer"))
+}
 
 /// Computes the exact number of BPE tokens in a markdown string using cl100k_base.
 pub fn count_bpe_tokens(content: &str) -> Result<u32, Box<dyn std::error::Error + Send + Sync>> {
     if content.is_empty() {
         return Ok(0);
     }
-    let bpe = cl100k_base()?;
+    let bpe = get_bpe_tokenizer();
     let tokens = bpe.encode_with_special_tokens(content);
     Ok(tokens.len() as u32)
 }

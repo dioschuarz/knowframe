@@ -404,8 +404,26 @@ if (toolbarController.setShowExcluded && savedState?.showExcluded !== undefined)
   toolbarController.setShowExcluded(savedState.showExcluded);
 }
 
+const loadingOverlay = document.getElementById('graph-loading-overlay') as HTMLElement | null;
+const loadingPercent = document.getElementById('loading-percent') as HTMLElement | null;
+const loadingStage = document.getElementById('loading-stage') as HTMLElement | null;
+const loadingBarFill = document.getElementById('loading-bar-fill') as HTMLElement | null;
+
+function updateLoadingProgress(percent: number, stage: string): void {
+  if (loadingPercent) loadingPercent.textContent = `${Math.round(percent)}%`;
+  if (loadingStage) loadingStage.textContent = stage;
+  if (loadingBarFill) loadingBarFill.style.width = `${Math.round(percent)}%`;
+}
+
+function hideLoadingOverlay(): void {
+  if (loadingOverlay) {
+    loadingOverlay.classList.add('hidden');
+  }
+}
+
 // Listen for updates from VS Code Extension Host
 rpc.on('graphDataUpdate', (data: any) => {
+  const isFirstLoad = nodes.length === 0;
   rawNodes = data.nodes || [];
   rawEdges = data.edges || [];
   if (data.color_groups && data.color_groups.length > 0) {
@@ -428,7 +446,15 @@ rpc.on('graphDataUpdate', (data: any) => {
   // Apply cluster color rules, or ensure default grey for unassigned nodes
   applyClientSideColorGroups(rawNodes, colorGroups);
 
+  hideLoadingOverlay();
   applyFocusFilter(0.4);
+
+  if (isFirstLoad && rawNodes.length > 0 && !savedState?.viewTransform) {
+    const hub = rawNodes.find((n) => n.hopDistance === 0) || rawNodes[0];
+    if (hub) {
+      setTimeout(() => renderer.centerOnNode(hub.id), 120);
+    }
+  }
 
   const brokenLinksCount = rawEdges.filter((e) => e.isBroken).length;
   const connectedCount = rawNodes.filter((n) => n.hopDistance >= 0).length;
@@ -463,6 +489,17 @@ if (savedState && savedState.tokenSummary) {
 if (savedState?.showExcluded !== undefined) {
   renderer.setShowExcluded(savedState.showExcluded);
 }
+
+rpc.on('loadingProgress', (data: any) => {
+  if (data) {
+    const p = typeof data.percent === 'number' ? data.percent : 0;
+    const msg = data.message || 'Loading...';
+    updateLoadingProgress(p, msg);
+    if (data.stage === 'complete' || p >= 100) {
+      setTimeout(hideLoadingOverlay, 300);
+    }
+  }
+});
 
 rpc.on('exclusionPreviewResult', (data: any) => {
   const matchingCount = data?.matching_count ?? data?.matchingCount ?? 0;
