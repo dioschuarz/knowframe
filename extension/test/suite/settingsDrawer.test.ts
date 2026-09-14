@@ -167,5 +167,65 @@ suite('SettingsDrawer Test Suite', () => {
     const enteringHtml = renderSettingsDrawerHtml(sampleProps, true);
     assert.ok(enteringHtml.includes('drawer-entering'), 'Must include drawer-entering class when entering');
   });
+
+  test('renders Structural Evolution tab with Orientation Selector and synchronized Pillar 2 Structural findings', () => {
+    const htmlWithDebt = renderSettingsDrawerHtml({
+      ...sampleProps,
+      activeTab: 'evolution',
+      activeOrientation: 'ai_oriented',
+      issuesReport: {
+        timestamp: '2026-09-14T00:00:00Z',
+        overall_score: 78,
+        integrity_score: 95,
+        consistency_score: 90,
+        discoverability_score: 85,
+        freshness_score: 80,
+        legacy_debt_count: 1,
+        regressions_count: 0,
+        issues: [
+          {
+            id: 'struct:notes/giant.md',
+            pillar: 'structure',
+            category: 'oversized_document',
+            file_path: 'notes/giant.md',
+            deduction_points: 10,
+            weight: 1.0,
+            description: 'Document exceeds 50,000 tokens without fragment addressing',
+            remediation_hint: 'Decompose or add section fragment anchors',
+          },
+        ],
+      },
+    });
+
+    // 1. Must render Orientation Selector cards
+    assert.ok(htmlWithDebt.includes('Documentation Orientation'), 'Must display Documentation Orientation heading');
+    assert.ok(htmlWithDebt.includes('AI-Oriented'), 'Must render AI-Oriented mode card');
+    assert.ok(htmlWithDebt.includes('Human-Oriented'), 'Must render Human-Oriented mode card');
+    assert.ok(htmlWithDebt.includes('Balanced'), 'Must render Balanced mode card');
+    assert.ok(htmlWithDebt.includes('Custom (Advanced)'), 'Must render Custom mode card');
+
+    // 2. Must render Pillar 2 Structural findings matching Diagnostics
+    assert.ok(htmlWithDebt.includes('Pillar 2 Structural Findings (1)'), 'Must render Pillar 2 Structural Findings card');
+    assert.ok(htmlWithDebt.includes('notes/giant.md'), 'Must contain path of structural finding');
+    assert.ok(htmlWithDebt.includes('Decompose or add section fragment anchors'), 'Must contain remediation hint');
+
+    // 3. Must NOT say "Vault Structure is Balanced & Clean" when structure debt exists
+    assert.ok(!htmlWithDebt.includes('Vault Structure is Balanced & Clean'), 'Must NOT report vault is balanced when structure debt exists');
+    assert.ok(htmlWithDebt.includes('Pillar 2 Structural Debt Active (1)'), 'Must report active structure debt notice');
+  });
+
+  test('renders Custom Settings knobs and sliders when custom drawer is open or mode is custom', () => {
+    const htmlCustom = renderSettingsDrawerHtml({
+      ...sampleProps,
+      activeTab: 'evolution',
+      activeOrientation: 'custom',
+      isCustomDrawerOpen: true,
+    });
+
+    assert.ok(htmlCustom.includes('Custom KOS Profile Configuration'), 'Must render Custom KOS Profile heading');
+    assert.ok(htmlCustom.includes('AI Discoverability'), 'Must render Tier 1 knobs');
+    assert.ok(htmlCustom.includes('Cohesion Threshold'), 'Must render Tier 2 sliders');
+    assert.ok(htmlCustom.includes('Save &amp; Compile Profile') || htmlCustom.includes('Save & Compile Profile'), 'Must render Save button');
+  });
 });
 

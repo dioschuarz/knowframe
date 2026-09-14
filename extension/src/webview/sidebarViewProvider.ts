@@ -3,12 +3,14 @@ import * as path from 'path';
 import { generateNonce, buildCspPolicy } from './cspHelper';
 import { ScanResultPayload } from '../types/protocol';
 import { KnowledgeQualityScore } from '../types/admission';
+import { DocumentationOrientation } from '../types/evolution';
 
 export class SidebarViewProvider implements vscode.WebviewViewProvider {
   public static readonly viewType = 'llmWiki.sidebarView';
   private _view?: vscode.WebviewView;
   private currentScanResult: ScanResultPayload | null = null;
   private currentQualityScore: KnowledgeQualityScore | null = null;
+  private currentOrientation: DocumentationOrientation = 'ai_oriented';
 
   constructor(
     private readonly extensionUri: vscode.Uri,
@@ -73,11 +75,25 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
             this.openDocument(data.hubPath);
           }
           break;
+        case 'openEvolution':
+        case 'reviewEvolution':
+          vscode.commands.executeCommand('llmWiki.reviewEvolution');
+          break;
       }
     });
 
     if (this.currentScanResult) {
       this.updateData(this.currentScanResult);
+    }
+  }
+
+  public updateOrientation(orientation: DocumentationOrientation): void {
+    this.currentOrientation = orientation;
+    if (this._view) {
+      this._view.webview.postMessage({
+        type: 'orientationUpdate',
+        payload: orientation,
+      });
     }
   }
 
@@ -719,6 +735,22 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       </div>
     </div>
 
+    <!-- Pillar 3: Evolution Strategy & Orientation -->
+    <div class="dashboard-pillar pillar-evolution-strategy" id="pillar-evolution">
+      <div class="pillar-title">EVOLUTION STRATEGY</div>
+      <div class="hub-info-row">
+        <div class="hub-details">
+          <span class="hub-icon" id="evolution-mode-icon">🤖</span>
+          <span class="hub-path-link" id="evolution-mode-badge" style="cursor: pointer;" title="Active Documentation Evolution Orientation - Click to configure">AI-Oriented (3k)</span>
+        </div>
+        <button class="dash-action-link" id="dash-btn-configure-evolution">Configure</button>
+      </div>
+      <div class="sync-status-row">
+        <span class="sync-indicator-dot" id="evolution-indicator-dot" style="background: #38bdf8;"></span>
+        <span class="sync-status-text" id="evolution-status-text">KOS: Section Addressing</span>
+      </div>
+    </div>
+
 
     <div class="section-title collapsible-header collapsed" id="top-notes-header" title="Toggle collapse">
       <span>Top Connected Notes</span>
@@ -763,6 +795,12 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     document.getElementById('dash-btn-refresh-quality')?.addEventListener('click', () => {
       vscode.postMessage({ type: 'refreshQuality' });
     });
+    document.getElementById('dash-btn-configure-evolution')?.addEventListener('click', () => {
+      vscode.postMessage({ type: 'openEvolution' });
+    });
+    document.getElementById('evolution-mode-badge')?.addEventListener('click', () => {
+      vscode.postMessage({ type: 'openEvolution' });
+    });
 
     let isTopNotesCollapsed = true;
     const topNotesHeader = document.getElementById('top-notes-header');
@@ -802,6 +840,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     if (currentQuality) {
       renderQuality(currentQuality);
     }
+    renderOrientation('${this.currentOrientation}');
 
     window.addEventListener('message', (event) => {
       const msg = event.data;
@@ -815,8 +854,45 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       } else if (msg.type === 'qualityUpdate') {
         currentQuality = msg.payload;
         renderQuality(currentQuality);
+      } else if (msg.type === 'orientationUpdate') {
+        renderOrientation(msg.payload);
       }
     });
+
+    function renderOrientation(orientation) {
+      const iconEl = document.getElementById('evolution-mode-icon');
+      const badgeEl = document.getElementById('evolution-mode-badge');
+      const statusEl = document.getElementById('evolution-status-text');
+      const dotEl = document.getElementById('evolution-indicator-dot');
+      if (!badgeEl) return;
+
+      switch (orientation) {
+        case 'ai_oriented':
+          if (iconEl) iconEl.textContent = '🤖';
+          badgeEl.textContent = 'AI-Oriented (3k)';
+          if (statusEl) statusEl.textContent = 'KOS: Section Addressing';
+          if (dotEl) dotEl.style.background = '#38bdf8';
+          break;
+        case 'human_oriented':
+          if (iconEl) iconEl.textContent = '👤';
+          badgeEl.textContent = 'Human-Oriented (8k)';
+          if (statusEl) statusEl.textContent = 'KOS: Preserve Narrative';
+          if (dotEl) dotEl.style.background = '#10b981';
+          break;
+        case 'balanced':
+          if (iconEl) iconEl.textContent = '⚖️';
+          badgeEl.textContent = 'Balanced (5k)';
+          if (statusEl) statusEl.textContent = 'KOS: Hybrid Balance';
+          if (dotEl) dotEl.style.background = '#f59e0b';
+          break;
+        case 'custom':
+          if (iconEl) iconEl.textContent = '⚙️';
+          badgeEl.textContent = 'Custom (Advanced)';
+          if (statusEl) statusEl.textContent = 'KOS: User-Defined Profile';
+          if (dotEl) dotEl.style.background = '#a855f7';
+          break;
+      }
+    }
 
     function formatCompactNumber(n) {
       if (n == null || isNaN(n) || n <= 0) return '0';

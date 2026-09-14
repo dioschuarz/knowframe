@@ -19,16 +19,27 @@ pub struct AppState {
     pub topology: GraphTopology,
     pub config: ContextVaultConfig,
     pub active_hub: Option<String>,
+    pub cached_plans: std::collections::HashMap<String, crate::evolution::TransformationPlan>,
 }
 
 impl AppState {
     pub fn new(workspace_root: PathBuf) -> Self {
+        let config_path = workspace_root.join(".context-vault.yaml");
+        let config = ContextVaultConfig::load_from_file(&config_path).unwrap_or_default();
         Self {
             workspace_root,
             topology: GraphTopology::new(),
-            config: ContextVaultConfig::default(),
+            config,
             active_hub: None,
+            cached_plans: std::collections::HashMap::new(),
         }
+    }
+
+    pub fn get_active_profile(&self) -> crate::evolution::OptimizationProfile {
+        crate::evolution::EvolutionEngine::compile_active_profile(
+            self.config.get_orientation(),
+            self.config.custom_profile.as_ref(),
+        )
     }
 }
 
@@ -712,6 +723,294 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
 
             JsonRpcResponse::success(req.id, json!(five_pillar))
         }
+        "profile/getOrientation" => {
+            let st = state.read().await;
+            let orientation = st.config.get_orientation();
+            let profile = st.get_active_profile();
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "orientation": orientation,
+                    "profile": profile,
+                }),
+            )
+        }
+        "profile/setOrientation" => {
+            let orientation = match req.params.as_ref().and_then(|p| {
+                p.get("orientation").and_then(|v| {
+                    serde_json::from_value::<crate::evolution::DocumentationOrientation>(v.clone()).ok()
+                })
+            }) {
+                Some(o) => o,
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32602,
+                        "Invalid or missing 'orientation' parameter",
+                    )
+                }
+            };
+            let mut st = state.write().await;
+            st.config.orientation = Some(orientation);
+            let config_path = st.workspace_root.join(".context-vault.yaml");
+            let _ = st.config.save_to_file(&config_path);
+            let profile = st.get_active_profile();
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "success": true,
+                    "orientation": orientation,
+                    "profile": profile,
+                }),
+            )
+        }
+        "profile/getCustomConfig" => {
+            let st = state.read().await;
+            let custom = st.config.custom_profile.clone().unwrap_or_default();
+            let tier1 = custom.tier1.unwrap_or_default();
+            let tier2 = custom.tier2.unwrap_or_else(|| {
+                let compiler = crate::evolution::ProfileCompiler::new();
+                compiler.map_tier1_to_tier2(&tier1)
+            });
+            let constraints = if custom.constraints.is_empty() {
+                crate::evolution::ConflictDetector::builtin_constraints()
+            } else {
+                custom.constraints
+            };
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "tier1": tier1,
+                    "tier2": tier2,
+                    "constraints": constraints,
+                }),
+            )
+        }
+        "profile/updateCustomConfig" => {
+            let params = match req.params {
+                Some(p) => p,
+                None => {
+                    return JsonRpcResponse::error(req.id, -32602, "Missing request parameters")
+                }
+            };
+            let tier1 = params.get("tier1").and_then(|v| {
+                serde_json::from_value::<crate::evolution::Tier1Objectives>(v.clone()).ok()
+            });
+            let tier2 = params.get("tier2").and_then(|v| {
+                serde_json::from_value::<crate::evolution::Tier2Parameters>(v.clone()).ok()
+            });
+            let constraints = params
+                .get("constraints")
+                .and_then(|v| {
+                    serde_json::from_value::<Vec<crate::evolution::ConstraintRule>>(v.clone()).ok()
+                })
+                .unwrap_or_default();
+
+            let mut st = state.write().await;
+            st.config.custom_profile = Some(crate::config::CustomProfileConfig {
+                tier1,
+                tier2,
+                constraints,
+            });
+            let config_path = st.workspace_root.join(".context-vault.yaml");
+            let _ = st.config.save_to_file(&config_path);
+            let profile = st.get_active_profile();
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "success": true,
+                    "profile": profile,
+                }),
+            )
+        }
+        "profile/validateConstraints" => {
+            let constraints = match req.params.as_ref().and_then(|p| {
+                p.get("constraints").and_then(|v| {
+                    serde_json::from_value::<Vec<crate::evolution::ConstraintRule>>(v.clone()).ok()
+                })
+            }) {
+                Some(c) => c,
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32602,
+                        "Missing or invalid 'constraints' parameter",
+                    )
+                }
+            };
+            let detector = crate::evolution::ConflictDetector::new();
+            let (is_valid, conflicts) = detector.validate(&constraints);
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "is_valid": is_valid,
+                    "conflicts": conflicts,
+                }),
+            )
+        }
+        "analytics/getStructuralProblems" => {
+            let file_path = req.params.as_ref().and_then(|p| {
+                p.get("file_path").and_then(|v| v.as_str().map(|s| s.to_string()))
+            });
+            let st = state.read().await;
+            let target = st.get_active_profile().fragment_size_target;
+
+            let nodes: Vec<crate::model::NoteNode> = if let Some(ref fp) = file_path {
+                st.topology
+                    .nodes
+                    .values()
+                    .filter(|n| n.file_path == *fp || n.id == *fp)
+                    .cloned()
+                    .collect()
+            } else {
+                st.topology.nodes.values().cloned().collect()
+            };
+
+            let signatures = crate::evolution::detect_all_signatures(&nodes, target);
+            JsonRpcResponse::success(req.id, json!({ "signatures": signatures }))
+        }
+        "recommendation/getRecommendations" => {
+            let signature_id = req.params.as_ref().and_then(|p| {
+                p.get("signature_id").and_then(|v| v.as_str().map(|s| s.to_string()))
+            });
+            let st = state.read().await;
+            let profile = st.get_active_profile();
+            let target = profile.fragment_size_target;
+
+            let nodes: Vec<crate::model::NoteNode> = st.topology.nodes.values().cloned().collect();
+            let signatures = crate::evolution::detect_all_signatures(&nodes, target);
+
+            let mut recommendations = Vec::new();
+            for sig in signatures {
+                if let Some(ref target_id) = signature_id {
+                    if sig.signature_id != *target_id {
+                        continue;
+                    }
+                }
+                let recs = crate::evolution::evaluate_recommendations_for_signature(&sig, &profile);
+                recommendations.extend(recs);
+            }
+
+            JsonRpcResponse::success(req.id, json!({ "recommendations": recommendations }))
+        }
+        "transformation/generatePlan" => {
+            let recommendation_id = match req.params.as_ref().and_then(|p| {
+                p.get("recommendation_id").and_then(|v| v.as_str().map(|s| s.to_string()))
+            }) {
+                Some(id) => id,
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32602,
+                        "Missing 'recommendation_id' parameter",
+                    )
+                }
+            };
+            let st = state.read().await;
+            let profile = st.get_active_profile();
+            let target = profile.fragment_size_target;
+
+            let nodes: Vec<crate::model::NoteNode> = st.topology.nodes.values().cloned().collect();
+            let signatures = crate::evolution::detect_all_signatures(&nodes, target);
+
+            let mut found = None;
+            for sig in &signatures {
+                let recs = crate::evolution::evaluate_recommendations_for_signature(sig, &profile);
+                for rec in recs {
+                    if rec.recommendation_id == recommendation_id {
+                        let node = nodes
+                            .iter()
+                            .find(|n| n.file_path == sig.document_path || n.id == sig.document_path)
+                            .cloned()
+                            .unwrap_or_else(|| {
+                                crate::model::NoteNode::new(
+                                    sig.document_path.clone(),
+                                    st.workspace_root.join(&sig.document_path).to_string_lossy().to_string(),
+                                    "Document",
+                                )
+                            });
+                        found = Some((rec, node));
+                        break;
+                    }
+                }
+                if found.is_some() {
+                    break;
+                }
+            }
+
+            let plan = match found {
+                Some((rec, node)) => {
+                    crate::evolution::TransformationEngine::build_plan(&rec, &node, &st.workspace_root)
+                }
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32004,
+                        format!("Recommendation '{}' not found", recommendation_id),
+                    );
+                }
+            };
+            drop(st);
+
+            let mut st_write = state.write().await;
+            st_write
+                .cached_plans
+                .insert(plan.plan_id.clone(), plan.clone());
+
+            JsonRpcResponse::success(req.id, json!(plan))
+        }
+        "transformation/applyPlan" => {
+            let plan_id = match req.params.as_ref().and_then(|p| {
+                p.get("plan_id").and_then(|v| v.as_str().map(|s| s.to_string()))
+            }) {
+                Some(id) => id,
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing 'plan_id' parameter"),
+            };
+
+            let st = state.read().await;
+            let plan_opt = if let Some(plan_val) = req.params.as_ref().and_then(|p| p.get("plan")) {
+                serde_json::from_value::<crate::evolution::TransformationPlan>(plan_val.clone()).ok()
+            } else {
+                st.cached_plans.get(&plan_id).cloned()
+            };
+
+            let plan = match plan_opt {
+                Some(p) => p,
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32004,
+                        format!("Transformation plan '{}' not found", plan_id),
+                    )
+                }
+            };
+            let root = st.workspace_root.clone();
+            drop(st);
+
+            // Invariant XVI: Require approval must be satisfied
+            if let Err(e) = crate::evolution::TransformationEngine::verify_invariant_xvi(&plan) {
+                return JsonRpcResponse::error(
+                    req.id,
+                    -32000,
+                    format!("Invariant XVI approval gate check failed: {}", e),
+                );
+            }
+
+            match crate::evolution::TransformationEngine::apply_plan_atomic(&plan, &root) {
+                Ok(actual_delta) => JsonRpcResponse::success(
+                    req.id,
+                    json!({
+                        "success": true,
+                        "actual_delta": actual_delta,
+                    }),
+                ),
+                Err(e) => JsonRpcResponse::error(
+                    req.id,
+                    -32000,
+                    format!("Atomic transformation failed and rolled back: {}", e),
+                ),
+            }
+        }
         _ => JsonRpcResponse::error(req.id, -32601, format!("Method not found: {}", req.method)),
     }
 }
@@ -748,3 +1047,336 @@ pub async fn handle_notification(state: &Arc<RwLock<AppState>>, notif: JsonRpcNo
         }
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[tokio::test]
+    async fn test_ipc_profile_orientation_methods() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let state = Arc::new(RwLock::new(AppState::new(temp_dir.path().to_path_buf())));
+
+        // 1. Get initial orientation (default: AiOriented)
+        let req = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(1),
+            method: "profile/getOrientation".to_string(),
+            params: None,
+        };
+        let res = handle_request(&state, req).await;
+        assert!(res.error.is_none());
+        let result = res.result.unwrap();
+        assert_eq!(result["orientation"], "ai_oriented");
+        assert_eq!(result["profile"]["fragment_size_target"], 3000);
+
+        // 2. Set orientation to balanced
+        let req2 = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(2),
+            method: "profile/setOrientation".to_string(),
+            params: Some(json!({ "orientation": "balanced" })),
+        };
+        let res2 = handle_request(&state, req2).await;
+        assert!(res2.error.is_none());
+        let result2 = res2.result.unwrap();
+        assert_eq!(result2["success"], true);
+        assert_eq!(result2["orientation"], "balanced");
+        assert_eq!(result2["profile"]["fragment_size_target"], 5000);
+
+        // 3. Confirm getOrientation returns balanced
+        let req3 = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(3),
+            method: "profile/getOrientation".to_string(),
+            params: None,
+        };
+        let res3 = handle_request(&state, req3).await;
+        assert_eq!(res3.result.unwrap()["orientation"], "balanced");
+
+        // 4. Set orientation to human_oriented
+        let req4 = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(4),
+            method: "profile/setOrientation".to_string(),
+            params: Some(json!({ "orientation": "human_oriented" })),
+        };
+        let res4 = handle_request(&state, req4).await;
+        let result4 = res4.result.unwrap();
+        assert_eq!(result4["orientation"], "human_oriented");
+        assert_eq!(result4["profile"]["fragment_size_target"], 8000);
+    }
+
+    #[tokio::test]
+    async fn test_ipc_custom_config_and_validation_handlers() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let state = Arc::new(RwLock::new(AppState::new(temp_dir.path().to_path_buf())));
+
+        // 1. Get initial custom config
+        let req1 = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(1),
+            method: "profile/getCustomConfig".to_string(),
+            params: None,
+        };
+        let res1 = handle_request(&state, req1).await;
+        assert!(res1.error.is_none());
+        let result1 = res1.result.unwrap();
+        assert!(result1.get("tier1").is_some());
+        assert!(result1.get("tier2").is_some());
+        assert!(result1.get("constraints").is_some());
+
+        // 2. Validate valid constraints
+        let builtins = crate::evolution::ConflictDetector::builtin_constraints();
+        let req2 = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(2),
+            method: "profile/validateConstraints".to_string(),
+            params: Some(json!({ "constraints": builtins })),
+        };
+        let res2 = handle_request(&state, req2).await;
+        assert!(res2.error.is_none());
+        let result2 = res2.result.unwrap();
+        assert_eq!(result2["is_valid"], true);
+        assert_eq!(result2["conflicts"].as_array().unwrap().len(), 0);
+
+        // 3. Validate contradictory constraints
+        let mut contradictory = builtins.clone();
+        contradictory.push(crate::evolution::ConstraintRule {
+            id: "contradict_decomp".to_string(),
+            level: crate::evolution::ConstraintLevel::HardConstraint,
+            rule_key: crate::evolution::RULE_FORCE_DECOMPOSITION.to_string(),
+            description: "Force decomposition".to_string(),
+        });
+        let req3 = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(3),
+            method: "profile/validateConstraints".to_string(),
+            params: Some(json!({ "constraints": contradictory })),
+        };
+        let res3 = handle_request(&state, req3).await;
+        let result3 = res3.result.unwrap();
+        assert_eq!(result3["is_valid"], false);
+        assert!(!result3["conflicts"].as_array().unwrap().is_empty());
+
+        // 4. Update custom config
+        let req4 = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(4),
+            method: "profile/updateCustomConfig".to_string(),
+            params: Some(json!({
+                "tier1": {
+                    "ai_discoverability": "high",
+                    "context_efficiency": "medium",
+                    "human_readability": "high",
+                    "knowledge_reuse": "medium",
+                    "narrative_coherence": "high",
+                    "maintenance_simplicity": "high"
+                },
+                "tier2": {
+                    "cohesion_threshold": 0.7,
+                    "semantic_diversity_threshold": 0.4,
+                    "reference_concentration_threshold": 0.6,
+                    "fragment_size_target": 4000,
+                    "max_trace_depth": 4,
+                    "candidate_expansion_factor": 3,
+                    "max_context_surface_tokens": 15000,
+                    "split_sensitivity": 0.5,
+                    "canonical_ownership_sensitivity": 0.7,
+                    "duplicate_tolerance": 0.1,
+                    "fragmentation_tolerance": 0.15
+                },
+                "constraints": builtins
+            })),
+        };
+        let res4 = handle_request(&state, req4).await;
+        assert!(res4.error.is_none());
+        let result4 = res4.result.unwrap();
+        assert_eq!(result4["success"], true);
+        assert!(result4.get("profile").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_ipc_get_structural_problems() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let state = Arc::new(RwLock::new(AppState::new(temp_dir.path().to_path_buf())));
+
+        // Insert an implicit router node into state topology
+        {
+            let mut st = state.write().await;
+            let mut router = crate::model::NoteNode::new("router.md", "/path/router.md", "Router");
+            router.out_degree = 25;
+            router.tokens = 300;
+            router.betweenness = 0.50;
+            st.topology.add_node(router);
+        }
+
+        let req = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(1),
+            method: "analytics/getStructuralProblems".to_string(),
+            params: None,
+        };
+        let res = handle_request(&state, req).await;
+        assert!(res.error.is_none());
+        let result = res.result.unwrap();
+        let signatures = result["signatures"].as_array().expect("signatures is an array");
+        assert!(!signatures.is_empty(), "Should detect the implicit router signature");
+        assert_eq!(signatures[0]["problem_type"], "implicit_router");
+    }
+
+    #[tokio::test]
+    async fn test_ipc_get_recommendations() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let state = Arc::new(RwLock::new(AppState::new(temp_dir.path().to_path_buf())));
+
+        // Insert a God Document node into state topology
+        {
+            let mut st = state.write().await;
+            let mut god = crate::model::NoteNode::new("god.md", "/path/god.md", "God Document");
+            god.tokens = 10_000;
+            god.in_degree = 8;
+            god.out_degree = 8;
+            god.fragments = vec![
+                crate::fragment::FragmentMetadata {
+                    anchor: "sec1".to_string(),
+                    heading: "Alpha Subject".to_string(),
+                    start_line: 1,
+                    end_line: 50,
+                    tokens: 5000,
+                    inbound: 19,
+                    outbound: 0,
+                },
+                crate::fragment::FragmentMetadata {
+                    anchor: "sec2".to_string(),
+                    heading: "Zeta Completely Unrelated Subject".to_string(),
+                    start_line: 51,
+                    end_line: 100,
+                    tokens: 5000,
+                    inbound: 1,
+                    outbound: 0,
+                },
+            ];
+            st.topology.add_node(god);
+        }
+
+        let req = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(1),
+            method: "recommendation/getRecommendations".to_string(),
+            params: None,
+        };
+        let res = handle_request(&state, req).await;
+        assert!(res.error.is_none());
+        let result = res.result.unwrap();
+        let recs = result["recommendations"].as_array().expect("recommendations is an array");
+        assert!(!recs.is_empty(), "Should generate recommendations for God Document");
+        assert!(recs[0].get("strategy").is_some());
+        assert!(recs[0].get("confidence").is_some());
+        assert!(recs[0].get("expected_benefits").is_some());
+        assert!(recs[0].get("trade_offs").is_some());
+    }
+
+    #[tokio::test]
+    async fn test_ipc_transformation_plan_handlers() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let root = temp_dir.path().to_path_buf();
+        let god_file = root.join("god.md");
+        std::fs::write(&god_file, "# God Document\n\n## Alpha Subject\n\nContent here.\n\n## Zeta Unrelated\n\nMore content.\n").unwrap();
+
+        let state = Arc::new(RwLock::new(AppState::new(root.clone())));
+
+        // Add node to state topology
+        {
+            let mut st = state.write().await;
+            let mut god = crate::model::NoteNode::new("god.md", god_file.to_string_lossy().to_string(), "God Document");
+            god.tokens = 10_000;
+            god.in_degree = 8;
+            god.out_degree = 8;
+            god.fragments = vec![
+                crate::fragment::FragmentMetadata {
+                    anchor: "sec1".to_string(),
+                    heading: "Alpha Subject".to_string(),
+                    start_line: 1,
+                    end_line: 50,
+                    tokens: 5000,
+                    inbound: 19,
+                    outbound: 0,
+                },
+                crate::fragment::FragmentMetadata {
+                    anchor: "sec2".to_string(),
+                    heading: "Zeta Unrelated".to_string(),
+                    start_line: 51,
+                    end_line: 100,
+                    tokens: 5000,
+                    inbound: 1,
+                    outbound: 0,
+                },
+            ];
+            st.topology.add_node(god);
+        }
+
+        // 1. Get recommendations
+        let req_rec = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(1),
+            method: "recommendation/getRecommendations".to_string(),
+            params: None,
+        };
+        let res_rec = handle_request(&state, req_rec).await;
+        assert!(res_rec.error.is_none());
+        let recs = res_rec.result.unwrap()["recommendations"].as_array().unwrap().clone();
+        assert!(!recs.is_empty());
+        let rec_id = recs[0]["recommendation_id"].as_str().unwrap().to_string();
+
+        // 2. Generate transformation plan
+        let req_gen = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(2),
+            method: "transformation/generatePlan".to_string(),
+            params: Some(json!({ "recommendation_id": rec_id })),
+        };
+        let res_gen = handle_request(&state, req_gen).await;
+        assert!(res_gen.error.is_none(), "generatePlan error: {:?}", res_gen.error);
+        let plan_json = res_gen.result.unwrap();
+        let plan_id = plan_json["plan_id"].as_str().unwrap().to_string();
+        assert_eq!(plan_json["requires_approval"], true, "Must require approval by default per Invariant XVI");
+        assert!(!plan_json["diff_preview"].as_str().unwrap().is_empty());
+        assert!(!plan_json["actions"].as_array().unwrap().is_empty());
+
+        // 3. Apply transformation plan
+        let req_apply = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(3),
+            method: "transformation/applyPlan".to_string(),
+            params: Some(json!({ "plan_id": plan_id })),
+        };
+        let res_apply = handle_request(&state, req_apply).await;
+        assert!(res_apply.error.is_none(), "applyPlan error: {:?}", res_apply.error);
+        let apply_res = res_apply.result.unwrap();
+        assert_eq!(apply_res["success"], true);
+        assert!(apply_res.get("actual_delta").is_some());
+
+        // 4. Invariant XVI test: attempt to apply plan with requires_approval = false
+        let illegal_plan = crate::evolution::TransformationPlan {
+            plan_id: "illegal_plan".to_string(),
+            recommendation_id: rec_id,
+            actions: vec![],
+            diff_preview: "".to_string(),
+            projected_delta: Default::default(),
+            requires_approval: false,
+        };
+        let req_illegal = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(4),
+            method: "transformation/applyPlan".to_string(),
+            params: Some(json!({
+                "plan_id": "illegal_plan",
+                "plan": illegal_plan
+            })),
+        };
+        let res_illegal = handle_request(&state, req_illegal).await;
+        assert!(res_illegal.error.is_some(), "Must reject unapproved plan per Invariant XVI");
+    }
+}
+

@@ -62,3 +62,20 @@ harness = false
 [[bench]]
 name = "fragment_benchmark"
 harness = false
+
+[[bench]]
+name = "profile_benchmark"
+harness = false
+
+[[bench]]
+name = "metrics_benchmark"
+harness = false
+
+[[bench]]
+name = "strategy_benchmark"
+harness = false
+
+[[bench]]
+name = "transformation_benchmark"
+harness = false
+

@@ -187,7 +187,13 @@ export type WebviewInboundType =
   | 'suggestExclusions'
   | 'setFocusMode'
   | 'openSettings'
-  | 'reviewIssues';
+  | 'reviewIssues'
+  | 'getEvolutionState'
+  | 'setOrientation'
+  | 'updateCustomConfig'
+  | 'validateConstraints'
+  | 'generateTransformationPlan'
+  | 'applyTransformationPlan';
 
 export interface WebviewInboundMessage {
   requestId?: string;
@@ -212,6 +218,10 @@ export type WebviewOutboundType =
   | 'loadingProgress'
   | 'issuesReportUpdate'
   | 'openSettingsDrawer'
+  | 'evolutionStateUpdate'
+  | 'transformationPlanReady'
+  | 'transformationPlanApplied'
+  | 'constraintValidationResult'
   | 'error';
 
 export interface WebviewOutboundMessage {

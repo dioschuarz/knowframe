@@ -12,6 +12,24 @@
 
 import type { ClusterColorGroup, NoteNode } from '../../../src/types/graph.ts';
 import type { KnowledgeIssue, KnowledgeIssuesReport } from '../../../src/types/admission.ts';
+import type {
+  DocumentationOrientation,
+  Tier1Objectives,
+  Tier2Parameters,
+  ConstraintRule,
+  ConstraintConflict,
+  StructuralProblemSignature,
+  StructuralRecommendation,
+  ObjectiveLevel,
+  ConstraintLevel,
+} from '../../../src/types/evolution.ts';
+import { renderEvolutionTabHtml } from './evolutionTab.ts';
+import { renderOrientationSelectorHtml } from './orientationSelector.ts';
+import {
+  renderCustomSettingsDrawerHtml,
+  TIER1_KNOB_DEFS,
+  TIER2_SLIDER_DEFS,
+} from './customSettingsDrawer.ts';
 import {
   discoverVaultSuggestions,
   countMatchingNotes,
@@ -19,7 +37,30 @@ import {
   CLUSTER_PALETTE_SWATCHES,
 } from './colorManager.ts';
 
-export type SettingsTab = 'knowledge' | 'exclusions' | 'clusters' | 'git_sync' | 'diagnostics';
+export const DEFAULT_TIER1_OBJECTIVES: Tier1Objectives = {
+  aiDiscoverability: 'high',
+  contextEfficiency: 'high',
+  humanReadability: 'medium',
+  knowledgeReuse: 'medium',
+  narrativeCoherence: 'low',
+  maintenanceSimplicity: 'medium',
+};
+
+export const DEFAULT_TIER2_PARAMETERS: Tier2Parameters = {
+  cohesionThreshold: 0.7,
+  semanticDiversityThreshold: 0.75,
+  referenceConcentrationThreshold: 0.7,
+  fragmentSizeTarget: 3000,
+  maxTraceDepth: 3,
+  candidateExpansionFactor: 3,
+  maxContextSurfaceTokens: 12000,
+  splitSensitivity: 0.7,
+  canonicalOwnershipSensitivity: 0.8,
+  duplicateTolerance: 0.1,
+  fragmentationTolerance: 0.2,
+};
+
+export type SettingsTab = 'knowledge' | 'exclusions' | 'clusters' | 'git_sync' | 'diagnostics' | 'evolution';
 
 export interface SettingsDrawerProps {
   activeTab: SettingsTab;
@@ -44,6 +85,16 @@ export interface SettingsDrawerProps {
   excludedNotes?: number;
   issuesReport?: KnowledgeIssuesReport | null;
   selectedPillarFilter?: string;
+  structuralSignatures?: StructuralProblemSignature[];
+  structuralRecommendations?: StructuralRecommendation[];
+  activeOrientation?: DocumentationOrientation;
+  tier1?: Tier1Objectives;
+  tier2?: Tier2Parameters;
+  constraints?: ConstraintRule[];
+  conflicts?: ConstraintConflict[];
+  isCustomDrawerOpen?: boolean;
+  isSavingCustom?: boolean;
+  isEvolutionLoading?: boolean;
 }
 
 export interface SettingsDrawerCallbacks {
@@ -61,6 +112,16 @@ export interface SettingsDrawerCallbacks {
   onOpenFile?: (filePath: string, line?: number) => void;
   onFixBrokenLink?: (source: string, target: string, line?: number) => void;
   onRequestIssues?: (pillar?: string) => void;
+  onSelectOrientation?: (orientation: DocumentationOrientation) => void;
+  onToggleCustomDrawer?: (isOpen: boolean) => void;
+  onChangeTier1?: (tier1: Tier1Objectives) => void;
+  onChangeTier2?: (tier2: Tier2Parameters) => void;
+  onSaveCustomConfig?: (tier1: Tier1Objectives, tier2: Tier2Parameters, constraints: ConstraintRule[]) => void;
+  onResetCustomConfig?: () => void;
+  onValidateConstraints?: (constraints: ConstraintRule[]) => void;
+  onGeneratePlan?: (recommendationId: string) => void;
+  onReviewPlan?: (planId: string) => void;
+  onApplyPlan?: (planId: string) => void;
   onClose?: () => void;
 }
 
@@ -628,6 +689,64 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
       `;
       break;
     }
+
+    case 'evolution': {
+      // Extract structure debt findings from issuesReport (Pillar 2: Structure)
+      const structureFindings = (props.issuesReport?.issues || [])
+        .filter((i) => i.pillar && i.pillar.toLowerCase() === 'structure')
+        .map((i) => ({
+          file_path: i.file_path,
+          description: i.description,
+          remediation_hint: i.remediation_hint,
+        }));
+
+      const activeOrientation = props.activeOrientation || 'ai_oriented';
+      const isCustomOpen = props.isCustomDrawerOpen !== undefined
+        ? props.isCustomDrawerOpen
+        : activeOrientation === 'custom';
+
+      const orientationHtml = renderOrientationSelectorHtml({
+        activeOrientation,
+      });
+
+      const customToggleBtnHtml = `
+        <div class="evolution-custom-toggle-bar">
+          <button type="button" class="btn btn-secondary evolution-custom-toggle-btn" id="btn-toggle-custom-params">
+            ${isCustomOpen ? '▲ Hide Custom Parameters (Tier 1 & Tier 2)' : '⚙️ Custom Parameters (Tier 1 & Tier 2)'}
+          </button>
+        </div>
+      `;
+
+      let customDrawerHtml = '';
+      if (isCustomOpen) {
+        customDrawerHtml = renderCustomSettingsDrawerHtml({
+          tier1: props.tier1 || DEFAULT_TIER1_OBJECTIVES,
+          tier2: props.tier2 || DEFAULT_TIER2_PARAMETERS,
+          constraints: props.constraints || [],
+          conflicts: props.conflicts || [],
+          isSaving: props.isSavingCustom,
+        });
+      }
+
+      const evolutionTabHtml = renderEvolutionTabHtml({
+        signatures: props.structuralSignatures || [],
+        recommendations: props.structuralRecommendations || [],
+        activeOrientation,
+        structureFindings,
+        isLoading: props.isEvolutionLoading,
+      });
+
+      tabContentHtml = `
+        <div class="evolution-settings-wrapper">
+          ${orientationHtml}
+          ${customToggleBtnHtml}
+          ${customDrawerHtml}
+          <div class="evolution-section-divider"></div>
+          ${evolutionTabHtml}
+        </div>
+      `;
+      break;
+    }
   }
 
   return `
@@ -651,6 +770,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         <button class="settings-tab-btn ${activeTab === 'clusters' ? 'active' : ''}" data-tab="clusters">Cluster Groups</button>
         <button class="settings-tab-btn ${activeTab === 'git_sync' ? 'active' : ''}" data-tab="git_sync">Git Sync</button>
         <button class="settings-tab-btn ${activeTab === 'diagnostics' ? 'active' : ''}" data-tab="diagnostics">Diagnostics</button>
+        <button class="settings-tab-btn ${activeTab === 'evolution' ? 'active' : ''}" data-tab="evolution">Structural Evolution</button>
       </div>
 
       <div class="settings-content" id="settings-content">
@@ -1159,6 +1279,139 @@ export function renderSettingsDrawer(
         }
       });
     });
+
+    // --- Evolution Tab Event Wiring ---
+
+    // 1. Orientation Cards Selection
+    container.querySelectorAll('.orientation-card').forEach((card) => {
+      card.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const orient = card.getAttribute('data-orientation') as DocumentationOrientation;
+        if (orient && orient !== state.activeOrientation) {
+          state.activeOrientation = orient;
+          if (orient === 'custom') {
+            state.isCustomDrawerOpen = true;
+          }
+          callbacks.onSelectOrientation?.(orient);
+          render();
+        }
+      });
+    });
+
+    // 2. Custom Parameters Toggle Button
+    container.querySelector('#btn-toggle-custom-params')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.isCustomDrawerOpen = !state.isCustomDrawerOpen;
+      callbacks.onToggleCustomDrawer?.(state.isCustomDrawerOpen);
+      render();
+    });
+
+    // 3. Tier 1 Knobs (Low / Med / High)
+    container.querySelectorAll('.tier1-level-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const knob = btn.getAttribute('data-knob') as keyof Tier1Objectives;
+        const level = btn.getAttribute('data-level') as ObjectiveLevel;
+        if (knob && level) {
+          state.tier1 = { ...(state.tier1 || DEFAULT_TIER1_OBJECTIVES), [knob]: level };
+          callbacks.onChangeTier1?.(state.tier1);
+          render();
+        }
+      });
+    });
+
+    // 4. Tier 2 Sliders (Real-time updates)
+    container.querySelectorAll('.tier2-slider-input').forEach((input) => {
+      const slider = input as HTMLInputElement;
+      slider.addEventListener('input', (e) => {
+        e.stopPropagation();
+        const param = slider.getAttribute('data-param') as keyof Tier2Parameters;
+        const val = parseFloat(slider.value);
+        if (param && !isNaN(val)) {
+          state.tier2 = { ...(state.tier2 || DEFAULT_TIER2_PARAMETERS), [param]: val };
+          const badge = container.querySelector(`#val-${param}`);
+          const def = TIER2_SLIDER_DEFS.find((d) => d.key === param);
+          if (badge) {
+            badge.textContent = `${val}${def?.unit ? ' ' + def.unit : ''}`;
+          }
+          callbacks.onChangeTier2?.(state.tier2);
+        }
+      });
+    });
+
+    // 5. Reset Custom Parameters
+    container.querySelector('#btn-reset-custom')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      state.tier1 = { ...DEFAULT_TIER1_OBJECTIVES };
+      state.tier2 = { ...DEFAULT_TIER2_PARAMETERS };
+      state.constraints = [];
+      state.conflicts = [];
+      callbacks.onResetCustomConfig?.();
+      render();
+    });
+
+    // 6. Save & Compile Custom Profile
+    container.querySelector('#btn-save-custom')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callbacks.onSaveCustomConfig?.(
+        state.tier1 || DEFAULT_TIER1_OBJECTIVES,
+        state.tier2 || DEFAULT_TIER2_PARAMETERS,
+        state.constraints || [],
+      );
+    });
+
+    // 7. Hard & Soft Constraints Level Select
+    container.querySelectorAll('.rule-level-select').forEach((sel) => {
+      sel.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const ruleId = sel.getAttribute('data-rule-id');
+        const level = (sel as HTMLSelectElement).value as ConstraintLevel;
+        if (ruleId && state.constraints) {
+          const rule = state.constraints.find((r) => r.id === ruleId);
+          if (rule) {
+            rule.level = level;
+            callbacks.onValidateConstraints?.(state.constraints);
+          }
+        }
+      });
+    });
+
+    // 8. Transformation Plan Actions (Generate / Review / Apply)
+    container.querySelectorAll('[data-action="generate-plan"]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const recId = btn.getAttribute('data-rec-id');
+        if (recId) callbacks.onGeneratePlan?.(recId);
+      });
+    });
+
+    container.querySelectorAll('[data-action="review-plan"]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const planId = btn.getAttribute('data-plan-id');
+        if (planId) callbacks.onReviewPlan?.(planId);
+      });
+    });
+
+    container.querySelectorAll('[data-action="apply-plan"]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const planId = btn.getAttribute('data-plan-id');
+        if (planId) callbacks.onApplyPlan?.(planId);
+      });
+    });
+
+    // 9. Finding File Link Navigation in Structural Debt Findings
+    container.querySelectorAll('.finding-loc').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const pathSpan = el.querySelector('.finding-path');
+        const file = pathSpan?.textContent?.trim();
+        if (file) {
+          callbacks.onOpenFile?.(file);
+        }
+      });
+    });
   }
 
   function open(tab?: SettingsTab): void {
@@ -1178,7 +1431,7 @@ export function renderSettingsDrawer(
       }, 250);
     }
 
-    if (state.activeTab === 'diagnostics') {
+    if (state.activeTab === 'diagnostics' || state.activeTab === 'evolution') {
       if (!state.issuesReport) {
         callbacks.onRequestIssues?.(state.selectedPillarFilter);
       }

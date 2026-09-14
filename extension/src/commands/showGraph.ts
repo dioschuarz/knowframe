@@ -2,16 +2,24 @@ import * as vscode from 'vscode';
 import { GraphPanelManager } from '../webview/panelManager';
 import { IpcClient } from '../ipc/client';
 import { ScanResultPayload } from '../types/protocol';
+import type { EvolutionManager } from '../evolution/evolutionManager';
 
 export function registerShowGraphCommand(
   context: vscode.ExtensionContext,
   getIpcClient: () => IpcClient | null,
-  getScanResult: () => ScanResultPayload | null
+  getScanResult: () => ScanResultPayload | null,
+  getEvolutionManager?: () => EvolutionManager | null
 ): vscode.Disposable {
   return vscode.commands.registerCommand('llmWiki.showKnowledgeGraph', () => {
     const ipc = getIpcClient();
     const scan = getScanResult();
     const panel = GraphPanelManager.createOrShow(context.extensionUri, ipc, scan);
+    if (getEvolutionManager) {
+      const em = getEvolutionManager();
+      if (em) {
+        panel.setEvolutionManager(em);
+      }
+    }
     if (!scan) {
       panel.sendLoadingProgress('graph', 25, 'Scanning vault topology...');
     }

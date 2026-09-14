@@ -4,6 +4,7 @@ import * as path from 'path';
 import { generateNonce, buildCspPolicy } from './cspHelper';
 import { IpcClient } from '../ipc/client';
 import { ScanResultPayload, WebviewInboundMessage } from '../types/protocol';
+import type { EvolutionManager } from '../evolution/evolutionManager';
 
 export class GraphPanelManager implements vscode.Disposable {
   public static currentPanel: GraphPanelManager | undefined;
@@ -13,6 +14,7 @@ export class GraphPanelManager implements vscode.Disposable {
   private readonly extensionUri: vscode.Uri;
   private disposables: vscode.Disposable[] = [];
   private ipcClient: IpcClient | null = null;
+  private evolutionManager: EvolutionManager | null = null;
   private currentScanResult: ScanResultPayload | null = null;
   private static cachedIssuesReport: unknown | null = null;
   private isFetchingIssues: boolean = false;
@@ -213,6 +215,84 @@ export class GraphPanelManager implements vscode.Disposable {
     }
   }
 
+  public setEvolutionManager(manager: EvolutionManager | null): void {
+    this.evolutionManager = manager;
+    if (manager) {
+      manager.onDidChangeOrientation(() => {
+        this.sendEvolutionState();
+      });
+      manager.onDidUpdateProblems(() => {
+        this.sendEvolutionState();
+      });
+      manager.onDidUpdateRecommendations(() => {
+        this.sendEvolutionState();
+      });
+    }
+  }
+
+  public async sendEvolutionState(): Promise<void> {
+    if (!this.evolutionManager) {
+      return;
+    }
+    try {
+      const orientRes = await this.evolutionManager.getOrientation();
+      let customRes: any = { tier1: null, tier2: null, constraints: [] };
+      try {
+        customRes = await this.evolutionManager.getCustomConfig();
+      } catch {
+        // Fallback if not custom
+      }
+      const signatures = await this.evolutionManager.getStructuralProblems();
+      const recommendations = await this.evolutionManager.getRecommendations();
+
+      this.panel.webview.postMessage({
+        type: 'evolutionStateUpdate',
+        payload: {
+          orientation: orientRes.orientation,
+          profile: orientRes.profile,
+          tier1: customRes.tier1,
+          tier2: customRes.tier2,
+          constraints: customRes.constraints,
+          signatures,
+          recommendations,
+        },
+      });
+    } catch (err: any) {
+      console.error('[GraphPanelManager] Error sending evolution state:', err);
+    }
+  }
+
+  public async openEvolutionTab(): Promise<void> {
+    this.panel.reveal();
+    this.pendingOpenTab = 'evolution';
+    this.panel.webview.postMessage({
+      type: 'openSettingsDrawer',
+      tab: 'evolution',
+    });
+
+    if (GraphPanelManager.cachedIssuesReport) {
+      this.panel.webview.postMessage({
+        type: 'issuesReportUpdate',
+        payload: GraphPanelManager.cachedIssuesReport,
+      });
+    }
+
+    if (this.ipcClient && !GraphPanelManager.cachedIssuesReport) {
+      try {
+        const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', {});
+        GraphPanelManager.cachedIssuesReport = issuesReport;
+        this.panel.webview.postMessage({
+          type: 'issuesReportUpdate',
+          payload: issuesReport,
+        });
+      } catch {
+        // ignore
+      }
+    }
+
+    await this.sendEvolutionState();
+  }
+
   private async handleWebviewMessage(message: WebviewInboundMessage): Promise<void> {
     if (!message || !message.type) {return;}
 
@@ -372,6 +452,93 @@ export class GraphPanelManager implements vscode.Disposable {
         }
         break;
       }
+      case 'getEvolutionState': {
+        await this.sendEvolutionState();
+        break;
+      }
+      case 'setOrientation': {
+        const payload = message.payload as { orientation: any };
+        if (this.evolutionManager && payload?.orientation) {
+          try {
+            await this.evolutionManager.setOrientation(payload.orientation);
+            vscode.window.showInformationMessage(
+              `Documentation orientation set to: ${payload.orientation.replace(/_/g, ' ')}`
+            );
+            await this.sendEvolutionState();
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to set orientation: ${err.message}`);
+          }
+        }
+        break;
+      }
+      case 'updateCustomConfig': {
+        const payload = message.payload as { tier1: any; tier2: any; constraints: any[] };
+        if (this.evolutionManager && payload?.tier1 && payload?.tier2) {
+          try {
+            await this.evolutionManager.updateCustomConfig(
+              payload.tier1,
+              payload.tier2,
+              payload.constraints || []
+            );
+            vscode.window.showInformationMessage('Custom KOS profile updated and compiled successfully.');
+            await this.sendEvolutionState();
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to update custom configuration: ${err.message}`);
+          }
+        }
+        break;
+      }
+      case 'validateConstraints': {
+        const payload = message.payload as { constraints: any[] };
+        if (this.evolutionManager && payload?.constraints) {
+          try {
+            const valRes = await this.evolutionManager.validateConstraints(payload.constraints);
+            this.panel.webview.postMessage({
+              type: 'constraintValidationResult',
+              payload: valRes,
+            });
+          } catch (err: any) {
+            console.error('Failed to validate constraints:', err);
+          }
+        }
+        break;
+      }
+      case 'generateTransformationPlan': {
+        const payload = message.payload as { recommendationId: string };
+        if (this.evolutionManager && payload?.recommendationId) {
+          try {
+            const plan = await this.evolutionManager.generatePlan(payload.recommendationId);
+            this.panel.webview.postMessage({
+              type: 'transformationPlanReady',
+              payload: plan,
+            });
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to generate transformation plan: ${err.message}`);
+          }
+        }
+        break;
+      }
+      case 'applyTransformationPlan': {
+        const payload = message.payload as { planId: string };
+        if (this.evolutionManager && payload?.planId) {
+          try {
+            const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            const res = await this.evolutionManager.applyPlan(payload.planId, { rootPath });
+            vscode.window.showInformationMessage(
+              `Transformation plan applied: efficiency delta ${res.actualDelta.efficiencyDelta >= 0 ? '+' : ''}${res.actualDelta.efficiencyDelta.toFixed(1)}%`
+            );
+            this.panel.webview.postMessage({
+              type: 'transformationPlanApplied',
+              payload: res,
+            });
+            vscode.commands.executeCommand('llmWiki.rescanVault');
+            await this.sendEvolutionState();
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to apply transformation plan: ${err.message}`);
+          }
+        }
+        break;
+      }
     }
   }
 
@@ -507,6 +674,7 @@ export class GraphPanelManager implements vscode.Disposable {
   <div id="inspector-container"></div>
   <div id="settings-container"></div>
   <div id="exclusion-modal-container"></div>
+  <div id="transformation-modal-container"></div>
   <script nonce="${nonce}" src="${scriptUri}"></script>
 </body>
 </html>`;

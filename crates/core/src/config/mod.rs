@@ -29,6 +29,22 @@ pub struct ContextVaultConfig {
     pub token_budget: TokenBudgetSettings,
     #[serde(default)]
     pub color_groups: Vec<ClusterColorGroup>,
+    /// V3 Documentation Orientation (AI-Oriented, Human-Oriented, Balanced, Custom)
+    #[serde(default)]
+    pub orientation: Option<crate::evolution::DocumentationOrientation>,
+    /// V3 Two-tier Custom profile configuration
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub custom_profile: Option<CustomProfileConfig>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+pub struct CustomProfileConfig {
+    #[serde(default)]
+    pub tier1: Option<crate::evolution::Tier1Objectives>,
+    #[serde(default)]
+    pub tier2: Option<crate::evolution::Tier2Parameters>,
+    #[serde(default)]
+    pub constraints: Vec<crate::evolution::ConstraintRule>,
 }
 
 fn default_version() -> String {
@@ -103,6 +119,8 @@ impl Default for ContextVaultConfig {
             graph: Some(GraphSettings::default()),
             token_budget: TokenBudgetSettings::default(),
             color_groups: Vec::new(),
+            orientation: None,
+            custom_profile: None,
         }
     }
 }
@@ -159,6 +177,10 @@ impl ContextVaultConfig {
             .as_ref()
             .map(|g| g.show_excluded)
             .unwrap_or(false)
+    }
+
+    pub fn get_orientation(&self) -> crate::evolution::DocumentationOrientation {
+        self.orientation.unwrap_or_default()
     }
 
     pub fn load_from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
@@ -351,5 +373,37 @@ graph:
         assert_eq!(config.get_focus_mode(), FocusMode::OneHop);
         assert!(!config.get_show_orphans());
         assert!(config.get_show_excluded());
+    }
+
+    #[test]
+    fn test_vault_orientation_yaml_roundtrip() {
+        let yaml = r#"
+version: "1.0"
+orientation: human_oriented
+custom_profile:
+  tier1:
+    ai_discoverability: medium
+    context_efficiency: low
+    human_readability: high
+    knowledge_reuse: medium
+    narrative_coherence: high
+    maintenance_simplicity: high
+"#;
+        let config: ContextVaultConfig = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            config.get_orientation(),
+            crate::evolution::DocumentationOrientation::HumanOriented
+        );
+        let custom = config.custom_profile.as_ref().expect("custom_profile exists");
+        let tier1 = custom.tier1.as_ref().expect("tier1 exists");
+        assert_eq!(tier1.human_readability, crate::evolution::ObjectiveLevel::High);
+
+        // Serialize back
+        let serialized = serde_yaml::to_string(&config).unwrap();
+        let de: ContextVaultConfig = serde_yaml::from_str(&serialized).unwrap();
+        assert_eq!(
+            de.get_orientation(),
+            crate::evolution::DocumentationOrientation::HumanOriented
+        );
     }
 }

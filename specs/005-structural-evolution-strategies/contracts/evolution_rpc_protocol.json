@@ -1,0 +1,325 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LLM Wiki Structural Evolution & KOS Strategy Protocol",
+  "version": "1.0.0",
+  "description": "JSON-RPC 2.0 contracts for Documentation Orientations, Custom Two-Tier Configuration, 10-Dimensional Structural Analytics, KOS Strategy Evaluator, and User-Controlled Automation between Extension Host and Rust Sidecar.",
+  "methods": {
+    "profile/getOrientation": {
+      "description": "Retrieves the active documentation orientation and compiled optimization profile.",
+      "request": { "type": "object" },
+      "response": {
+        "type": "object",
+        "required": ["orientation", "profile"],
+        "properties": {
+          "orientation": { "type": "string", "enum": ["ai_oriented", "human_oriented", "balanced", "custom"] },
+          "profile": {
+            "type": "object",
+            "required": ["cohesion_weight", "coupling_weight", "concentration_weight", "context_efficiency_weight", "discoverability_weight", "narrative_coherence_weight", "maintenance_simplicity_weight", "max_trace_depth", "max_context_surface_tokens", "fragment_size_target", "split_sensitivity", "canonical_ownership_sensitivity", "constraints"],
+            "properties": {
+              "cohesion_weight": { "type": "number" },
+              "coupling_weight": { "type": "number" },
+              "concentration_weight": { "type": "number" },
+              "context_efficiency_weight": { "type": "number" },
+              "discoverability_weight": { "type": "number" },
+              "narrative_coherence_weight": { "type": "number" },
+              "maintenance_simplicity_weight": { "type": "number" },
+              "max_trace_depth": { "type": "integer" },
+              "max_context_surface_tokens": { "type": "integer" },
+              "fragment_size_target": { "type": "integer" },
+              "split_sensitivity": { "type": "number" },
+              "canonical_ownership_sensitivity": { "type": "number" },
+              "constraints": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["id", "level", "rule_key", "description"],
+                  "properties": {
+                    "id": { "type": "string" },
+                    "level": { "type": "string", "enum": ["preference", "constraint", "hard_constraint"] },
+                    "rule_key": { "type": "string" },
+                    "description": { "type": "string" }
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "profile/setOrientation": {
+      "description": "Sets the active documentation orientation, recompiling the optimization profile.",
+      "request": {
+        "type": "object",
+        "required": ["orientation"],
+        "properties": {
+          "orientation": { "type": "string", "enum": ["ai_oriented", "human_oriented", "balanced", "custom"] }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["success", "orientation", "profile"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "orientation": { "type": "string" },
+          "profile": { "type": "object" }
+        }
+      }
+    },
+    "profile/getCustomConfig": {
+      "description": "Retrieves the current Tier 1 objectives, Tier 2 parameters, and constraint set.",
+      "request": { "type": "object" },
+      "response": {
+        "type": "object",
+        "required": ["tier1", "tier2", "constraints"],
+        "properties": {
+          "tier1": {
+            "type": "object",
+            "required": ["ai_discoverability", "context_efficiency", "human_readability", "knowledge_reuse", "narrative_coherence", "maintenance_simplicity"],
+            "properties": {
+              "ai_discoverability": { "type": "string", "enum": ["low", "medium", "high"] },
+              "context_efficiency": { "type": "string", "enum": ["low", "medium", "high"] },
+              "human_readability": { "type": "string", "enum": ["low", "medium", "high"] },
+              "knowledge_reuse": { "type": "string", "enum": ["low", "medium", "high"] },
+              "narrative_coherence": { "type": "string", "enum": ["low", "medium", "high"] },
+              "maintenance_simplicity": { "type": "string", "enum": ["low", "medium", "high"] }
+            }
+          },
+          "tier2": {
+            "type": "object",
+            "required": [
+              "cohesion_threshold",
+              "semantic_diversity_threshold",
+              "reference_concentration_threshold",
+              "fragment_size_target",
+              "max_trace_depth",
+              "candidate_expansion_factor",
+              "max_context_surface_tokens",
+              "split_sensitivity",
+              "canonical_ownership_sensitivity",
+              "duplicate_tolerance",
+              "fragmentation_tolerance"
+            ],
+            "properties": {
+              "cohesion_threshold": { "type": "number" },
+              "semantic_diversity_threshold": { "type": "number" },
+              "reference_concentration_threshold": { "type": "number" },
+              "fragment_size_target": { "type": "integer" },
+              "max_trace_depth": { "type": "integer" },
+              "candidate_expansion_factor": { "type": "integer" },
+              "max_context_surface_tokens": { "type": "integer" },
+              "split_sensitivity": { "type": "number" },
+              "canonical_ownership_sensitivity": { "type": "number" },
+              "duplicate_tolerance": { "type": "number" },
+              "fragmentation_tolerance": { "type": "number" }
+            }
+          },
+          "constraints": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["id", "level", "rule_key", "description"],
+              "properties": {
+                "id": { "type": "string" },
+                "level": { "type": "string", "enum": ["preference", "constraint", "hard_constraint"] },
+                "rule_key": { "type": "string" },
+                "description": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "profile/updateCustomConfig": {
+      "description": "Updates the Tier 1 objectives, Tier 2 parameters, and constraint set, updating .context-vault.yaml and recompiling the optimization profile.",
+      "request": {
+        "type": "object",
+        "required": ["tier1", "tier2", "constraints"],
+        "properties": {
+          "tier1": { "type": "object" },
+          "tier2": { "type": "object" },
+          "constraints": { "type": "array" }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["success", "profile"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "profile": { "type": "object" }
+        }
+      }
+    },
+    "profile/validateConstraints": {
+      "description": "Checks the constraint set for mutual satisfiability and conflicting rules.",
+      "request": {
+        "type": "object",
+        "required": ["constraints"],
+        "properties": {
+          "constraints": { "type": "array" }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["is_valid", "conflicts"],
+        "properties": {
+          "is_valid": { "type": "boolean" },
+          "conflicts": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["conflicting_rules", "reason", "suggestion"],
+              "properties": {
+                "conflicting_rules": { "type": "array", "items": { "type": "string" } },
+                "reason": { "type": "string" },
+                "suggestion": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "analytics/getStructuralProblems": {
+      "description": "Computes 10-dimensional structural metrics and returns detected problem signatures.",
+      "request": {
+        "type": "object",
+        "properties": {
+          "file_path": { "type": "string" }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["signatures"],
+        "properties": {
+          "signatures": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["signature_id", "document_path", "problem_type", "confidence", "evidence", "rationale"],
+              "properties": {
+                "signature_id": { "type": "string" },
+                "document_path": { "type": "string" },
+                "problem_type": { "type": "string", "enum": ["god_document", "implicit_router", "fragmented_concept", "isolated_silo", "healthy_monolith"] },
+                "confidence": { "type": "number" },
+                "evidence": {
+                  "type": "object",
+                  "required": ["cohesion", "coupling", "reference_concentration", "granularity", "context_efficiency", "discoverability", "reusability", "semantic_diversity", "navigational_complexity", "maintenance_coupling"],
+                  "properties": {
+                    "cohesion": { "type": "number" },
+                    "coupling": { "type": "number" },
+                    "reference_concentration": { "type": "number" },
+                    "granularity": { "type": "number" },
+                    "context_efficiency": { "type": "number" },
+                    "discoverability": { "type": "number" },
+                    "reusability": { "type": "number" },
+                    "semantic_diversity": { "type": "number" },
+                    "navigational_complexity": { "type": "number" },
+                    "maintenance_coupling": { "type": "number" }
+                  }
+                },
+                "rationale": { "type": "string" }
+              }
+            }
+          }
+        }
+      }
+    },
+    "recommendation/getRecommendations": {
+      "description": "Evaluates candidate KOS strategies for detected problem signatures against the active optimization profile.",
+      "request": {
+        "type": "object",
+        "properties": {
+          "signature_id": { "type": "string" }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["recommendations"],
+        "properties": {
+          "recommendations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["recommendation_id", "signature_id", "strategy", "confidence", "expected_benefits", "trade_offs"],
+              "properties": {
+                "recommendation_id": { "type": "string" },
+                "signature_id": { "type": "string" },
+                "strategy": { "type": "string", "enum": ["section_addressing", "topic_decomposition", "lightweight_index", "faceted_classification", "preserve_document", "hybrid"] },
+                "confidence": { "type": "number" },
+                "expected_benefits": { "type": "array", "items": { "type": "string" } },
+                "trade_offs": { "type": "array", "items": { "type": "string" } }
+              }
+            }
+          }
+        }
+      }
+    },
+    "transformation/generatePlan": {
+      "description": "Generates a deterministic transformation plan with diff previews and projected deltas for user approval.",
+      "request": {
+        "type": "object",
+        "required": ["recommendation_id"],
+        "properties": {
+          "recommendation_id": { "type": "string" }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["plan_id", "recommendation_id", "actions", "diff_preview", "projected_delta", "requires_approval"],
+        "properties": {
+          "plan_id": { "type": "string" },
+          "recommendation_id": { "type": "string" },
+          "actions": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["type", "payload"],
+              "properties": {
+                "type": { "type": "string", "enum": ["create_document", "update_document_content", "rewrite_link_references", "inject_fragment_frontmatter"] },
+                "payload": { "type": "object" }
+              }
+            }
+          },
+          "diff_preview": { "type": "string" },
+          "projected_delta": {
+            "type": "object",
+            "required": ["efficiency_delta", "trace_depth_delta", "coupling_delta", "doc_count_delta"],
+            "properties": {
+              "efficiency_delta": { "type": "number" },
+              "trace_depth_delta": { "type": "number" },
+              "coupling_delta": { "type": "number" },
+              "doc_count_delta": { "type": "integer" }
+            }
+          },
+          "requires_approval": { "type": "boolean" }
+        }
+      }
+    },
+    "transformation/applyPlan": {
+      "description": "Atomically applies an approved transformation plan and performs immediate Before-vs-After re-measurement.",
+      "request": {
+        "type": "object",
+        "required": ["plan_id"],
+        "properties": {
+          "plan_id": { "type": "string" }
+        }
+      },
+      "response": {
+        "type": "object",
+        "required": ["success", "actual_delta"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "actual_delta": {
+            "type": "object",
+            "required": ["efficiency_delta", "trace_depth_delta", "coupling_delta", "doc_count_delta"],
+            "properties": {
+              "efficiency_delta": { "type": "number" },
+              "trace_depth_delta": { "type": "number" },
+              "coupling_delta": { "type": "number" },
+              "doc_count_delta": { "type": "integer" }
+            }
+          }
+        }
+      }
+    }
+  }
+}

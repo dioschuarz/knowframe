@@ -8,6 +8,7 @@ import { renderExclusionModal, ExclusionModalController } from './components/exc
 import { renderSettingsDrawer, SettingsDrawerController, type SettingsTab } from './components/settingsDrawer';
 import { filterNodesByQuery, SearchMatchOptions } from './graph/searchMatcher';
 import { filterGraphByFocus } from './graph/focusEngine';
+import { renderTransformationPlanModalHtml } from './components/transformationPlanModal';
 import {
   NoteNode,
   NoteEdge,
@@ -27,6 +28,7 @@ const colorModalContainer = document.getElementById('color-modal-container') as 
 const inspectorContainer = document.getElementById('inspector-container') as HTMLElement;
 const exclusionModalContainer = document.getElementById('exclusion-modal-container') as HTMLElement;
 const settingsContainer = document.getElementById('settings-container') as HTMLElement;
+const transformationModalContainer = document.getElementById('transformation-modal-container') as HTMLElement;
 const tooltip = document.getElementById('node-tooltip') as HTMLElement;
 
 let rawNodes: NoteNode[] = [];
@@ -37,6 +39,39 @@ let colorGroups: ClusterColorGroup[] = [];
 let selectedNode: NoteNode | null = null;
 let lastTokenSummary: TokenSummary | null = null;
 let currentPreviewPattern = '';
+
+// Transformation Plan Modal State
+let currentTransformationPlan: any = null;
+let isTransformationModalOpen = false;
+let isApplyingTransformationPlan = false;
+let actualTransformationDelta: any = null;
+
+function renderTransformationModal(): void {
+  if (!transformationModalContainer) return;
+  transformationModalContainer.innerHTML = renderTransformationPlanModalHtml({
+    plan: currentTransformationPlan,
+    isOpen: isTransformationModalOpen,
+    isApplying: isApplyingTransformationPlan,
+    actualDelta: actualTransformationDelta,
+  });
+
+  if (isTransformationModalOpen) {
+    transformationModalContainer.querySelector('#btn-close-plan-modal')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      isTransformationModalOpen = false;
+      renderTransformationModal();
+    });
+
+    transformationModalContainer.querySelector('#btn-apply-plan')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (currentTransformationPlan && !isApplyingTransformationPlan) {
+        isApplyingTransformationPlan = true;
+        renderTransformationModal();
+        rpc.applyTransformationPlan(currentTransformationPlan.planId);
+      }
+    });
+  }
+}
 
 const savedState = rpc.getState<any>();
 let currentFocusMode: FocusMode = (savedState?.focusMode as FocusMode) || 'all';
@@ -92,6 +127,31 @@ const settingsDrawer = renderSettingsDrawer(
     },
     onRequestIssues: (pillar) => {
       rpc.sendMessage({ type: 'requestIssues', payload: { pillar } });
+    },
+    onSelectOrientation: (orientation) => {
+      rpc.setOrientation(orientation);
+    },
+    onSaveCustomConfig: (tier1, tier2, constraints) => {
+      settingsDrawer.updateProps({ isSavingCustom: true });
+      rpc.updateCustomConfig(tier1, tier2, constraints);
+    },
+    onResetCustomConfig: () => {
+      rpc.getEvolutionState();
+    },
+    onValidateConstraints: (constraints) => {
+      rpc.validateConstraints(constraints);
+    },
+    onGeneratePlan: (recId) => {
+      rpc.generateTransformationPlan(recId);
+    },
+    onReviewPlan: (planId) => {
+      if (currentTransformationPlan && currentTransformationPlan.planId === planId) {
+        isTransformationModalOpen = true;
+        renderTransformationModal();
+      }
+    },
+    onApplyPlan: (planId) => {
+      rpc.applyTransformationPlan(planId);
     },
   },
 );
@@ -522,6 +582,48 @@ rpc.on('issuesReportUpdate', (data: any) => {
   });
 });
 
-// Request initial or refreshed graph data from Extension Host
+rpc.on('evolutionStateUpdate', (data: any) => {
+  if (data) {
+    settingsDrawer.updateProps({
+      activeOrientation: data.orientation,
+      tier1: data.tier1,
+      tier2: data.tier2,
+      constraints: data.constraints,
+      structuralSignatures: data.signatures || [],
+      structuralRecommendations: data.recommendations || [],
+      isSavingCustom: false,
+      isEvolutionLoading: false,
+    });
+  }
+});
+
+rpc.on('transformationPlanReady', (plan: any) => {
+  if (plan) {
+    currentTransformationPlan = plan;
+    isTransformationModalOpen = true;
+    isApplyingTransformationPlan = false;
+    actualTransformationDelta = null;
+    renderTransformationModal();
+  }
+});
+
+rpc.on('transformationPlanApplied', (data: any) => {
+  if (data) {
+    isApplyingTransformationPlan = false;
+    actualTransformationDelta = data.actualDelta;
+    renderTransformationModal();
+  }
+});
+
+rpc.on('constraintValidationResult', (data: any) => {
+  if (data) {
+    settingsDrawer.updateProps({
+      conflicts: data.conflicts || [],
+    });
+  }
+});
+
+// Request initial or refreshed graph data and evolution state from Extension Host
 rpc.send('requestGraphData');
+rpc.getEvolutionState();
 

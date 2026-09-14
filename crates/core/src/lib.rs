@@ -9,6 +9,7 @@ pub mod debt;
 pub mod delta;
 pub mod drift;
 pub mod error;
+pub mod evolution;
 pub mod fragment;
 pub mod graph;
 pub mod ipc;

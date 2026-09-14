@@ -6,33 +6,21 @@
 
 <!--
 === SYNC IMPACT REPORT ===
-Version Change: 1.4.0 -> 1.5.0 (Section-Level Fragment Architecture, Materialized Frontmatter Layer, 5-Pillar Health Model & 12 Critical Invariants)
+Version Change: 1.5.0 -> 1.6.0 (Knowledge Organization Systems, Structural Evidence & Trade-Offs, Documentation Orientations, Custom Two-Tier Configuration, User-Controlled Downstream Automation & Invariants XIII–XVI)
 Modified Principles:
-  - Added Section: "The 12 Critical Invariants" establishing the non-negotiable architectural bedrock (Committed truth, Candidate isolation, Determinism, Locality, Document-centric graph, Section addressability, AST authority, Materialized metadata, Raw numeric integrity, Presentation separation, Brownfield tolerance, Quality gate).
-  - Principle I: Dual-Process Separation & Local Determinism -> Reaffirmed zero external AI, local offline execution, and memory ceilings.
-  - Principle II: Git Knowledge State Boundary & Dual Hook Lifecycle -> Harmonized with Invariants I & II (ephemeral candidate graph at pre-commit, persistent graph update at post-commit).
-  - Added Principle IV: Document-Centric Graph, Section Addressability & Materialized Frontmatter Layer -> Codifying document-level graph nodes ($O(N)$), section fragments as document metadata (`document.md#fragment`), Markdown AST as structural source of truth, frontmatter as materialized metadata layer (`wiki.fragments`), raw numeric integrity (integers in analytics/storage) vs compact presentation formatting ($\le 5$ chars in UI), Fragment Inspector (3-column report `Fragment | Tok | I/O`), and reference concentration analytics.
-  - Principle IX (formerly VIII): Context Trace & 5-Pillar Network-Aware Knowledge Health Model -> Expanded from 4 to 5 dimensions:
-      1. Integrity (broken links, dangling anchors, unmapped targets)
-      2. Structure (NEW: missing fragment metadata, oversized documents >50k tokens, reference concentration >70%, unfragmented hubs, low context utilization)
-      3. Consistency (collisions, canonical conflicts, contradictions)
-      4. Discoverability (Context Trace path depth, reachability from entry points, centrality distribution, orphan ratio)
-      5. Freshness (deterministic evidence of currentness: code entity existence, code changes in Git after doc updates, deleted/renamed symbols, canonical contradictions)
-    Integrated Context Trace section-level routing achieving ~90% context reduction (e.g. 50k -> 5k tokens) via constrained beam search.
-  - Renumbered Subsequent Principles:
-      - Principle V: Context Hierarchy, Semantic Sizing & Focus Modes
-      - Principle VI: Strict Link Integrity & Cross-Submodule Vault Traversal
-      - Principle VII: Brownfield Debt Baseline & Admission Control
-      - Principle VIII: Deterministic Drift & Semantic Collision Engine
-      - Principle X: Sandboxed Webview, Progressive Disclosure & Zero Action Duplication
-      - Principle XI: TDD, Multi-Platform Verification & Performance Budgets
+  - Expanded Section: "The 16 Critical Invariants" establishing the non-negotiable architectural bedrock:
+      - Added Invariant XIII (Non-Prescriptive Knowledge Organization: size is signal, not verdict; no methodology dogma).
+      - Added Invariant XIV (Unified Optimization Profile: AI/Human/Balanced/Custom compile to single internal profile).
+      - Added Invariant XV (Transparent Trade-Off & Evidence-Based Recommendation: multi-dimensional metrics, explicit countervailing trade-offs).
+      - Added Invariant XVI (User-Controlled Downstream Automation & Re-Measurement: approval gate, Before/After validation).
+  - Added Principle XII: Documentation Orientation, Strategy Trade-Offs & User-Controlled Structural Evolution.
 Follow-up TODOs: None deferred.
 ==========================
 -->
 
-## The 12 Critical Invariants (NON-NEGOTIABLE)
+## The 16 Critical Invariants (NON-NEGOTIABLE)
 
-The following twelve invariants constitute the immutable architectural foundation of LLM Wiki. Every component, data model, RPC interface, and user workflow MUST strictly obey these invariants without exception:
+The following sixteen invariants constitute the immutable architectural foundation of LLM Wiki. Every component, data model, RPC interface, and user workflow MUST strictly obey these invariants without exception:
 
 1. **Invariant I — Committed Truth**: The persistent Knowledge Graph MUST represent committed repository state only. Working-tree changes or file-save events MUST NOT mutate the persistent graph (`file saved ≠ knowledge graph update`).
 2. **Invariant II — Candidate Isolation**: Pre-commit analysis MUST evaluate staged changes exclusively in an in-memory ephemeral candidate graph, which is completely discarded after validation and MUST NOT contaminate persistent state.
@@ -46,6 +34,10 @@ The following twelve invariants constitute the immutable architectural foundatio
 10. **Invariant X — Presentation Separation**: Compact numeric formatting (e.g., `1.04M`, `543`, `13.3k`) MUST exist exclusively at the presentation layer and MUST NOT exceed 5 characters. Formatted strings MUST NEVER be fed back into analytics, scoring, or persistent data models.
 11. **Invariant XI — Brownfield Tolerance**: Pre-existing repository debt MUST be baselined and visible without blocking commits. Pre-commit validation MUST strictly distinguish legacy debt from new regressions (`New Regressions = Candidate \ Baseline`).
 12. **Invariant XII — Quality Gate**: New high-confidence knowledge regressions (e.g., new broken internal links, new invalid heading anchors, new high-confidence collision duplicates) MUST be capable of deterministically blocking commits.
+13. **Invariant XIII — Non-Prescriptive Knowledge Organization**: The system MUST NOT mandate or dogmatize a single documentation methodology (e.g., DITA, Wiki-links, hierarchical taxonomy, topic-based). Document size, link count, and section density are analytical signals, NEVER automatic verdicts. A 50k-token document can be structurally healthy, while a 5k-token document can be overloaded.
+14. **Invariant XIV — Unified Optimization Profile**: All Documentation Orientations (`AI-Oriented` [default], `Human-Oriented`, `Balanced`, `Custom`) MUST compile into a single, inspectable internal `OptimizationProfile` struct. The engine MUST NOT run separate, divergent heuristic engines per mode.
+15. **Invariant XV — Transparent Trade-Off & Evidence-Based Recommendation**: Every structural problem detection MUST be derived from observable multi-dimensional metrics (cohesion, coupling, concentration, semantic diversity, context efficiency), and every recommendation MUST explicitly articulate both expected benefits and countervailing trade-offs (e.g., increased fragmentation, metadata complexity, or index maintenance).
+16. **Invariant XVI — User-Controlled Downstream Automation & Re-Measurement**: Automated structural transformations (e.g., generating index routers, section-level refactoring, frontmatter injection) MUST be strictly downstream of explicit user orientation choice and approval (`Auto-Apply: OFF`, `Require Approval: ON` by default) and MUST respect Hard Constraints. Every applied transformation MUST be verified through deterministic Before-vs-After comparative re-measurement.
 
 ---
 
@@ -213,6 +205,31 @@ Quality and cross-platform stability are guaranteed through strict automated tes
 - **Extension Host Integration Tests**: Headless VS Code extension tests (`@vscode/test-electron`) verifying sidecar process spawning, IPC socket resilience, Fragment Inspector rendering, and Webview message roundtrips.
 - **Multi-Platform Support**: Binaries MUST be built and tested for Linux (x86_64, aarch64), macOS (x86_64, Apple Silicon aarch64), and Windows (x86_64).
 
+### XII. Documentation Orientation, Strategy Trade-Offs & User-Controlled Structural Evolution
+The engine bridges structural observation with intentional evolution:
+- **Four Documentation Orientations**:
+  1. *AI-Oriented (Default)*: Optimizes for machine-mediated discovery and retrieval, context efficiency, canonical routing, section addressability, and short, high-relevance Context Traces.
+  2. *Human-Oriented*: Prioritizes narrative continuity, readability, conceptual explanation, human navigation, and maintainability.
+  3. *Balanced*: Multi-objective optimization balancing AI retrieval efficiency and human comprehension without letting either dominate unnecessarily.
+  4. *Custom*: Unrestricted configuration for specific organizational or philosophical standards.
+- **Two-Tier Custom Configuration Architecture**:
+  - *Tier 1 (High-Level Objectives)*: Intuitive knobs (`AI Discoverability`, `Context Efficiency`, `Human Readability`, `Knowledge Reuse`, `Narrative Coherence`, `Maintenance Simplicity`) with informational tooltips (`ⓘ`) explaining trade-offs.
+  - *Tier 2 (Advanced Engine Parameters)*: Inspectable underlying parameters (`cohesion_threshold`, `semantic_diversity_threshold`, `reference_concentration_threshold`, `max_trace_depth`, `max_context_surface`, `split_sensitivity`, `canonical_ownership_sensitivity`).
+  - *Deterministic Parameter Mapping*: Every Tier 1 setting maps explicitly and deterministically to underlying Tier 2 engine variables.
+- **Constraint Hierarchy & Conflict Detection**:
+  - Classifies configuration directives into *Preferences* (soft bias), *Constraints* (penalized trade-off), and *Hard Constraints* (strictly forbidden automated actions, e.g. never split canonical docs).
+  - Deterministically detects and surfaces mathematically contradictory constraint sets before producing recommendations.
+- **10-Dimensional Structural Analytics & Evidence-Based Signatures**:
+  - Measures: Cohesion, Coupling, Reference Concentration, Granularity, Context Efficiency, Discoverability, Reusability, Semantic Diversity, Navigational Complexity, Maintenance Coupling.
+  - Combines metrics into problem signatures (e.g., structural "God Document" defined by high diversity, high concentration, and low context efficiency rather than raw token count alone).
+- **Knowledge Organization System (KOS) Candidate Strategies & Trade-Off Matrix**:
+  - Evaluates classical strategies (Section Addressing, Topic Decomposition, Lightweight Index Routers, Faceted Classification, Preserve Document, Hybrid Strategies) against the active `OptimizationProfile`.
+  - Assigns deterministic confidence scores $[0.0, 1.0]$ and explains countervailing trade-offs.
+- **User-Controlled Downstream Automation**:
+  - Workflow: $\text{Measure} \to \text{Diagnose} \to \text{Recommend} \to \text{User Selects Strategy} \to \text{Generate Transformation Plan} \to \text{User Approval} \to \text{Automate} \to \text{Re-Measure}$.
+  - Default safety: `Auto-Apply: OFF`, `Require Approval: ON`.
+  - Quantifies empirical Before-vs-After delta metrics ($\Delta \text{Context Efficiency}$, $\Delta \text{Trace Depth}$, $\Delta \text{Maintenance Coupling}$).
+
 ---
 
 ## Technology Stack & Performance Standards
@@ -268,4 +285,4 @@ This Constitution represents the supreme architectural and technical policy for 
   - **MINOR**: Addition of new principles, sections, or materially expanded guidelines.
   - **PATCH**: Clarifications, wording adjustments, or typo fixes.
 
-**Version**: 1.5.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-13
+**Version**: 1.6.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-14

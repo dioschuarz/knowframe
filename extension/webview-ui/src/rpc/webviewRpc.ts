@@ -106,6 +106,47 @@ export class WebviewRpcBridge {
     });
   }
 
+  public getEvolutionState(): void {
+    this.sendMessage({
+      type: 'getEvolutionState',
+    });
+  }
+
+  public setOrientation(orientation: string): void {
+    this.sendMessage({
+      type: 'setOrientation',
+      payload: { orientation },
+    });
+  }
+
+  public updateCustomConfig(tier1: any, tier2: any, constraints: any[]): void {
+    this.sendMessage({
+      type: 'updateCustomConfig',
+      payload: { tier1, tier2, constraints },
+    });
+  }
+
+  public validateConstraints(constraints: any[]): void {
+    this.sendMessage({
+      type: 'validateConstraints',
+      payload: { constraints },
+    });
+  }
+
+  public generateTransformationPlan(recommendationId: string): void {
+    this.sendMessage({
+      type: 'generateTransformationPlan',
+      payload: { recommendationId },
+    });
+  }
+
+  public applyTransformationPlan(planId: string): void {
+    this.sendMessage({
+      type: 'applyTransformationPlan',
+      payload: { planId },
+    });
+  }
+
   public setState(state: any): void {
     this.vscodeApi?.setState(state);
   }

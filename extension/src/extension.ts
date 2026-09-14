@@ -11,6 +11,7 @@ import { registerFixBrokenLinksCommand } from './commands/fixBrokenLinks';
 import { registerInstallHooksCommand } from './commands/installHooks';
 import { SidebarViewProvider } from './webview/sidebarViewProvider';
 import { AdmissionManager } from './services/admissionManager';
+import { EvolutionManager } from './evolution/evolutionManager';
 import { KnowledgeQualityScore } from './types/admission';
 
 let processManager: ProcessManager | null = null;
@@ -19,6 +20,7 @@ let statusBarItem: vscode.StatusBarItem | null = null;
 let latestScanResult: ScanResultPayload | null = null;
 let sidebarProvider: SidebarViewProvider | null = null;
 let admissionManager: AdmissionManager | null = null;
+let evolutionManager: EvolutionManager | null = null;
 let latestQualityScore: KnowledgeQualityScore | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -75,7 +77,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   // Register modular commands
   context.subscriptions.push(
-    registerShowGraphCommand(context, () => ipcClient, () => latestScanResult),
+    registerShowGraphCommand(context, () => ipcClient, () => latestScanResult, () => evolutionManager),
     registerSetHubCommand(() => ipcClient, () => latestScanResult, onScanResultUpdated),
     registerRescanVaultCommand(() => ipcClient, onScanResultUpdated),
     registerFixBrokenLinksCommand(() => latestScanResult),
@@ -91,7 +93,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('llmWiki.reviewIssues', async () => {
       const panel = GraphPanelManager.createOrShow(context.extensionUri, ipcClient, latestScanResult);
+      if (evolutionManager) {
+        panel.setEvolutionManager(evolutionManager);
+      }
       await panel.openDiagnosticsTab();
+    }),
+    vscode.commands.registerCommand('llmWiki.reviewEvolution', async () => {
+      const panel = GraphPanelManager.createOrShow(context.extensionUri, ipcClient, latestScanResult);
+      if (evolutionManager) {
+        panel.setEvolutionManager(evolutionManager);
+      }
+      await panel.openEvolutionTab();
     })
   );
 
@@ -113,6 +125,40 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
 
       admissionManager = new AdmissionManager(ipcClient);
+      const uiBridge = {
+        confirmPlanApproval: async (planId: string) => {
+          const choice = await vscode.window.showWarningMessage(
+            `Apply structural transformation plan '${planId}'? This will modify documents atomically.`,
+            { modal: true },
+            'Apply Changes'
+          );
+          return choice === 'Apply Changes';
+        },
+        stageFiles: async (root: string, files: string[]) => {
+          try {
+            const { exec } = await import('child_process');
+            const cmd = `git add ${files.map((f) => `"${f}"`).join(' ')}`;
+            await new Promise<void>((resolve) => {
+              exec(cmd, { cwd: root }, () => resolve());
+            });
+          } catch (e: any) {
+            outputChannel.appendLine(`[EVOLUTION GIT STAGE] Warning: ${e.message}`);
+          }
+        },
+        log: (msg: string) => outputChannel.appendLine(msg),
+      };
+      evolutionManager = new EvolutionManager(ipcClient, uiBridge);
+      context.subscriptions.push({ dispose: () => evolutionManager?.dispose() });
+
+      if (GraphPanelManager.currentPanel) {
+        GraphPanelManager.currentPanel.setEvolutionManager(evolutionManager);
+      }
+      evolutionManager.onDidChangeOrientation((orient) => {
+        sidebarProvider?.updateOrientation(orient);
+      });
+      evolutionManager.getOrientation().then((res) => {
+        sidebarProvider?.updateOrientation(res.orientation);
+      }).catch(() => {});
 
       // Phase 1: Fast Graph Topology Scan (PRIORITY 1 - Render Graph First and Quickly!)
       statusBarItem.text = '$(sync~spin) Wiki: 30% Scanning Graph...';
