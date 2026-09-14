@@ -45,14 +45,14 @@ export const TIER2_SLIDER_DEFS: Array<{
   unit: string;
 }> = [
   { key: 'cohesionThreshold', label: 'Cohesion Threshold', min: 0.1, max: 1.0, step: 0.05, unit: '' },
-  { key: 'semanticDiversityThreshold', label: 'Semantic Diversity Threshold', min: 0.1, max: 1.0, step: 0.05, unit: '' },
-  { key: 'referenceConcentrationThreshold', label: 'Ref. Concentration Threshold', min: 0.1, max: 1.0, step: 0.05, unit: '' },
+  { key: 'semanticDiversityThreshold', label: 'Semantic Diversity', min: 0.1, max: 1.0, step: 0.05, unit: '' },
+  { key: 'referenceConcentrationThreshold', label: 'Ref. Concentration', min: 0.1, max: 1.0, step: 0.05, unit: '' },
   { key: 'fragmentSizeTarget', label: 'Fragment Size Target', min: 1000, max: 15000, step: 500, unit: 'tok' },
   { key: 'maxTraceDepth', label: 'Max Trace Depth', min: 1, max: 10, step: 1, unit: 'hops' },
-  { key: 'candidateExpansionFactor', label: 'Candidate Expansion Factor', min: 1.0, max: 3.0, step: 0.1, unit: 'x' },
+  { key: 'candidateExpansionFactor', label: 'Candidate Expansion', min: 1.0, max: 3.0, step: 0.1, unit: 'x' },
   { key: 'maxContextSurfaceTokens', label: 'Max Context Surface', min: 2000, max: 50000, step: 1000, unit: 'tok' },
   { key: 'splitSensitivity', label: 'Split Sensitivity', min: 0.0, max: 1.0, step: 0.05, unit: '' },
-  { key: 'canonicalOwnershipSensitivity', label: 'Canonical Ownership Sensitivity', min: 0.0, max: 1.0, step: 0.05, unit: '' },
+  { key: 'canonicalOwnershipSensitivity', label: 'Canonical Ownership', min: 0.0, max: 1.0, step: 0.05, unit: '' },
   { key: 'duplicateTolerance', label: 'Duplicate Tolerance', min: 0.0, max: 1.0, step: 0.05, unit: '' },
   { key: 'fragmentationTolerance', label: 'Fragmentation Tolerance', min: 0.0, max: 1.0, step: 0.05, unit: '' },
 ];

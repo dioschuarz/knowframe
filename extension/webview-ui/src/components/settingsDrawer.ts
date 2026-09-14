@@ -805,6 +805,10 @@ export function renderSettingsDrawer(
   let enterTimer: any = null;
 
   function render(): void {
+    // Save scroll position before re-render to prevent jumping to top
+    const contentEl = container.querySelector('#settings-content') as HTMLElement | null;
+    const savedScrollTop = contentEl ? contentEl.scrollTop : 0;
+
     container.innerHTML = renderSettingsDrawerHtml(state, isEntering);
     const drawer = container.querySelector('#settings-drawer') as HTMLElement;
     if (drawer) {
@@ -812,6 +816,12 @@ export function renderSettingsDrawer(
       drawer.addEventListener('mousedown', (e) => e.stopPropagation());
       drawer.addEventListener('mouseup', (e) => e.stopPropagation());
       drawer.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    // Restore scroll position after re-render
+    const newContentEl = container.querySelector('#settings-content') as HTMLElement | null;
+    if (newContentEl && savedScrollTop > 0) {
+      newContentEl.scrollTop = savedScrollTop;
     }
 
     container.querySelector('#settings-btn-close')?.addEventListener('click', (e) => {
