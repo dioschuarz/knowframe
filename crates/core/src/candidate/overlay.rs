@@ -85,6 +85,8 @@ impl<'a> CandidateOverlay<'a> {
                         status: NodeStatus::Active,
                         color: "#64748B".to_string(),
                         broken_links: 0,
+                        fragments: Vec::new(),
+                        freshness: None,
                     };
 
                     overlay.mutated_headings.insert(rel_path.clone(), ast.headings);

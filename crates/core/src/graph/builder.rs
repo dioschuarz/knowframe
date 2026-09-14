@@ -165,6 +165,8 @@ impl GraphTopology {
             resolve_edge_integrity(edge, &index, &self.headings);
         }
 
+        crate::fragment::extractor::populate_fragment_inbounds(&mut self.nodes, &self.edges);
+
         self.compute_degrees();
     }
 

@@ -58,3 +58,7 @@ harness = false
 [[bench]]
 name = "sync_benchmark"
 harness = false
+
+[[bench]]
+name = "fragment_benchmark"
+harness = false

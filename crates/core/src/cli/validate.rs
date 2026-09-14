@@ -108,6 +108,41 @@ pub async fn execute_validate(
             return 0;
         }
 
+        // Materialize frontmatter for staged markdown documents and re-stage into Git index
+        let mut structure_warnings = Vec::new();
+        for item in &staged_delta.items {
+            if item.path.ends_with(".md") && item.status != FileDeltaStatus::Deleted {
+                let file_path = workspace_root.join(&item.path);
+                if file_path.is_file() {
+                    if let Ok(content) = std::fs::read_to_string(&file_path) {
+                        let parsed = crate::ast::parser::parse_markdown_ast(&item.path, &content);
+                        let fragments = crate::fragment::extractor::extract_fragments_from_document(&content, &parsed.edges);
+                        let token_count = crate::tokens::counter::count_bpe_tokens(&content).unwrap_or(0);
+
+                        // Structure debt check: oversized document (>50k tokens or >10 headings) lacking frontmatter
+                        let has_frontmatter_metadata = content.contains("wiki:") && content.contains("fragments:");
+                        if (token_count > 50_000 || parsed.headings.len() > 10) && !has_frontmatter_metadata {
+                            structure_warnings.push(format!(
+                                "Document '{}' exceeds structural threshold ({} tokens, {} headings) without materialized fragment metadata. Run 'llm-wiki-core materialize {}' to resolve structural debt.",
+                                item.path, token_count, parsed.headings.len(), item.path
+                            ));
+                        }
+
+                        // Non-destructively inject materialized frontmatter and re-stage into git index
+                        if let Ok(updated) = crate::fragment::frontmatter::inject_materialized_frontmatter(&content, &fragments) {
+                            if updated != content && std::fs::write(&file_path, &updated).is_ok() {
+                                let _ = std::process::Command::new("git")
+                                    .arg("add")
+                                    .arg(&item.path)
+                                    .current_dir(workspace_root)
+                                    .output();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
         // Scan base committed graph topology
         let base_graph = match crate::cli::scan::execute_scan(crate::cli::scan::ScanOptions {
             workspace_root: workspace_root.to_path_buf(),
@@ -117,6 +152,10 @@ pub async fn execute_validate(
             Ok(scan_result) => {
                 let mut topology = GraphTopology::new();
                 for node in scan_result.nodes {
+                    topology.set_headings(
+                        node.id.clone(),
+                        node.fragments.iter().map(|f| f.heading.clone()).collect(),
+                    );
                     topology.add_node(crate::model::NoteNode {
                         id: node.id.clone(),
                         file_path: node.file_path,
@@ -130,13 +169,17 @@ pub async fn execute_validate(
                         status: node.status,
                         color: node.color,
                         broken_links: node.broken_links,
+                        fragments: node.fragments,
+                        freshness: None,
                     });
                 }
                 for edge in scan_result.edges {
+                    let target_fragment = edge.anchor.as_ref().map(|a| a.trim_start_matches('#').to_string());
                     topology.add_edge(crate::model::NoteEdge {
                         id: edge.id,
                         source: edge.source,
                         target: edge.target,
+                        target_fragment,
                         link_type: edge.link_type,
                         is_broken: edge.is_broken,
                         raw_text: String::new(),
@@ -150,9 +193,9 @@ pub async fn execute_validate(
             Err(_) => GraphTopology::new(),
         };
 
-        // Load or auto-initialize debt baseline
+        // Load or initialize brownfield debt baseline
         let baseline = match load_baseline(workspace_root) {
-            Ok(Some(b)) => b,
+            Ok(Some(base)) => base,
             _ => {
                 let initial = capture_initial_baseline(&base_graph, "initial", vec![], vec![]);
                 let _ = save_baseline(workspace_root, &initial);
@@ -161,13 +204,23 @@ pub async fn execute_validate(
         };
 
         let overlay = CandidateOverlay::new(&base_graph, workspace_root, &staged_delta);
-        let report = evaluate_candidate(
+        let mut report = evaluate_candidate(
             &overlay,
             &baseline,
             vec![],
             vec![],
             AdmissionConfig::default(),
         );
+
+        for w in structure_warnings {
+            report.warnings.push(crate::candidate::WarningItem {
+                message: w,
+                file_path: None,
+            });
+        }
+        if report.decision == AdmissionDecision::Pass && !report.warnings.is_empty() {
+            report.decision = AdmissionDecision::Warn;
+        }
 
         if json_output {
             if let Ok(serialized) = serde_json::to_string_pretty(&report) {

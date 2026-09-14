@@ -1,10 +1,12 @@
 //! Code-to-doc reverse impact index and technical drift detection.
 
-pub mod extractor;
-pub mod index;
 pub mod detector;
+pub mod extractor;
+pub mod freshness;
+pub mod index;
 
 pub use detector::*;
+pub use freshness::*;
 
 use std::collections::{HashMap, HashSet};
 use serde::{Deserialize, Serialize};

@@ -113,4 +113,85 @@ describe('InspectorDrawer Test Suite', () => {
     assert.ok(html.includes('Active Context'), 'Should list top consumer node');
     assert.ok(html.includes('2.80k') || html.includes('2.8k') || html.includes('2,800'), 'Should display top consumer tokens');
   });
+
+  it('renders fragments table with 3 columns (Fragment | Tok | I/O) and line attributes (FR-019, FR-020)', () => {
+    const node: NoteNode = {
+      id: 'docs/architecture.md',
+      label: 'Architecture',
+      filePath: 'docs/architecture.md',
+      tags: ['#arch'],
+      color: '#3b82f6',
+      status: 'active',
+      tokens: 6500,
+      hopDistance: 1,
+      inDegree: 4,
+      outDegree: 2,
+      betweenness: 0.2,
+      brokenLinks: 0,
+      fragments: [
+        {
+          anchor: 'auth-flow',
+          heading: 'Authentication Flow',
+          start_line: 12,
+          end_line: 45,
+          tokens: 1500,
+          inbound: 5,
+          outbound: 2,
+        },
+        {
+          anchor: 'data-pipeline',
+          heading: 'Data Pipeline',
+          start_line: 46,
+          end_line: 98,
+          tokens: 2200,
+          inbound: 8,
+          outbound: 3,
+        },
+      ],
+    };
+
+    const html = renderNodeInspectionHtml({
+      node,
+      inLinks: [],
+      outLinks: [],
+      isHub: false,
+    });
+
+    assert.ok(html.includes('FRAGMENTS (2)'), 'Should display fragments header with count');
+    assert.ok(html.includes('insp-fragments-table'), 'Should render fragment table');
+    assert.ok(html.includes('Authentication Flow'), 'Should render fragment heading');
+    assert.ok(html.includes('#auth-flow'), 'Should render fragment anchor');
+    assert.ok(html.includes('data-start-line="12"'), 'Should set start line attribute');
+    assert.ok(html.includes('data-end-line="45"'), 'Should set end line attribute');
+    assert.ok(html.includes('1.50k') || html.includes('1.5k'), 'Should display compact tokens');
+    assert.ok(html.includes('5/2'), 'Should display I/O ratio');
+    assert.ok(html.includes('Inbound references: 5 · Outbound references: 2'), 'Should display informative tooltip');
+  });
+
+  it('renders empty fragment banner when no headings exist (FR-023)', () => {
+    const node: NoteNode = {
+      id: 'docs/short.md',
+      label: 'Short',
+      filePath: 'docs/short.md',
+      tags: [],
+      color: '#3b82f6',
+      status: 'active',
+      tokens: 120,
+      hopDistance: 2,
+      inDegree: 1,
+      outDegree: 0,
+      betweenness: 0,
+      brokenLinks: 0,
+      fragments: [],
+    };
+
+    const html = renderNodeInspectionHtml({
+      node,
+      inLinks: [],
+      outLinks: [],
+      isHub: false,
+    });
+
+    assert.ok(html.includes('No heading sections found'), 'Should display empty fragment state');
+  });
 });

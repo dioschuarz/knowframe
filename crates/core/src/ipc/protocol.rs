@@ -96,6 +96,10 @@ pub struct NodePayload {
     pub out_degree: u32,
     pub betweenness: f64,
     pub broken_links: u32,
+    #[serde(default)]
+    pub fragments: Vec<crate::fragment::FragmentMetadata>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub freshness: Option<crate::drift::FreshnessEvidence>,
 }
 
 impl From<&NoteNode> for NodePayload {
@@ -113,6 +117,8 @@ impl From<&NoteNode> for NodePayload {
             out_degree: n.out_degree,
             betweenness: n.betweenness,
             broken_links: n.broken_links,
+            fragments: n.fragments.clone(),
+            freshness: n.freshness.clone(),
         }
     }
 }
@@ -122,6 +128,8 @@ pub struct EdgePayload {
     pub id: String,
     pub source: String,
     pub target: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_fragment: Option<String>,
     pub is_broken: bool,
     pub link_type: LinkType,
     #[serde(default)]
@@ -138,6 +146,7 @@ impl From<&NoteEdge> for EdgePayload {
             id: e.id.clone(),
             source: e.source.clone(),
             target: e.target.clone(),
+            target_fragment: e.target_fragment.clone(),
             is_broken: e.is_broken,
             link_type: e.link_type,
             anchor: e.anchor.clone(),

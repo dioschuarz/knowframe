@@ -242,6 +242,8 @@ fn test_candidate_collision_blocking() {
         status: NodeStatus::Active,
         color: "#64748B".to_string(),
         broken_links: 0,
+        fragments: Vec::new(),
+        freshness: None,
     });
     base_graph.set_headings(
         "auth.md".to_string(),

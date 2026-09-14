@@ -70,28 +70,35 @@ export function renderQualityPillarHtml(props: QualityPillarProps): string {
           <span class="score-max">/100</span>
         </div>
         <div class="quality-pillars-mini">
-          <div class="pillar-mini-row" title="Broken links & anchor targets (30%)">
+          <div class="pillar-mini-row" title="Broken links & anchor targets (25%)">
             <span class="mini-label">Integrity</span>
             <div class="mini-bar-track">
               <div class="mini-bar-fill" style="width: ${score.integrity_score}%; background: ${getScoreColor(score.integrity_score)};"></div>
             </div>
             <span class="mini-val">${score.integrity_score.toFixed(0)}%</span>
           </div>
-          <div class="pillar-mini-row" title="Semantic collisions & conflicts (25%)">
+          <div class="pillar-mini-row" title="Missing fragment metadata & oversized documents (20%)">
+            <span class="mini-label">Structure</span>
+            <div class="mini-bar-track">
+              <div class="mini-bar-fill" style="width: ${(score.structure_score ?? 100)}%; background: ${getScoreColor(score.structure_score ?? 100)};"></div>
+            </div>
+            <span class="mini-val">${(score.structure_score ?? 100).toFixed(0)}%</span>
+          </div>
+          <div class="pillar-mini-row" title="Semantic collisions & conflicts (20%)">
             <span class="mini-label">Consistency</span>
             <div class="mini-bar-track">
               <div class="mini-bar-fill" style="width: ${score.consistency_score}%; background: ${getScoreColor(score.consistency_score)};"></div>
             </div>
             <span class="mini-val">${score.consistency_score.toFixed(0)}%</span>
           </div>
-          <div class="pillar-mini-row" title="Orphans & hop reachability (25%)">
+          <div class="pillar-mini-row" title="Orphans & hop reachability (20%)">
             <span class="mini-label">Discoverability</span>
             <div class="mini-bar-track">
               <div class="mini-bar-fill" style="width: ${score.discoverability_score}%; background: ${getScoreColor(score.discoverability_score)};"></div>
             </div>
             <span class="mini-val">${score.discoverability_score.toFixed(0)}%</span>
           </div>
-          <div class="pillar-mini-row" title="Technical drift & unvalidated notes (20%)">
+          <div class="pillar-mini-row" title="Evidence-based citation & commit drift (15%)">
             <span class="mini-label">Freshness</span>
             <div class="mini-bar-track">
               <div class="mini-bar-fill" style="width: ${score.freshness_score}%; background: ${getScoreColor(score.freshness_score)};"></div>

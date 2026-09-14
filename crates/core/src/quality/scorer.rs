@@ -142,13 +142,62 @@ pub fn calculate_quality_score(
             description: format!("Cites modified/deleted code '{}' ({})", d.code_target, d.explanation),
         });
     }
+
+    for (path, node) in &topology.nodes {
+        if let Some(ref f) = node.freshness {
+            let weight = calculate_topological_weight(node.betweenness);
+            for missing in &f.missing_citations {
+                let penalty = 15.0 * weight;
+                freshness_deductions += penalty;
+                degradation_factors.push(QualityDegradationFactor {
+                    category: "missing_code_citation".to_string(),
+                    affected_node: path.clone(),
+                    betweenness_weight: weight,
+                    deduction_points: penalty,
+                    description: format!("Cites non-existent code file '{}'", missing),
+                });
+            }
+            if !f.code_modified_after_doc.is_empty() {
+                let penalty = 10.0 * weight;
+                freshness_deductions += penalty;
+                degradation_factors.push(QualityDegradationFactor {
+                    category: "code_modified_after_doc".to_string(),
+                    affected_node: path.clone(),
+                    betweenness_weight: weight,
+                    deduction_points: penalty,
+                    description: format!("Cited code files {:?} modified after document commit", f.code_modified_after_doc),
+                });
+            }
+        }
+    }
     let freshness_score = (100.0f32 - freshness_deductions).clamp(0.0, 100.0);
 
-    // 4-pillar composite calculation: 30% / 25% / 25% / 20%
-    let overall_score = 0.30 * integrity_score
-        + 0.25 * consistency_score
-        + 0.25 * discoverability_score
-        + 0.20 * freshness_score;
+    // Pillar 2: Structure
+    let structure_findings = crate::quality::structure::detect_structure_debt(topology);
+    let structure_score = crate::quality::structure::calculate_structure_score(&structure_findings, topology);
+
+    for sf in &structure_findings {
+        let b = topology
+            .get_node(&sf.document_path)
+            .map(|n| n.betweenness)
+            .unwrap_or(0.0);
+        let weight = calculate_topological_weight(b);
+        let penalty = sf.penalty * weight;
+        degradation_factors.push(QualityDegradationFactor {
+            category: "structure_debt".to_string(),
+            affected_node: sf.document_path.clone(),
+            betweenness_weight: weight,
+            deduction_points: penalty,
+            description: sf.guidance.clone(),
+        });
+    }
+
+    // 5-pillar composite calculation: 25% / 20% / 20% / 20% / 15%
+    let overall_score = 0.25 * integrity_score
+        + 0.20 * structure_score
+        + 0.20 * consistency_score
+        + 0.20 * discoverability_score
+        + 0.15 * freshness_score;
     let overall_score = overall_score.clamp(0.0, 100.0);
 
     // Top degradation factors: sort descending by deduction_points
@@ -195,6 +244,7 @@ pub fn calculate_quality_score(
     KnowledgeQualityScore {
         overall_score: (overall_score * 10.0).round() / 10.0,
         integrity_score: (integrity_score * 10.0).round() / 10.0,
+        structure_score: (structure_score * 10.0).round() / 10.0,
         consistency_score: (consistency_score * 10.0).round() / 10.0,
         discoverability_score: (discoverability_score * 10.0).round() / 10.0,
         freshness_score: (freshness_score * 10.0).round() / 10.0,
@@ -336,6 +386,66 @@ pub fn extract_all_issues(
             weight: (weight * 100.0).round() / 100.0,
             description: format!("Cites modified/deleted code '{}' ({})", d.code_target, d.explanation),
             remediation_hint: format!("Update documentation to reflect changes in '{}'", d.code_target),
+        });
+    }
+
+    for (path, node) in &topology.nodes {
+        if let Some(ref f) = node.freshness {
+            let weight = calculate_topological_weight(node.betweenness);
+            for missing in &f.missing_citations {
+                let deduction = (15.0 * weight * 10.0).round() / 10.0;
+                issues.push(KnowledgeIssue {
+                    id: format!("freshness:missing:{}:{}", path, missing),
+                    pillar: "freshness".to_string(),
+                    category: "missing_code_citation".to_string(),
+                    file_path: path.clone(),
+                    line_number: None,
+                    target: Some(missing.clone()),
+                    deduction_points: deduction,
+                    weight: (weight * 100.0).round() / 100.0,
+                    description: format!("Cites code file '{}' which does not exist on disk", missing),
+                    remediation_hint: format!("Create source file '{}' or update code citation in '{}'", missing, path),
+                });
+            }
+            for mod_code in &f.code_modified_after_doc {
+                let deduction = (10.0 * weight * 10.0).round() / 10.0;
+                issues.push(KnowledgeIssue {
+                    id: format!("freshness:modified:{}:{}", path, mod_code),
+                    pillar: "freshness".to_string(),
+                    category: "code_modified_after_doc".to_string(),
+                    file_path: path.clone(),
+                    line_number: None,
+                    target: Some(mod_code.clone()),
+                    deduction_points: deduction,
+                    weight: (weight * 100.0).round() / 100.0,
+                    description: format!("Cited code '{}' was modified in Git after document's last commit", mod_code),
+                    remediation_hint: format!("Review recent code changes in '{}' and update documentation accordingly", mod_code),
+                });
+            }
+        }
+    }
+
+    // 5. Structure Issues (Pillar 2)
+    let structure_findings = crate::quality::structure::detect_structure_debt(topology);
+    for sf in structure_findings {
+        let b = topology
+            .nodes
+            .get(&sf.document_path)
+            .map(|n| n.betweenness)
+            .unwrap_or(0.0);
+        let weight = calculate_topological_weight(b);
+        let deduction = (sf.penalty * weight * 10.0).round() / 10.0;
+        issues.push(KnowledgeIssue {
+            id: format!("structure:{}:{:?}", sf.document_path, sf.debt_type),
+            pillar: "structure".to_string(),
+            category: format!("{:?}", sf.debt_type).to_lowercase(),
+            file_path: sf.document_path.clone(),
+            line_number: None,
+            target: sf.fragment_anchor.clone(),
+            deduction_points: deduction,
+            weight: (weight * 100.0).round() / 100.0,
+            description: sf.guidance.clone(),
+            remediation_hint: "Restructure document or materialize fragment metadata with 'llm-wiki-core materialize'".to_string(),
         });
     }
 

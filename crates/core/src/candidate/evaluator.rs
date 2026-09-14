@@ -68,7 +68,7 @@ pub fn evaluate_candidate(
             candidate_broken_links.push(BrokenLinkSignature {
                 source_path: candidate_edge.source.clone(),
                 target_ref: candidate_edge.target.clone(),
-                line_number: candidate_edge.line.unwrap_or(1) as u32,
+                line_number: candidate_edge.line.unwrap_or(1),
             });
         } else {
             *out_degrees.entry(candidate_edge.source.clone()).or_insert(0) += 1;
@@ -85,7 +85,7 @@ pub fn evaluate_candidate(
             candidate_broken_links.push(BrokenLinkSignature {
                 source_path: candidate_edge.source.clone(),
                 target_ref: candidate_edge.target.clone(),
-                line_number: candidate_edge.line.unwrap_or(1) as u32,
+                line_number: candidate_edge.line.unwrap_or(1),
             });
         } else {
             *out_degrees.entry(candidate_edge.source.clone()).or_insert(0) += 1;
@@ -95,7 +95,7 @@ pub fn evaluate_candidate(
 
     // 3. Compute candidate orphan nodes
     let mut candidate_orphans = HashSet::new();
-    for (id, _) in &known_nodes {
+    for id in known_nodes.keys() {
         let in_deg = in_degrees.get(id).copied().unwrap_or(0);
         let out_deg = out_degrees.get(id).copied().unwrap_or(0);
         if in_deg == 0 && out_deg == 0 {

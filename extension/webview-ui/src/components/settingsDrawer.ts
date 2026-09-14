@@ -405,6 +405,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
       const totalIssues = report?.total_issues ?? brokenLinksCount;
       const overallScore = report ? Math.round(report.overall_score) : 100;
       const integrityCount = report?.integrity_count ?? brokenLinksCount;
+      const structureCount = report?.structure_count ?? 0;
       const consistencyCount = report?.consistency_count ?? 0;
       const discoverabilityCount = report?.discoverability_count ?? orphanNotes;
       const freshnessCount = report?.freshness_count ?? 0;
@@ -415,6 +416,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
 
       const pillarDefs = [
         { id: 'integrity', label: 'Integrity', count: integrityCount },
+        { id: 'structure', label: 'Structure', count: structureCount },
         { id: 'consistency', label: 'Consistency', count: consistencyCount },
         { id: 'discoverability', label: 'Discoverability', count: discoverabilityCount },
         { id: 'freshness', label: 'Freshness', count: freshnessCount },
@@ -511,7 +513,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
         <div class="settings-section">
           <div class="settings-sec-title">Knowledge Quality Diagnostics</div>
           <p class="settings-desc">
-            Itemized findings detected from last sync across all 4 quality pillars. Inspect issues one-by-one and resolve them in editor.
+            Itemized findings detected from last sync across all 5 quality pillars. Inspect issues one-by-one and resolve them in editor.
           </p>
 
           <div class="diag-overview-card">
@@ -523,6 +525,10 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
               <div class="diag-pillar-chip" title="Integrity defects (broken links)">
                 <span class="diag-chip-val" style="color: ${integrityCount > 0 ? '#ef4444' : 'inherit'};">${integrityCount}</span>
                 <span class="diag-chip-lbl">Integrity</span>
+              </div>
+              <div class="diag-pillar-chip" title="Structure defects (oversized docs/missing metadata)">
+                <span class="diag-chip-val" style="color: ${structureCount > 0 ? '#38bdf8' : 'inherit'};">${structureCount}</span>
+                <span class="diag-chip-lbl">Structure</span>
               </div>
               <div class="diag-pillar-chip" title="Consistency defects (collisions)">
                 <span class="diag-chip-val" style="color: ${consistencyCount > 0 ? '#f472b6' : 'inherit'};">${consistencyCount}</span>
@@ -544,6 +550,9 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
               </button>
               <button type="button" class="diag-filter-btn ${currentPillar === 'integrity' ? 'active' : ''}" data-filter="integrity">
                 Integrity (${integrityCount})
+              </button>
+              <button type="button" class="diag-filter-btn ${currentPillar === 'structure' ? 'active' : ''}" data-filter="structure">
+                Structure (${structureCount})
               </button>
               <button type="button" class="diag-filter-btn ${currentPillar === 'consistency' ? 'active' : ''}" data-filter="consistency">
                 Consistency (${consistencyCount})

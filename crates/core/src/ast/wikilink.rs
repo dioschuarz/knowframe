@@ -62,10 +62,12 @@ pub fn parse_wikilinks(text: &str) -> Vec<RawWikilink> {
 }
 
 pub fn wikilink_to_edge(source: &str, link: RawWikilink, line: Option<u32>) -> NoteEdge {
+    let target_fragment = link.anchor.as_ref().map(|a| a.trim_start_matches('#').to_string());
     NoteEdge {
         id: format!("{}->{}", source, link.target),
         source: source.to_string(),
         target: link.target,
+        target_fragment,
         link_type: LinkType::Wikilink,
         is_broken: false,
         raw_text: link.label,

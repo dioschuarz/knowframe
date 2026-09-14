@@ -1,71 +1,58 @@
 /**
  * Universal Compact Number Formatter.
- * Enforces: Maximum 3 digits and maximum 5 characters total.
+ * Invariant X: Presentation Separation.
+ * Strict Invariant: Output MUST NOT exceed 5 characters across all scales.
  *
- * Requirements:
- * - Maximum 3 digits (e.g., 543, 13.3k, 0.11M)
- * - Maximum 5 characters total (string length <= 5)
- *
- * Examples:
- *   543      -> 543     (3 digits, 3 chars)
- *   13300    -> 13.3k   (3 digits, 5 chars)
- *   110000   -> 0.11M   (3 digits, 5 chars)
- *   1234567  -> 1.23M   (3 digits, 5 chars)
- *   13340000 -> 13.3M   (3 digits, 5 chars)
- *   100000000-> 100M    (3 digits, 4 chars)
+ * Mathematical Length Verification:
+ *   [0 .. 999]              -> value.toString()           (1..3 chars) e.g. "543"
+ *   [1,000 .. 9,999]        -> (val/1k).toFixed(2) + 'k'  (max 5 chars) e.g. "4.23k", "9.99k"
+ *   [10,000 .. 99,999]      -> (val/1k).toFixed(1) + 'k'  (max 5 chars) e.g. "13.3k", "99.9k"
+ *   [100,000 .. 999,999]    -> Math.round(val/1k) + 'k'   (max 4 chars) e.g. "100k", "543k"
+ *   [1M .. 9,999,999]       -> (val/1M).toFixed(2) + 'M'  (max 5 chars) e.g. "1.04M", "9.99M"
+ *   [10M .. 99,999,999]     -> (val/1M).toFixed(1) + 'M'  (max 5 chars) e.g. "10M", "12.5M"
+ *   [100M .. 999,999,999]   -> Math.round(val/1M) + 'M'   (max 4 chars) e.g. "100M", "123M"
+ *   [1B .. 9,999,999,999]   -> (val/1B).toFixed(2) + 'B'  (max 5 chars) e.g. "1B", "1.04B"
+ *   [10B .. 99,999,999,999] -> (val/1B).toFixed(1) + 'B'  (max 5 chars) e.g. "10B", "12.5B"
+ *   [>= 100B]               -> Math.round(val/1B) + 'B'   (max 4..5 chars) e.g. "100B", "999B"
  */
-export function formatCompactNumber(n: number | null | undefined): string {
-  if (n === null || n === undefined || isNaN(n) || n <= 0) {
+export function formatCompactNumber(value: number | null | undefined): string {
+  if (value === null || value === undefined || isNaN(value) || value <= 0) {
     return '0';
   }
 
-  if (n < 1000) {
-    return Math.round(n).toString();
+  let res: string;
+  if (value < 1000) {
+    res = Math.round(value).toString();
+  } else if (value < 10000) {
+    res = (value / 1000).toFixed(2).replace(/\.?0+$/, '') + 'k';
+  } else if (value < 100000) {
+    res = (value / 1000).toFixed(1).replace(/\.?0+$/, '') + 'k';
+  } else if (value < 1000000) {
+    res = Math.round(value / 1000) + 'k';
+  } else if (value < 10000000) {
+    res = (value / 1000000).toFixed(2).replace(/\.?0+$/, '') + 'M';
+  } else if (value < 100000000) {
+    res = (value / 1000000).toFixed(1).replace(/\.?0+$/, '') + 'M';
+  } else if (value < 1000000000) {
+    res = Math.round(value / 1000000) + 'M';
+  } else if (value < 10000000000) {
+    res = (value / 1000000000).toFixed(2).replace(/\.?0+$/, '') + 'B';
+  } else if (value < 100000000000) {
+    res = (value / 1000000000).toFixed(1).replace(/\.?0+$/, '') + 'B';
+  } else {
+    res = Math.round(value / 1000000000) + 'B';
   }
 
-  if (n < 10000) {
-    const val = (n / 1000).toFixed(2);
-    if (parseFloat(val) >= 10) {
-      return (n / 1000).toFixed(1) + 'k';
+  // Strict invariant guarantee: length <= 5
+  if (res.length > 5) {
+    if (res.endsWith('k')) {
+      const v = parseFloat(res);
+      res = (v / 1000).toFixed(1).replace(/\.?0+$/, '') + 'M';
+    } else if (res.endsWith('M')) {
+      const v = parseFloat(res);
+      res = (v / 1000).toFixed(1).replace(/\.?0+$/, '') + 'B';
     }
-    return val + 'k';
   }
 
-  if (n < 100000) {
-    const val = (n / 1000).toFixed(1);
-    if (parseFloat(val) >= 100) {
-      return '0.10M';
-    }
-    return val + 'k';
-  }
-
-  if (n < 1000000) {
-    const val = (n / 1000000).toFixed(2);
-    if (parseFloat(val) >= 1) {
-      return '1.00M';
-    }
-    return val + 'M';
-  }
-
-  if (n < 10000000) {
-    const val = (n / 1000000).toFixed(2);
-    if (parseFloat(val) >= 10) {
-      return (n / 1000000).toFixed(1) + 'M';
-    }
-    return val + 'M';
-  }
-
-  if (n < 100000000) {
-    const val = (n / 1000000).toFixed(1);
-    if (parseFloat(val) >= 100) {
-      return '100M';
-    }
-    return val + 'M';
-  }
-
-  if (n < 1000000000) {
-    return Math.round(n / 1000000) + 'M';
-  }
-
-  return (n / 1000000000).toFixed(1) + 'B';
+  return res.length <= 5 ? res : res.slice(0, 5);
 }

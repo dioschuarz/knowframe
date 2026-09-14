@@ -49,10 +49,11 @@ fn test_quality_score_pillar_weights() {
     topology.add_node(make_test_node("B.md", 0.0));
     topology.add_edge(make_test_edge("A.md", "B.md", false));
 
-    // Perfect graph: all pillars 100.0, overall 100.0
+    // Perfect graph: all 5 pillars 100.0, overall 100.0
     let perfect = calculate_quality_score(&topology, None, &[], &[]);
     assert_eq!(perfect.overall_score, 100.0);
     assert_eq!(perfect.integrity_score, 100.0);
+    assert_eq!(perfect.structure_score, 100.0);
     assert_eq!(perfect.consistency_score, 100.0);
     assert_eq!(perfect.discoverability_score, 100.0);
     assert_eq!(perfect.freshness_score, 100.0);
@@ -61,9 +62,9 @@ fn test_quality_score_pillar_weights() {
     topology.add_edge(make_test_edge("A.md", "missing.md", true));
     let with_broken = calculate_quality_score(&topology, None, &[], &[]);
     // Integrity deduction = 5.0 * 1.0 = 5.0 -> integrity_score = 95.0
-    // overall = 0.30 * 95.0 + 0.25 * 100 + 0.25 * 100 + 0.20 * 100 = 28.5 + 25 + 25 + 20 = 98.5
+    // 5-pillar overall = 0.25 * 95.0 + 0.20 * 100 + 0.20 * 100 + 0.20 * 100 + 0.15 * 100 = 23.75 + 75.0 = 98.75 -> 98.8
     assert_eq!(with_broken.integrity_score, 95.0);
-    assert_eq!(with_broken.overall_score, 98.5);
+    assert_eq!(with_broken.overall_score, 98.8);
 }
 
 #[test]

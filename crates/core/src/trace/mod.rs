@@ -1,10 +1,12 @@
 //! Context Trace graph traversal and BPE token accounting.
 
+pub mod beam;
 pub mod dijkstra;
 pub mod traversal;
 
 use serde::{Deserialize, Serialize};
 
+pub use beam::*;
 pub use traversal::*;
 
 /// Result of deterministic graph-constrained pathfinding from entrypoint to query target.
@@ -37,4 +39,21 @@ impl Default for ContextTraceResult {
             latency_ms: 0,
         }
     }
+}
+
+/// Section-level refinement outcome of Context Trace constrained beam search.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct ContextTraceSectionResult {
+    pub query: String,
+    pub entrypoint: String,
+    pub target_document: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_fragment: Option<String>,
+    pub path: Vec<String>,
+    pub depth: u32,
+    pub document_raw_tokens: u32,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub fragment_raw_tokens: Option<u32>,
+    pub context_reduction_percent: f64,
+    pub relevance_reasons: Vec<String>,
 }

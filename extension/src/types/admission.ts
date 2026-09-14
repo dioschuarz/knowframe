@@ -104,12 +104,14 @@ export interface QualityDegradationFactor {
 export interface KnowledgeQualityScore {
   overall_score: number;
   integrity_score: number;
+  structure_score?: number;
   consistency_score: number;
   discoverability_score: number;
   freshness_score: number;
   legacy_debt_count: number;
   regressions_count: number;
   resolved_debt_count?: number;
+  structure_debt_count?: number;
   central_hub_id?: string;
   top_degradation_factors: QualityDegradationFactor[];
 }
@@ -131,6 +133,7 @@ export interface KnowledgeIssuesReport {
   overall_score: number;
   total_issues: number;
   integrity_count: number;
+  structure_count?: number;
   consistency_count: number;
   discoverability_count: number;
   freshness_count: number;

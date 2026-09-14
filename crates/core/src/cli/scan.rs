@@ -104,9 +104,20 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
                     .unwrap_or_else(|| rel_str.clone())
             });
 
+            let fragments = crate::fragment::extractor::extract_fragments_from_document(&content, &parsed.edges);
+            let freshness = crate::drift::freshness::evaluate_document_freshness(
+                &options.workspace_root,
+                &rel_str,
+                &content,
+                None,
+                &[],
+            );
+
             let mut node = NoteNode::new(&rel_str, abs_path.to_string_lossy().to_string(), label);
             node.tokens = tokens;
             node.tags = parsed.tags;
+            node.fragments = fragments;
+            node.freshness = Some(freshness);
             if exclusion_engine.is_graph_excluded(&rel_str) {
                 node.status = crate::model::NodeStatus::Excluded;
             }

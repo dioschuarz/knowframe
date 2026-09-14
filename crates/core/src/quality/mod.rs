@@ -1,14 +1,24 @@
 pub mod scorer;
+pub mod structure;
 
 pub use scorer::{calculate_quality_score, calculate_topological_weight, extract_all_issues};
+pub use structure::*;
 
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use crate::debt::DebtSummary;
 
-/// 4-pillar knowledge quality score.
+fn default_100() -> f32 {
+    100.0
+}
+
+/// 5-pillar knowledge quality score.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct KnowledgeQualityScore {
     pub overall_score: f32, // 0.0 to 100.0
     pub integrity_score: f32, // 0.0 to 100.0
+    #[serde(default = "default_100")]
+    pub structure_score: f32, // 0.0 to 100.0 (Pillar 2)
     pub consistency_score: f32, // 0.0 to 100.0
     pub discoverability_score: f32, // 0.0 to 100.0
     pub freshness_score: f32, // 0.0 to 100.0
@@ -24,6 +34,7 @@ impl Default for KnowledgeQualityScore {
         Self {
             overall_score: 100.0,
             integrity_score: 100.0,
+            structure_score: 100.0,
             consistency_score: 100.0,
             discoverability_score: 100.0,
             freshness_score: 100.0,
@@ -32,6 +43,45 @@ impl Default for KnowledgeQualityScore {
             resolved_debt_count: 0,
             central_hub_id: None,
             top_degradation_factors: Vec::new(),
+        }
+    }
+}
+
+/// The 5 core dimensions of knowledge quality.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum QualityPillar {
+    Integrity,
+    Structure,
+    Consistency,
+    Discoverability,
+    Freshness,
+}
+
+/// Formal 5-pillar composite quality score with explainable reasons.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+pub struct FivePillarQualityScore {
+    pub overall_score: f64,
+    pub integrity_score: f64,
+    pub structure_score: f64,
+    pub consistency_score: f64,
+    pub discoverability_score: f64,
+    pub freshness_score: f64,
+    pub reasons: HashMap<QualityPillar, Vec<String>>,
+    pub debt_summary: DebtSummary,
+}
+
+impl Default for FivePillarQualityScore {
+    fn default() -> Self {
+        Self {
+            overall_score: 100.0,
+            integrity_score: 100.0,
+            structure_score: 100.0,
+            consistency_score: 100.0,
+            discoverability_score: 100.0,
+            freshness_score: 100.0,
+            reasons: HashMap::new(),
+            debt_summary: DebtSummary::default(),
         }
     }
 }
@@ -67,6 +117,8 @@ pub struct KnowledgeIssuesReport {
     pub overall_score: f32,
     pub total_issues: usize,
     pub integrity_count: usize,
+    #[serde(default)]
+    pub structure_count: usize,
     pub consistency_count: usize,
     pub discoverability_count: usize,
     pub freshness_count: usize,

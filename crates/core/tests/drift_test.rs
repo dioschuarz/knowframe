@@ -176,6 +176,8 @@ fn test_candidate_technical_drift_warning() {
         status: NodeStatus::Active,
         color: "#64748B".to_string(),
         broken_links: 0,
+        fragments: vec![],
+        freshness: None,
     });
 
     let baseline = KnowledgeDebtBaseline::default();

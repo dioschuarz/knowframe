@@ -60,6 +60,7 @@ pub struct SemanticCollision {
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
+#[allow(clippy::enum_variant_names)]
 pub enum CollisionClassification {
     PotentialDuplicate,
     PotentialFragmentation,

@@ -181,6 +181,17 @@ enum Commands {
         json: bool,
     },
 
+    /// Materialize heading fragment metadata into YAML frontmatter
+    Materialize {
+        /// File or directory path to materialize
+        #[arg(index = 1)]
+        path: PathBuf,
+
+        /// Automatically stage changes into Git index with git add
+        #[arg(long, default_value_t = false)]
+        stage: bool,
+    },
+
     /// Manage knowledge debt baseline (.context-vault/baseline.json)
     Baseline {
         #[command(subcommand)]
@@ -354,6 +365,12 @@ async fn main() -> anyhow::Result<()> {
                 .unwrap_or_else(|| PathBuf::from("."));
             if let Err(e) = execute_issues(&workspace_root, &pillar, limit, json) {
                 eprintln!("Error retrieving knowledge issues: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Materialize { path, stage } => {
+            if let Err(e) = llm_wiki_core::cli::materialize_cmd::execute_materialize(&path, stage) {
+                eprintln!("Error materializing frontmatter: {}", e);
                 std::process::exit(1);
             }
         }

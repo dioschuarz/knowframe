@@ -109,10 +109,12 @@ pub fn parse_markdown_ast(file_id: &str, content: &str) -> ParsedDocument {
                             current_link_text.trim().to_string()
                         };
 
+                        let target_frag = anchor.clone().map(|a| a.trim_start_matches('#').to_string());
                         edges.push(NoteEdge {
                             id: format!("{}->{}", file_id, path_part),
                             source: file_id.to_string(),
                             target: path_part,
+                            target_fragment: target_frag,
                             link_type: LinkType::Markdown,
                             is_broken: false,
                             raw_text,

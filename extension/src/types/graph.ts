@@ -2,12 +2,15 @@
  * Graph domain entities and types for LLM Wiki Extension.
  */
 
+import type { FragmentMetadata, FreshnessEvidence } from './fragment.js';
+
 export type NodeStatus = 'active' | 'connected_inactive' | 'orphan' | 'excluded';
 export type LinkResolutionStatus =
   | 'resolved'
   | 'resolved_excluded'
   | 'broken_missing_file'
   | 'broken_missing_anchor'
+  | 'broken_fragment_anchor'
   | 'broken_wikilink';
 export type LinkType = 'markdown' | 'wikilink';
 export type TokenBudgetStatus = 'normal' | 'warning' | 'critical';
@@ -28,6 +31,8 @@ export interface NoteNode {
   outDegree: number;
   betweenness: number;
   brokenLinks: number;
+  fragments?: FragmentMetadata[];
+  freshness?: FreshnessEvidence;
 
   // d3-force visual coordinates
   x?: number;
@@ -45,6 +50,7 @@ export interface NoteEdge {
   isBroken: boolean;
   linkType: LinkType;
   anchor?: string | null;
+  target_fragment?: string | null;
   line?: number | null;
   resolutionStatus?: LinkResolutionStatus;
 }
@@ -55,6 +61,7 @@ export interface TokenSummary {
   warningThreshold: number;
   criticalThreshold: number;
   status: TokenBudgetStatus;
+  contextReductionPercent?: number;
 }
 
 export interface ClusterColorGroup {

@@ -145,6 +145,7 @@ fn test_context_trace_and_quality_score_structures() {
     let quality = KnowledgeQualityScore {
         overall_score: 84.5,
         integrity_score: 90.0,
+        structure_score: 85.0,
         consistency_score: 80.0,
         discoverability_score: 85.0,
         freshness_score: 83.0,

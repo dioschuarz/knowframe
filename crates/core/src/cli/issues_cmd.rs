@@ -33,7 +33,18 @@ pub fn execute_issues(
         n.status = node.status;
         n.color = node.color;
         n.broken_links = node.broken_links;
+        n.fragments = node.fragments;
+        n.freshness = node.freshness;
         topology.add_node(n);
+    }
+    let node_headings: Vec<(String, Vec<String>)> = topology
+        .nodes
+        .values()
+        .filter(|n| !n.fragments.is_empty())
+        .map(|n| (n.file_path.clone(), n.fragments.iter().map(|f| f.anchor.clone()).collect()))
+        .collect();
+    for (path, headings) in node_headings {
+        topology.set_headings(path, headings);
     }
     for edge in scan_res.edges {
         let mut e = crate::model::NoteEdge::new(
@@ -56,6 +67,7 @@ pub fn execute_issues(
     let all_issues = extract_all_issues(&topology, &collisions, &drifts);
 
     let integrity_count = all_issues.iter().filter(|i| i.pillar == "integrity").count();
+    let structure_count = all_issues.iter().filter(|i| i.pillar == "structure").count();
     let consistency_count = all_issues.iter().filter(|i| i.pillar == "consistency").count();
     let discoverability_count = all_issues.iter().filter(|i| i.pillar == "discoverability").count();
     let freshness_count = all_issues.iter().filter(|i| i.pillar == "freshness").count();
@@ -81,6 +93,7 @@ pub fn execute_issues(
         overall_score: quality.overall_score,
         total_issues,
         integrity_count,
+        structure_count,
         consistency_count,
         discoverability_count,
         freshness_count,
@@ -99,8 +112,9 @@ pub fn execute_issues(
     );
     println!("──────────────────────────────────────────────────────────────");
     println!(
-        "Pillar Counts: Integrity ({}) | Consistency ({}) | Discoverability ({}) | Freshness ({})",
+        "Pillar Counts: Integrity ({}) | Structure ({}) | Consistency ({}) | Discoverability ({}) | Freshness ({})",
         report.integrity_count,
+        report.structure_count,
         report.consistency_count,
         report.discoverability_count,
         report.freshness_count

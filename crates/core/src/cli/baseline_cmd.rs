@@ -53,6 +53,10 @@ pub fn execute_baseline_init(
     })?;
     let mut topology = GraphTopology::new();
     for node in scan_res.nodes {
+        topology.set_headings(
+            node.id.clone(),
+            node.fragments.iter().map(|f| f.heading.clone()).collect(),
+        );
         topology.add_node(crate::model::NoteNode {
             id: node.id.clone(),
             file_path: node.file_path,
@@ -66,13 +70,17 @@ pub fn execute_baseline_init(
             status: node.status,
             color: node.color,
             broken_links: node.broken_links,
+            fragments: node.fragments,
+            freshness: None,
         });
     }
     for edge in scan_res.edges {
+        let target_fragment = edge.anchor.as_ref().map(|a| a.trim_start_matches('#').to_string());
         topology.add_edge(crate::model::NoteEdge {
             id: edge.id,
             source: edge.source,
             target: edge.target,
+            target_fragment,
             link_type: edge.link_type,
             is_broken: edge.is_broken,
             raw_text: String::new(),

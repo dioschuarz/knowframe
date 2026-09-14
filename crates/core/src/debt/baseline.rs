@@ -23,7 +23,7 @@ pub fn extract_findings_from_topology(
             broken_links.push(BrokenLinkSignature {
                 source_path: edge.source.clone(),
                 target_ref: edge.target.clone(),
-                line_number: edge.line.unwrap_or(1) as u32,
+                line_number: edge.line.unwrap_or(1),
             });
         }
     }

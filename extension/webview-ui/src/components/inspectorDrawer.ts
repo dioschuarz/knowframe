@@ -114,6 +114,46 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
         </div>
       </div>
 
+      <!-- Section: Fragments (3-column: Fragment | Tok | I/O) -->
+      <div class="insp-section insp-section-fragments" style="max-height: 180px; overflow-y: auto;">
+        <div class="insp-section-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;" id="insp-fragments-toggle">
+          <span>FRAGMENTS (${formatCompactNumber((node.fragments || []).length)})</span>
+          <span class="insp-chevron-icon" id="insp-fragments-chevron">▼</span>
+        </div>
+        <div id="insp-fragments-content">
+          ${(node.fragments || []).length > 0
+            ? `
+              <table class="insp-fragments-table" style="width: 100%; border-collapse: collapse; font-size: 11px;">
+                <thead>
+                  <tr style="border-bottom: 1px solid var(--vscode-widget-border, #333); opacity: 0.8; text-align: left;">
+                    <th style="padding: 4px 6px;">Fragment</th>
+                    <th style="padding: 4px 6px; text-align: right;">Tok</th>
+                    <th style="padding: 4px 6px; text-align: right;">I/O</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  ${(node.fragments || []).map((f) => `
+                    <tr class="insp-fragment-row" data-start-line="${f.start_line}" data-end-line="${f.end_line}" data-anchor="${f.anchor}" style="cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);" title="Click to navigate to line ${f.start_line}">
+                      <td style="padding: 4px 6px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                        <span style="font-weight: 500;">${f.heading}</span>
+                        <span style="opacity: 0.6; font-size: 10px; margin-left: 4px;">#${f.anchor}</span>
+                      </td>
+                      <td style="padding: 4px 6px; text-align: right; font-variant-numeric: tabular-nums;">
+                        ${formatCompactNumber(f.tokens)}
+                      </td>
+                      <td style="padding: 4px 6px; text-align: right; font-variant-numeric: tabular-nums;" title="Inbound references: ${f.inbound} · Outbound references: ${f.outbound}">
+                        ${formatCompactNumber(f.inbound)}/${formatCompactNumber(f.outbound)}
+                      </td>
+                    </tr>
+                  `).join('')}
+                </tbody>
+              </table>
+            `
+            : '<div class="insp-empty-item">No heading sections found</div>'
+          }
+        </div>
+      </div>
+
       <!-- Section: Tags (1/3 of remaining space, scrollable) -->
       <div class="insp-section insp-section-third">
         <div class="insp-section-header">TAGS</div>
@@ -386,6 +426,32 @@ export function renderInspectorDrawer(
         const p = typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id;
         callbacks.onExclude?.(p);
       });
+
+      // T044: Wire fragment row clicks to navigate to line coordinates
+      content.querySelectorAll('.insp-fragment-row').forEach((row) => {
+        row.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const startLineStr = row.getAttribute('data-start-line');
+          const startLine = startLineStr ? parseInt(startLineStr, 10) : undefined;
+          const p = typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id;
+          callbacks.onOpenSource?.(p, startLine);
+        });
+      });
+
+      // Toggle fragment collapsible accordion
+      const toggleBtn = content.querySelector('#insp-fragments-toggle');
+      const fragmentsContent = content.querySelector('#insp-fragments-content');
+      const chevron = content.querySelector('#insp-fragments-chevron');
+      if (toggleBtn && fragmentsContent) {
+        toggleBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const isHidden = (fragmentsContent as HTMLElement).style.display === 'none';
+          (fragmentsContent as HTMLElement).style.display = isHidden ? 'block' : 'none';
+          if (chevron) {
+            chevron.textContent = isHidden ? '▼' : '▶';
+          }
+        });
+      }
 
       open();
     },

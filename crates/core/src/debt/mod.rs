@@ -42,6 +42,17 @@ impl Default for KnowledgeDebtBaseline {
     }
 }
 
+/// Brownfield debt accounting summary across all 5 pillars.
+/// Invariant IX: Complete integer representations.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct DebtSummary {
+    pub total_debt: u32,
+    pub legacy_debt: u32,
+    pub new_debt: u32,
+    pub resolved_debt: u32,
+    pub regressions: u32,
+}
+
 /// Stable signature identifying a broken link independent of file reordering.
 #[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub struct BrokenLinkSignature {

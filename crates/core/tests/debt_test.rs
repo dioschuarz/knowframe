@@ -152,6 +152,8 @@ fn test_initial_baseline_capture_on_brownfield() {
         status: NodeStatus::Active,
         color: "#64748B".to_string(),
         broken_links: 1,
+        fragments: vec![],
+        freshness: None,
     });
 
     // Add orphan node
@@ -168,6 +170,8 @@ fn test_initial_baseline_capture_on_brownfield() {
         status: NodeStatus::Orphan,
         color: "#6B7280".to_string(),
         broken_links: 0,
+        fragments: vec![],
+        freshness: None,
     });
 
     // Add broken edge originating from hub
@@ -175,6 +179,7 @@ fn test_initial_baseline_capture_on_brownfield() {
         id: "edge-1".to_string(),
         source: "notes/hub.md".to_string(),
         target: "notes/missing.md".to_string(),
+        target_fragment: None,
         is_broken: true,
         link_type: LinkType::Wikilink,
         raw_text: "[[notes/missing.md]]".to_string(),

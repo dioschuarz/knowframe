@@ -9,6 +9,7 @@ suite('QualityPillar & 4-Pillar Dashboard Test Suite', () => {
   const sampleQuality: KnowledgeQualityScore = {
     overall_score: 88.4,
     integrity_score: 95.0,
+    structure_score: 90.0,
     consistency_score: 82.0,
     discoverability_score: 90.0,
     freshness_score: 85.0,
@@ -33,12 +34,13 @@ suite('QualityPillar & 4-Pillar Dashboard Test Suite', () => {
     assert.ok(getScoreColor(60).includes('red'));
   });
 
-  test('renderQualityPillarHtml renders overall score and 4 pillar meters', () => {
+  test('renderQualityPillarHtml renders overall score and 5 pillar meters', () => {
     const html = renderQualityPillarHtml({ qualityScore: sampleQuality });
 
     assert.ok(html.includes('QUALITY & ADMISSION'), 'Must display Quality title');
     assert.ok(html.includes('88'), 'Must show overall score');
     assert.ok(html.includes('Integrity'), 'Must display Integrity pillar');
+    assert.ok(html.includes('Structure'), 'Must display Structure pillar (Pillar 2)');
     assert.ok(html.includes('Consistency'), 'Must display Consistency pillar');
     assert.ok(html.includes('Discoverability'), 'Must display Discoverability pillar');
     assert.ok(html.includes('Freshness'), 'Must display Freshness pillar');

@@ -2,6 +2,9 @@
 
 use serde::{Deserialize, Serialize};
 
+use crate::drift::FreshnessEvidence;
+use crate::fragment::FragmentMetadata;
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeStatus {
@@ -19,6 +22,7 @@ pub enum LinkResolutionStatus {
     ResolvedExcluded,
     BrokenMissingFile,
     BrokenMissingAnchor,
+    BrokenFragmentAnchor,
     BrokenWikilink,
 }
 
@@ -96,6 +100,12 @@ pub struct NoteNode {
     pub color: String,
     /// Dead links originating in this note
     pub broken_links: u32,
+    /// Addressable section fragments (Invariant V: metadata, not graph nodes)
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub fragments: Vec<FragmentMetadata>,
+    /// Deterministic freshness evidence (Pillar 5)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub freshness: Option<FreshnessEvidence>,
 }
 
 impl NoteNode {
@@ -118,6 +128,8 @@ impl NoteNode {
             status: NodeStatus::Orphan,
             color: "#6B7280".to_string(), // Muted gray default
             broken_links: 0,
+            fragments: Vec::new(),
+            freshness: None,
         }
     }
 }
@@ -139,6 +151,9 @@ pub struct NoteEdge {
     pub raw_text: String,
     /// Optional section heading anchor (e.g. "#section-heading")
     pub anchor: Option<String>,
+    /// Optional section heading anchor target (e.g. "section-heading")
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub target_fragment: Option<String>,
     /// 1-based source line number in originating document
     pub line: Option<u32>,
     /// Link resolution status
@@ -158,6 +173,9 @@ impl NoteEdge {
         let src = source.into();
         let tgt = target.into();
         let id = format!("{}->{}", src, tgt);
+        let target_fragment = anchor
+            .as_ref()
+            .map(|a| a.trim_start_matches('#').to_string());
         Self {
             id,
             source: src,
@@ -166,6 +184,7 @@ impl NoteEdge {
             is_broken: false,
             raw_text: raw_text.into(),
             anchor,
+            target_fragment,
             line,
             resolution_status: Some(LinkResolutionStatus::Resolved),
         }

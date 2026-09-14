@@ -147,14 +147,21 @@ pub fn resolve_edge_integrity(
     edge.id = format!("{}->{}", edge.source, edge.target);
 
     // Validate section heading anchor if present
-    if let Some(ref anchor) = edge.anchor {
-        let anchor_slug = slugify_heading(anchor);
+    let anchor_candidate = edge
+        .anchor
+        .as_ref()
+        .or(edge.target_fragment.as_ref())
+        .cloned();
+
+    if let Some(ref anchor) = anchor_candidate {
+        let clean_anchor = anchor.trim_start_matches('#');
+        let anchor_slug = slugify_heading(clean_anchor);
         let mut anchor_found = false;
 
         if let Some(headings) = node_headings.get(&canonical_target) {
             for h in headings {
-                if slugify_heading(h) == anchor_slug || h.trim().eq_ignore_ascii_case(anchor.trim())
-                {
+                let h_slug = slugify_heading(h);
+                if h_slug == anchor_slug || h.trim().eq_ignore_ascii_case(clean_anchor) {
                     anchor_found = true;
                     break;
                 }
@@ -163,8 +170,10 @@ pub fn resolve_edge_integrity(
 
         if !anchor_found {
             edge.is_broken = true;
-            edge.resolution_status = Some(LinkResolutionStatus::BrokenMissingAnchor);
+            edge.resolution_status = Some(LinkResolutionStatus::BrokenFragmentAnchor);
             return;
+        } else {
+            edge.target_fragment = Some(anchor_slug);
         }
     }
 

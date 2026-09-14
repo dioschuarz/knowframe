@@ -542,6 +542,130 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
 
             JsonRpcResponse::success(req.id, json!(report))
         }
+        "graph/getDocumentFragments" => {
+            let path = match req.params.and_then(|p| p.get("path").and_then(|v| v.as_str().map(|s| s.to_string()))) {
+                Some(p) => p,
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing 'path' parameter"),
+            };
+            let st = state.read().await;
+            if let Some(node) = st.topology.get_node(&path) {
+                JsonRpcResponse::success(req.id, json!({
+                    "path": path,
+                    "total_tokens": node.tokens,
+                    "fragments": node.fragments,
+                }))
+            } else {
+                let abs_path = st.workspace_root.join(&path);
+                if let Ok(content) = std::fs::read_to_string(&abs_path) {
+                    let tokens = crate::tokens::counter::count_bpe_tokens(&content).unwrap_or(0);
+                    let parsed = crate::ast::parser::parse_markdown_ast(&path, &content);
+                    let fragments = crate::fragment::extractor::extract_fragments_from_document(&content, &parsed.edges);
+                    JsonRpcResponse::success(req.id, json!({
+                        "path": path,
+                        "total_tokens": tokens,
+                        "fragments": fragments,
+                    }))
+                } else {
+                    JsonRpcResponse::error(req.id, -32004, format!("Document '{}' not found", path))
+                }
+            }
+        }
+        "graph/materializeFrontmatter" => {
+            let path = match req.params.as_ref().and_then(|p| p.get("path").and_then(|v| v.as_str().map(|s| s.to_string()))) {
+                Some(p) => p,
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing 'path' parameter"),
+            };
+            let dry_run = req.params.as_ref().and_then(|p| p.get("dry_run").and_then(|v| v.as_bool())).unwrap_or(false);
+            let st = state.read().await;
+            let abs_path = st.workspace_root.join(&path);
+            if !abs_path.exists() {
+                return JsonRpcResponse::error(req.id, -32004, format!("Document '{}' not found on disk", path));
+            }
+            if dry_run {
+                if let Ok(content) = std::fs::read_to_string(&abs_path) {
+                    let tokens = crate::tokens::counter::count_bpe_tokens(&content).unwrap_or(0);
+                    let parsed = crate::ast::parser::parse_markdown_ast(&path, &content);
+                    let fragments = crate::fragment::extractor::extract_fragments_from_document(&content, &parsed.edges);
+                    JsonRpcResponse::success(req.id, json!({
+                        "path": path,
+                        "updated": false,
+                        "fragment_count": fragments.len(),
+                        "total_tokens": tokens,
+                    }))
+                } else {
+                    JsonRpcResponse::error(req.id, -32000, "Failed to read file for dry run")
+                }
+            } else {
+                match crate::cli::materialize_cmd::materialize_file(&abs_path, false) {
+                    Ok(updated) => {
+                        let content = std::fs::read_to_string(&abs_path).unwrap_or_default();
+                        let tokens = crate::tokens::counter::count_bpe_tokens(&content).unwrap_or(0);
+                        let parsed = crate::ast::parser::parse_markdown_ast(&path, &content);
+                        let fragments = crate::fragment::extractor::extract_fragments_from_document(&content, &parsed.edges);
+                        JsonRpcResponse::success(req.id, json!({
+                            "path": path,
+                            "updated": updated,
+                            "fragment_count": fragments.len(),
+                            "total_tokens": tokens,
+                        }))
+                    }
+                    Err(e) => JsonRpcResponse::error(req.id, -32000, format!("Materialize failed: {}", e)),
+                }
+            }
+        }
+        "trace/contextTraceSection" => {
+            let query = match req.params.as_ref().and_then(|p| p.get("query").and_then(|v| v.as_str().map(|s| s.to_string()))) {
+                Some(q) => q,
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing 'query' parameter"),
+            };
+            let entrypoint = req.params.as_ref().and_then(|p| p.get("entrypoint").and_then(|v| v.as_str().map(|s| s.to_string())));
+            let st = state.read().await;
+            match crate::trace::beam::trace_context_section(&st.topology, &query, entrypoint.as_deref()) {
+                Some(res) => JsonRpcResponse::success(req.id, json!(res)),
+                None => JsonRpcResponse::error(req.id, -32004, "No context trace section match found"),
+            }
+        }
+        "quality/getFivePillarScore" => {
+            let st = state.read().await;
+            let root = st.workspace_root.clone();
+            let base = crate::debt::baseline::load_baseline(&root).ok().flatten();
+            let collisions = crate::collision::detect_collisions_in_graph(&st.topology, &root, 0.70);
+            let drifts = crate::drift::detect_all_drifts_in_graph(&st.topology, &root);
+            let score = crate::quality::scorer::calculate_quality_score(&st.topology, base.as_ref(), &collisions, &drifts);
+
+            let debt_summary = crate::debt::DebtSummary {
+                total_debt: score.legacy_debt_count + score.new_regressions_count,
+                legacy_debt: score.legacy_debt_count,
+                new_debt: score.new_regressions_count,
+                resolved_debt: score.resolved_debt_count,
+                regressions: score.new_regressions_count,
+            };
+
+            let mut reasons: std::collections::HashMap<crate::quality::QualityPillar, Vec<String>> = std::collections::HashMap::new();
+            for f in &score.top_degradation_factors {
+                let pillar = match f.category.as_str() {
+                    "broken_link" | "broken_anchor" => crate::quality::QualityPillar::Integrity,
+                    "structure_debt" => crate::quality::QualityPillar::Structure,
+                    "collision" => crate::quality::QualityPillar::Consistency,
+                    "technical_drift" | "missing_code_citation" | "code_modified_after_doc" => crate::quality::QualityPillar::Freshness,
+                    _ => crate::quality::QualityPillar::Discoverability,
+                };
+                reasons.entry(pillar).or_default().push(format!("{}: {}", f.affected_node, f.description));
+            }
+
+            let five_pillar = crate::quality::FivePillarQualityScore {
+                overall_score: score.overall_score as f64,
+                integrity_score: score.integrity_score as f64,
+                structure_score: score.structure_score as f64,
+                consistency_score: score.consistency_score as f64,
+                discoverability_score: score.discoverability_score as f64,
+                freshness_score: score.freshness_score as f64,
+                reasons,
+                debt_summary,
+            };
+
+            JsonRpcResponse::success(req.id, json!(five_pillar))
+        }
         _ => JsonRpcResponse::error(req.id, -32601, format!("Method not found: {}", req.method)),
     }
 }

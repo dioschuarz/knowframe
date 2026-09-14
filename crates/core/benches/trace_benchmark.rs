@@ -1,6 +1,8 @@
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
+use llm_wiki_core::fragment::FragmentMetadata;
 use llm_wiki_core::graph::builder::GraphTopology;
 use llm_wiki_core::model::{LinkType, NoteEdge, NoteNode};
+use llm_wiki_core::trace::beam::trace_context_section;
 use llm_wiki_core::trace::traversal::execute_context_trace;
 
 fn generate_benchmark_topology(num_nodes: usize) -> GraphTopology {
@@ -17,8 +19,28 @@ fn generate_benchmark_topology(num_nodes: usize) -> GraphTopology {
         let label = format!("Service Architecture Module {:04}", i);
 
         let mut node = NoteNode::new(&id, path, label);
-        node.tokens = 250;
+        node.tokens = 2500;
         node.tags = vec!["architecture".to_string(), format!("cluster_{}", i % 10)];
+        node.fragments = vec![
+            FragmentMetadata {
+                anchor: "overview".to_string(),
+                heading: "Overview".to_string(),
+                start_line: 1,
+                end_line: 25,
+                tokens: 300,
+                inbound: 2,
+                outbound: 1,
+            },
+            FragmentMetadata {
+                anchor: format!("technical-specification-{:04}", i),
+                heading: format!("Technical Specification {:04}", i),
+                start_line: 26,
+                end_line: 80,
+                tokens: 450,
+                inbound: 5,
+                outbound: 3,
+            },
+        ];
         topology.add_node(node);
 
         topology.set_headings(
@@ -77,9 +99,20 @@ fn generate_benchmark_topology(num_nodes: usize) -> GraphTopology {
 fn bench_trace_traversal(c: &mut Criterion) {
     let topology = generate_benchmark_topology(1_000);
 
-    c.bench_function("trace_context_1000_notes", |b| {
+    c.bench_function("trace_dijkstra_1000_notes", |b| {
         b.iter(|| {
             let res = execute_context_trace(
+                black_box(&topology),
+                black_box("Technical Specification 0500"),
+                black_box(Some("AGENTS.md")),
+            );
+            black_box(res);
+        });
+    });
+
+    c.bench_function("trace_beam_section_1000_notes", |b| {
+        b.iter(|| {
+            let res = trace_context_section(
                 black_box(&topology),
                 black_box("Technical Specification 0500"),
                 black_box(Some("AGENTS.md")),

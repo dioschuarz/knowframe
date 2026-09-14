@@ -26,6 +26,8 @@ fn test_candidate_overlay_routing_and_isolation() {
         status: NodeStatus::Active,
         color: "#64748B".to_string(),
         broken_links: 0,
+        fragments: vec![],
+        freshness: None,
     });
     base_graph.add_node(NoteNode {
         id: "notes/to_delete.md".to_string(),
@@ -40,6 +42,8 @@ fn test_candidate_overlay_routing_and_isolation() {
         status: NodeStatus::Orphan,
         color: "#6B7280".to_string(),
         broken_links: 0,
+        fragments: vec![],
+        freshness: None,
     });
 
     // Create staged files on disk
@@ -108,11 +112,14 @@ fn test_candidate_admission_decision_gate() {
         status: NodeStatus::Active,
         color: "#64748B".to_string(),
         broken_links: 1,
+        fragments: vec![],
+        freshness: None,
     });
     base_graph.add_edge(NoteEdge {
         id: "edge-1".to_string(),
         source: "notes/hub.md".to_string(),
         target: "notes/legacy_missing.md".to_string(),
+        target_fragment: None,
         is_broken: true,
         raw_text: "[[notes/legacy_missing.md]]".to_string(),
         link_type: LinkType::Wikilink,

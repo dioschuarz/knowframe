@@ -2,6 +2,8 @@ import WebSocket from 'ws';
 import * as vscode from 'vscode';
 import { JsonRpcRequest, JsonRpcResponse, JsonRpcNotification } from '../types/protocol';
 
+import { FragmentMetadata, FivePillarQualityScore, ContextTraceSectionResponse } from '../types/fragment';
+
 interface PendingRequest {
   resolve: (value: any) => void;
   reject: (reason: any) => void;
@@ -98,6 +100,22 @@ export class IpcClient implements vscode.Disposable {
         }
       });
     });
+  }
+
+  public getDocumentFragments(path: string): Promise<{ path: string; total_tokens: number; fragments: FragmentMetadata[] }> {
+    return this.sendRequest('graph/getDocumentFragments', { path });
+  }
+
+  public materializeFrontmatter(path: string, dryRun = false): Promise<{ path: string; updated: boolean; fragment_count: number; total_tokens: number; frontmatter_yaml?: string }> {
+    return this.sendRequest('graph/materializeFrontmatter', { path, dry_run: dryRun });
+  }
+
+  public traceContextSection(query: string, entrypoint?: string, maxDepth = 4, beamWidth = 5): Promise<ContextTraceSectionResponse> {
+    return this.sendRequest('trace/contextTraceSection', { query, entrypoint, max_depth: maxDepth, beam_width: beamWidth });
+  }
+
+  public getFivePillarScore(forceRecompute = false): Promise<FivePillarQualityScore> {
+    return this.sendRequest('quality/getFivePillarScore', { force_recompute: forceRecompute });
   }
 
   public sendNotification(method: string, params: unknown): void {
