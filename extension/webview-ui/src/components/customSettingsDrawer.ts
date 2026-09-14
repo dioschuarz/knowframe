@@ -59,10 +59,13 @@ export const TIER2_SLIDER_DEFS: Array<{
 
 export function renderCustomSettingsDrawerHtml(props: CustomSettingsProps): string {
   const levels: ObjectiveLevel[] = ['low', 'medium', 'high'];
+  const t1 = (props.tier1 || {}) as any;
+  const t2 = (props.tier2 || {}) as any;
 
   // Tier 1 Knobs
   const tier1Html = TIER1_KNOB_DEFS.map((knob) => {
-    const currentVal = props.tier1[knob.key];
+    const snakeKey = knob.key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+    const currentVal = t1[knob.key] || t1[snakeKey] || 'medium';
     const buttonsHtml = levels.map((lvl) => {
       const activeClass = currentVal === lvl ? 'tier1-btn-active' : '';
       return `
@@ -87,7 +90,14 @@ export function renderCustomSettingsDrawerHtml(props: CustomSettingsProps): stri
 
   // Tier 2 Sliders
   const tier2Html = TIER2_SLIDER_DEFS.map((slider) => {
-    const val = props.tier2[slider.key];
+    const snakeKey = slider.key.replace(/[A-Z]/g, (letter) => `_${letter.toLowerCase()}`);
+    let val = t2[slider.key];
+    if (val === undefined || val === null) {
+      val = t2[snakeKey];
+    }
+    if (val === undefined || val === null || isNaN(Number(val))) {
+      val = (DEFAULT_TIER2_PARAMETERS as any)[slider.key] ?? slider.min;
+    }
     return `
       <div class="tier2-slider-row" id="slider-container-${slider.key}">
         <div class="slider-header">
@@ -110,20 +120,26 @@ export function renderCustomSettingsDrawerHtml(props: CustomSettingsProps): stri
 
   // Constraint Rules
   const constraintLevels: ConstraintLevel[] = ['preference', 'constraint', 'hard_constraint'];
-  const rulesHtml = props.constraints.map((rule) => {
+  const constraintsList = Array.isArray(props.constraints) ? props.constraints : [];
+  const rulesHtml = constraintsList.map((rawRule: any) => {
+    const ruleId = rawRule.id || '';
+    const ruleKey = rawRule.ruleKey || rawRule.rule_key || '';
+    const ruleDesc = rawRule.description || '';
+    const currentLevel = rawRule.level || 'preference';
+
     const optionsHtml = constraintLevels.map((lvl) => {
-      const selected = rule.level === lvl ? 'selected' : '';
+      const selected = currentLevel === lvl ? 'selected' : '';
       return `<option value="${lvl}" ${selected}>${lvl.replace('_', ' ')}</option>`;
     }).join('');
 
     return `
-      <div class="constraint-rule-row" data-rule-id="${rule.id}">
+      <div class="constraint-rule-row" data-rule-id="${ruleId}">
         <div class="rule-info">
-          <span class="rule-key"><code>${rule.ruleKey}</code></span>
-          <span class="rule-desc">${rule.description}</span>
+          <span class="rule-key"><code>${ruleKey}</code></span>
+          <span class="rule-desc">${ruleDesc}</span>
         </div>
         <div class="rule-actions">
-          <select class="rule-level-select" data-rule-id="${rule.id}">
+          <select class="rule-level-select" data-rule-id="${ruleId}">
             ${optionsHtml}
           </select>
         </div>
@@ -132,7 +148,8 @@ export function renderCustomSettingsDrawerHtml(props: CustomSettingsProps): stri
   }).join('');
 
   // Conflict Banner (T052)
-  const conflictBannerHtml = renderConflictBannerHtml({ conflicts: props.conflicts });
+  const conflictsList = Array.isArray(props.conflicts) ? props.conflicts : [];
+  const conflictBannerHtml = renderConflictBannerHtml({ conflicts: conflictsList });
 
   return `
     <div class="custom-settings-drawer-container">

@@ -227,5 +227,54 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(htmlCustom.includes('Cohesion Threshold'), 'Must render Tier 2 sliders');
     assert.ok(htmlCustom.includes('Save &amp; Compile Profile') || htmlCustom.includes('Save & Compile Profile'), 'Must render Save button');
   });
+
+  test('renders Structural Evolution tab with active signatures and recommendations from sidecar without errors', () => {
+    const rawRustSignatures: any = [
+      {
+        signature_id: 'sig_god_test',
+        document_path: 'docs/test_doc.md',
+        problem_type: 'god_document',
+        confidence: 0.95,
+        evidence: {
+          cohesion: 0.5,
+          coupling: 0.8,
+          reference_concentration: 0.75,
+          granularity: 0.3,
+          context_efficiency: 0.25,
+          discoverability: 0.8,
+          reusability: 0.2,
+          semantic_diversity: 0.85,
+          navigational_complexity: 0.7,
+          maintenance_coupling: 0.65,
+        },
+        rationale: 'High semantic diversity and concentrated references.',
+      },
+    ];
+
+    const rawRustRecommendations: any = [
+      {
+        recommendation_id: 'rec_test_1',
+        signature_id: 'sig_god_test',
+        strategy: 'topic_decomposition',
+        confidence: 0.92,
+        expected_benefits: ['Eliminates God Document by splitting topics'],
+        trade_offs: ['Increases file count'],
+      },
+    ];
+
+    const html = renderSettingsDrawerHtml({
+      ...sampleProps,
+      activeTab: 'evolution',
+      activeOrientation: 'ai_oriented',
+      structuralSignatures: rawRustSignatures,
+      structuralRecommendations: rawRustRecommendations,
+    });
+
+    assert.ok(html.includes('docs/test_doc.md'), 'Must render signature document path');
+    assert.ok(html.includes('God Document'), 'Must render problem badge');
+    assert.ok(html.includes('Topic Decomposition'), 'Must render recommendation strategy');
+    assert.ok(html.includes('Eliminates God Document by splitting topics'), 'Must render expected benefits');
+    assert.ok(html.includes('Increases file count'), 'Must render countervailing trade-offs');
+  });
 });
 

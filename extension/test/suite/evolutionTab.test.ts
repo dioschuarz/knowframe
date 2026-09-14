@@ -102,4 +102,49 @@ suite('EvolutionTab Unit Test Suite (T053)', () => {
     assert.ok(html.includes('data-rec-id="rec_decomp_1"'));
     assert.ok(html.includes('Generate Transformation Plan'));
   });
+
+  test('renders raw snake_case Rust objects without errors or undefined badges', () => {
+    const rawRustProps: any = {
+      signatures: [
+        {
+          signature_id: 'sig_god_raw',
+          document_path: 'docs/raw_god.md',
+          problem_type: 'god_document',
+          confidence: 0.88,
+          evidence: {
+            cohesion: 0.5,
+            coupling: 0.8,
+            reference_concentration: 0.72,
+            granularity: 0.4,
+            context_efficiency: 0.3,
+            discoverability: 0.7,
+            reusability: 0.3,
+            semantic_diversity: 0.8,
+            navigational_complexity: 0.6,
+            maintenance_coupling: 0.65,
+          },
+          rationale: 'Overloaded document in raw Rust format.',
+        },
+      ],
+      recommendations: [
+        {
+          recommendation_id: 'rec_raw_1',
+          signature_id: 'sig_god_raw',
+          strategy: 'topic_decomposition',
+          confidence: 0.85,
+          expected_benefits: ['Decomposes raw document'],
+          trade_offs: ['More files'],
+        },
+      ],
+    };
+
+    const html = renderEvolutionTabHtml(rawRustProps);
+    assert.ok(html.includes('docs/raw_god.md'), 'Must render document path from document_path');
+    assert.ok(html.includes('God Document'), 'Must render badge from problem_type');
+    assert.ok(html.includes('data-signature-id="sig_god_raw"'), 'Must render signature id');
+    assert.ok(html.includes('data-rec-id="rec_raw_1"'), 'Must render recommendation id');
+    assert.ok(html.includes('Decomposes raw document'), 'Must render expected_benefits without crashing');
+    assert.ok(html.includes('More files'), 'Must render trade_offs without crashing');
+    assert.ok(!html.includes('undefined'), 'Must never output literal undefined in badges or text');
+  });
 });

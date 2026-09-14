@@ -65,15 +65,26 @@ export function renderTransformationPlanModalHtml(props: TransformationPlanModal
     return '';
   }
 
-  const { plan, isApplying, actualDelta } = props;
-  const d = actualDelta || plan.projectedDelta;
+  const { plan: rawPlan, isApplying, actualDelta: rawActualDelta } = props;
+  const plan: any = rawPlan;
+  const planId = plan.planId || plan.plan_id || '';
+  const diffPreview = plan.diffPreview || plan.diff_preview || '';
+  const projectedDelta = plan.projectedDelta || plan.projected_delta || {};
+  const actualDelta = rawActualDelta || plan.actualDelta || plan.actual_delta || null;
+  const d = actualDelta || projectedDelta;
   const deltaTitle = actualDelta ? 'Actual Before-vs-After Deltas' : 'Projected Structural Deltas';
 
+  const effDelta = typeof d.efficiencyDelta === 'number' ? d.efficiencyDelta : (typeof d.efficiency_delta === 'number' ? d.efficiency_delta : 0);
+  const traceDelta = typeof d.traceDepthDelta === 'number' ? d.traceDepthDelta : (typeof d.trace_depth_delta === 'number' ? d.trace_depth_delta : 0);
+  const coupDelta = typeof d.couplingDelta === 'number' ? d.couplingDelta : (typeof d.coupling_delta === 'number' ? d.coupling_delta : 0);
+  const docDelta = typeof d.docCountDelta === 'number' ? d.docCountDelta : (typeof d.doc_count_delta === 'number' ? d.doc_count_delta : 0);
+
   // Actions list
-  const actionsListHtml = plan.actions.map((act) => {
-    const typeLabel = act.type.replace(/_/g, ' ');
-    const p = act.payload as any;
-    const targetFile = p.filePath || p.sourcePath || '';
+  const actions: any[] = Array.isArray(plan.actions) ? plan.actions : [];
+  const actionsListHtml = actions.map((act) => {
+    const typeLabel = (act.type || '').replace(/_/g, ' ');
+    const p = act.payload || {};
+    const targetFile = p.filePath || p.file_path || p.sourcePath || p.source_path || '';
     return `
       <div class="modal-action-row">
         <span class="action-type-badge">${typeLabel}</span>
@@ -82,7 +93,7 @@ export function renderTransformationPlanModalHtml(props: TransformationPlanModal
     `;
   }).join('');
 
-  const diffHtml = renderDiffPreviewHtml(plan.diffPreview);
+  const diffHtml = renderDiffPreviewHtml(diffPreview);
 
   return `
     <div class="transformation-modal-overlay" id="transformation-modal" role="dialog" aria-modal="true" aria-labelledby="modal-plan-title">
@@ -90,7 +101,7 @@ export function renderTransformationPlanModalHtml(props: TransformationPlanModal
         <div class="modal-header">
           <div class="modal-title-group">
             <h2 id="modal-plan-title">Transformation Plan Preview</h2>
-            <span class="plan-id-badge">${plan.planId}</span>
+            <span class="plan-id-badge">${planId}</span>
           </div>
           <button type="button" class="modal-close-btn" id="btn-close-plan-modal" aria-label="Close">✕</button>
         </div>
@@ -108,25 +119,25 @@ export function renderTransformationPlanModalHtml(props: TransformationPlanModal
             <div class="delta-cards-grid">
               <div class="delta-card">
                 <span class="delta-label">Δ Efficiency</span>
-                <span class="delta-value ${d.efficiencyDelta >= 0 ? 'delta-positive' : 'delta-negative'}">${formatDeltaNumber(d.efficiencyDelta)}</span>
+                <span class="delta-value ${effDelta >= 0 ? 'delta-positive' : 'delta-negative'}">${formatDeltaNumber(effDelta)}</span>
               </div>
               <div class="delta-card">
                 <span class="delta-label">Δ Trace Depth</span>
-                <span class="delta-value ${d.traceDepthDelta <= 0 ? 'delta-positive' : 'delta-negative'}">${formatDeltaNumber(d.traceDepthDelta)}</span>
+                <span class="delta-value ${traceDelta <= 0 ? 'delta-positive' : 'delta-negative'}">${formatDeltaNumber(traceDelta)}</span>
               </div>
               <div class="delta-card">
                 <span class="delta-label">Δ Coupling</span>
-                <span class="delta-value ${d.couplingDelta <= 0 ? 'delta-positive' : 'delta-negative'}">${formatDeltaNumber(d.couplingDelta)}</span>
+                <span class="delta-value ${coupDelta <= 0 ? 'delta-positive' : 'delta-negative'}">${formatDeltaNumber(coupDelta)}</span>
               </div>
               <div class="delta-card">
                 <span class="delta-label">Δ Document Count</span>
-                <span class="delta-value">${d.docCountDelta >= 0 ? '+' : ''}${d.docCountDelta}</span>
+                <span class="delta-value">${docDelta >= 0 ? '+' : ''}${docDelta}</span>
               </div>
             </div>
           </div>
 
           <div class="modal-section">
-            <h3 class="modal-section-title">Atomic File System Actions (${plan.actions.length})</h3>
+            <h3 class="modal-section-title">Atomic File System Actions (${actions.length})</h3>
             <div class="modal-actions-list">
               ${actionsListHtml}
             </div>

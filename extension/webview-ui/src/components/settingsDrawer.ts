@@ -112,6 +112,7 @@ export interface SettingsDrawerCallbacks {
   onOpenFile?: (filePath: string, line?: number) => void;
   onFixBrokenLink?: (source: string, target: string, line?: number) => void;
   onRequestIssues?: (pillar?: string) => void;
+  onRequestEvolution?: () => void;
   onSelectOrientation?: (orientation: DocumentationOrientation) => void;
   onToggleCustomDrawer?: (isOpen: boolean) => void;
   onChangeTier1?: (tier1: Tier1Objectives) => void;
@@ -691,60 +692,73 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
     }
 
     case 'evolution': {
-      // Extract structure debt findings from issuesReport (Pillar 2: Structure)
-      const structureFindings = (props.issuesReport?.issues || [])
-        .filter((i) => i.pillar && i.pillar.toLowerCase() === 'structure')
-        .map((i) => ({
-          file_path: i.file_path,
-          description: i.description,
-          remediation_hint: i.remediation_hint,
-        }));
+      try {
+        // Extract structure debt findings from issuesReport (Pillar 2: Structure)
+        const structureFindings = (props.issuesReport?.issues || [])
+          .filter((i) => i.pillar && i.pillar.toLowerCase() === 'structure')
+          .map((i) => ({
+            file_path: i.file_path,
+            description: i.description,
+            remediation_hint: i.remediation_hint,
+          }));
 
-      const activeOrientation = props.activeOrientation || 'ai_oriented';
-      const isCustomOpen = props.isCustomDrawerOpen !== undefined
-        ? props.isCustomDrawerOpen
-        : activeOrientation === 'custom';
+        const activeOrientation = props.activeOrientation || 'ai_oriented';
+        const isCustomOpen = props.isCustomDrawerOpen !== undefined
+          ? props.isCustomDrawerOpen
+          : activeOrientation === 'custom';
 
-      const orientationHtml = renderOrientationSelectorHtml({
-        activeOrientation,
-      });
-
-      const customToggleBtnHtml = `
-        <div class="evolution-custom-toggle-bar">
-          <button type="button" class="btn btn-secondary evolution-custom-toggle-btn" id="btn-toggle-custom-params">
-            ${isCustomOpen ? '▲ Hide Custom Parameters (Tier 1 & Tier 2)' : '⚙️ Custom Parameters (Tier 1 & Tier 2)'}
-          </button>
-        </div>
-      `;
-
-      let customDrawerHtml = '';
-      if (isCustomOpen) {
-        customDrawerHtml = renderCustomSettingsDrawerHtml({
-          tier1: props.tier1 || DEFAULT_TIER1_OBJECTIVES,
-          tier2: props.tier2 || DEFAULT_TIER2_PARAMETERS,
-          constraints: props.constraints || [],
-          conflicts: props.conflicts || [],
-          isSaving: props.isSavingCustom,
+        const orientationHtml = renderOrientationSelectorHtml({
+          activeOrientation,
         });
+
+        const customToggleBtnHtml = `
+          <div class="evolution-custom-toggle-bar">
+            <button type="button" class="btn btn-secondary evolution-custom-toggle-btn" id="btn-toggle-custom-params">
+              ${isCustomOpen ? '▲ Hide Custom Parameters (Tier 1 & Tier 2)' : '⚙️ Custom Parameters (Tier 1 & Tier 2)'}
+            </button>
+          </div>
+        `;
+
+        let customDrawerHtml = '';
+        if (isCustomOpen) {
+          customDrawerHtml = renderCustomSettingsDrawerHtml({
+            tier1: props.tier1 || DEFAULT_TIER1_OBJECTIVES,
+            tier2: props.tier2 || DEFAULT_TIER2_PARAMETERS,
+            constraints: props.constraints || [],
+            conflicts: props.conflicts || [],
+            isSaving: props.isSavingCustom,
+          });
+        }
+
+        const evolutionTabHtml = renderEvolutionTabHtml({
+          signatures: props.structuralSignatures || [],
+          recommendations: props.structuralRecommendations || [],
+          activeOrientation,
+          structureFindings,
+          isLoading: props.isEvolutionLoading,
+        });
+
+        tabContentHtml = `
+          <div class="evolution-settings-wrapper">
+            ${orientationHtml}
+            ${customToggleBtnHtml}
+            ${customDrawerHtml}
+            <div class="evolution-section-divider"></div>
+            ${evolutionTabHtml}
+          </div>
+        `;
+      } catch (err) {
+        console.error('[SettingsDrawer] Error rendering evolution tab:', err);
+        tabContentHtml = `
+          <div class="evolution-settings-wrapper">
+            <div class="evolution-empty-state">
+              <span class="empty-icon">⚠️</span>
+              <h3>Error Rendering Structural Evolution</h3>
+              <p>${String(err)}</p>
+            </div>
+          </div>
+        `;
       }
-
-      const evolutionTabHtml = renderEvolutionTabHtml({
-        signatures: props.structuralSignatures || [],
-        recommendations: props.structuralRecommendations || [],
-        activeOrientation,
-        structureFindings,
-        isLoading: props.isEvolutionLoading,
-      });
-
-      tabContentHtml = `
-        <div class="evolution-settings-wrapper">
-          ${orientationHtml}
-          ${customToggleBtnHtml}
-          ${customDrawerHtml}
-          <div class="evolution-section-divider"></div>
-          ${evolutionTabHtml}
-        </div>
-      `;
       break;
     }
   }
@@ -846,6 +860,12 @@ export function renderSettingsDrawer(
           callbacks.onChangeTab?.(tab);
           if (tab === 'diagnostics') {
             callbacks.onRequestIssues?.(state.selectedPillarFilter);
+          }
+          if (tab === 'evolution') {
+            if (!state.issuesReport) {
+              callbacks.onRequestIssues?.();
+            }
+            callbacks.onRequestEvolution?.();
           }
           render();
         }
@@ -1434,6 +1454,9 @@ export function renderSettingsDrawer(
     if (state.activeTab === 'diagnostics' || state.activeTab === 'evolution') {
       if (!state.issuesReport) {
         callbacks.onRequestIssues?.(state.selectedPillarFilter);
+      }
+      if (state.activeTab === 'evolution') {
+        callbacks.onRequestEvolution?.();
       }
     }
     render();

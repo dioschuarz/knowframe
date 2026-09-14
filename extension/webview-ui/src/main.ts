@@ -128,6 +128,14 @@ const settingsDrawer = renderSettingsDrawer(
     onRequestIssues: (pillar) => {
       rpc.sendMessage({ type: 'requestIssues', payload: { pillar } });
     },
+    onRequestEvolution: () => {
+      rpc.getEvolutionState();
+    },
+    onChangeTab: (tab) => {
+      if (tab === 'evolution') {
+        rpc.getEvolutionState();
+      }
+    },
     onSelectOrientation: (orientation) => {
       rpc.setOrientation(orientation);
     },

@@ -242,16 +242,106 @@ export class GraphPanelManager implements vscode.Disposable {
       } catch {
         // Fallback if not custom
       }
-      const signatures = await this.evolutionManager.getStructuralProblems();
-      const recommendations = await this.evolutionManager.getRecommendations();
+      const rawSignatures = await this.evolutionManager.getStructuralProblems();
+      const rawRecommendations = await this.evolutionManager.getRecommendations();
+
+      // Normalize signatures for webview
+      const signatures = (rawSignatures || []).map((s: any) => ({
+        signatureId: s.signature_id || s.signatureId,
+        signature_id: s.signature_id || s.signatureId,
+        documentPath: s.document_path || s.documentPath,
+        document_path: s.document_path || s.documentPath,
+        problemType: s.problem_type || s.problemType,
+        problem_type: s.problem_type || s.problemType,
+        confidence: s.confidence,
+        rationale: s.rationale,
+        evidence: {
+          cohesion: s.evidence?.cohesion ?? 0,
+          coupling: s.evidence?.coupling ?? 0,
+          referenceConcentration: s.evidence?.reference_concentration ?? s.evidence?.referenceConcentration ?? 0,
+          reference_concentration: s.evidence?.reference_concentration ?? s.evidence?.referenceConcentration ?? 0,
+          granularity: s.evidence?.granularity ?? 0,
+          contextEfficiency: s.evidence?.context_efficiency ?? s.evidence?.contextEfficiency ?? 0,
+          context_efficiency: s.evidence?.context_efficiency ?? s.evidence?.contextEfficiency ?? 0,
+          discoverability: s.evidence?.discoverability ?? 0,
+          reusability: s.evidence?.reusability ?? 0,
+          semanticDiversity: s.evidence?.semantic_diversity ?? s.evidence?.semanticDiversity ?? 0,
+          semantic_diversity: s.evidence?.semantic_diversity ?? s.evidence?.semanticDiversity ?? 0,
+          navigationalComplexity: s.evidence?.navigational_complexity ?? s.evidence?.navigationalComplexity ?? 0,
+          navigational_complexity: s.evidence?.navigational_complexity ?? s.evidence?.navigationalComplexity ?? 0,
+          maintenanceCoupling: s.evidence?.maintenance_coupling ?? s.evidence?.maintenanceCoupling ?? 0,
+          maintenance_coupling: s.evidence?.maintenance_coupling ?? s.evidence?.maintenanceCoupling ?? 0,
+        },
+      }));
+
+      // Normalize recommendations for webview
+      const recommendations = (rawRecommendations || []).map((r: any) => ({
+        recommendationId: r.recommendation_id || r.recommendationId,
+        recommendation_id: r.recommendation_id || r.recommendationId,
+        signatureId: r.signature_id || r.signatureId,
+        signature_id: r.signature_id || r.signatureId,
+        strategy: r.strategy,
+        confidence: r.confidence,
+        expectedBenefits: r.expected_benefits || r.expectedBenefits || [],
+        expected_benefits: r.expected_benefits || r.expectedBenefits || [],
+        tradeOffs: r.trade_offs || r.tradeOffs || [],
+        trade_offs: r.trade_offs || r.tradeOffs || [],
+        transformationPlan: r.transformation_plan || r.transformationPlan,
+      }));
+
+      let tier1 = customRes?.tier1;
+      if (tier1) {
+        tier1 = {
+          aiDiscoverability: tier1.ai_discoverability || tier1.aiDiscoverability,
+          ai_discoverability: tier1.ai_discoverability || tier1.aiDiscoverability,
+          contextEfficiency: tier1.context_efficiency || tier1.contextEfficiency,
+          context_efficiency: tier1.context_efficiency || tier1.contextEfficiency,
+          humanReadability: tier1.human_readability || tier1.humanReadability,
+          human_readability: tier1.human_readability || tier1.humanReadability,
+          knowledgeReuse: tier1.knowledge_reuse || tier1.knowledgeReuse,
+          knowledge_reuse: tier1.knowledge_reuse || tier1.knowledgeReuse,
+          narrativeCoherence: tier1.narrative_coherence || tier1.narrativeCoherence,
+          narrative_coherence: tier1.narrative_coherence || tier1.narrativeCoherence,
+          maintenanceSimplicity: tier1.maintenance_simplicity || tier1.maintenanceSimplicity,
+          maintenance_simplicity: tier1.maintenance_simplicity || tier1.maintenanceSimplicity,
+        };
+      }
+
+      let tier2 = customRes?.tier2;
+      if (tier2) {
+        tier2 = {
+          cohesionThreshold: tier2.cohesion_threshold ?? tier2.cohesionThreshold,
+          cohesion_threshold: tier2.cohesion_threshold ?? tier2.cohesionThreshold,
+          semanticDiversityThreshold: tier2.semantic_diversity_threshold ?? tier2.semanticDiversityThreshold,
+          semantic_diversity_threshold: tier2.semantic_diversity_threshold ?? tier2.semanticDiversityThreshold,
+          referenceConcentrationThreshold: tier2.reference_concentration_threshold ?? tier2.referenceConcentrationThreshold,
+          reference_concentration_threshold: tier2.reference_concentration_threshold ?? tier2.referenceConcentrationThreshold,
+          fragmentSizeTarget: tier2.fragment_size_target ?? tier2.fragmentSizeTarget,
+          fragment_size_target: tier2.fragment_size_target ?? tier2.fragmentSizeTarget,
+          maxTraceDepth: tier2.max_trace_depth ?? tier2.maxTraceDepth,
+          max_trace_depth: tier2.max_trace_depth ?? tier2.maxTraceDepth,
+          candidateExpansionFactor: tier2.candidate_expansion_factor ?? tier2.candidateExpansionFactor,
+          candidate_expansion_factor: tier2.candidate_expansion_factor ?? tier2.candidateExpansionFactor,
+          maxContextSurfaceTokens: tier2.max_context_surface_tokens ?? tier2.maxContextSurfaceTokens,
+          max_context_surface_tokens: tier2.max_context_surface_tokens ?? tier2.maxContextSurfaceTokens,
+          splitSensitivity: tier2.split_sensitivity ?? tier2.splitSensitivity,
+          split_sensitivity: tier2.split_sensitivity ?? tier2.splitSensitivity,
+          canonicalOwnershipSensitivity: tier2.canonical_ownership_sensitivity ?? tier2.canonicalOwnershipSensitivity,
+          canonical_ownership_sensitivity: tier2.canonical_ownership_sensitivity ?? tier2.canonicalOwnershipSensitivity,
+          duplicateTolerance: tier2.duplicate_tolerance ?? tier2.duplicateTolerance,
+          duplicate_tolerance: tier2.duplicate_tolerance ?? tier2.duplicateTolerance,
+          fragmentationTolerance: tier2.fragmentation_tolerance ?? tier2.fragmentationTolerance,
+          fragmentation_tolerance: tier2.fragmentation_tolerance ?? tier2.fragmentationTolerance,
+        };
+      }
 
       this.panel.webview.postMessage({
         type: 'evolutionStateUpdate',
         payload: {
           orientation: orientRes.orientation,
           profile: orientRes.profile,
-          tier1: customRes.tier1,
-          tier2: customRes.tier2,
+          tier1,
+          tier2,
           constraints: customRes.constraints,
           signatures,
           recommendations,

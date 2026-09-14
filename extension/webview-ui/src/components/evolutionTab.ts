@@ -147,39 +147,72 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
     `;
   }
 
-  const signatureCardsHtml = props.signatures.map((sig) => {
-    const badge = getProblemTypeBadge(sig.problemType);
-    const recsForSig = props.recommendations.filter((r) => r.signatureId === sig.signatureId);
+  const signatureCardsHtml = props.signatures.map((rawSig: any) => {
+    const sigId = rawSig.signatureId || rawSig.signature_id || '';
+    const docPath = rawSig.documentPath || rawSig.document_path || '';
+    const problemType = rawSig.problemType || rawSig.problem_type || 'god_document';
+    const confidence = typeof rawSig.confidence === 'number' ? rawSig.confidence : 0;
+    const rationale = rawSig.rationale || '';
+
+    const badge = getProblemTypeBadge(problemType);
+    const recsForSig = (props.recommendations || []).filter((r: any) => {
+      const rSigId = r.signatureId || r.signature_id;
+      return rSigId === sigId;
+    });
 
     // Render 10D evidence metrics (strictly <= 5 chars via formatMetricValue)
-    const e = sig.evidence;
+    const e = rawSig.evidence || {};
+    const coh = typeof e.cohesion === 'number' ? e.cohesion : 0;
+    const coup = typeof e.coupling === 'number' ? e.coupling : 0;
+    const conc = typeof e.referenceConcentration === 'number' ? e.referenceConcentration : (typeof e.reference_concentration === 'number' ? e.reference_concentration : 0);
+    const gran = typeof e.granularity === 'number' ? e.granularity : 0;
+    const eff = typeof e.contextEfficiency === 'number' ? e.contextEfficiency : (typeof e.context_efficiency === 'number' ? e.context_efficiency : 0);
+    const disc = typeof e.discoverability === 'number' ? e.discoverability : 0;
+    const reus = typeof e.reusability === 'number' ? e.reusability : 0;
+    const div = typeof e.semanticDiversity === 'number' ? e.semanticDiversity : (typeof e.semantic_diversity === 'number' ? e.semantic_diversity : 0);
+    const nav = typeof e.navigationalComplexity === 'number' ? e.navigationalComplexity : (typeof e.navigational_complexity === 'number' ? e.navigational_complexity : 0);
+    const maint = typeof e.maintenanceCoupling === 'number' ? e.maintenanceCoupling : (typeof e.maintenance_coupling === 'number' ? e.maintenance_coupling : 0);
+
     const evidenceGridHtml = `
       <div class="evidence-metrics-grid">
-        <div class="evidence-pill" title="Cohesion"><span class="ep-label">Coh</span><span class="ep-val">${formatMetricValue(e.cohesion)}</span></div>
-        <div class="evidence-pill" title="Coupling"><span class="ep-label">Coup</span><span class="ep-val">${formatMetricValue(e.coupling)}</span></div>
-        <div class="evidence-pill" title="Ref Concentration"><span class="ep-label">Conc</span><span class="ep-val">${formatMetricValue(e.referenceConcentration)}</span></div>
-        <div class="evidence-pill" title="Granularity"><span class="ep-label">Gran</span><span class="ep-val">${formatMetricValue(e.granularity)}</span></div>
-        <div class="evidence-pill" title="Context Efficiency"><span class="ep-label">Eff</span><span class="ep-val">${formatMetricValue(e.contextEfficiency)}</span></div>
-        <div class="evidence-pill" title="Discoverability"><span class="ep-label">Disc</span><span class="ep-val">${formatMetricValue(e.discoverability)}</span></div>
-        <div class="evidence-pill" title="Reusability"><span class="ep-label">Reus</span><span class="ep-val">${formatMetricValue(e.reusability)}</span></div>
-        <div class="evidence-pill" title="Semantic Diversity"><span class="ep-label">Div</span><span class="ep-val">${formatMetricValue(e.semanticDiversity)}</span></div>
-        <div class="evidence-pill" title="Navigational Complexity"><span class="ep-label">Nav</span><span class="ep-val">${formatMetricValue(e.navigationalComplexity)}</span></div>
-        <div class="evidence-pill" title="Maintenance Coupling"><span class="ep-label">Maint</span><span class="ep-val">${formatMetricValue(e.maintenanceCoupling)}</span></div>
+        <div class="evidence-pill" title="Cohesion"><span class="ep-label">Coh</span><span class="ep-val">${formatMetricValue(coh)}</span></div>
+        <div class="evidence-pill" title="Coupling"><span class="ep-label">Coup</span><span class="ep-val">${formatMetricValue(coup)}</span></div>
+        <div class="evidence-pill" title="Ref Concentration"><span class="ep-label">Conc</span><span class="ep-val">${formatMetricValue(conc)}</span></div>
+        <div class="evidence-pill" title="Granularity"><span class="ep-label">Gran</span><span class="ep-val">${formatMetricValue(gran)}</span></div>
+        <div class="evidence-pill" title="Context Efficiency"><span class="ep-label">Eff</span><span class="ep-val">${formatMetricValue(eff)}</span></div>
+        <div class="evidence-pill" title="Discoverability"><span class="ep-label">Disc</span><span class="ep-val">${formatMetricValue(disc)}</span></div>
+        <div class="evidence-pill" title="Reusability"><span class="ep-label">Reus</span><span class="ep-val">${formatMetricValue(reus)}</span></div>
+        <div class="evidence-pill" title="Semantic Diversity"><span class="ep-label">Div</span><span class="ep-val">${formatMetricValue(div)}</span></div>
+        <div class="evidence-pill" title="Navigational Complexity"><span class="ep-label">Nav</span><span class="ep-val">${formatMetricValue(nav)}</span></div>
+        <div class="evidence-pill" title="Maintenance Coupling"><span class="ep-label">Maint</span><span class="ep-val">${formatMetricValue(maint)}</span></div>
       </div>
     `;
 
     // Render Recommendations
-    const recsHtml = recsForSig.map((rec) => {
-      const isAdvisory = rec.confidence < 0.70;
-      const confidencePercent = Math.round(rec.confidence * 100);
+    const recsHtml = recsForSig.map((rawRec: any) => {
+      const recId = rawRec.recommendationId || rawRec.recommendation_id || '';
+      const recConf = typeof rawRec.confidence === 'number' ? rawRec.confidence : 0;
+      const strategy = rawRec.strategy || 'topic_decomposition';
+      const isAdvisory = recConf < 0.70;
+      const confidencePercent = Math.round(recConf * 100);
 
-      const benefitsList = rec.expectedBenefits.map((b) => `<li>✔ ${b}</li>`).join('');
-      const tradeOffsList = rec.tradeOffs.map((t) => `<li>⚠ ${t}</li>`).join('');
+      const benefits: string[] = Array.isArray(rawRec.expectedBenefits)
+        ? rawRec.expectedBenefits
+        : (Array.isArray(rawRec.expected_benefits) ? rawRec.expected_benefits : []);
+      const tradeOffs: string[] = Array.isArray(rawRec.tradeOffs)
+        ? rawRec.tradeOffs
+        : (Array.isArray(rawRec.trade_offs) ? rawRec.trade_offs : []);
+
+      const benefitsList = benefits.map((b) => `<li>✔ ${b}</li>`).join('');
+      const tradeOffsList = tradeOffs.map((t) => `<li>⚠ ${t}</li>`).join('');
+
+      const txPlan = rawRec.transformationPlan || rawRec.transformation_plan;
+      const planId = txPlan ? (txPlan.planId || txPlan.plan_id) : null;
 
       return `
-        <div class="recommendation-card" data-rec-id="${rec.recommendationId}">
+        <div class="recommendation-card" data-rec-id="${recId}">
           <div class="rec-card-header">
-            <span class="rec-strategy-title">${getStrategyLabel(rec.strategy)}</span>
+            <span class="rec-strategy-title">${getStrategyLabel(strategy)}</span>
             <div class="rec-header-badges">
               ${isAdvisory ? '<span class="rec-advisory-badge">Advisory</span>' : ''}
               <span class="rec-confidence-badge">${confidencePercent}% Fit</span>
@@ -198,12 +231,12 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
           </div>
 
           <div class="rec-actions-bar">
-            <button type="button" class="btn btn-primary btn-generate-plan" data-action="generate-plan" data-rec-id="${rec.recommendationId}">
+            <button type="button" class="btn btn-primary btn-generate-plan" data-action="generate-plan" data-rec-id="${recId}">
               Generate Transformation Plan
             </button>
-            ${rec.transformationPlan ? `
-              <button type="button" class="btn btn-secondary btn-review-plan" data-action="review-plan" data-plan-id="${rec.transformationPlan.planId}">
-                Review Plan (${rec.transformationPlan.planId})
+            ${planId ? `
+              <button type="button" class="btn btn-secondary btn-review-plan" data-action="review-plan" data-plan-id="${planId}">
+                Review Plan (${planId})
               </button>
             ` : ''}
           </div>
@@ -212,16 +245,16 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
     }).join('');
 
     return `
-      <div class="signature-card" data-signature-id="${sig.signatureId}">
+      <div class="signature-card" data-signature-id="${sigId}">
         <div class="signature-header">
           <div class="sig-title-row">
-            <span class="sig-doc-path" title="${sig.documentPath}">${sig.documentPath}</span>
+            <span class="sig-doc-path" title="${docPath}">${docPath}</span>
             <span class="sig-problem-badge ${badge.cssClass}">${badge.label}</span>
           </div>
-          <span class="sig-confidence">Confidence: ${Math.round(sig.confidence * 100)}%</span>
+          <span class="sig-confidence">Confidence: ${Math.round(confidence * 100)}%</span>
         </div>
 
-        <p class="sig-rationale">${sig.rationale}</p>
+        <p class="sig-rationale">${rationale}</p>
 
         <div class="sig-evidence-section">
           <span class="section-micro-title">Empirical Metric Evidence:</span>
