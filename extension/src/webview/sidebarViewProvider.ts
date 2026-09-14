@@ -707,7 +707,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     </div>
 
 
-    <div class="section-title collapsible-header" id="top-notes-header" title="Toggle collapse">
+    <div class="section-title collapsible-header collapsed" id="top-notes-header" title="Toggle collapse">
       <span>Top Connected Notes</span>
       <span class="collapsible-chevron" id="top-notes-chevron">
         <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -715,7 +715,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         </svg>
       </span>
     </div>
-    <ul id="top-notes-list" class="top-notes">
+    <ul id="top-notes-list" class="top-notes" style="display: none;">
       <li style="color: var(--vscode-descriptionForeground); font-size: 11px; padding: 4px;">Loading top hubs...</li>
     </ul>
   </div>
@@ -736,7 +736,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       vscode.postMessage({ type: 'refreshQuality' });
     });
 
-    let isTopNotesCollapsed = false;
+    let isTopNotesCollapsed = true;
     const topNotesHeader = document.getElementById('top-notes-header');
     const topNotesList = document.getElementById('top-notes-list');
     if (topNotesHeader && topNotesList) {
