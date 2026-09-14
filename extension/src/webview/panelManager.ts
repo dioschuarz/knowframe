@@ -14,6 +14,17 @@ export class GraphPanelManager implements vscode.Disposable {
   private disposables: vscode.Disposable[] = [];
   private ipcClient: IpcClient | null = null;
   private currentScanResult: ScanResultPayload | null = null;
+  private static cachedIssuesReport: unknown | null = null;
+  private isFetchingIssues: boolean = false;
+  private pendingOpenTab: string | null = null;
+
+  public static setCachedIssuesReport(report: unknown): void {
+    GraphPanelManager.cachedIssuesReport = report;
+  }
+
+  public static getCachedIssuesReport(): unknown | null {
+    return GraphPanelManager.cachedIssuesReport;
+  }
 
   public static createOrShow(
     extensionUri: vscode.Uri,
@@ -26,7 +37,7 @@ export class GraphPanelManager implements vscode.Disposable {
 
     if (GraphPanelManager.currentPanel) {
       GraphPanelManager.currentPanel.panel.reveal(column);
-      if (scanResult) {
+      if (scanResult && !GraphPanelManager.currentPanel.currentScanResult) {
         GraphPanelManager.currentPanel.updateData(scanResult);
       }
       return GraphPanelManager.currentPanel;
@@ -124,6 +135,7 @@ export class GraphPanelManager implements vscode.Disposable {
   }
 
   public sendIssuesReport(issuesReport: unknown): void {
+    GraphPanelManager.cachedIssuesReport = issuesReport;
     this.panel.webview.postMessage({
       type: 'issuesReportUpdate',
       payload: issuesReport,
@@ -167,19 +179,36 @@ export class GraphPanelManager implements vscode.Disposable {
 
   public async openDiagnosticsTab(): Promise<void> {
     this.panel.reveal();
+    this.pendingOpenTab = 'diagnostics';
     this.panel.webview.postMessage({
       type: 'openSettingsDrawer',
       tab: 'diagnostics',
     });
+
+    if (GraphPanelManager.cachedIssuesReport) {
+      this.panel.webview.postMessage({
+        type: 'issuesReportUpdate',
+        payload: GraphPanelManager.cachedIssuesReport,
+      });
+    }
+
+    if (this.isFetchingIssues) {
+      return;
+    }
+
     if (this.ipcClient) {
       try {
+        this.isFetchingIssues = true;
         const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', {});
+        GraphPanelManager.cachedIssuesReport = issuesReport;
         this.panel.webview.postMessage({
           type: 'issuesReportUpdate',
           payload: issuesReport,
         });
       } catch (err: any) {
         console.error('Failed to fetch issues report:', err);
+      } finally {
+        this.isFetchingIssues = false;
       }
     }
   }
@@ -294,6 +323,21 @@ export class GraphPanelManager implements vscode.Disposable {
         } else {
           this.sendLoadingProgress('graph', 20, 'Scanning vault topology...');
         }
+
+        if (this.pendingOpenTab) {
+          const tabToOpen = this.pendingOpenTab;
+          this.pendingOpenTab = null;
+          this.panel.webview.postMessage({
+            type: 'openSettingsDrawer',
+            tab: tabToOpen,
+          });
+          if (GraphPanelManager.cachedIssuesReport) {
+            this.panel.webview.postMessage({
+              type: 'issuesReportUpdate',
+              payload: GraphPanelManager.cachedIssuesReport,
+            });
+          }
+        }
         break;
       }
       case 'triggerSetHubQuickPick': {
@@ -301,16 +345,29 @@ export class GraphPanelManager implements vscode.Disposable {
         break;
       }
       case 'requestIssues': {
+        if (GraphPanelManager.cachedIssuesReport) {
+          this.panel.webview.postMessage({
+            type: 'issuesReportUpdate',
+            payload: GraphPanelManager.cachedIssuesReport,
+          });
+        }
+        if (this.isFetchingIssues) {
+          break;
+        }
         if (this.ipcClient) {
           try {
+            this.isFetchingIssues = true;
             const payload = (message.payload || {}) as { pillar?: string; limit?: number };
             const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', payload);
+            GraphPanelManager.cachedIssuesReport = issuesReport;
             this.panel.webview.postMessage({
               type: 'issuesReportUpdate',
               payload: issuesReport,
             });
           } catch (err: any) {
             console.error('Failed to get issues report:', err);
+          } finally {
+            this.isFetchingIssues = false;
           }
         }
         break;

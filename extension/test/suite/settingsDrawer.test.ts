@@ -159,5 +159,13 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(html.includes('Open Note'), 'Must offer Open Note action button');
     assert.ok(html.includes('Fix Reference'), 'Must offer Fix Reference action button for broken links');
   });
+
+  test('scopes drawer-entering class strictly to isEntering state to prevent re-animation on updates', () => {
+    const defaultHtml = renderSettingsDrawerHtml(sampleProps);
+    assert.ok(!defaultHtml.includes('drawer-entering'), 'Must not have drawer-entering class by default or on property updates');
+
+    const enteringHtml = renderSettingsDrawerHtml(sampleProps, true);
+    assert.ok(enteringHtml.includes('drawer-entering'), 'Must include drawer-entering class when entering');
+  });
 });
 

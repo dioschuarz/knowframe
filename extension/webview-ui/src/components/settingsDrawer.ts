@@ -71,7 +71,7 @@ export interface SettingsDrawerController {
   updateProps: (newProps: Partial<SettingsDrawerProps>) => void;
 }
 
-export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
+export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering = false): string {
   const {
     activeTab,
     primaryHub = '00_meta/wiki_index.md',
@@ -631,7 +631,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
   }
 
   return `
-    <div class="settings-drawer" id="settings-drawer" style="display: none;">
+    <div class="settings-drawer${isEntering ? ' drawer-entering' : ''}" id="settings-drawer" style="display: none;">
       <div class="settings-header">
         <div class="settings-title-box">
           <span class="settings-icon">
@@ -667,9 +667,11 @@ export function renderSettingsDrawer(
 ): SettingsDrawerController {
   let state = { ...initialProps };
   let isVisible = false;
+  let isEntering = false;
+  let enterTimer: any = null;
 
   function render(): void {
-    container.innerHTML = renderSettingsDrawerHtml(state);
+    container.innerHTML = renderSettingsDrawerHtml(state, isEntering);
     const drawer = container.querySelector('#settings-drawer') as HTMLElement;
     if (drawer) {
       drawer.style.display = isVisible ? 'flex' : 'none';
@@ -1160,19 +1162,41 @@ export function renderSettingsDrawer(
   }
 
   function open(tab?: SettingsTab): void {
+    const wasVisible = isVisible;
     if (tab) state.activeTab = tab;
     isVisible = true;
+
+    if (!wasVisible) {
+      isEntering = true;
+      if (enterTimer) {
+        clearTimeout(enterTimer);
+      }
+      enterTimer = setTimeout(() => {
+        isEntering = false;
+        const drawer = container.querySelector('#settings-drawer');
+        drawer?.classList.remove('drawer-entering');
+      }, 250);
+    }
+
     if (state.activeTab === 'diagnostics') {
-      callbacks.onRequestIssues?.(state.selectedPillarFilter);
+      if (!state.issuesReport) {
+        callbacks.onRequestIssues?.(state.selectedPillarFilter);
+      }
     }
     render();
   }
 
   function close(): void {
     isVisible = false;
+    isEntering = false;
+    if (enterTimer) {
+      clearTimeout(enterTimer);
+      enterTimer = null;
+    }
     const drawer = container.querySelector('#settings-drawer') as HTMLElement;
     if (drawer) {
       drawer.style.display = 'none';
+      drawer.classList.remove('drawer-entering');
     }
     callbacks.onClose?.();
   }

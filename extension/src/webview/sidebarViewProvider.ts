@@ -199,6 +199,12 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.1));
       text-decoration: underline;
     }
+    .dash-action-link:disabled,
+    .dash-action-link.loading {
+      opacity: 0.6;
+      cursor: wait;
+      pointer-events: none;
+    }
     .dashboard-pillar {
       background: var(--vscode-editor-background, #1e1e1e);
       border: 1px solid var(--vscode-widget-border, #333333);
@@ -730,11 +736,26 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
 
-    document.getElementById('dash-btn-review-broken')?.addEventListener('click', () => {
+    const btnReviewBroken = document.getElementById('dash-btn-review-broken');
+    btnReviewBroken?.addEventListener('click', () => {
+      btnReviewBroken.classList.add('loading');
+      btnReviewBroken.textContent = 'Opening...';
       vscode.postMessage({ type: 'reviewIssues' });
+      setTimeout(() => {
+        btnReviewBroken.classList.remove('loading');
+        btnReviewBroken.textContent = 'Review issues';
+      }, 2000);
     });
-    document.getElementById('dash-btn-review-suggestions')?.addEventListener('click', () => {
+
+    const btnReviewSuggestions = document.getElementById('dash-btn-review-suggestions');
+    btnReviewSuggestions?.addEventListener('click', () => {
+      btnReviewSuggestions.classList.add('loading');
+      btnReviewSuggestions.textContent = 'Opening...';
       vscode.postMessage({ type: 'reviewSuggestions' });
+      setTimeout(() => {
+        btnReviewSuggestions.classList.remove('loading');
+        btnReviewSuggestions.textContent = 'Review suggestions';
+      }, 2000);
     });
     document.getElementById('dash-btn-change-hub')?.addEventListener('click', () => {
       vscode.postMessage({ type: 'changeHub' });

@@ -144,10 +144,13 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           statusBarItem.text = '$(sync~spin) Wiki: 85% Auditing Issues...';
           GraphPanelManager.currentPanel?.sendLoadingProgress('issues', 85, 'Gathering diagnostic issues...');
 
-          if (GraphPanelManager.currentPanel && ipcClient) {
+          if (ipcClient) {
             try {
               const issuesReport = await ipcClient.sendRequest('workspace/getIssues', {});
-              GraphPanelManager.currentPanel.sendIssuesReport(issuesReport);
+              GraphPanelManager.setCachedIssuesReport(issuesReport);
+              if (GraphPanelManager.currentPanel) {
+                GraphPanelManager.currentPanel.sendIssuesReport(issuesReport);
+              }
             } catch (err: any) {
               outputChannel.appendLine(`[EXTENSION] Non-fatal issues fetch warning: ${err.message}`);
             }
