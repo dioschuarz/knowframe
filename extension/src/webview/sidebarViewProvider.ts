@@ -598,28 +598,35 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
           <span class="score-max">/100</span>
         </div>
         <div class="quality-pillars-mini">
-          <div class="pillar-mini-row" title="Integrity (30%) - Broken links and target anchors">
+          <div class="pillar-mini-row" title="Integrity (25%) - Broken links and target anchors">
             <span class="mini-label">Integrity</span>
             <div class="mini-bar-track">
               <div class="mini-bar-fill" id="fill-integrity" style="width: 0%; background-color: var(--vscode-charts-green, #22c55e);"></div>
             </div>
             <span class="mini-val" id="val-integrity">--%</span>
           </div>
-          <div class="pillar-mini-row" title="Consistency (25%) - Semantic collisions & duplicates">
+          <div class="pillar-mini-row" title="Structure (20%) - Missing fragment metadata & oversized documents">
+            <span class="mini-label">Structure</span>
+            <div class="mini-bar-track">
+              <div class="mini-bar-fill" id="fill-structure" style="width: 0%; background-color: var(--vscode-charts-green, #22c55e);"></div>
+            </div>
+            <span class="mini-val" id="val-structure">--%</span>
+          </div>
+          <div class="pillar-mini-row" title="Consistency (20%) - Semantic collisions & duplicates">
             <span class="mini-label">Consistency</span>
             <div class="mini-bar-track">
               <div class="mini-bar-fill" id="fill-consistency" style="width: 0%; background-color: var(--vscode-charts-green, #22c55e);"></div>
             </div>
             <span class="mini-val" id="val-consistency">--%</span>
           </div>
-          <div class="pillar-mini-row" title="Discoverability (25%) - Orphans & hop reachability">
+          <div class="pillar-mini-row" title="Discoverability (20%) - Orphans & hop reachability">
             <span class="mini-label">Discoverability</span>
             <div class="mini-bar-track">
               <div class="mini-bar-fill" id="fill-discoverability" style="width: 0%; background-color: var(--vscode-charts-green, #22c55e);"></div>
             </div>
             <span class="mini-val" id="val-discoverability">--%</span>
           </div>
-          <div class="pillar-mini-row" title="Freshness (20%) - Technical drift & stale code citations">
+          <div class="pillar-mini-row" title="Freshness (15%) - Technical drift & stale code citations">
             <span class="mini-label">Freshness</span>
             <div class="mini-bar-track">
               <div class="mini-bar-fill" id="fill-freshness" style="width: 0%; background-color: var(--vscode-charts-green, #22c55e);"></div>
@@ -942,6 +949,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       }
 
       updateBar('fill-integrity', 'val-integrity', q.integrity_score);
+      updateBar('fill-structure', 'val-structure', q.structure_score != null ? q.structure_score : 100);
       updateBar('fill-consistency', 'val-consistency', q.consistency_score);
       updateBar('fill-discoverability', 'val-discoverability', q.discoverability_score);
       updateBar('fill-freshness', 'val-freshness', q.freshness_score);

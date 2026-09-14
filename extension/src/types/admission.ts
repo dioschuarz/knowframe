@@ -104,7 +104,7 @@ export interface QualityDegradationFactor {
 export interface KnowledgeQualityScore {
   overall_score: number;
   integrity_score: number;
-  structure_score?: number;
+  structure_score: number;
   consistency_score: number;
   discoverability_score: number;
   freshness_score: number;
@@ -118,7 +118,7 @@ export interface KnowledgeQualityScore {
 
 export interface KnowledgeIssue {
   id: string;
-  pillar: "integrity" | "consistency" | "discoverability" | "freshness" | string;
+  pillar: "integrity" | "structure" | "consistency" | "discoverability" | "freshness" | string;
   category: string;
   file_path: string;
   line_number?: number | null;
@@ -133,7 +133,7 @@ export interface KnowledgeIssuesReport {
   overall_score: number;
   total_issues: number;
   integrity_count: number;
-  structure_count?: number;
+  structure_count: number;
   consistency_count: number;
   discoverability_count: number;
   freshness_count: number;

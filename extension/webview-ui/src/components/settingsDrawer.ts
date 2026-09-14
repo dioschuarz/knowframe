@@ -402,14 +402,39 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps): string {
 
     case 'diagnostics': {
       const report = props.issuesReport;
-      const totalIssues = report?.total_issues ?? brokenLinksCount;
-      const overallScore = report ? Math.round(report.overall_score) : 100;
-      const integrityCount = report?.integrity_count ?? brokenLinksCount;
-      const structureCount = report?.structure_count ?? 0;
-      const consistencyCount = report?.consistency_count ?? 0;
-      const discoverabilityCount = report?.discoverability_count ?? orphanNotes;
-      const freshnessCount = report?.freshness_count ?? 0;
       const issues = report?.issues ?? [];
+      const overallScore = report ? Math.round(report.overall_score) : 100;
+
+      const integFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'integrity').length;
+      const integrityCount = (report?.integrity_count !== undefined && report.integrity_count >= integFilterCount)
+        ? report.integrity_count
+        : (integFilterCount || brokenLinksCount);
+
+      const structFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'structure').length;
+      const structureCount = (report?.structure_count !== undefined && report.structure_count >= structFilterCount)
+        ? report.structure_count
+        : structFilterCount;
+
+      const consFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'consistency').length;
+      const consistencyCount = (report?.consistency_count !== undefined && report.consistency_count >= consFilterCount)
+        ? report.consistency_count
+        : consFilterCount;
+
+      const discFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'discoverability').length;
+      const discoverabilityCount = (report?.discoverability_count !== undefined && report.discoverability_count >= discFilterCount)
+        ? report.discoverability_count
+        : (discFilterCount || orphanNotes);
+
+      const freshFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'freshness').length;
+      const freshnessCount = (report?.freshness_count !== undefined && report.freshness_count >= freshFilterCount)
+        ? report.freshness_count
+        : freshFilterCount;
+
+      const computedTotal = integrityCount + structureCount + consistencyCount + discoverabilityCount + freshnessCount;
+      const totalIssues = (report?.total_issues !== undefined && report.total_issues >= issues.length)
+        ? report.total_issues
+        : computedTotal;
+
       const currentPillar = props.selectedPillarFilter || 'all';
 
       const scoreClass = overallScore >= 90 ? 'diag-score-good' : overallScore >= 75 ? 'diag-score-warn' : 'diag-score-bad';

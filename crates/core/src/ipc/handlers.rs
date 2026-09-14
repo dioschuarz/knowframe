@@ -289,6 +289,11 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                         n.tokens = node.tokens;
                         n.status = node.status;
                         n.color = node.color;
+                        n.fragments = node.fragments.clone();
+                        topology.set_headings(
+                            node.id.clone(),
+                            node.fragments.iter().map(|f| f.heading.clone()).collect(),
+                        );
                         topology.add_node(n);
                     }
                     for edge in scan_res.edges {
@@ -318,6 +323,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             JsonRpcResponse::success(req.id, json!({
                 "overall_score": quality.overall_score,
                 "integrity_score": quality.integrity_score,
+                "structure_score": quality.structure_score,
                 "consistency_score": quality.consistency_score,
                 "discoverability_score": quality.discoverability_score,
                 "freshness_score": quality.freshness_score,
@@ -345,6 +351,11 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                         n.tokens = node.tokens;
                         n.status = node.status;
                         n.color = node.color;
+                        n.fragments = node.fragments.clone();
+                        topology.set_headings(
+                            node.id.clone(),
+                            node.fragments.iter().map(|f| f.heading.clone()).collect(),
+                        );
                         topology.add_node(n);
                     }
                     for edge in scan_res.edges {
@@ -374,6 +385,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             let all_issues = crate::quality::extract_all_issues(&topology, &collisions, &drifts);
 
             let integrity_count = all_issues.iter().filter(|i| i.pillar == "integrity").count();
+            let structure_count = all_issues.iter().filter(|i| i.pillar == "structure").count();
             let consistency_count = all_issues.iter().filter(|i| i.pillar == "consistency").count();
             let discoverability_count = all_issues.iter().filter(|i| i.pillar == "discoverability").count();
             let freshness_count = all_issues.iter().filter(|i| i.pillar == "freshness").count();
@@ -409,6 +421,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 "overall_score": quality.overall_score,
                 "total_issues": total_issues,
                 "integrity_count": integrity_count,
+                "structure_count": structure_count,
                 "consistency_count": consistency_count,
                 "discoverability_count": discoverability_count,
                 "freshness_count": freshness_count,
