@@ -805,14 +805,23 @@ export function renderSettingsDrawer(
   let enterTimer: any = null;
 
   let _lastRenderedTab: SettingsTab | null = null;
+  let _pendingOrientation: string | null = null;   // optimistic lock while awaiting IPC confirm
+  let _lastKnownScrollTop = 0;                     // updated by scroll listener; used in rAF restore
+  let _renderPending = false;                      // debounce: only one rAF render in flight
+
+  function scheduleRender(): void {
+    if (_renderPending) return;
+    _renderPending = true;
+    requestAnimationFrame(() => {
+      _renderPending = false;
+      render();
+    });
+  }
 
   function render(): void {
-    // Only preserve scroll when staying on the same tab (not on initial render or tab switch)
+    // Only preserve scroll when staying on the same tab
     const isTabChange = _lastRenderedTab !== state.activeTab;
-    const contentEl = container.querySelector('#settings-content') as HTMLElement | null;
-    const savedScrollTop = (!isTabChange && contentEl && contentEl.scrollTop > 0)
-      ? contentEl.scrollTop
-      : 0;
+    const savedScrollTop = isTabChange ? 0 : _lastKnownScrollTop;
 
     container.innerHTML = renderSettingsDrawerHtml(state, isEntering);
     _lastRenderedTab = state.activeTab;
@@ -825,12 +834,21 @@ export function renderSettingsDrawer(
       drawer.addEventListener('click', (e) => e.stopPropagation());
     }
 
-    // Restore scroll in rAF so browser has finished layout before we set scrollTop
-    if (savedScrollTop > 0) {
-      requestAnimationFrame(() => {
-        const el = container.querySelector('#settings-content') as HTMLElement | null;
-        if (el) el.scrollTop = savedScrollTop;
-      });
+    // Track scroll position via event so we always have the real user position
+    const newContentEl = container.querySelector('#settings-content') as HTMLElement | null;
+    if (newContentEl) {
+      if (savedScrollTop > 0) {
+        // Restore after layout via rAF
+        requestAnimationFrame(() => {
+          const el = container.querySelector('#settings-content') as HTMLElement | null;
+          if (el) {
+            el.scrollTop = savedScrollTop;
+          }
+        });
+      }
+      newContentEl.addEventListener('scroll', () => {
+        _lastKnownScrollTop = newContentEl.scrollTop;
+      }, { passive: true });
     }
 
 
@@ -1327,8 +1345,9 @@ export function renderSettingsDrawer(
       card.addEventListener('click', (e) => {
         e.stopPropagation();
         const orient = card.getAttribute('data-orientation') as DocumentationOrientation;
-        if (orient && orient !== state.activeOrientation) {
+        if (orient) {
           state.activeOrientation = orient;
+          _pendingOrientation = orient;  // lock out IPC overwrites until confirmed
           if (orient === 'custom') {
             state.isCustomDrawerOpen = true;
           }
@@ -1456,8 +1475,19 @@ export function renderSettingsDrawer(
 
   function open(tab?: SettingsTab): void {
     const wasVisible = isVisible;
+    const prevTab = state.activeTab;
     if (tab) state.activeTab = tab;
     isVisible = true;
+
+    // Skip full re-render if already visible on the same tab (deduplicate rapid open calls)
+    if (wasVisible && state.activeTab === prevTab) {
+      return;
+    }
+
+    // Reset scroll when switching tabs
+    if (state.activeTab !== prevTab) {
+      _lastKnownScrollTop = 0;
+    }
 
     if (!wasVisible) {
       isEntering = true;
@@ -1485,6 +1515,7 @@ export function renderSettingsDrawer(
   function close(): void {
     isVisible = false;
     isEntering = false;
+    _lastKnownScrollTop = 0;
     if (enterTimer) {
       clearTimeout(enterTimer);
       enterTimer = null;
@@ -1510,8 +1541,21 @@ export function renderSettingsDrawer(
       return isVisible;
     },
     updateProps(newProps: Partial<SettingsDrawerProps>) {
+      // Pending orientation lock: if user just clicked an orientation card,
+      // don't let an in-flight IPC response overwrite it until the sidecar
+      // echoes back the same orientation (confirming the change was persisted).
+      if (_pendingOrientation && 'activeOrientation' in newProps) {
+        if (newProps.activeOrientation === _pendingOrientation) {
+          _pendingOrientation = null; // IPC confirmed — release the lock
+        } else {
+          // IPC returned stale state — keep our local selection
+          const { activeOrientation: _ignored, ...rest } = newProps as any;
+          newProps = rest;
+        }
+      }
       state = { ...state, ...newProps };
-      render();
+      // Batch rapid updates (IPC often fires multiple messages in quick succession)
+      scheduleRender();
     },
   };
 }

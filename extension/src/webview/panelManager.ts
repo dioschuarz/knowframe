@@ -184,7 +184,7 @@ export class GraphPanelManager implements vscode.Disposable {
     this.pendingOpenTab = 'diagnostics';
     this.panel.webview.postMessage({
       type: 'openSettingsDrawer',
-      tab: 'diagnostics',
+      payload: { tab: 'diagnostics' },
     });
 
     if (GraphPanelManager.cachedIssuesReport) {
@@ -357,7 +357,7 @@ export class GraphPanelManager implements vscode.Disposable {
     this.pendingOpenTab = 'evolution';
     this.panel.webview.postMessage({
       type: 'openSettingsDrawer',
-      tab: 'evolution',
+      payload: { tab: 'evolution' },
     });
 
     if (GraphPanelManager.cachedIssuesReport) {
@@ -499,7 +499,7 @@ export class GraphPanelManager implements vscode.Disposable {
           this.pendingOpenTab = null;
           this.panel.webview.postMessage({
             type: 'openSettingsDrawer',
-            tab: tabToOpen,
+            payload: { tab: tabToOpen },
           });
           if (GraphPanelManager.cachedIssuesReport) {
             this.panel.webview.postMessage({
