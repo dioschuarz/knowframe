@@ -247,11 +247,11 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
     return `
       <div class="signature-card" data-signature-id="${sigId}">
         <div class="signature-header">
-          <div class="sig-title-row">
-            <span class="sig-doc-path" title="${docPath}">${docPath}</span>
+          <span class="sig-doc-path" title="${docPath}">${docPath}</span>
+          <div class="sig-meta-row">
             <span class="sig-problem-badge ${badge.cssClass}">${badge.label}</span>
+            <span class="sig-confidence">Confidence: ${Math.round(confidence * 100)}%</span>
           </div>
-          <span class="sig-confidence">Confidence: ${Math.round(confidence * 100)}%</span>
         </div>
 
         <p class="sig-rationale">${rationale}</p>

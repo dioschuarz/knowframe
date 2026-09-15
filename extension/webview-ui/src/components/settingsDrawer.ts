@@ -804,12 +804,19 @@ export function renderSettingsDrawer(
   let isEntering = false;
   let enterTimer: any = null;
 
+  let _lastRenderedTab: SettingsTab | null = null;
+
   function render(): void {
-    // Save scroll position before re-render to prevent jumping to top
+    // Only preserve scroll when staying on the same tab (not on initial render or tab switch)
+    const isTabChange = _lastRenderedTab !== state.activeTab;
     const contentEl = container.querySelector('#settings-content') as HTMLElement | null;
-    const savedScrollTop = contentEl ? contentEl.scrollTop : 0;
+    const savedScrollTop = (!isTabChange && contentEl && contentEl.scrollTop > 0)
+      ? contentEl.scrollTop
+      : 0;
 
     container.innerHTML = renderSettingsDrawerHtml(state, isEntering);
+    _lastRenderedTab = state.activeTab;
+
     const drawer = container.querySelector('#settings-drawer') as HTMLElement;
     if (drawer) {
       drawer.style.display = isVisible ? 'flex' : 'none';
@@ -818,11 +825,14 @@ export function renderSettingsDrawer(
       drawer.addEventListener('click', (e) => e.stopPropagation());
     }
 
-    // Restore scroll position after re-render
-    const newContentEl = container.querySelector('#settings-content') as HTMLElement | null;
-    if (newContentEl && savedScrollTop > 0) {
-      newContentEl.scrollTop = savedScrollTop;
+    // Restore scroll in rAF so browser has finished layout before we set scrollTop
+    if (savedScrollTop > 0) {
+      requestAnimationFrame(() => {
+        const el = container.querySelector('#settings-content') as HTMLElement | null;
+        if (el) el.scrollTop = savedScrollTop;
+      });
     }
+
 
     container.querySelector('#settings-btn-close')?.addEventListener('click', (e) => {
       e.stopPropagation();
