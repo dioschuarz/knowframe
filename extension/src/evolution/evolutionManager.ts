@@ -123,12 +123,15 @@ export class EvolutionManager {
     const res = await this.ipcClient.sendRequest<GetStructuralProblemsResponse>('analytics/getStructuralProblems', {
       file_path: filePath,
     });
+    const changed = JSON.stringify(this.cachedSignatures) !== JSON.stringify(res.signatures);
     this.cachedSignatures = res.signatures;
-    for (const l of this.problemListeners) {
-      try {
-        l(res.signatures);
-      } catch (e) {
-        // Safe dispatch
+    if (changed) {
+      for (const l of this.problemListeners) {
+        try {
+          l(res.signatures);
+        } catch (e) {
+          // Safe dispatch
+        }
       }
     }
     return res.signatures;
@@ -138,12 +141,15 @@ export class EvolutionManager {
     const res = await this.ipcClient.sendRequest<GetRecommendationsResponse>('recommendation/getRecommendations', {
       signature_id: signatureId,
     });
+    const changed = JSON.stringify(this.cachedRecommendations) !== JSON.stringify(res.recommendations);
     this.cachedRecommendations = res.recommendations;
-    for (const l of this.recommendationListeners) {
-      try {
-        l(res.recommendations);
-      } catch (e) {
-        // Safe dispatch
+    if (changed) {
+      for (const l of this.recommendationListeners) {
+        try {
+          l(res.recommendations);
+        } catch (e) {
+          // Safe dispatch
+        }
       }
     }
     return res.recommendations;

@@ -24,6 +24,8 @@ export interface EvolutionTabProps {
   isLoading?: boolean;
   activeOrientation?: string;
   structureFindings?: Array<{ file_path: string; description: string; remediation_hint?: string }>;
+  generatingPlanRecId?: string | null;   // recId whose plan is currently being generated
+  planGenerationError?: string | null;   // error message for the failed plan generation
 }
 
 export function formatMetricValue(val: number): string {
@@ -79,6 +81,8 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
       </div>
     `;
   }
+
+  const { generatingPlanRecId, planGenerationError } = props;
 
   const orientationLabel = (props.activeOrientation || 'balanced')
     .replace(/_/g, ' ')
@@ -209,40 +213,57 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
       const txPlan = rawRec.transformationPlan || rawRec.transformation_plan;
       const planId = txPlan ? (txPlan.planId || txPlan.plan_id) : null;
 
+      const isGenerating = generatingPlanRecId === recId;
+      const errorMsg = (typeof planGenerationError === 'object' && planGenerationError && (planGenerationError as any).recId === recId)
+        ? (planGenerationError as any).message
+        : (typeof planGenerationError === 'string' && isGenerating ? planGenerationError : null);
+
       return `
-        <div class="recommendation-card" data-rec-id="${recId}">
-          <div class="rec-card-header">
-            <span class="rec-strategy-title">${getStrategyLabel(strategy)}</span>
-            <div class="rec-header-badges">
-              ${isAdvisory ? '<span class="rec-advisory-badge">Advisory</span>' : ''}
-              <span class="rec-confidence-badge">${confidencePercent}% Fit</span>
-            </div>
-          </div>
+            <div class="recommendation-card" data-rec-id="${recId}">
+              <div class="rec-card-header">
+                <span class="rec-strategy-title">${getStrategyLabel(strategy)}</span>
+                <div class="rec-header-badges">
+                  ${isAdvisory ? '<span class="rec-advisory-badge">Advisory</span>' : ''}
+                  <span class="rec-confidence-badge">${confidencePercent}% Fit</span>
+                </div>
+              </div>
 
-          <div class="trade-off-table">
-            <div class="trade-off-col trade-off-benefits">
-              <span class="col-title">Expected Benefits</span>
-              <ul>${benefitsList}</ul>
-            </div>
-            <div class="trade-off-col trade-off-costs">
-              <span class="col-title">Countervailing Trade-offs</span>
-              <ul>${tradeOffsList}</ul>
-            </div>
-          </div>
+              <div class="trade-off-table">
+                <div class="trade-off-col trade-off-benefits">
+                  <span class="col-title">Expected Benefits</span>
+                  <ul>${benefitsList}</ul>
+                </div>
+                <div class="trade-off-col trade-off-costs">
+                  <span class="col-title">Countervailing Trade-offs</span>
+                  <ul>${tradeOffsList}</ul>
+                </div>
+              </div>
 
-          <div class="rec-actions-bar">
-            <button type="button" class="btn btn-primary btn-generate-plan" data-action="generate-plan" data-rec-id="${recId}">
-              Generate Transformation Plan
-            </button>
-            ${planId ? `
-              <button type="button" class="btn btn-secondary btn-review-plan" data-action="review-plan" data-plan-id="${planId}">
-                Review Plan (${planId})
-              </button>
-            ` : ''}
-          </div>
-        </div>
-      `;
-    }).join('');
+              <div class="rec-actions-bar">
+                <button type="button"
+                        class="btn btn-primary btn-generate-plan${isGenerating ? ' is-loading' : ''}"
+                        data-action="generate-plan"
+                        data-rec-id="${recId}"
+                        ${isGenerating ? 'disabled' : ''}>
+                  ${isGenerating
+                    ? '<span class="btn-spinner"></span> Generating Plan...'
+                    : 'Generate Transformation Plan'}
+                </button>
+                ${planId ? `
+                  <button type="button" class="btn btn-secondary btn-review-plan" data-action="review-plan" data-plan-id="${planId}">
+                    Review Plan (${planId})
+                  </button>
+                ` : ''}
+              </div>
+              ${errorMsg ? `
+                <div class="plan-gen-error-banner">
+                  <span class="error-icon">⚠️</span>
+                  <span class="error-msg">${errorMsg}</span>
+                </div>
+              ` : ''}
+            </div>
+          `;
+        }).join('');
 
     return `
       <div class="signature-card" data-signature-id="${sigId}">

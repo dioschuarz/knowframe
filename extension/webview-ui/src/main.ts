@@ -150,6 +150,10 @@ const settingsDrawer = renderSettingsDrawer(
       rpc.validateConstraints(constraints);
     },
     onGeneratePlan: (recId) => {
+      settingsDrawer.updateProps({
+        generatingPlanRecId: recId,
+        planGenerationError: null,
+      });
       rpc.generateTransformationPlan(recId);
     },
     onReviewPlan: (planId) => {
@@ -607,12 +611,26 @@ rpc.on('evolutionStateUpdate', (data: any) => {
 
 rpc.on('transformationPlanReady', (plan: any) => {
   if (plan) {
+    settingsDrawer.updateProps({
+      generatingPlanRecId: null,
+      planGenerationError: null,
+    });
     currentTransformationPlan = plan;
     isTransformationModalOpen = true;
     isApplyingTransformationPlan = false;
     actualTransformationDelta = null;
     renderTransformationModal();
   }
+});
+
+rpc.on('transformationPlanError', (data: any) => {
+  settingsDrawer.updateProps({
+    generatingPlanRecId: null,
+    planGenerationError: {
+      recId: data?.recommendationId,
+      message: data?.error || 'Failed to generate transformation plan',
+    },
+  });
 });
 
 rpc.on('transformationPlanApplied', (data: any) => {

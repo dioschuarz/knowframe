@@ -221,6 +221,7 @@ export type WebviewOutboundType =
   | 'evolutionStateUpdate'
   | 'transformationPlanReady'
   | 'transformationPlanApplied'
+  | 'transformationPlanError'
   | 'constraintValidationResult'
   | 'error';
 

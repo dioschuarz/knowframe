@@ -95,6 +95,8 @@ export interface SettingsDrawerProps {
   isCustomDrawerOpen?: boolean;
   isSavingCustom?: boolean;
   isEvolutionLoading?: boolean;
+  generatingPlanRecId?: string | null;   // recId currently being planned (shows spinner)
+  planGenerationError?: { recId: string; message: string } | string | null;   // inline error message to display near the button
 }
 
 export interface SettingsDrawerCallbacks {
@@ -736,6 +738,8 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
           activeOrientation,
           structureFindings,
           isLoading: props.isEvolutionLoading,
+          generatingPlanRecId: props.generatingPlanRecId,
+          planGenerationError: props.planGenerationError,
         });
 
         tabContentHtml = `

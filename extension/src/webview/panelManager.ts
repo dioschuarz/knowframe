@@ -18,6 +18,7 @@ export class GraphPanelManager implements vscode.Disposable {
   private currentScanResult: ScanResultPayload | null = null;
   private static cachedIssuesReport: unknown | null = null;
   private isFetchingIssues: boolean = false;
+  private isSendingEvolutionState: boolean = false;
   private pendingOpenTab: string | null = null;
 
   public static setCachedIssuesReport(report: unknown): void {
@@ -231,9 +232,10 @@ export class GraphPanelManager implements vscode.Disposable {
   }
 
   public async sendEvolutionState(): Promise<void> {
-    if (!this.evolutionManager) {
+    if (!this.evolutionManager || this.isSendingEvolutionState) {
       return;
     }
+    this.isSendingEvolutionState = true;
     try {
       const orientRes = await this.evolutionManager.getOrientation();
       let customRes: any = { tier1: null, tier2: null, constraints: [] };
@@ -349,6 +351,8 @@ export class GraphPanelManager implements vscode.Disposable {
       });
     } catch (err: any) {
       console.error('[GraphPanelManager] Error sending evolution state:', err);
+    } finally {
+      this.isSendingEvolutionState = false;
     }
   }
 
@@ -604,6 +608,13 @@ export class GraphPanelManager implements vscode.Disposable {
             });
           } catch (err: any) {
             vscode.window.showErrorMessage(`Failed to generate transformation plan: ${err.message}`);
+            this.panel.webview.postMessage({
+              type: 'transformationPlanError',
+              payload: {
+                recommendationId: payload.recommendationId,
+                error: err.message || 'Failed to generate transformation plan',
+              },
+            });
           }
         }
         break;
