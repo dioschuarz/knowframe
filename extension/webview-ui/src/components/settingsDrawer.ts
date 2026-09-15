@@ -794,6 +794,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
   `;
 }
 
+
 export function renderSettingsDrawer(
   container: HTMLElement,
   initialProps: SettingsDrawerProps,
@@ -806,23 +807,35 @@ export function renderSettingsDrawer(
 
   let _lastRenderedTab: SettingsTab | null = null;
   let _pendingOrientation: string | null = null;   // optimistic lock while awaiting IPC confirm
-  let _lastKnownScrollTop = 0;                     // updated by scroll listener; used in rAF restore
   let _renderPending = false;                      // debounce: only one rAF render in flight
 
   function scheduleRender(): void {
+    // For IPC-driven updates, do a PARTIAL DOM update — only replace the
+    // content area. The #settings-content element stays alive so its
+    // scrollTop is naturally preserved (no rAF tricks needed).
     if (_renderPending) return;
     _renderPending = true;
     requestAnimationFrame(() => {
       _renderPending = false;
-      render();
+      const contentEl = container.querySelector('#settings-content') as HTMLElement | null;
+      if (!contentEl || _lastRenderedTab !== state.activeTab) {
+        // No content element yet, or tab just changed — need full render
+        render();
+        return;
+      }
+      // Partial update: parse new HTML in a temp div, extract content, inject
+      const tmp = document.createElement('div');
+      tmp.innerHTML = renderSettingsDrawerHtml(state, false);
+      const newContent = tmp.querySelector('#settings-content');
+      if (newContent) {
+        contentEl.innerHTML = newContent.innerHTML;
+        wireEvolutionListeners();
+      }
     });
   }
 
   function render(): void {
-    // Only preserve scroll when staying on the same tab
-    const isTabChange = _lastRenderedTab !== state.activeTab;
-    const savedScrollTop = isTabChange ? 0 : _lastKnownScrollTop;
-
+    // Full render — replaces the entire drawer shell + content
     container.innerHTML = renderSettingsDrawerHtml(state, isEntering);
     _lastRenderedTab = state.activeTab;
 
@@ -833,24 +846,6 @@ export function renderSettingsDrawer(
       drawer.addEventListener('mouseup', (e) => e.stopPropagation());
       drawer.addEventListener('click', (e) => e.stopPropagation());
     }
-
-    // Track scroll position via event so we always have the real user position
-    const newContentEl = container.querySelector('#settings-content') as HTMLElement | null;
-    if (newContentEl) {
-      if (savedScrollTop > 0) {
-        // Restore after layout via rAF
-        requestAnimationFrame(() => {
-          const el = container.querySelector('#settings-content') as HTMLElement | null;
-          if (el) {
-            el.scrollTop = savedScrollTop;
-          }
-        });
-      }
-      newContentEl.addEventListener('scroll', () => {
-        _lastKnownScrollTop = newContentEl.scrollTop;
-      }, { passive: true });
-    }
-
 
     container.querySelector('#settings-btn-close')?.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1339,7 +1334,10 @@ export function renderSettingsDrawer(
     });
 
     // --- Evolution Tab Event Wiring ---
+    wireEvolutionListeners();
+  }
 
+  function wireEvolutionListeners(): void {
     // 1. Orientation Cards Selection
     container.querySelectorAll('.orientation-card').forEach((card) => {
       card.addEventListener('click', (e) => {
@@ -1460,7 +1458,7 @@ export function renderSettingsDrawer(
       });
     });
 
-    // 9. Finding File Link Navigation in Structural Debt Findings
+    // 9. Finding File Link Navigation
     container.querySelectorAll('.finding-loc').forEach((el) => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1484,11 +1482,8 @@ export function renderSettingsDrawer(
       return;
     }
 
-    // Reset scroll when switching tabs
-    if (state.activeTab !== prevTab) {
-      _lastKnownScrollTop = 0;
-    }
-
+    // Reset scroll when switching tabs — destroy and recreate the content element
+    // so the new tab starts at the top (handled naturally by full render())
     if (!wasVisible) {
       isEntering = true;
       if (enterTimer) {
@@ -1515,7 +1510,6 @@ export function renderSettingsDrawer(
   function close(): void {
     isVisible = false;
     isEntering = false;
-    _lastKnownScrollTop = 0;
     if (enterTimer) {
       clearTimeout(enterTimer);
       enterTimer = null;

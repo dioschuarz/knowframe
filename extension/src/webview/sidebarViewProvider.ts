@@ -743,7 +743,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
           <span class="hub-icon" id="evolution-mode-icon">🤖</span>
           <span class="hub-path-link" id="evolution-mode-badge" style="cursor: pointer;" title="Active Documentation Evolution Orientation - Click to configure">AI-Oriented (3k)</span>
         </div>
-        <button class="dash-action-link" id="dash-btn-configure-evolution">Configure</button>
+        <button class="dash-action-link" id="dash-btn-configure-evolution">Change</button>
       </div>
       <div class="sync-status-row">
         <span class="sync-indicator-dot" id="evolution-indicator-dot" style="background: #38bdf8;"></span>
