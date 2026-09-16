@@ -268,7 +268,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       letter-spacing: 0.3px;
       white-space: nowrap;
     }
-    .factors-section {
+    .factors-section, .top-notes-section {
       margin-top: 8px;
       border-top: 1px solid rgba(255, 255, 255, 0.06);
       padding-top: 6px;
@@ -712,6 +712,21 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
           <div id="quality-factors-items"></div>
         </div>
       </div>
+
+      <!-- Top Connected Notes (Collapsible, closed by default) inside Quality Frame -->
+      <div class="top-notes-section" id="top-notes-section">
+        <div class="collapsible-header collapsed" id="top-notes-header" title="Toggle collapse">
+          <span class="factors-title" style="margin: 0; cursor: pointer;">Top Connected Notes</span>
+          <span class="collapsible-chevron" id="top-notes-chevron">
+            <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <polyline points="4 6 8 10 12 6"></polyline>
+            </svg>
+          </span>
+        </div>
+        <ul id="top-notes-list" class="top-notes" style="display: none; margin-top: 4px;">
+          <li style="color: var(--vscode-descriptionForeground); font-size: 11px; padding: 4px;">Loading top hubs...</li>
+        </ul>
+      </div>
     </div>
 
     <!-- Pillar 2: Central Hub & Health -->
@@ -750,19 +765,6 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         <span class="sync-status-text" id="evolution-status-text">KOS: Section Addressing</span>
       </div>
     </div>
-
-
-    <div class="section-title collapsible-header collapsed" id="top-notes-header" title="Toggle collapse">
-      <span>Top Connected Notes</span>
-      <span class="collapsible-chevron" id="top-notes-chevron">
-        <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-          <polyline points="4 6 8 10 12 6"></polyline>
-        </svg>
-      </span>
-    </div>
-    <ul id="top-notes-list" class="top-notes" style="display: none;">
-      <li style="color: var(--vscode-descriptionForeground); font-size: 11px; padding: 4px;">Loading top hubs...</li>
-    </ul>
   </div>
 
   <script nonce="${nonce}">
