@@ -29,7 +29,7 @@
         "command": "llmWiki.showKnowledgeGraph",
         "title": "LLM Wiki: Show Graph",
         "category": "LLM Wiki",
-        "icon": "$(graph)"
+        "icon": "$(llm-wiki-graph)"
       },
       {
         "command": "llmWiki.setHub",
@@ -124,6 +124,15 @@
           "name": "LLM Wiki - Manager"
         }
       ]
+    },
+    "icons": {
+      "llm-wiki-graph": {
+        "description": "LLM Wiki Graph Icon",
+        "default": {
+          "fontPath": "./media/llm-wiki-icons.woff",
+          "fontCharacter": "\\f101"
+        }
+      }
     },
     "configuration": {
       "title": "LLM Wiki",

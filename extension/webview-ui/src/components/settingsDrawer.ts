@@ -4,10 +4,10 @@
  * Implements Constitution Principle VI (Progressive Disclosure).
  * Houses administrative tasks in a slide-over drawer accessed via toolbar:
  * - Knowledge (Hub configuration, broken links, vault rescan)
- * - Excluded Paths (Two-tier rule manager, test preview, add/delete rules)
- * - Cluster Groups (Color clustering rules by path or tag)
- * - Git Sync (prek git hooks status, latency, reinstall)
- * - Diagnostics (Node counts, protocol metrics, cache stats)
+ * - Ignoreds (Two-tier rule manager, test preview, add/delete rules)
+ * - Clusters (Color clustering rules by path or tag)
+ * - Harness (prek git hooks status, latency, reinstall, LLM-Wiki skill)
+ * - Issues (Node counts, protocol metrics, cache stats)
  */
 
 import type { ClusterColorGroup, NoteNode } from '../../../src/types/graph.ts';
@@ -73,6 +73,7 @@ export interface SettingsDrawerProps {
   gitHooksInstalled?: boolean;
   preCommitHookInstalled?: boolean;
   postCommitHookInstalled?: boolean;
+  llmWikiSkillAvailable?: boolean;
   gitCommitLatencyMs?: number;
   blockOnBrokenLinks?: boolean;
   blockOnDuplicateCollision?: boolean;
@@ -109,6 +110,7 @@ export interface SettingsDrawerCallbacks {
   onTestPreview?: (pattern: string) => void;
   onSaveColorGroups?: (groups: ClusterColorGroup[]) => void;
   onInstallGitHooks?: () => void;
+  onInstallLLMWikiSkill?: () => void;
   onCaptureBaseline?: () => void;
   onToggleThreshold?: (key: string, enabled: boolean) => void;
   onOpenFile?: (filePath: string, line?: number) => void;
@@ -393,9 +395,24 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
       const bDrift = props.blockOnTechnicalDrift ?? false;
       const baseCommitStr = props.baselineCommit || 'Initial (HEAD)';
       const baseDebtNum = props.baselineDebtCount ?? 0;
+      const skillAvailable = props.llmWikiSkillAvailable ?? false;
 
       tabContentHtml = `
         <div class="settings-section">
+          <div class="settings-skill-card" style="margin-top: 0;">
+            <div class="settings-subheading">LLM-Wiki Skill</div>
+            <p class="settings-desc">Install the workspace skill that documents the complete LLM Wiki CLI and its UI-equivalent workflows.</p>
+            <div class="settings-hook-row">
+              <span class="hook-label">Skill availability:</span>
+              <span class="hook-status-badge ${skillAvailable ? 'status-clean' : 'status-warn'}">
+                ${skillAvailable ? '● Available' : '○ Not Installed'}
+              </span>
+            </div>
+            <button class="btn-secondary" id="btn-install-llm-wiki-skill" style="margin-top: 12px;">
+              ${skillAvailable ? 'Reinstall LLM-Wiki Skill' : 'Install LLM-Wiki Skill'}
+            </button>
+          </div>
+
           <div class="settings-sec-title">Git Hook Integration & Dual Hooks (prek)</div>
           <p class="settings-desc">
             Dual-process enforcement boundary: pre-commit validates in ephemeral RAM; post-commit incorporates git deltas into persistent knowledge graph.
@@ -459,6 +476,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:5px;"><path d="M2.5 8a5.5 5.5 0 1 1 1.6 3.9L1.5 14M1.5 9.5v4.5h4.5"/></svg>
             Reinstall Dual Git Hooks
           </button>
+
         </div>
       `;
       break;
@@ -499,7 +517,15 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         ? report.total_issues
         : computedTotal;
 
-      const currentPillar = props.selectedPillarFilter || 'all';
+      const selectedPillars = new Set(
+        (props.selectedPillarFilter || '')
+          .split(',')
+          .map((pillar) => pillar.trim())
+          .filter(Boolean),
+      );
+      const issuesForDisplay = selectedPillars.size === 0
+        ? issues
+        : issues.filter((issue) => selectedPillars.has(issue.pillar.toLowerCase()));
 
       const scoreClass = overallScore >= 90 ? 'diag-score-good' : overallScore >= 75 ? 'diag-score-warn' : 'diag-score-bad';
 
@@ -511,12 +537,12 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         { id: 'freshness', label: 'Freshness', count: freshnessCount },
       ];
 
-      const visiblePillars = currentPillar === 'all'
+      const visiblePillars = selectedPillars.size === 0
         ? pillarDefs
-        : pillarDefs.filter((p) => p.id === currentPillar);
+        : pillarDefs.filter((p) => selectedPillars.has(p.id));
 
       let accordionsHtml = '';
-      if (issues.length === 0 && !report) {
+      if (issuesForDisplay.length === 0 && !report) {
         accordionsHtml = `
           <div class="diag-empty-box">
             <svg viewBox="0 0 16 16" width="24" height="24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;">
@@ -540,8 +566,8 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         `;
       } else {
         for (const p of visiblePillars) {
-          const pillarIssues = issues.filter((i) => i.pillar.toLowerCase() === p.id);
-          if (currentPillar === 'all' && pillarIssues.length === 0) continue;
+          const pillarIssues = issuesForDisplay.filter((i) => i.pillar.toLowerCase() === p.id);
+          if (selectedPillars.size === 0 && pillarIssues.length === 0) continue;
 
           const issuesHtml = pillarIssues.map((issue) => {
             const catClass = `cat-${issue.category.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
@@ -578,8 +604,8 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
           }).join('');
 
           accordionsHtml += `
-            <div class="diag-accordion-group">
-              <div class="diag-accordion-header" data-pillar="${p.id}">
+            <div class="diag-accordion-group" data-pillar="${p.id}">
+              <div class="diag-accordion-header collapsed" data-pillar="${p.id}">
                 <div class="diag-accordion-title">
                   <span>${p.label.toUpperCase()}</span>
                   <span class="diag-count-badge">${pillarIssues.length}</span>
@@ -590,7 +616,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
                   </svg>
                 </span>
               </div>
-              <div class="diag-accordion-body" id="diag-body-${p.id}">
+              <div class="diag-accordion-body collapsed" id="diag-body-${p.id}">
                 ${issuesHtml || '<div style="color:var(--vscode-descriptionForeground); font-size:11px; padding:4px;">No issues in this pillar.</div>'}
               </div>
             </div>
@@ -608,50 +634,35 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
           <div class="diag-overview-card">
             <div class="diag-overview-header">
               <span class="diag-overview-title">Quality & Defect Overview</span>
-              <span class="diag-score-badge ${scoreClass}">${overallScore}/100</span>
+              <div class="diag-overview-actions">
+                <button type="button" class="diag-toggle-all" id="diag-toggle-all">Expand all</button>
+                <span class="diag-score-badge ${scoreClass}">${overallScore}/100</span>
+              </div>
             </div>
-            <div class="diag-pillar-chips">
-              <div class="diag-pillar-chip" title="Integrity defects (broken links)">
+            <div class="diag-pillar-filter-row">
+              <div class="diag-pillar-chips" role="group" aria-label="Filter issues by quality pillar">
+              <button type="button" class="diag-pillar-chip ${selectedPillars.has('integrity') ? 'active' : ''}" data-filter="integrity" aria-pressed="${selectedPillars.has('integrity')}">
                 <span class="diag-chip-val" style="color: ${integrityCount > 0 ? '#ef4444' : 'inherit'};">${integrityCount}</span>
                 <span class="diag-chip-lbl">Integrity</span>
-              </div>
-              <div class="diag-pillar-chip" title="Structure defects (oversized docs/missing metadata)">
+              </button>
+              <button type="button" class="diag-pillar-chip ${selectedPillars.has('structure') ? 'active' : ''}" data-filter="structure" aria-pressed="${selectedPillars.has('structure')}">
                 <span class="diag-chip-val" style="color: ${structureCount > 0 ? '#38bdf8' : 'inherit'};">${structureCount}</span>
                 <span class="diag-chip-lbl">Structure</span>
-              </div>
-              <div class="diag-pillar-chip" title="Consistency defects (collisions)">
+              </button>
+              <button type="button" class="diag-pillar-chip ${selectedPillars.has('consistency') ? 'active' : ''}" data-filter="consistency" aria-pressed="${selectedPillars.has('consistency')}">
                 <span class="diag-chip-val" style="color: ${consistencyCount > 0 ? '#f472b6' : 'inherit'};">${consistencyCount}</span>
                 <span class="diag-chip-lbl">Consistency</span>
-              </div>
-              <div class="diag-pillar-chip" title="Discoverability defects (orphans/high hops)">
+              </button>
+              <button type="button" class="diag-pillar-chip ${selectedPillars.has('discoverability') ? 'active' : ''}" data-filter="discoverability" aria-pressed="${selectedPillars.has('discoverability')}">
                 <span class="diag-chip-val" style="color: ${discoverabilityCount > 0 ? '#eab308' : 'inherit'};">${discoverabilityCount}</span>
                 <span class="diag-chip-lbl">Discovery</span>
-              </div>
-              <div class="diag-pillar-chip" title="Freshness defects (technical drift)">
+              </button>
+              <button type="button" class="diag-pillar-chip ${selectedPillars.has('freshness') ? 'active' : ''}" data-filter="freshness" aria-pressed="${selectedPillars.has('freshness')}">
                 <span class="diag-chip-val" style="color: ${freshnessCount > 0 ? '#c084fc' : 'inherit'};">${freshnessCount}</span>
                 <span class="diag-chip-lbl">Freshness</span>
+              </button>
               </div>
-            </div>
-
-            <div class="diag-filter-bar">
-              <button type="button" class="diag-filter-btn ${currentPillar === 'all' ? 'active' : ''}" data-filter="all">
-                All (${totalIssues})
-              </button>
-              <button type="button" class="diag-filter-btn ${currentPillar === 'integrity' ? 'active' : ''}" data-filter="integrity">
-                Integrity (${integrityCount})
-              </button>
-              <button type="button" class="diag-filter-btn ${currentPillar === 'structure' ? 'active' : ''}" data-filter="structure">
-                Structure (${structureCount})
-              </button>
-              <button type="button" class="diag-filter-btn ${currentPillar === 'consistency' ? 'active' : ''}" data-filter="consistency">
-                Consistency (${consistencyCount})
-              </button>
-              <button type="button" class="diag-filter-btn ${currentPillar === 'discoverability' ? 'active' : ''}" data-filter="discoverability">
-                Discovery (${discoverabilityCount})
-              </button>
-              <button type="button" class="diag-filter-btn ${currentPillar === 'freshness' ? 'active' : ''}" data-filter="freshness">
-                Freshness (${freshnessCount})
-              </button>
+              <button type="button" class="diag-clear-filters" id="diag-clear-filters" ${selectedPillars.size === 0 ? 'disabled' : ''}>Clear</button>
             </div>
           </div>
 
@@ -772,9 +783,8 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
       <div class="settings-header">
         <div class="settings-title-box">
           <span class="settings-icon">
-            <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-              <circle cx="8" cy="8" r="2.5"/>
-              <path d="M8 1v2m0 10v2M1 8h2m10 0h2m-2.05-4.95l-1.41 1.41m-7.08 7.08l-1.41 1.41m0-9.9l1.41 1.41m7.08 7.08l1.41 1.41"/>
+            <svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M9.1 4.4L8.6 2H7.4l-.5 2.4-.7.3-2-1.3-.9.8 1.3 2-.2.7-2.4.5v1.2l2.4.5.3.8-1.3 2 .8.8 2-1.3.8.3.4 2.3h1.2l.5-2.4.8-.3 2 1.3.8-.8-1.3-2 .3-.8 2.3-.4V7.4l-2.4-.5-.3-.7 1.3-2-.8-.9-2 1.3-.7-.2zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
             </svg>
           </span>
           <h3 class="settings-title">Advanced Settings</h3>
@@ -784,11 +794,11 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
 
       <div class="settings-tabs-bar">
         <button class="settings-tab-btn ${activeTab === 'knowledge' ? 'active' : ''}" data-tab="knowledge">Knowledge</button>
-        <button class="settings-tab-btn ${activeTab === 'exclusions' ? 'active' : ''}" data-tab="exclusions">Excluded Paths</button>
-        <button class="settings-tab-btn ${activeTab === 'clusters' ? 'active' : ''}" data-tab="clusters">Cluster Groups</button>
-        <button class="settings-tab-btn ${activeTab === 'git_sync' ? 'active' : ''}" data-tab="git_sync">Git Sync</button>
-        <button class="settings-tab-btn ${activeTab === 'diagnostics' ? 'active' : ''}" data-tab="diagnostics">Diagnostics</button>
-        <button class="settings-tab-btn ${activeTab === 'evolution' ? 'active' : ''}" data-tab="evolution">Structural Evolution</button>
+        <button class="settings-tab-btn ${activeTab === 'exclusions' ? 'active' : ''}" data-tab="exclusions">Ignoreds</button>
+        <button class="settings-tab-btn ${activeTab === 'clusters' ? 'active' : ''}" data-tab="clusters">Clusters</button>
+        <button class="settings-tab-btn ${activeTab === 'git_sync' ? 'active' : ''}" data-tab="git_sync">Harness</button>
+        <button class="settings-tab-btn ${activeTab === 'diagnostics' ? 'active' : ''}" data-tab="diagnostics">Issues</button>
+        <button class="settings-tab-btn ${activeTab === 'evolution' ? 'active' : ''}" data-tab="evolution">Methods</button>
       </div>
 
       <div class="settings-content" id="settings-content">
@@ -813,6 +823,23 @@ export function renderSettingsDrawer(
   let _pendingOrientation: string | null = null;   // optimistic lock while awaiting IPC confirm
   let _renderPending = false;                      // debounce: only one rAF render in flight
 
+  function wireKnowledgeListeners(): void {
+    container.querySelector('#btn-settings-change-hub')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callbacks.onChangeHub?.();
+    });
+
+    container.querySelector('#btn-settings-fix-broken')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callbacks.onFixBrokenLinks?.();
+    });
+
+    container.querySelector('#btn-settings-rescan')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callbacks.onRescanVault?.();
+    });
+  }
+
   function scheduleRender(): void {
     // For IPC-driven updates, do a PARTIAL DOM update — only replace the
     // content area. The #settings-content element stays alive so its
@@ -833,6 +860,8 @@ export function renderSettingsDrawer(
       const newContent = tmp.querySelector('#settings-content');
       if (newContent) {
         contentEl.innerHTML = newContent.innerHTML;
+        wireKnowledgeListeners();
+        wireDiagnosticsAccordionListeners();
         wireEvolutionListeners();
       }
     });
@@ -909,24 +938,16 @@ export function renderSettingsDrawer(
       });
     });
 
-    container.querySelector('#btn-settings-change-hub')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      callbacks.onChangeHub?.();
-    });
-
-    container.querySelector('#btn-settings-fix-broken')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      callbacks.onFixBrokenLinks?.();
-    });
-
-    container.querySelector('#btn-settings-rescan')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      callbacks.onRescanVault?.();
-    });
+    wireKnowledgeListeners();
 
     container.querySelector('#btn-reinstall-hooks')?.addEventListener('click', (e) => {
       e.stopPropagation();
       callbacks.onInstallGitHooks?.();
+    });
+
+    container.querySelector('#btn-install-llm-wiki-skill')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callbacks.onInstallLLMWikiSkill?.();
     });
 
     container.querySelector('#btn-capture-baseline')?.addEventListener('click', (e) => {
@@ -1281,35 +1302,6 @@ export function renderSettingsDrawer(
       });
     });
 
-    // Diagnostics pillar filter buttons
-    container.querySelectorAll('.diag-filter-btn').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const filter = btn.getAttribute('data-filter') || 'all';
-        state.selectedPillarFilter = filter;
-        render();
-      });
-    });
-
-    // Diagnostics pillar accordions
-    container.querySelectorAll('.diag-accordion-header').forEach((header) => {
-      header.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const pillar = header.getAttribute('data-pillar');
-        const body = container.querySelector(`#diag-body-${pillar}`);
-        if (body) {
-          const isCollapsed = header.classList.contains('collapsed');
-          if (isCollapsed) {
-            header.classList.remove('collapsed');
-            body.classList.remove('collapsed');
-          } else {
-            header.classList.add('collapsed');
-            body.classList.add('collapsed');
-          }
-        }
-      });
-    });
-
     // Diagnostics Open Note buttons & clickable file links
     container.querySelectorAll('.diag-open-doc-btn, .diag-file-clickable').forEach((el) => {
       el.addEventListener('click', (e) => {
@@ -1337,8 +1329,95 @@ export function renderSettingsDrawer(
       });
     });
 
+    wireDiagnosticsAccordionListeners();
+
     // --- Evolution Tab Event Wiring ---
     wireEvolutionListeners();
+  }
+
+  function applyDiagnosticsFilterToDom(): void {
+    const selected = new Set(
+      (state.selectedPillarFilter || '')
+        .split(',')
+        .map((pillar) => pillar.trim())
+        .filter(Boolean),
+    );
+
+    container.querySelectorAll<HTMLElement>('.diag-accordion-group').forEach((group) => {
+      const pillar = group.getAttribute('data-pillar');
+      group.style.display = selected.size === 0 || (pillar ? selected.has(pillar) : false) ? '' : 'none';
+    });
+
+    container.querySelectorAll<HTMLElement>('.diag-pillar-chip').forEach((chip) => {
+      const pillar = chip.getAttribute('data-filter');
+      const active = pillar ? selected.has(pillar) : false;
+      chip.classList.toggle('active', active);
+      chip.setAttribute('aria-pressed', String(active));
+    });
+
+    const clearButton = container.querySelector<HTMLButtonElement>('#diag-clear-filters');
+    if (clearButton) clearButton.disabled = selected.size === 0;
+  }
+
+  function wireDiagnosticsFilterListeners(): void {
+    if (container.dataset.diagnosticsFiltersWired === 'true') return;
+    container.dataset.diagnosticsFiltersWired = 'true';
+
+    container.addEventListener('click', (event) => {
+      const target = event.target as HTMLElement;
+      const filterButton = target.closest<HTMLElement>('.diag-pillar-chip');
+      const clearButton = target.closest<HTMLElement>('#diag-clear-filters');
+      if (!filterButton && !clearButton) return;
+
+      event.preventDefault();
+      event.stopPropagation();
+
+      if (clearButton) {
+        state.selectedPillarFilter = '';
+      } else {
+        const filter = filterButton?.getAttribute('data-filter');
+        if (!filter) return;
+        const selected = new Set(
+          (state.selectedPillarFilter || '')
+            .split(',')
+            .map((pillar) => pillar.trim())
+            .filter(Boolean),
+        );
+        if (selected.has(filter)) selected.delete(filter);
+        else selected.add(filter);
+        state.selectedPillarFilter = Array.from(selected).join(',');
+      }
+
+      applyDiagnosticsFilterToDom();
+    }, true);
+  }
+
+  function wireDiagnosticsAccordionListeners(): void {
+    container.querySelectorAll('.diag-accordion-header').forEach((header) => {
+      header.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const pillar = header.getAttribute('data-pillar');
+        const body = pillar ? container.querySelector(`#diag-body-${pillar}`) : null;
+        if (!body) return;
+
+        const isCollapsed = header.classList.toggle('collapsed');
+        body.classList.toggle('collapsed', isCollapsed);
+      });
+    });
+
+    container.querySelector<HTMLButtonElement>('#diag-toggle-all')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const headers = Array.from(container.querySelectorAll<HTMLElement>('.diag-accordion-header'));
+      const expand = headers.some((header) => header.classList.contains('collapsed'));
+      headers.forEach((header) => {
+        const pillar = header.getAttribute('data-pillar');
+        const body = pillar ? container.querySelector(`#diag-body-${pillar}`) : null;
+        header.classList.toggle('collapsed', !expand);
+        body?.classList.toggle('collapsed', !expand);
+      });
+      const button = e.currentTarget as HTMLButtonElement;
+      button.textContent = expand ? 'Collapse all' : 'Expand all';
+    });
   }
 
   function wireEvolutionListeners(): void {
@@ -1526,6 +1605,7 @@ export function renderSettingsDrawer(
     callbacks.onClose?.();
   }
 
+  wireDiagnosticsFilterListeners();
   render();
 
   return {

@@ -34,7 +34,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Status Bar Item
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.command = 'llmWiki.showKnowledgeGraph';
-  statusBarItem.text = '$(graph) LLM Wiki: Initializing';
+  statusBarItem.text = '$(llm-wiki-graph) LLM Wiki: Initializing';
   statusBarItem.tooltip = 'Click to open LLM Wiki - Graph';
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
@@ -217,21 +217,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   } else {
     outputChannel.appendLine('[EXTENSION] No open workspace folder detected.');
-    statusBarItem.text = '$(graph) LLM Wiki: No Workspace';
+    statusBarItem.text = '$(llm-wiki-graph) LLM Wiki: No Workspace';
   }
 }
 
 function updateStatusBarWithBudget(scan: ScanResultPayload | null, quality: KnowledgeQualityScore | null): void {
   if (!statusBarItem) {return;}
   if (!scan) {
-    statusBarItem.text = '$(graph) LLM Wiki';
+    statusBarItem.text = '$(llm-wiki-graph) LLM Wiki';
     return;
   }
   const activeTokens = scan.token_summary.active_harness_tokens.toLocaleString();
   const subcallTokens = scan.token_summary.subcall_accessible_tokens.toLocaleString();
   const status = scan.token_summary.status;
 
-  let icon = '$(graph)';
+  let icon = '$(llm-wiki-graph)';
   if (status === 'warning') {icon = '$(warning)';}
   if (status === 'critical') {icon = '$(error)';}
 
