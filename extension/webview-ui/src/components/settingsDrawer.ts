@@ -24,6 +24,7 @@ import type {
   ConstraintLevel,
 } from '../../../src/types/evolution.ts';
 import { renderEvolutionTabHtml } from './evolutionTab.ts';
+import { wireInfoBubbleListeners } from './infoBubble.ts';
 import { renderOrientationSelectorHtml } from './orientationSelector.ts';
 import {
   renderCustomSettingsDrawerHtml,
@@ -60,7 +61,15 @@ export const DEFAULT_TIER2_PARAMETERS: Tier2Parameters = {
   fragmentationTolerance: 0.2,
 };
 
-export type SettingsTab = 'knowledge' | 'exclusions' | 'clusters' | 'git_sync' | 'diagnostics' | 'evolution';
+export type DrawerPrimaryTab = 'insights' | 'settings';
+export type InsightsSubTab = 'health' | 'structure' | 'evolution';
+export type SettingsSubTab = 'knowledge' | 'exclusions' | 'clusters' | 'git_harness';
+export type SettingsTab =
+  | InsightsSubTab
+  | SettingsSubTab
+  | 'diagnostics' // backwards-compatibility alias for health
+  | 'git_sync'    // backwards-compatibility alias for git_harness
+  | 'advanced';   // backwards-compatibility alias for git_harness
 
 export interface SettingsDrawerProps {
   activeTab: SettingsTab;
@@ -137,6 +146,12 @@ export interface SettingsDrawerController {
   updateProps: (newProps: Partial<SettingsDrawerProps>) => void;
 }
 
+export function normalizeTab(tab: SettingsTab): InsightsSubTab | SettingsSubTab {
+  if (tab === 'diagnostics') return 'health';
+  if (tab === 'git_sync' || tab === 'advanced') return 'git_harness';
+  return tab as InsightsSubTab | SettingsSubTab;
+}
+
 export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering = false): string {
   const {
     activeTab,
@@ -155,8 +170,9 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
   } = props;
 
   let tabContentHtml = '';
+  const normalizedTab = normalizeTab(activeTab);
 
-  switch (activeTab) {
+  switch (normalizedTab) {
     case 'knowledge':
       tabContentHtml = `
         <div class="settings-section">
@@ -387,6 +403,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
       break;
     }
 
+    case 'git_harness':
     case 'git_sync': {
       const preActive = props.preCommitHookInstalled ?? gitHooksInstalled;
       const postActive = props.postCommitHookInstalled ?? gitHooksInstalled;
@@ -482,6 +499,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
       break;
     }
 
+    case 'health':
     case 'diagnostics': {
       const report = props.issuesReport;
       const issues = report?.issues ?? [];
@@ -573,8 +591,12 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             const catClass = `cat-${issue.category.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
             const targetHtml = issue.target ? `<span class="diag-arrow">→</span><span class="diag-target-text" title="${issue.target}">${issue.target}</span>` : '';
             const lineStr = issue.line_number ? `:${issue.line_number}` : '';
-            const fixBtnHtml = issue.category === 'broken_link'
+            const isBroken = issue.category === 'broken_link' || issue.category === 'invalid_anchor' || issue.category === 'broken_fragment_anchor';
+            const fixBtnHtml = isBroken
               ? `<button type="button" class="btn-tiny btn-primary diag-fix-ref-btn" data-file="${issue.file_path}" data-target="${issue.target || ''}" data-line="${issue.line_number ?? ''}">Fix Reference</button>`
+              : '';
+            const excludeBtnHtml = isBroken
+              ? `<button type="button" class="btn-tiny diag-exclude-path-btn" data-file="${issue.file_path}">Exclude Path</button>`
               : '';
 
             return `
@@ -598,6 +620,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
                 <div class="diag-issue-actions">
                   <button type="button" class="btn-tiny diag-open-doc-btn" data-file="${issue.file_path}" data-line="${issue.line_number ?? ''}">Open Note</button>
                   ${fixBtnHtml}
+                  ${excludeBtnHtml}
                 </div>
               </div>
             `;
@@ -670,12 +693,43 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             ${accordionsHtml}
           </div>
         </div>
+      `;
+      break;
+    }
 
-        <div class="settings-section" style="margin-top: 12px;">
-          <div class="settings-sec-title">Engine Diagnostics</div>
+    case 'structure': {
+      const totalRefs = nodes.reduce((sum, n) => sum + (n.outDegree || 0), 0);
+      const topConnected = [...nodes]
+        .sort((a, b) => ((b.inDegree || 0) + (b.outDegree || 0)) - ((a.inDegree || 0) + (a.outDegree || 0)))
+        .slice(0, 8);
+      const isolatedDocs = nodes.filter((n) => ((n.inDegree || 0) + (n.outDegree || 0)) === 0 || n.hopDistance === -1);
+
+      const topConnectedHtml = topConnected.length > 0
+        ? topConnected.map((n) => `
+            <div class="structure-note-item" data-file="${n.filePath}" title="Click to open ${n.filePath}">
+              <span class="structure-note-title">${n.label}</span>
+              <span class="structure-note-badge">${(n.inDegree || 0) + (n.outDegree || 0)} refs</span>
+            </div>
+          `).join('')
+        : '<div class="settings-empty-msg">No connected documents in graph</div>';
+
+      const isolatedHtml = isolatedDocs.length > 0
+        ? isolatedDocs.map((n) => `
+            <div class="structure-note-item" data-file="${n.filePath}" title="Click to open ${n.filePath}">
+              <span class="structure-note-title">${n.label}</span>
+              <span class="structure-note-path">${n.filePath}</span>
+            </div>
+          `).join('')
+        : '<div class="settings-empty-msg">No isolated documents detected</div>';
+
+      tabContentHtml = `
+        <div class="settings-section">
+          <div class="settings-sec-title">Knowledge Graph Structure</div>
+          <p class="settings-desc">Document topology, reference density, designated hub anchor, and isolated document detection.</p>
+
           <div class="settings-diag-grid">
             <div class="diag-item">
-              <span class="diag-lbl">Total Notes</span>
+              <span class="diag-lbl">Total Documents</span>
               <span class="diag-val">${totalNotes}</span>
             </div>
             <div class="diag-item">
@@ -683,21 +737,44 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               <span class="diag-val">${connectedNotes}</span>
             </div>
             <div class="diag-item">
-              <span class="diag-lbl">Orphans</span>
+              <span class="diag-lbl">Isolated</span>
               <span class="diag-val">${orphanNotes}</span>
             </div>
             <div class="diag-item">
-              <span class="diag-lbl">Excluded</span>
-              <span class="diag-val">${excludedNotes}</span>
+              <span class="diag-lbl">References</span>
+              <span class="diag-val">${totalRefs}</span>
             </div>
           </div>
-          <div class="settings-diag-item" style="margin-top: 12px;">
-            <span class="diag-lbl">Architecture:</span>
-            <span class="diag-text">Dual-Process Sidecar (Rust IPC Core + Webview 2D Canvas)</span>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-sec-title">Central Hub Note</div>
+          <p class="settings-desc">The designated anchor note from which BFS hop horizons and context decay tiers are calculated.</p>
+          <div class="settings-hub-card">
+            <span class="settings-hub-icon">
+              <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <circle cx="8" cy="8" r="6"/>
+                <circle cx="8" cy="8" r="2.5" fill="#38bdf8"/>
+              </svg>
+            </span>
+            <span class="settings-hub-path" title="${primaryHub}">${primaryHub}</span>
+            <button class="btn-secondary settings-hub-btn" id="btn-settings-change-hub">Change Hub</button>
           </div>
-          <div class="settings-diag-item">
-            <span class="diag-lbl">Protocol:</span>
-            <span class="diag-text">JSON-RPC 2.0 over Stdio + Loopback Delta Authorization</span>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-sec-title">Top Connected Notes</div>
+          <p class="settings-desc">Notes with the highest inbound and outbound reference centrality.</p>
+          <div class="structure-notes-list">
+            ${topConnectedHtml}
+          </div>
+        </div>
+
+        <div class="settings-section">
+          <div class="settings-sec-title">Isolated Documents (${isolatedDocs.length})</div>
+          <p class="settings-desc">Documents with zero active graph references. Neutral status: may be standalone drafts or entry points.</p>
+          <div class="structure-notes-list">
+            ${isolatedHtml}
           </div>
         </div>
       `;
@@ -787,18 +864,29 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               <path fill-rule="evenodd" clip-rule="evenodd" d="M9.1 4.4L8.6 2H7.4l-.5 2.4-.7.3-2-1.3-.9.8 1.3 2-.2.7-2.4.5v1.2l2.4.5.3.8-1.3 2 .8.8 2-1.3.8.3.4 2.3h1.2l.5-2.4.8-.3 2 1.3.8-.8-1.3-2 .3-.8 2.3-.4V7.4l-2.4-.5-.3-.7 1.3-2-.8-.9-2 1.3-.7-.2zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
             </svg>
           </span>
-          <h3 class="settings-title">Advanced Settings</h3>
+          <h3 class="settings-title">Management & Settings</h3>
         </div>
         <button class="settings-close-btn" id="settings-btn-close" aria-label="Close Settings">✕</button>
       </div>
 
-      <div class="settings-tabs-bar">
-        <button class="settings-tab-btn ${activeTab === 'knowledge' ? 'active' : ''}" data-tab="knowledge">Knowledge</button>
-        <button class="settings-tab-btn ${activeTab === 'exclusions' ? 'active' : ''}" data-tab="exclusions">Ignoreds</button>
-        <button class="settings-tab-btn ${activeTab === 'clusters' ? 'active' : ''}" data-tab="clusters">Clusters</button>
-        <button class="settings-tab-btn ${activeTab === 'git_sync' ? 'active' : ''}" data-tab="git_sync">Harness</button>
-        <button class="settings-tab-btn ${activeTab === 'diagnostics' ? 'active' : ''}" data-tab="diagnostics">Issues</button>
-        <button class="settings-tab-btn ${activeTab === 'evolution' ? 'active' : ''}" data-tab="evolution">Methods</button>
+      <div class="settings-nav-tiers">
+        <div class="settings-nav-group" data-tier="insights">
+          <span class="settings-nav-label">INSIGHTS</span>
+          <div class="settings-tabs-subgroup">
+            <button class="settings-tab-btn ${normalizedTab === 'health' ? 'active' : ''}" data-tab="health">Health</button>
+            <button class="settings-tab-btn ${normalizedTab === 'structure' ? 'active' : ''}" data-tab="structure">Structure</button>
+            <button class="settings-tab-btn ${normalizedTab === 'evolution' ? 'active' : ''}" data-tab="evolution">Evolution</button>
+          </div>
+        </div>
+        <div class="settings-nav-group" data-tier="settings">
+          <span class="settings-nav-label">SETTINGS</span>
+          <div class="settings-tabs-subgroup">
+            <button class="settings-tab-btn ${normalizedTab === 'knowledge' ? 'active' : ''}" data-tab="knowledge">Knowledge</button>
+            <button class="settings-tab-btn ${normalizedTab === 'exclusions' ? 'active' : ''}" data-tab="exclusions">Exclusions</button>
+            <button class="settings-tab-btn ${normalizedTab === 'clusters' ? 'active' : ''}" data-tab="clusters">Clusters</button>
+            <button class="settings-tab-btn ${normalizedTab === 'git_harness' ? 'active' : ''}" data-tab="git_harness">Git / Harness</button>
+          </div>
+        </div>
       </div>
 
       <div class="settings-content" id="settings-content">
@@ -863,6 +951,7 @@ export function renderSettingsDrawer(
         wireKnowledgeListeners();
         wireDiagnosticsAccordionListeners();
         wireEvolutionListeners();
+        wireHealthAndStructureActions();
       }
     });
   }
@@ -924,7 +1013,7 @@ export function renderSettingsDrawer(
         if (tab && tab !== state.activeTab) {
           state.activeTab = tab;
           callbacks.onChangeTab?.(tab);
-          if (tab === 'diagnostics') {
+          if (tab === 'diagnostics' || tab === 'health') {
             callbacks.onRequestIssues?.(state.selectedPillarFilter);
           }
           if (tab === 'evolution') {
@@ -1302,7 +1391,15 @@ export function renderSettingsDrawer(
       });
     });
 
-    // Diagnostics Open Note buttons & clickable file links
+    wireHealthAndStructureActions();
+    wireDiagnosticsAccordionListeners();
+
+    // --- Evolution Tab Event Wiring ---
+    wireEvolutionListeners();
+  }
+
+  function wireHealthAndStructureActions(): void {
+    // Open Note buttons & clickable file links
     container.querySelectorAll('.diag-open-doc-btn, .diag-file-clickable').forEach((el) => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -1329,10 +1426,27 @@ export function renderSettingsDrawer(
       });
     });
 
-    wireDiagnosticsAccordionListeners();
+    // Exclude Path buttons (contextual inside Health findings)
+    container.querySelectorAll('.diag-exclude-path-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const file = btn.getAttribute('data-file');
+        if (file) {
+          callbacks.onAddExclusion?.(file, 'graph');
+        }
+      });
+    });
 
-    // --- Evolution Tab Event Wiring ---
-    wireEvolutionListeners();
+    // Structure Note Items (click to open note in editor)
+    container.querySelectorAll('.structure-note-item').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const file = item.getAttribute('data-file');
+        if (file) {
+          callbacks.onOpenFile?.(file);
+        }
+      });
+    });
   }
 
   function applyDiagnosticsFilterToDom(): void {
@@ -1607,6 +1721,7 @@ export function renderSettingsDrawer(
 
   wireDiagnosticsFilterListeners();
   render();
+  wireInfoBubbleListeners(container);
 
   return {
     open(tab?: SettingsTab) {
