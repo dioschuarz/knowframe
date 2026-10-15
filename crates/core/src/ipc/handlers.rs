@@ -392,9 +392,14 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             JsonRpcResponse::success(req.id, json!(result))
         }
         "workspace/getQualityScore" => {
-            let (root, mut topology) = {
+            let (root, mut topology, active_hub, configured_hub) = {
                 let st = state.read().await;
-                (st.workspace_root.clone(), st.topology.clone())
+                (
+                    st.workspace_root.clone(),
+                    st.topology.clone(),
+                    st.active_hub.clone(),
+                    st.config.vault.hubs.first().cloned(),
+                )
             };
             if topology.nodes.is_empty() {
                 if let Ok(scan_res) = execute_scan(ScanOptions {
@@ -436,8 +441,11 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             }
             topology.compute_degrees();
             topology.compute_betweenness();
-            if let Some(hub) = topology.suggest_hub() {
-                topology.compute_hops(&hub);
+            let hub_to_use = active_hub
+                .or(configured_hub)
+                .or_else(|| topology.suggest_hub());
+            if let Some(ref hub) = hub_to_use {
+                topology.compute_hops(hub);
             }
             let baseline = crate::debt::baseline::load_baseline(&root).ok().flatten();
             let collisions = crate::collision::detect_collisions_in_graph(&topology, &root, 0.70);
@@ -473,9 +481,14 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             )
         }
         "workspace/getIssues" => {
-            let (root, mut topology) = {
+            let (root, mut topology, active_hub, configured_hub) = {
                 let st = state.read().await;
-                (st.workspace_root.clone(), st.topology.clone())
+                (
+                    st.workspace_root.clone(),
+                    st.topology.clone(),
+                    st.active_hub.clone(),
+                    st.config.vault.hubs.first().cloned(),
+                )
             };
             if topology.nodes.is_empty() {
                 if let Ok(scan_res) = execute_scan(ScanOptions {
@@ -513,12 +526,15 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                         e.resolution_status = edge.resolution_status;
                         topology.add_edge(e);
                     }
-                    topology.compute_degrees();
-                    topology.compute_betweenness();
-                    if let Some(hub) = topology.suggest_hub() {
-                        topology.compute_hops(&hub);
-                    }
                 }
+            }
+            topology.compute_degrees();
+            topology.compute_betweenness();
+            let hub_to_use = active_hub
+                .or(configured_hub)
+                .or_else(|| topology.suggest_hub());
+            if let Some(ref hub) = hub_to_use {
+                topology.compute_hops(hub);
             }
             let baseline = crate::debt::baseline::load_baseline(&root).ok().flatten();
             let collisions = crate::collision::detect_collisions_in_graph(&topology, &root, 0.70);
