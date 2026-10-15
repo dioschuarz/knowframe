@@ -386,7 +386,7 @@ pub struct ContextTraceSectionResult {
 
 ## 3. TypeScript Extension Host Interfaces (`src/types/`)
 
-### 3.1 Fragment & Node Inspector Types (`src/types/fragment.ts`)
+### 3.1 Fragment & Node Inspector Types (*src/types/fragment.ts*)
 
 ```typescript
 /**
@@ -483,7 +483,7 @@ export interface ContextTraceSectionResponse {
 
 ---
 
-## 4. UI Presentation Formatter Contract (`src/utils/numberFormat.ts`)
+## 4. UI Presentation Formatter Contract (*src/utils/numberFormat.ts*)
 
 ```typescript
 /**

@@ -260,19 +260,18 @@ graph TD
   - **Mapped Requirements**: FR-014, Invariant IX
   - **Verification**: `cargo test test_raw_numeric_integrity_in_contracts`
 
-- [x] **T038**: Implement TypeScript `formatCompactNumber` in `src/utils/numberFormat.ts` enforcing strict $\le 5$ character length across all scales (`543`, `4.23k`, `13.3k`, `1.04M`, `123M`, `1.2B`).
+- [x] **T038**: Implement TypeScript `formatCompactNumber` in *src/utils/numberFormat.ts* enforcing strict $\le 5$ character length across all scales (`543`, `4.23k`, `13.3k`, `1.04M`, `123M`, `1.2B`).
   - **Mapped Requirements**: FR-015, FR-016, Invariant X
-*npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts*-*npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts***npm test -- numberFormat.test.ts***npm test -- numberFormat.test.ts*V*npm test -- numberFormat.test.ts*e*npm test -- numberFormat.test.ts*r*npm test -- numberFormat.test.ts*i*npm test -- numberFormat.test.ts*f*npm test -- numberFormat.test.ts*i*npm test -- numberFormat.test.ts*c*npm test -- numberFormat.test.ts*a*npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts*i*npm test -- numberFormat.test.ts*o*npm test -- numberFormat.test.ts*n*npm test -- numberFormat.test.ts***npm test -- numberFormat.test.ts***npm test -- numberFormat.test.ts*:*npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts*`*npm test -- numberFormat.test.ts*n*npm test -- numberFormat.test.ts*p*npm test -- numberFormat.test.ts*m*npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts*e*npm test -- numberFormat.test.ts*s*npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts*-*npm test -- numberFormat.test.ts*-*npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts*n*npm test -- numberFormat.test.ts*u*npm test -- numberFormat.test.ts*m*npm test -- numberFormat.test.ts*b*npm test -- numberFormat.test.ts*e*npm test -- numberFormat.test.ts*r*npm test -- numberFormat.test.ts*F*npm test -- numberFormat.test.ts*o*npm test -- numberFormat.test.ts*r*npm test -- numberFormat.test.ts*m*npm test -- numberFormat.test.ts*a*npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts*.*npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts*e*npm test -- numberFormat.test.ts*s*npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts*.*npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts*s*npm test -- numberFormat.test.ts*`*npm test -- numberFormat.test.ts*
-*npm test -- numberFormat.test.ts*
-- [x] **T039**: Unit tests in `test/suite/numberFormat.test.ts` asserting strict $\le 5$ character limits across boundary numbers ($0$, $999$, $1000$, $4230$, $13300$, $543000$, $1043256$, $123456789$, $999900000$, $1200000000$).
+  - **Verification**: `npm test`
+- [x] **T039**: Unit tests in *test/suite/numberFormat.test.ts* asserting strict $\le 5$ character limits across boundary numbers ($0$, $999$, $1000$, $4230$, $13300$, $543000$, $1043256$, $123456789$, $999900000$, $1200000000$).
   - **Mapped Requirements**: FR-018, SC-006
-  - **Verification**: *npm test -- numberFormat.test.ts*
+  - **Verification**: `npm test`
 
 - [x] **T040**: Verify zero formatted strings are stored or fed into analytical calculation pipelines.
   - **Mapped Requirements**: FR-017, Invariant X
   - **Verification**: Code review pass and AST assertions
 
-- [x] **T041**: Implement TypeScript type definitions in `src/types/fragment.ts` matching contracts and data model (`FivePillarQualityScore`, `StructureDebtFinding`, `StructureDebtType`, `DebtSummary`, `QualityPillar`).
+- [x] **T041**: Implement TypeScript type definitions in *src/types/fragment.ts* matching contracts and data model (`FivePillarQualityScore`, `StructureDebtFinding`, `StructureDebtType`, `DebtSummary`, `QualityPillar`).
   - **Mapped Requirements**: FR-014
   - **Verification**: `npm run build`
 
@@ -298,15 +297,15 @@ graph TD
 
 - [x] **T046**: Update Diagnostics drawer in `extension/webview-ui/src/components/settingsDrawer.ts` to support 5 pillar tabs (`All`, `Integrity`, `Structure`, `Consistency`, `Discoverability`, `Freshness`) and render itemized Structure and Freshness findings.
   - **Mapped Requirements**: FR-041
-  - **Verification**: Extension test in `test/suite/settingsDrawer.test.ts`
+  - **Verification**: Extension test in *test/suite/settingsDrawer.test.ts*
 
 - [x] **T047**: Update `extension/webview-ui/src/components/statusDashboard.ts` Quality Pillar meter to display 5 dimensions and debt summary.
   - **Mapped Requirements**: FR-041
-  - **Verification**: Extension test in `test/suite/statusDashboard.test.ts`
+  - **Verification**: Extension test in *test/suite/statusDashboard.test.ts*
 
 - [x] **T048**: Update Token Economics toolbar popover to display section-level context reduction metrics.
   - **Mapped Requirements**: FR-033
-  - **Verification**: Extension test in `test/suite/toolbar.test.ts`
+  - **Verification**: Extension test in *test/suite/toolbar.test.ts*
 
 ---
 

@@ -141,8 +141,8 @@ graph TD
   - `crates/core/src/cli/issues_cmd.rs`: Update issues filtering for 5 pillars.
 
 ### VS Code Extension Host & Webview (`src/`)
-- `src/types/fragment.ts`: TypeScript definitions for fragments, 5-pillar scores, debt summaries, and Context Trace responses.
-- `src/utils/numberFormat.ts`: Universal `formatCompactNumber` enforcing $\le 5$ character limit across all numbers.
+- *src/types/fragment.ts*: TypeScript definitions for fragments, 5-pillar scores, debt summaries, and Context Trace responses.
+- *src/utils/numberFormat.ts*: Universal `formatCompactNumber` enforcing $\le 5$ character limit across all numbers.
 - `extension/webview-ui/src/components/inspectorDrawer.ts`: Add collapsible "Fragments" 3-column table (`Fragment | Tok | I/O`), empty state banner (`"No heading sections found"`), progressive disclosure ordering, click-to-line navigation, and reference tooltips.
 - `extension/webview-ui/src/components/settingsDrawer.ts`: Add Pillar 2 (`Structure`) and Pillar 5 (`Freshness`) to Diagnostics drawer tabs and itemized issue rendering.
 - `extension/webview-ui/src/components/statusDashboard.ts`: Update Quality gauge and pillar breakdown to 5 dimensions.
