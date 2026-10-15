@@ -47,7 +47,7 @@ export const ORIENTATION_CARDS: OrientationCardInfo[] = [
   },
   {
     id: 'custom',
-    title: 'Custom (Advanced)',
+    title: 'Custom',
     badge: 'User Defined',
     targetSize: 'Custom',
     description: 'Fine-tune 6 Tier 1 business objectives, 11 Tier 2 technical parameters, and SAT hard constraints.',

@@ -1,3 +1,40 @@
+---
+wiki:
+  content_hash: b9a0efc0edeaad668b15c0d09225c28955dd7590d8671b151c2e9c8764c9721e
+  fragments:
+    implementation-plan-ai-context-observatory-curated-knowledge-ux-002-context-observatory-ux:
+      tokens: 2007
+      inbound: 0
+      outbound: 1
+    summary:
+      tokens: 276
+      inbound: 0
+      outbound: 0
+    technical-context:
+      tokens: 545
+      inbound: 0
+      outbound: 0
+    constitution-check:
+      tokens: 341
+      inbound: 0
+      outbound: 0
+    project-structure:
+      tokens: 716
+      inbound: 0
+      outbound: 0
+    documentation-this-feature:
+      tokens: 122
+      inbound: 0
+      outbound: 0
+    source-code-tree-layout:
+      tokens: 590
+      inbound: 0
+      outbound: 0
+    complexity-tracking:
+      tokens: 23
+      inbound: 0
+      outbound: 0
+---
 # Implementation Plan: AI Context Observatory & Curated Knowledge UX (`002-context-observatory-ux`)
 
 **Branch**: `002-context-observatory-ux` | **Date**: 2026-09-11 | **Spec**: [`specs/002-context-observatory-ux/spec.md`](spec.md)

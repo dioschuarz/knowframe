@@ -2,10 +2,10 @@
 //! Enforces Constitution Principle II:
 //! <= 500ms fail-open timeout. Always exits 0 if daemon is offline or on timeout.
 
+use futures_util::SinkExt;
 use std::path::Path;
 use std::process::Command;
 use std::time::Duration;
-use futures_util::SinkExt;
 use tokio::time::timeout;
 use tokio_tungstenite::connect_async;
 use tokio_tungstenite::tungstenite::Message;
@@ -80,8 +80,10 @@ pub async fn execute_git_delta(
                 changed_files,
             };
 
-            let notification =
-                JsonRpcNotification::new("git/commitDelta", serde_json::to_value(params).unwrap_or_default());
+            let notification = JsonRpcNotification::new(
+                "git/commitDelta",
+                serde_json::to_value(params).unwrap_or_default(),
+            );
             if let Ok(serialized) = serde_json::to_string(&notification) {
                 if let Ok((mut ws_stream, _)) = connect_async(&url).await {
                     let _ = ws_stream.send(Message::Text(serialized)).await;
@@ -118,10 +120,14 @@ pub async fn execute_git_delta(
                         broken_links: node.broken_links,
                         fragments: node.fragments,
                         freshness: None,
+                        code_dependencies: Vec::new(),
                     });
                 }
                 for edge in scan_res.edges {
-                    let target_fragment = edge.anchor.as_ref().map(|a| a.trim_start_matches('#').to_string());
+                    let target_fragment = edge
+                        .anchor
+                        .as_ref()
+                        .map(|a| a.trim_start_matches('#').to_string());
                     topology.add_edge(crate::model::NoteEdge {
                         id: edge.id,
                         source: edge.source,

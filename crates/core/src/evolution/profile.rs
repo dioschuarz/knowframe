@@ -1,18 +1,13 @@
 use serde::{Deserialize, Serialize};
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, Default)]
 #[serde(rename_all = "snake_case")]
 pub enum DocumentationOrientation {
+    #[default]
     AiOriented,
     HumanOriented,
     Balanced,
     Custom,
-}
-
-impl Default for DocumentationOrientation {
-    fn default() -> Self {
-        Self::AiOriented
-    }
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -75,6 +70,18 @@ impl OptimizationProfile {
             split_sensitivity: 0.75,
             canonical_ownership_sensitivity: 0.80,
             constraints: Vec::new(),
+        }
+    }
+
+    /// Compiles an AIOrientedCapabilityMatrix into an overall governance composite score (Invariant XIV).
+    pub fn compile_governance_score(
+        &self,
+        matrix: &crate::harness::AIOrientedCapabilityMatrix,
+    ) -> f32 {
+        if self.orientation == DocumentationOrientation::AiOriented {
+            matrix.overall_governance_score
+        } else {
+            (matrix.overall_governance_score * 0.5 + matrix.entry_score * 0.5).clamp(0.0, 100.0)
         }
     }
 

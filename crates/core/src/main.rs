@@ -3,9 +3,14 @@
 use clap::{Parser, Subcommand};
 use llm_wiki_core::cli::baseline_cmd::{execute_baseline_init, execute_baseline_reset};
 use llm_wiki_core::cli::delta::execute_git_delta;
+use llm_wiki_core::cli::governance_cmd::{
+    execute_governance_apply, execute_governance_plan, execute_sync_harnesses,
+};
+use llm_wiki_core::cli::method_evolution::{
+    execute_apply, execute_plan, execute_profile, execute_suggestions,
+};
 use llm_wiki_core::cli::scan::{execute_scan, ScanOptions};
-use llm_wiki_core::cli::issues_cmd::execute_issues;
-use llm_wiki_core::cli::validate::execute_validate;
+use llm_wiki_core::cli::validate::execute_validate_with_paths;
 use llm_wiki_core::ipc::server::start_ipc_server;
 use std::path::PathBuf;
 
@@ -111,6 +116,10 @@ enum Commands {
         /// Hard timeout in milliseconds before non-blocking fail-open (default 500ms)
         #[arg(long, default_value_t = 500)]
         timeout_ms: u64,
+
+        /// Specific files to evaluate instead of git index
+        #[arg(long, value_delimiter = ' ')]
+        paths: Option<Vec<String>>,
     },
 
     /// Trace context discovery path from entrypoint to query topic
@@ -149,6 +158,10 @@ enum Commands {
         #[arg(index = 1)]
         positional_root: Option<PathBuf>,
 
+        /// Show raw historical audit score instead of effective score
+        #[arg(long, alias = "audit-all")]
+        raw: bool,
+
         /// Output as JSON
         #[arg(long)]
         json: bool,
@@ -168,9 +181,25 @@ enum Commands {
         #[arg(index = 1)]
         positional_root: Option<PathBuf>,
 
-        /// Filter issues by pillar (all, integrity, consistency, discoverability, freshness)
+        /// Filter issues by pillar (all, integrity, structure, consistency, discoverability, freshness)
         #[arg(short, long, default_value = "all")]
         pillar: String,
+
+        /// Include acknowledged legacy debt from baseline
+        #[arg(short = 'd', long = "include-debt", alias = "all")]
+        include_debt: bool,
+
+        /// Show compact summary grouped by directory
+        #[arg(short = 's', long)]
+        summary: bool,
+
+        /// Filter issues by file path prefix (e.g. --filter-path specs/)
+        #[arg(long = "filter-path", alias = "prefix")]
+        filter_path: Option<String>,
+
+        /// Check excluded paths also (normally ignored)
+        #[arg(long = "include-excluded")]
+        include_excluded: bool,
 
         /// Limit maximum number of issues to display
         #[arg(short, long)]
@@ -179,6 +208,13 @@ enum Commands {
         /// Output as JSON
         #[arg(long)]
         json: bool,
+    },
+
+    /// Configure profiles, review suggestions, generate plans, and apply method evolution
+    #[command(name = "method-evolution")]
+    MethodEvolution {
+        #[command(subcommand)]
+        subcommand: MethodEvolutionCommands,
     },
 
     /// Materialize heading fragment metadata into YAML frontmatter
@@ -197,8 +233,183 @@ enum Commands {
         #[command(subcommand)]
         subcommand: BaselineCommands,
     },
+
+    /// Review governance plans, diff previews, apply transformations, and synchronize AI harnesses
+    Governance {
+        #[command(subcommand)]
+        subcommand: GovernanceCommands,
+    },
+
+    /// Trace code-to-doc reverse impact for changed files or Git diff range
+    #[command(name = "trace-impact")]
+    TraceImpact {
+        /// Explicit code file paths to evaluate
+        #[arg(long, value_delimiter = ' ')]
+        paths: Option<Vec<String>>,
+
+        /// Git diff range (e.g. A..B or base...head)
+        #[arg(long)]
+        range: Option<String>,
+
+        /// Evaluate files staged in Git index
+        #[arg(long)]
+        staged: bool,
+
+        /// Workspace root directory (flag)
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Workspace root directory (path flag alias)
+        #[arg(long)]
+        path: Option<PathBuf>,
+
+        /// Positional workspace root directory
+        #[arg(index = 1)]
+        positional_root: Option<PathBuf>,
+
+        /// Emit AffectedDocumentsReport as machine-readable JSON
+        #[arg(long)]
+        json: bool,
+    },
+
+    /// Manage documentation review receipts (.context-vault/reviews.json)
+    Review {
+        #[command(subcommand)]
+        subcommand: ReviewCommands,
+    },
 }
 
+#[derive(Subcommand)]
+enum ReviewCommands {
+    /// Resolve a review obligation by recording an approval receipt
+    Resolve {
+        /// Document ID to mark as reviewed unchanged
+        #[arg(index = 1)]
+        doc_id: String,
+
+        /// Optional Git commit SHA or branch ref (defaults to HEAD)
+        #[arg(long)]
+        commit_ref: Option<String>,
+
+        /// Workspace root directory (flag)
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Workspace root directory (path flag alias)
+        #[arg(long)]
+        path: Option<PathBuf>,
+
+        /// Positional workspace root directory
+        #[arg(index = 2)]
+        positional_root: Option<PathBuf>,
+    },
+}
+
+#[derive(Subcommand)]
+enum GovernanceCommands {
+    /// Generate and preview a governance transformation plan with standard unified diff
+    Plan {
+        /// Governance strategy (e.g. sync_harness_routes, eliminate_secondary_routing_layer)
+        #[arg(short, long)]
+        strategy: String,
+
+        /// Target file or directory path
+        #[arg(short, long)]
+        target: String,
+
+        /// Workspace root directory
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+    /// Apply a governance transformation plan after explicit user approval (Invariant XVI)
+    Apply {
+        /// Governance strategy (e.g. sync_harness_routes, eliminate_secondary_routing_layer)
+        #[arg(short, long)]
+        strategy: String,
+
+        /// Target file or directory path
+        #[arg(short, long)]
+        target: String,
+
+        /// Workspace root directory
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Explicit approval to mutate files on disk (Constitutional Invariant XVI)
+        #[arg(long)]
+        approve: bool,
+    },
+    /// Synchronize AI harness routes within peer directory scope
+    SyncHarnesses {
+        /// Target harness file (defaults to AGENTS.md)
+        #[arg(index = 1)]
+        target: Option<String>,
+
+        /// Workspace root directory
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Apply changes immediately after review (without this, only diff preview is shown)
+        #[arg(long)]
+        approve: bool,
+
+        /// Output as JSON
+        #[arg(long)]
+        json: bool,
+    },
+}
+
+#[derive(Subcommand)]
+enum MethodEvolutionCommands {
+    /// Show or save one of the four profiles: ai-oriented, human-oriented, balanced, custom
+    Profile {
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+        #[arg(index = 1)]
+        positional_root: Option<PathBuf>,
+        #[arg(long)]
+        preset: Option<String>,
+        #[arg(long = "set")]
+        settings: Vec<String>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// List ranked evolution method suggestions
+    Suggestions {
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+        #[arg(index = 1)]
+        positional_root: Option<PathBuf>,
+        #[arg(short, long)]
+        limit: Option<usize>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Generate a transformation plan from a recommendation ID
+    Plan {
+        recommendation_id: String,
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+        #[arg(index = 2)]
+        positional_root: Option<PathBuf>,
+        #[arg(long)]
+        json: bool,
+    },
+    /// Apply a recommendation after explicit approval
+    Apply {
+        recommendation_id: String,
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+        #[arg(index = 2)]
+        positional_root: Option<PathBuf>,
+        #[arg(long)]
+        approve: bool,
+    },
+}
 
 #[derive(Subcommand)]
 enum BaselineCommands {
@@ -305,13 +516,14 @@ async fn main() -> anyhow::Result<()> {
             quiet,
             json,
             timeout_ms,
+            paths,
         } => {
             let workspace_root = path
                 .or(root)
                 .or(positional_root)
                 .unwrap_or_else(|| PathBuf::from("."));
             let exit_code =
-                execute_validate(&workspace_root, staged_only, quiet, json, timeout_ms).await;
+                execute_validate_with_paths(&workspace_root, paths, staged_only, quiet, json, timeout_ms).await;
             if exit_code != 0 {
                 std::process::exit(exit_code);
             }
@@ -323,9 +535,7 @@ async fn main() -> anyhow::Result<()> {
             entrypoint,
             json,
         } => {
-            let workspace_root = path
-                .or(root)
-                .unwrap_or_else(|| PathBuf::from("."));
+            let workspace_root = path.or(root).unwrap_or_else(|| PathBuf::from("."));
             if let Err(e) = llm_wiki_core::cli::trace_cmd::execute_trace(
                 &workspace_root,
                 &query,
@@ -340,13 +550,18 @@ async fn main() -> anyhow::Result<()> {
             root,
             path,
             positional_root,
+            raw,
             json,
         } => {
             let workspace_root = path
                 .or(root)
                 .or(positional_root)
                 .unwrap_or_else(|| PathBuf::from("."));
-            if let Err(e) = llm_wiki_core::cli::quality_cmd::execute_quality(&workspace_root, json) {
+            if let Err(e) = llm_wiki_core::cli::quality_cmd::execute_quality_with_options(
+                &workspace_root,
+                raw,
+                json,
+            ) {
                 eprintln!("Error computing quality score: {}", e);
                 std::process::exit(1);
             }
@@ -356,6 +571,10 @@ async fn main() -> anyhow::Result<()> {
             path,
             positional_root,
             pillar,
+            include_debt,
+            summary,
+            filter_path,
+            include_excluded,
             limit,
             json,
         } => {
@@ -363,8 +582,77 @@ async fn main() -> anyhow::Result<()> {
                 .or(root)
                 .or(positional_root)
                 .unwrap_or_else(|| PathBuf::from("."));
-            if let Err(e) = execute_issues(&workspace_root, &pillar, limit, json) {
+            let options = llm_wiki_core::cli::issues_cmd::IssuesOptions {
+                pillar,
+                limit,
+                json,
+                include_debt,
+                summary,
+                filter_path,
+                include_excluded,
+            };
+            if let Err(e) =
+                llm_wiki_core::cli::issues_cmd::execute_issues_with_options(&workspace_root, options)
+            {
                 eprintln!("Error retrieving knowledge issues: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::MethodEvolution { subcommand } => {
+            let result = match subcommand {
+                MethodEvolutionCommands::Profile {
+                    root,
+                    positional_root,
+                    preset,
+                    settings,
+                    json,
+                } => execute_profile(
+                    &root
+                        .or(positional_root)
+                        .unwrap_or_else(|| PathBuf::from(".")),
+                    preset.as_deref(),
+                    &settings,
+                    json,
+                ),
+                MethodEvolutionCommands::Suggestions {
+                    root,
+                    positional_root,
+                    limit,
+                    json,
+                } => execute_suggestions(
+                    &root
+                        .or(positional_root)
+                        .unwrap_or_else(|| PathBuf::from(".")),
+                    limit,
+                    json,
+                ),
+                MethodEvolutionCommands::Plan {
+                    recommendation_id,
+                    root,
+                    positional_root,
+                    json,
+                } => execute_plan(
+                    &root
+                        .or(positional_root)
+                        .unwrap_or_else(|| PathBuf::from(".")),
+                    &recommendation_id,
+                    json,
+                ),
+                MethodEvolutionCommands::Apply {
+                    recommendation_id,
+                    root,
+                    positional_root,
+                    approve,
+                } => execute_apply(
+                    &root
+                        .or(positional_root)
+                        .unwrap_or_else(|| PathBuf::from(".")),
+                    &recommendation_id,
+                    approve,
+                ),
+            };
+            if let Err(e) = result {
+                eprintln!("method-evolution error: {}", e);
                 std::process::exit(1);
             }
         }
@@ -397,6 +685,90 @@ async fn main() -> anyhow::Result<()> {
                     .unwrap_or_else(|| PathBuf::from("."));
                 if let Err(e) = execute_baseline_reset(&workspace_root) {
                     eprintln!("Error resetting baseline: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        },
+        Commands::Governance { subcommand } => match subcommand {
+            GovernanceCommands::Plan {
+                strategy,
+                target,
+                root,
+                json,
+            } => {
+                let ws_root = root.unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+                if let Err(e) = execute_governance_plan(&ws_root, &strategy, &target, json) {
+                    eprintln!("governance plan error: {}", e);
+                    std::process::exit(1);
+                }
+            }
+            GovernanceCommands::Apply {
+                strategy,
+                target,
+                root,
+                approve,
+            } => {
+                let ws_root = root.unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+                if let Err(e) = execute_governance_apply(&ws_root, &strategy, &target, approve) {
+                    eprintln!("governance apply error: {}", e);
+                    std::process::exit(1);
+                }
+            }
+            GovernanceCommands::SyncHarnesses {
+                target,
+                root,
+                approve,
+                json,
+            } => {
+                let ws_root = root.unwrap_or_else(|| std::env::current_dir().unwrap_or_default());
+                if let Err(e) = execute_sync_harnesses(&ws_root, target, approve, json) {
+                    eprintln!("governance sync error: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        },
+        Commands::TraceImpact {
+            paths,
+            range,
+            staged,
+            root,
+            path,
+            positional_root,
+            json,
+        } => {
+            let workspace_root = path
+                .or(root)
+                .or(positional_root)
+                .unwrap_or_else(|| PathBuf::from("."));
+            if let Err(e) = llm_wiki_core::cli::trace_impact::execute_trace_impact(
+                &workspace_root,
+                paths,
+                range,
+                staged,
+                json,
+            ) {
+                eprintln!("trace-impact error: {}", e);
+                std::process::exit(1);
+            }
+        }
+        Commands::Review { subcommand } => match subcommand {
+            ReviewCommands::Resolve {
+                doc_id,
+                commit_ref,
+                root,
+                path,
+                positional_root,
+            } => {
+                let workspace_root = path
+                    .or(root)
+                    .or(positional_root)
+                    .unwrap_or_else(|| PathBuf::from("."));
+                if let Err(e) = llm_wiki_core::cli::review_cmd::execute_review_resolve(
+                    &workspace_root,
+                    &doc_id,
+                    commit_ref.as_deref(),
+                ) {
+                    eprintln!("review resolve error: {}", e);
                     std::process::exit(1);
                 }
             }

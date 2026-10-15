@@ -102,7 +102,11 @@ pub fn compute_reference_concentration(fragments: &[FragmentMetadata]) -> f32 {
 }
 
 /// Computes Granularity (G) in [0.0, 1.0]: ratio of actual fragment token count to optimal target.
-pub fn compute_granularity(node: &NoteNode, fragments: &[FragmentMetadata], fragment_target: u32) -> f32 {
+pub fn compute_granularity(
+    node: &NoteNode,
+    fragments: &[FragmentMetadata],
+    fragment_target: u32,
+) -> f32 {
     if fragment_target == 0 {
         return 1.0;
     }
@@ -135,7 +139,8 @@ pub fn compute_context_efficiency(node: &NoteNode, fragments: &[FragmentMetadata
         let avg_section_tokens = (node.tokens / fragments.len() as u32) as f32;
         let addressed_ratio = (avg_section_tokens / node.tokens as f32).clamp(0.05, 1.0);
         let unaddressed_ratio = (500.0 / (node.tokens as f32).max(500.0)).clamp(0.05, 1.0);
-        (reusability * (1.0 - addressed_ratio) + (1.0 - reusability) * unaddressed_ratio).clamp(0.0, 1.0)
+        (reusability * (1.0 - addressed_ratio) + (1.0 - reusability) * unaddressed_ratio)
+            .clamp(0.0, 1.0)
     }
 }
 
@@ -193,7 +198,10 @@ pub fn extract_metrics_for_node(node: &NoteNode, fragment_target: u32) -> Struct
 }
 
 /// Parallel multi-file structural metric extractor using Rayon (NFR-001, NFR-003, T023).
-pub fn extract_metrics_parallel(nodes: &[NoteNode], fragment_target: u32) -> Vec<StructuralMetrics> {
+pub fn extract_metrics_parallel(
+    nodes: &[NoteNode],
+    fragment_target: u32,
+) -> Vec<StructuralMetrics> {
     nodes
         .par_iter()
         .map(|node| extract_metrics_for_node(node, fragment_target))
@@ -250,8 +258,16 @@ pub mod tests {
         ];
         let c = compute_cohesion(&cohesive_frags);
         let s = compute_semantic_diversity(c);
-        assert!(c >= 0.5, "Cohesive fragments should yield cohesion >= 0.5, got {}", c);
-        assert!(s <= 0.5, "Cohesive fragments should yield diversity <= 0.5, got {}", s);
+        assert!(
+            c >= 0.5,
+            "Cohesive fragments should yield cohesion >= 0.5, got {}",
+            c
+        );
+        assert!(
+            s <= 0.5,
+            "Cohesive fragments should yield diversity <= 0.5, got {}",
+            s
+        );
 
         // Low cohesion / High diversity: unrelated topics
         let diverse_frags = vec![
@@ -378,7 +394,7 @@ pub mod tests {
             node.tokens = 1500 + (i % 500) as u32;
             node.in_degree = (i % 10) as u32;
             node.out_degree = (i % 8) as u32;
-            node.hop_distance = (i % 4) as i32;
+            node.hop_distance = i % 4;
             node.fragments = vec![
                 FragmentMetadata {
                     anchor: "sec1".to_string(),
@@ -447,4 +463,3 @@ pub mod tests {
         test_raw_numeric_integrity_metric_values();
     }
 }
-

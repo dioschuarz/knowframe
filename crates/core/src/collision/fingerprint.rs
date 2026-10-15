@@ -7,9 +7,9 @@ use super::DocumentFingerprint;
 
 const STOP_WORDS: &[&str] = &[
     "the", "a", "an", "and", "or", "but", "in", "on", "at", "to", "for", "of", "with", "by",
-    "from", "as", "is", "was", "are", "were", "be", "been", "being", "have", "has", "had",
-    "do", "does", "did", "this", "that", "these", "those", "it", "its", "we", "you", "they",
-    "can", "will", "would", "should", "could", "not",
+    "from", "as", "is", "was", "are", "were", "be", "been", "being", "have", "has", "had", "do",
+    "does", "did", "this", "that", "these", "those", "it", "its", "we", "you", "they", "can",
+    "will", "would", "should", "could", "not",
 ];
 
 /// Extracts cleaned, lowercased word tokens excluding stop words.
@@ -145,7 +145,12 @@ impl InvertedIndex {
     pub fn insert(&mut self, fp: DocumentFingerprint) {
         let doc_id = fp.doc_id.clone();
 
-        for term in fp.title_tokens.iter().chain(fp.heading_tokens.iter()).chain(fp.term_frequencies.keys()) {
+        for term in fp
+            .title_tokens
+            .iter()
+            .chain(fp.heading_tokens.iter())
+            .chain(fp.term_frequencies.keys())
+        {
             self.term_to_docs
                 .entry(term.clone())
                 .or_default()
@@ -158,7 +163,12 @@ impl InvertedIndex {
     /// Removes a document from the inverted index.
     pub fn remove(&mut self, doc_id: &str) {
         if let Some(fp) = self.doc_to_fingerprint.remove(doc_id) {
-            for term in fp.title_tokens.iter().chain(fp.heading_tokens.iter()).chain(fp.term_frequencies.keys()) {
+            for term in fp
+                .title_tokens
+                .iter()
+                .chain(fp.heading_tokens.iter())
+                .chain(fp.term_frequencies.keys())
+            {
                 if let Some(set) = self.term_to_docs.get_mut(term) {
                     set.remove(doc_id);
                 }
@@ -199,7 +209,11 @@ impl InvertedIndex {
         // Body term frequency matches: query top 25 highest-TF terms and skip ubiquitous terms (>20% of corpus)
         let max_doc_freq = (self.doc_to_fingerprint.len() / 5).max(10);
         let mut top_terms: Vec<(&String, &f32)> = query_fp.term_frequencies.iter().collect();
-        top_terms.sort_by(|a, b| b.1.partial_cmp(a.1).unwrap_or(std::cmp::Ordering::Equal));
+        top_terms.sort_by(|a, b| {
+            b.1.partial_cmp(a.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.0.cmp(b.0))
+        });
 
         for (term, tf) in top_terms.into_iter().take(25) {
             if let Some(docs) = self.term_to_docs.get(term.as_str()) {
@@ -215,7 +229,11 @@ impl InvertedIndex {
         }
 
         let mut ranked: Vec<(String, f32)> = doc_scores.into_iter().collect();
-        ranked.sort_by(|a, b| b.1.partial_cmp(&a.1).unwrap_or(std::cmp::Ordering::Equal));
+        ranked.sort_by(|a, b| {
+            b.1.partial_cmp(&a.1)
+                .unwrap_or(std::cmp::Ordering::Equal)
+                .then_with(|| a.0.cmp(&b.0))
+        });
 
         ranked
             .into_iter()

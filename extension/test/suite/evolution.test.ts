@@ -71,24 +71,29 @@ suite('Evolution Domain Types Test Suite (T006b)', () => {
         type: 'inject_fragment_frontmatter',
         payload: { filePath: 'docs/test.md', fragments: [{ tokens: 100, inbound: 1, outbound: 2 }] },
       },
+      {
+        type: 'delete_document',
+        payload: { filePath: 'index.md' },
+      },
     ];
 
     const plan: TransformationPlan = {
       planId: 'p-1',
       recommendationId: 'r-1',
       actions,
-      diffPreview: '+++ docs/test.md',
+      diffPreview: '+++ docs/test.md\n--- index.md',
       projectedDelta: {
         efficiencyDelta: 0.20,
         traceDepthDelta: -1.0,
         couplingDelta: -0.15,
-        docCountDelta: 1,
+        docCountDelta: 0,
       },
       requiresApproval: true,
     };
 
-    assert.strictEqual(plan.actions.length, 4);
+    assert.strictEqual(plan.actions.length, 5);
     assert.strictEqual(plan.actions[0].type, 'create_document');
+    assert.strictEqual(plan.actions[4].type, 'delete_document');
     assert.strictEqual(plan.requiresApproval, true);
   });
 });

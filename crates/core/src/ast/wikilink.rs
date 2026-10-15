@@ -22,9 +22,10 @@ pub fn parse_wikilinks(text: &str) -> Vec<RawWikilink> {
             continue;
         }
 
-        // Split target and alias: [[target|alias]]
+        // Split target and alias: [[target|alias]]. Inside Markdown tables the pipe is
+        // escaped as `[[target\|alias]]`, so drop the trailing backslash from the target.
         let (raw_target_part, alias) = if let Some((tgt, label)) = inner.split_once('|') {
-            (tgt.trim(), Some(label.trim().to_string()))
+            (tgt.trim().trim_end_matches('\\').trim_end(), Some(label.trim().to_string()))
         } else {
             (inner, None)
         };
@@ -62,7 +63,10 @@ pub fn parse_wikilinks(text: &str) -> Vec<RawWikilink> {
 }
 
 pub fn wikilink_to_edge(source: &str, link: RawWikilink, line: Option<u32>) -> NoteEdge {
-    let target_fragment = link.anchor.as_ref().map(|a| a.trim_start_matches('#').to_string());
+    let target_fragment = link
+        .anchor
+        .as_ref()
+        .map(|a| a.trim_start_matches('#').to_string());
     NoteEdge {
         id: format!("{}->{}", source, link.target),
         source: source.to_string(),

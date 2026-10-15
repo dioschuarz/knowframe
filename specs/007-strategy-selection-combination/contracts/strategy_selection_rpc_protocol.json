@@ -1,0 +1,264 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "StrategySelectionRPCProtocol",
+  "description": "JSON-RPC 2.0 interface contracts for Strategy Selection & Combination engine in llm-wiki-core",
+  "type": "object",
+  "definitions": {
+    "StrategyFitScore": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 100,
+      "description": "Evaluated fit score of a strategy against a structural problem (0-100)"
+    },
+    "StrategyRole": {
+      "type": "string",
+      "enum": ["primary", "supporting", "alternative"]
+    },
+    "KnowledgeOrganizationStrategy": {
+      "type": "string",
+      "enum": [
+        "section_addressing",
+        "faceted_classification",
+        "lightweight_index",
+        "preserve_document"
+      ]
+    },
+    "StrategyRelationshipType": {
+      "type": "string",
+      "enum": ["complementary", "alternative", "mutually_exclusive"]
+    },
+    "StrategyRecommendationItem": {
+      "type": "object",
+      "properties": {
+        "recommendation_id": { "type": "string" },
+        "strategy": { "$ref": "#/definitions/KnowledgeOrganizationStrategy" },
+        "fit_score": { "$ref": "#/definitions/StrategyFitScore" },
+        "role": { "$ref": "#/definitions/StrategyRole" },
+        "rationale": { "type": "string" },
+        "expected_benefits": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "countervailing_trade_offs": {
+          "type": "array",
+          "items": { "type": "string" }
+        },
+        "transformation_cost": { "type": "integer" }
+      },
+      "required": [
+        "recommendation_id",
+        "strategy",
+        "fit_score",
+        "role",
+        "rationale",
+        "expected_benefits",
+        "countervailing_trade_offs",
+        "transformation_cost"
+      ]
+    },
+    "CompositePlanValue": {
+      "type": "object",
+      "properties": {
+        "base_fit_sum": { "type": "integer" },
+        "synergy_bonus": { "type": "integer" },
+        "overlap_penalty": { "type": "integer" },
+        "transformation_cost": { "type": "integer" },
+        "net_value": { "type": "integer" },
+        "narrative": { "type": "string" }
+      },
+      "required": [
+        "base_fit_sum",
+        "synergy_bonus",
+        "overlap_penalty",
+        "transformation_cost",
+        "net_value",
+        "narrative"
+      ]
+    },
+    "StrategySet": {
+      "type": "object",
+      "properties": {
+        "set_id": { "type": "string" },
+        "opportunity_id": { "type": "string" },
+        "target_document": { "type": "string" },
+        "primary": { "$ref": "#/definitions/StrategyRecommendationItem" },
+        "supporting": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/StrategyRecommendationItem" }
+        },
+        "alternatives": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/StrategyRecommendationItem" }
+        },
+        "composite_plan_value": { "$ref": "#/definitions/CompositePlanValue" },
+        "active_selection": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/KnowledgeOrganizationStrategy" }
+        }
+      },
+      "required": [
+        "set_id",
+        "opportunity_id",
+        "target_document",
+        "primary",
+        "supporting",
+        "alternatives",
+        "composite_plan_value",
+        "active_selection"
+      ]
+    },
+    "GetStrategySetRequest": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": ["string", "number"] },
+        "method": { "const": "evolution/getStrategySet" },
+        "params": {
+          "type": "object",
+          "properties": {
+            "opportunity_id": { "type": "string" },
+            "document_path": { "type": "string" }
+          },
+          "required": ["opportunity_id"]
+        }
+      },
+      "required": ["jsonrpc", "id", "method", "params"]
+    },
+    "GetStrategySetResponse": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": ["string", "number"] },
+        "result": { "$ref": "#/definitions/StrategySet" }
+      },
+      "required": ["jsonrpc", "id", "result"]
+    },
+    "CalculatePlanValueRequest": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": ["string", "number"] },
+        "method": { "const": "evolution/calculatePlanValue" },
+        "params": {
+          "type": "object",
+          "properties": {
+            "opportunity_id": { "type": "string" },
+            "selected_strategies": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/KnowledgeOrganizationStrategy" }
+            }
+          },
+          "required": ["opportunity_id", "selected_strategies"]
+        }
+      },
+      "required": ["jsonrpc", "id", "method", "params"]
+    },
+    "CalculatePlanValueResponse": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": ["string", "number"] },
+        "result": {
+          "type": "object",
+          "properties": {
+            "composite_plan_value": { "$ref": "#/definitions/CompositePlanValue" },
+            "is_valid": { "type": "boolean" },
+            "conflict_message": { "type": ["string", "null"] }
+          },
+          "required": ["composite_plan_value", "is_valid"]
+        }
+      },
+      "required": ["jsonrpc", "id", "result"]
+    },
+    "ValidateSelectionRequest": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": ["string", "number"] },
+        "method": { "const": "evolution/validateStrategySelection" },
+        "params": {
+          "type": "object",
+          "properties": {
+            "selected_strategies": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/KnowledgeOrganizationStrategy" }
+            }
+          },
+          "required": ["selected_strategies"]
+        }
+      },
+      "required": ["jsonrpc", "id", "method", "params"]
+    },
+    "ValidateSelectionResponse": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": ["string", "number"] },
+        "result": {
+          "type": "object",
+          "properties": {
+            "is_valid": { "type": "boolean" },
+            "incompatible_pairs": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "strategy_a": { "$ref": "#/definitions/KnowledgeOrganizationStrategy" },
+                  "strategy_b": { "$ref": "#/definitions/KnowledgeOrganizationStrategy" },
+                  "relationship": { "$ref": "#/definitions/StrategyRelationshipType" },
+                  "reason": { "type": "string" }
+                },
+                "required": ["strategy_a", "strategy_b", "relationship", "reason"]
+              }
+            }
+          },
+          "required": ["is_valid", "incompatible_pairs"]
+        }
+      },
+      "required": ["jsonrpc", "id", "result"]
+    },
+    "GeneratePlanRequest": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": ["string", "number"] },
+        "method": { "const": "evolution/generatePlan" },
+        "params": {
+          "type": "object",
+          "properties": {
+            "opportunity_id": { "type": "string" },
+            "selected_strategies": {
+              "type": "array",
+              "items": { "$ref": "#/definitions/KnowledgeOrganizationStrategy" }
+            }
+          },
+          "required": ["opportunity_id", "selected_strategies"]
+        }
+      },
+      "required": ["jsonrpc", "id", "method", "params"]
+    },
+    "GeneratePlanResponse": {
+      "type": "object",
+      "properties": {
+        "jsonrpc": { "const": "2.0" },
+        "id": { "type": ["string", "number"] },
+        "result": {
+          "type": "object",
+          "properties": {
+            "plan_id": { "type": "string" },
+            "opportunity_id": { "type": "string" },
+            "actions": {
+              "type": "array",
+              "items": { "type": "object" }
+            },
+            "diff_preview": { "type": "string" },
+            "projected_delta": { "type": "object" },
+            "requires_approval": { "type": "boolean" }
+          },
+          "required": ["plan_id", "opportunity_id", "actions", "diff_preview", "projected_delta", "requires_approval"]
+        }
+      },
+      "required": ["jsonrpc", "id", "result"]
+    }
+  }
+}

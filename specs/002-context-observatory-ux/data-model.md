@@ -1,3 +1,64 @@
+---
+wiki:
+  content_hash: b25ca9cd68800d7b9d8f8f668233884c902192fd23abd9112d0c87886732dbbf
+  fragments:
+    phase-1-data-model-ai-context-observatory-curated-knowledge-ux-002-context-observatory-ux:
+      tokens: 2227
+      inbound: 0
+      outbound: 0
+    1-domain-entities-state-models:
+      tokens: 387
+      inbound: 0
+      outbound: 0
+    2-entity-specifications-field-constraints:
+      tokens: 1527
+      inbound: 0
+      outbound: 0
+    21-notenode-enhanced:
+      tokens: 422
+      inbound: 0
+      outbound: 0
+    22-noteedge-enhanced:
+      tokens: 256
+      inbound: 0
+      outbound: 0
+    23-exclusionrule:
+      tokens: 160
+      inbound: 0
+      outbound: 0
+    24-exclusionpreview:
+      tokens: 82
+      inbound: 0
+      outbound: 0
+    25-noisesuggestion:
+      tokens: 125
+      inbound: 0
+      outbound: 0
+    26-observatorysummary:
+      tokens: 217
+      inbound: 0
+      outbound: 0
+    27-focusmode-serialization-mapping:
+      tokens: 130
+      inbound: 0
+      outbound: 0
+    28-contextual-inspector-action-envelopes:
+      tokens: 125
+      inbound: 0
+      outbound: 0
+    3-state-transitions-invariants:
+      tokens: 237
+      inbound: 0
+      outbound: 0
+    31-node-lifecycle-invariant:
+      tokens: 142
+      inbound: 0
+      outbound: 0
+    32-target-resolvability-invariant:
+      tokens: 84
+      inbound: 0
+      outbound: 0
+---
 # Phase 1 Data Model: AI Context Observatory & Curated Knowledge UX (`002-context-observatory-ux`)
 
 **Feature Branch**: `002-context-observatory-ux`  

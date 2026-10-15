@@ -45,6 +45,8 @@ export interface InspectorCallbacks {
   onExclude?: (pattern: string) => void;
   onFixReference?: (edge: NoteEdge) => void;
   onNavigateLink?: (target: string) => void;
+  onMarkReviewed?: (docId: string) => void;
+  onOpen?: () => void;
   onClose?: () => void;
 }
 
@@ -94,10 +96,15 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
     <div class="insp-body insp-body-node">
       <!-- Section: Tier & Token Weight (Fixed header) -->
       <div class="insp-section insp-section-fixed">
-        <div class="insp-section-header">CONTEXT OBSERVER TIER</div>
+        <div class="insp-section-header">Context Observer Tier</div>
         <div class="insp-tier-badge ${node.hopDistance === 0 ? 'tier-hub' : node.hopDistance === 1 ? 'tier-1' : node.hopDistance === 2 ? 'tier-2' : node.hopDistance > 2 ? 'tier-deep' : 'tier-orphan'}">
           ${tierName}
         </div>
+        ${node.reviewStatus ? `
+        <div class="insp-review-badge insp-review-${node.reviewStatus}" style="margin-top: 4px; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 4px; display: inline-block; text-transform: uppercase; background: rgba(245, 158, 11, 0.15); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.3);">
+          Review: ${node.reviewStatus}
+        </div>
+        ` : ''}
         <div class="insp-metrics-row">
           <div class="insp-metric-col">
             <span class="insp-m-val">${tokenFormatted}</span>
@@ -117,7 +124,7 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
       <!-- Section: Fragments (3-column: Fragment | Tok | I/O) -->
       <div class="insp-section insp-section-fragments" style="max-height: 180px; overflow-y: auto;">
         <div class="insp-section-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;" id="insp-fragments-toggle">
-          <span>FRAGMENTS (${formatCompactNumber((node.fragments || []).length)})</span>
+          <span>Fragments (${formatCompactNumber((node.fragments || []).length)})</span>
           <span class="insp-chevron-icon" id="insp-fragments-chevron">▼</span>
         </div>
         <div id="insp-fragments-content">
@@ -156,19 +163,19 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
 
       <!-- Section: Tags (1/3 of remaining space, scrollable) -->
       <div class="insp-section insp-section-third">
-        <div class="insp-section-header">TAGS</div>
+        <div class="insp-section-header">Tags</div>
         <div class="insp-tags-row">${tagsChips}</div>
       </div>
 
       <!-- Section: Incoming References (1/3 of remaining space, scrollable) -->
       <div class="insp-section insp-section-third">
-        <div class="insp-section-header">INCOMING REFERENCES (${formatCompactNumber(inLinks.length)})</div>
+        <div class="insp-section-header">Incoming References (${formatCompactNumber(inLinks.length)})</div>
         <ul class="insp-links-list">${inLinksList}</ul>
       </div>
 
       <!-- Section: Outgoing References (1/3 of remaining space, scrollable) -->
       <div class="insp-section insp-section-third">
-        <div class="insp-section-header">OUTGOING REFERENCES (${formatCompactNumber(outLinks.length)})</div>
+        <div class="insp-section-header">Outgoing References (${formatCompactNumber(outLinks.length)})</div>
         <ul class="insp-links-list">${outLinksList}</ul>
       </div>
     </div>
@@ -187,6 +194,10 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
       <button class="btn-secondary insp-action-btn" id="insp-btn-exclude">
         <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><circle cx="8" cy="8" r="6"/><line x1="3.5" y1="3.5" x2="12.5" y2="12.5"/></svg>
         <span>Exclude note</span>
+      </button>
+      <button class="btn-secondary insp-action-btn" id="insp-btn-mark-reviewed" title="Mark document review resolved">
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><path d="M13.5 4.5 6 12 2.5 8.5"/></svg>
+        <span>Mark Reviewed</span>
       </button>
     </div>
   `;
@@ -214,7 +225,7 @@ export function renderEdgeInspectionHtml(props: EdgeInspectionProps): string {
 
     <div class="insp-body">
       <div class="insp-section">
-        <div class="insp-section-header">REFERENCE DETAILS</div>
+        <div class="insp-section-header">Reference Details</div>
         <div class="insp-broken-detail-box">
           <div class="insp-detail-row">
             <span class="insp-d-lbl">Source File:</span>
@@ -241,7 +252,7 @@ export function renderEdgeInspectionHtml(props: EdgeInspectionProps): string {
       </div>
 
       <div class="insp-section">
-        <div class="insp-section-header">RESOLUTION ADVICE</div>
+        <div class="insp-section-header">Resolution Advice</div>
         <div class="insp-advice-text">
           The link in <code>${edge.source}</code> on line ${edge.line || 1} points to <code>${edge.target}</code> which does not resolve to an existing note in this workspace. Click <strong>Fix reference</strong> to re-point the link to an existing file, or create the missing note.
         </div>
@@ -278,6 +289,7 @@ export function renderTokenEconomicsHtml(props: TokenEconomicsProps): string {
     barColor = '#f59e0b';
     badgeClass = 'status-warning';
   }
+  const statusLabel = summary.status ? summary.status.charAt(0).toUpperCase() + summary.status.slice(1).toLowerCase() : 'Normal';
 
   const topConsumersHtml = topNodes.length > 0
     ? topNodes.map((n) => `
@@ -305,10 +317,10 @@ export function renderTokenEconomicsHtml(props: TokenEconomicsProps): string {
 
     <div class="insp-body">
       <div class="insp-section">
-        <div class="insp-section-header">BUDGET ALLOCATION</div>
+        <div class="insp-section-header">Budget Allocation</div>
         <div class="insp-budget-summary">
           <div class="insp-budget-row">
-            <span class="insp-b-lbl">Active Prompt Load (L0):</span>
+            <span class="insp-b-lbl">Active Prompt Load — L0:</span>
             <span class="insp-b-val">${formatTokens(activeTokens)} tok</span>
           </div>
           <div class="token-progress-track">
@@ -316,13 +328,13 @@ export function renderTokenEconomicsHtml(props: TokenEconomicsProps): string {
           </div>
           <div class="insp-budget-limits">
             <span>Budget used: ${budgetPct}%</span>
-            <span class="insp-badge ${badgeClass}">${(summary.status || 'NORMAL').toUpperCase()}</span>
+            <span class="insp-badge ${badgeClass}">${statusLabel}</span>
           </div>
         </div>
       </div>
 
       <div class="insp-section">
-        <div class="insp-section-header">REACHABLE CONTEXT (L1-L2)</div>
+        <div class="insp-section-header">Reachable Context — L1–L2</div>
         <div class="insp-reachable-box">
           <div class="insp-budget-row">
             <span class="insp-b-lbl">On-demand Subcall Context:</span>
@@ -335,7 +347,7 @@ export function renderTokenEconomicsHtml(props: TokenEconomicsProps): string {
       </div>
 
       <div class="insp-section">
-        <div class="insp-section-header">TOP TOKEN CONSUMERS</div>
+        <div class="insp-section-header">Top Token Consumers</div>
         <ul class="insp-consumers-list">${topConsumersHtml}</ul>
       </div>
     </div>
@@ -372,6 +384,7 @@ export function renderInspectorDrawer(
     if (drawer) {
       drawer.style.display = 'flex';
       visible = true;
+      callbacks.onOpen?.();
     }
   }
 
@@ -425,6 +438,11 @@ export function renderInspectorDrawer(
         e.stopPropagation();
         const p = typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id;
         callbacks.onExclude?.(p);
+      });
+      content.querySelector('#insp-btn-mark-reviewed')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const p = typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id;
+        callbacks.onMarkReviewed?.(p);
       });
 
       // T044: Wire fragment row clicks to navigate to line coordinates

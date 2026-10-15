@@ -1,3 +1,60 @@
+---
+wiki:
+  content_hash: b39116bef004544f8118e8c1488e4706548be185a9b82134103c80702f95a5a7
+  fragments:
+    data-model-fragment-level-knowledge-architecture-5-pillar-quality-model:
+      tokens: 4077
+      inbound: 0
+      outbound: 0
+    1-domain-entities-class-diagram:
+      tokens: 678
+      inbound: 0
+      outbound: 0
+    2-core-rust-structs-enums-cratescoresrc:
+      tokens: 1819
+      inbound: 0
+      outbound: 0
+    21-fragment-metadata-document-node-integration-cratesclisrccommandsmodrs:
+      tokens: 390
+      inbound: 0
+      outbound: 0
+    22-edge-representation-with-fragment-targeting-cratescoresrcmodelmodrs:
+      tokens: 197
+      inbound: 0
+      outbound: 0
+    23-structural-debt-pillar-2-scoring-cratescoresrcqualitystructurers:
+      tokens: 258
+      inbound: 0
+      outbound: 0
+    24-evidence-based-freshness-model-pillar-5-cratescoresrcdriftfreshnessrs:
+      tokens: 292
+      inbound: 0
+      outbound: 0
+    25-debt-summary-entity-cratesclisrccommandsmodrs:
+      tokens: 111
+      inbound: 0
+      outbound: 0
+    26-5-pillar-quality-score-model-cratescoresrcqualityscorerrs:
+      tokens: 360
+      inbound: 0
+      outbound: 0
+    27-context-trace-section-level-result-cratesclisrccommandsmodrs:
+      tokens: 193
+      inbound: 0
+      outbound: 0
+    3-typescript-extension-host-interfaces-srctypes:
+      tokens: 609
+      inbound: 0
+      outbound: 0
+    31-fragment-node-inspector-types-srctypesfragmentts:
+      tokens: 595
+      inbound: 0
+      outbound: 0
+    4-ui-presentation-formatter-contract-srcutilsnumberformatts:
+      tokens: 870
+      inbound: 0
+      outbound: 0
+---
 # Data Model: Fragment-Level Knowledge Architecture & 5-Pillar Quality Model
 
 **Feature Branch:** `004-fragment-architecture-quality`  
@@ -118,7 +175,7 @@ classDiagram
 
 ## 2. Core Rust Structs & Enums (`crates/core/src/`)
 
-### 2.1 Fragment Metadata & Document Node Integration (`fragment/mod.rs`)
+### 2.1 Fragment Metadata & Document Node Integration (`crates/cli/src/commands/mod.rs`)
 
 ```rust
 use serde::{Deserialize, Serialize};
@@ -160,7 +217,7 @@ pub struct MaterializedFragmentEntry {
 }
 ```
 
-### 2.2 Edge Representation with Fragment Targeting (`graph/edge.rs`)
+### 2.2 Edge Representation with Fragment Targeting (`crates/core/src/model/mod.rs`)
 
 ```rust
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -188,7 +245,7 @@ pub enum LinkResolutionStatus {
 }
 ```
 
-### 2.3 Structural Debt & Pillar 2 Scoring (`quality/structure.rs`)
+### 2.3 Structural Debt & Pillar 2 Scoring (`crates/core/src/quality/structure.rs`)
 
 ```rust
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
@@ -216,7 +273,7 @@ pub struct StructureDebtFinding {
 }
 ```
 
-### 2.4 Evidence-Based Freshness Model — Pillar 5 (`drift/freshness.rs`)
+### 2.4 Evidence-Based Freshness Model — Pillar 5 (`crates/core/src/drift/freshness.rs`)
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
@@ -248,7 +305,7 @@ pub struct FreshnessEvidence {
 }
 ```
 
-### 2.5 Debt Summary Entity (`debt/mod.rs`)
+### 2.5 Debt Summary Entity (`crates/cli/src/commands/mod.rs`)
 
 ```rust
 /// Brownfield debt accounting summary across all 5 pillars.
@@ -263,7 +320,7 @@ pub struct DebtSummary {
 }
 ```
 
-### 2.6 5-Pillar Quality Score Model (`quality/score.rs`)
+### 2.6 5-Pillar Quality Score Model (`crates/core/src/quality/scorer.rs`)
 
 ```rust
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -302,7 +359,7 @@ pub struct FivePillarQualityScore {
 }
 ```
 
-### 2.7 Context Trace Section-Level Result (`trace/mod.rs`)
+### 2.7 Context Trace Section-Level Result (`crates/cli/src/commands/mod.rs`)
 
 ```rust
 #[derive(Debug, Clone, Serialize, Deserialize)]

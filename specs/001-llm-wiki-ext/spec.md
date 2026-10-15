@@ -1,3 +1,108 @@
+---
+wiki:
+  content_hash: a32c0c3ff604970a2bf17cbf2fb58a41b65e300a4f3934d27267197d4ce8300b
+  fragments:
+    feature-specification-llm-wiki-extension-for-vs-code-llm-wiki-ext4vsc:
+      tokens: 7614
+      inbound: 0
+      outbound: 0
+    executive-summary-alignment-with-ctaas-knowledge-base:
+      tokens: 275
+      inbound: 0
+      outbound: 0
+    user-scenarios-testing-mandatory:
+      tokens: 3589
+      inbound: 0
+      outbound: 0
+    user-story-1-organic-vault-discovery-graph-centrality-computation-priority-p1:
+      tokens: 412
+      inbound: 0
+      outbound: 0
+    user-story-2-sidecar-process-lifecycle-typed-websocket-ipc-priority-p1:
+      tokens: 364
+      inbound: 0
+      outbound: 0
+    user-story-3-interactive-force-directed-webview-with-hop-opacity-cluster-hashtag-path-coloring-token-economics-priority-p2:
+      tokens: 743
+      inbound: 0
+      outbound: 0
+    user-story-4-event-driven-git-hook-synchronization-with-rust-native-prek-orchestration-priority-p2:
+      tokens: 1838
+      inbound: 0
+      outbound: 0
+    user-story-5-multi-repo-unified-vault-git-submodule-resolution-priority-p3:
+      tokens: 222
+      inbound: 0
+      outbound: 0
+    edge-cases-failure-modes:
+      tokens: 411
+      inbound: 0
+      outbound: 0
+    requirements-mandatory:
+      tokens: 1767
+      inbound: 0
+      outbound: 0
+    functional-requirements:
+      tokens: 1761
+      inbound: 0
+      outbound: 0
+    1-core-parsing-ast-link-extraction:
+      tokens: 245
+      inbound: 0
+      outbound: 0
+    2-graph-topology-centrality-resolver:
+      tokens: 170
+      inbound: 0
+      outbound: 0
+    3-token-economics-engine:
+      tokens: 164
+      inbound: 0
+      outbound: 0
+    4-sidecar-architecture-ipc-protocol:
+      tokens: 278
+      inbound: 0
+      outbound: 0
+    5-configuration-contract-context-vaultyaml:
+      tokens: 131
+      inbound: 0
+      outbound: 0
+    6-git-hook-integration-delta-processing-with-prek:
+      tokens: 341
+      inbound: 0
+      outbound: 0
+    7-webview-graph-ui-visual-hierarchy-cluster-color-groups:
+      tokens: 428
+      inbound: 0
+      outbound: 0
+    key-entities-data-contracts:
+      tokens: 1054
+      inbound: 0
+      outbound: 0
+    1-workspace-configuration-schema-context-vaultyaml:
+      tokens: 250
+      inbound: 0
+      outbound: 0
+    2-declarative-git-hook-configuration-schema-pre-commit-configyaml-for-prek:
+      tokens: 105
+      inbound: 0
+      outbound: 0
+    3-git-hook-delta-payload-json-over-ipc:
+      tokens: 137
+      inbound: 0
+      outbound: 0
+    4-graph-render-state-schema-extension-host-to-webview:
+      tokens: 555
+      inbound: 0
+      outbound: 0
+    measurable-success-criteria-mandatory:
+      tokens: 293
+      inbound: 0
+      outbound: 0
+    assumptions-technical-dependencies:
+      tokens: 134
+      inbound: 0
+      outbound: 0
+---
 # Feature Specification: LLM Wiki Extension for VS Code (`llm_wiki_ext4vsc`)
 
 **Feature Branch**: `001-llm-wiki-ext`  
@@ -112,14 +217,14 @@ So that my editor stays snappy and my graph stays current without blocking my co
 **Why this priority**: Replaces heavy filesystem watchers with high-performance, event-driven Git synchronization. Leverages `prek` for three primary architectural advantages:
 - **Rust Homogeneity**: Pairs a Rust-based hook orchestrator with the Rust core engine (`llm-wiki-core`), eliminating Python runtime dependencies and interpreter cold-start delays.
 - **Parallel Execution**: Uses `prek`'s multi-threaded worker pool to execute `llm-wiki-sync` in parallel with other codebase linters, formatters, and security checks without blocking the commit queue.
-- **Declarative Pattern Reusability**: Reuses the industry-standard `.pre-commit-config.yaml` file format, ensuring drop-in compatibility without proprietary DSLs or team retraining.
-
-**Independent Test**: Configure `.pre-commit-config.yaml` with `prek`, commit a `.rs` file (verify `prek` skips hook instantly); commit a `.md` file (verify `prek` invokes `llm-wiki-core git-delta`, sidecar updates graph in <50 ms); kill the sidecar and commit (verify hook exits with code 0 in <500 ms without blocking commit).
+*.pre-commit-config.yaml*-*.pre-commit-config.yaml* *.pre-commit-config.yaml***.pre-commit-config.yaml***.pre-commit-config.yaml*D*.pre-commit-config.yaml*e*.pre-commit-config.yaml*c*.pre-commit-config.yaml*l*.pre-commit-config.yaml*a*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*v*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*P*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml*n*.pre-commit-config.yaml* *.pre-commit-config.yaml*R*.pre-commit-config.yaml*e*.pre-commit-config.yaml*u*.pre-commit-config.yaml*s*.pre-commit-config.yaml*a*.pre-commit-config.yaml*b*.pre-commit-config.yaml*i*.pre-commit-config.yaml*l*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*y*.pre-commit-config.yaml***.pre-commit-config.yaml***.pre-commit-config.yaml*:*.pre-commit-config.yaml* *.pre-commit-config.yaml*R*.pre-commit-config.yaml*e*.pre-commit-config.yaml*u*.pre-commit-config.yaml*s*.pre-commit-config.yaml*e*.pre-commit-config.yaml*s*.pre-commit-config.yaml* *.pre-commit-config.yaml*t*.pre-commit-config.yaml*h*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*d*.pre-commit-config.yaml*u*.pre-commit-config.yaml*s*.pre-commit-config.yaml*t*.pre-commit-config.yaml*r*.pre-commit-config.yaml*y*.pre-commit-config.yaml*-*.pre-commit-config.yaml*s*.pre-commit-config.yaml*t*.pre-commit-config.yaml*a*.pre-commit-config.yaml*n*.pre-commit-config.yaml*d*.pre-commit-config.yaml*a*.pre-commit-config.yaml*r*.pre-commit-config.yaml*d*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*.*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*m*.pre-commit-config.yaml*m*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*g*.pre-commit-config.yaml*.*.pre-commit-config.yaml*y*.pre-commit-config.yaml*a*.pre-commit-config.yaml*m*.pre-commit-config.yaml*l*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*l*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*f*.pre-commit-config.yaml*o*.pre-commit-config.yaml*r*.pre-commit-config.yaml*m*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*,*.pre-commit-config.yaml* *.pre-commit-config.yaml*e*.pre-commit-config.yaml*n*.pre-commit-config.yaml*s*.pre-commit-config.yaml*u*.pre-commit-config.yaml*r*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml* *.pre-commit-config.yaml*d*.pre-commit-config.yaml*r*.pre-commit-config.yaml*o*.pre-commit-config.yaml*p*.pre-commit-config.yaml*-*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml* *.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*m*.pre-commit-config.yaml*p*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*b*.pre-commit-config.yaml*i*.pre-commit-config.yaml*l*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*y*.pre-commit-config.yaml* *.pre-commit-config.yaml*w*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*h*.pre-commit-config.yaml*o*.pre-commit-config.yaml*u*.pre-commit-config.yaml*t*.pre-commit-config.yaml* *.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*o*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*i*.pre-commit-config.yaml*e*.pre-commit-config.yaml*t*.pre-commit-config.yaml*a*.pre-commit-config.yaml*r*.pre-commit-config.yaml*y*.pre-commit-config.yaml* *.pre-commit-config.yaml*D*.pre-commit-config.yaml*S*.pre-commit-config.yaml*L*.pre-commit-config.yaml*s*.pre-commit-config.yaml* *.pre-commit-config.yaml*o*.pre-commit-config.yaml*r*.pre-commit-config.yaml* *.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml*a*.pre-commit-config.yaml*m*.pre-commit-config.yaml* *.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*t*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml*.*.pre-commit-config.yaml*
+*.pre-commit-config.yaml*
+**Independent Test**: Configure *.pre-commit-config.yaml* with `prek`, commit a `.rs` file (verify `prek` skips hook instantly); commit a `.md` file (verify `prek` invokes `llm-wiki-core git-delta`, sidecar updates graph in <50 ms); kill the sidecar and commit (verify hook exits with code 0 in <500 ms without blocking commit).
 
 **Acceptance Scenarios**:
 1. **Given** an initialized workspace with Git,  
    **When** the user runs `LLM Wiki: Install Git Hooks`,  
-   **Then** the extension detects `prek` (or falls back to `pre-commit`, `lefthook`, or standalone script), writes the declarative `.pre-commit-config.yaml` configuration with `files: '(?i)\.md$'`, and runs `prek install --hook-type post-commit`.
+   **Then** the extension detects `prek` (or falls back to `pre-commit`, `lefthook`, or standalone script), writes the declarative *.pre-commit-config.yaml* configuration with `files: '(?i)\.md$'`, and runs `prek install --hook-type post-commit`.
 2. **Given** a commit that modifies only source code files (e.g. `.ts`, `.rs`, `.py`),  
    **When** `git commit` executes,  
    **Then** `prek` evaluates the `files: '(?i)\.md$'` regex, determines no documentation was modified, and skips hook execution in under 2 ms without launching the sidecar dispatcher.
@@ -206,8 +311,8 @@ So that cross-project architecture references do not generate false-positive dea
 - **FR-026**: System MUST support `mode: single-repo`, `mode: multi-repo`, and `mode: vault`.
 
 #### 6. Git Hook Integration & Delta Processing with `prek`
-- **FR-027**: System MUST adopt `prek` (Rust-native git hook manager) as the primary Git hook engine, generating or updating `.pre-commit-config.yaml` with the `llm-wiki-sync` hook definition.
-- **FR-028**: System MUST configure declarative regex file filtering (`files: '(?i)\.md$'`) in `.pre-commit-config.yaml` so non-documentation commits incur zero execution overhead.
+- **FR-027**: System MUST adopt `prek` (Rust-native git hook manager) as the primary Git hook engine, generating or updating *.pre-commit-config.yaml* with the `llm-wiki-sync` hook definition.
+- **FR-028**: System MUST configure declarative regex file filtering (`files: '(?i)\.md$'`) in *.pre-commit-config.yaml* so non-documentation commits incur zero execution overhead.
 - **FR-029**: System MUST support automated installation via command `llmWiki.installGitHooks`, invoking `prek install --hook-type post-commit` (and optional `--hook-type pre-commit`).
 - **FR-030**: System MUST support a 3-tier fallback hierarchy if `prek` is unavailable: Tier 1 (`prek`), Tier 2 (Python `pre-commit` / `lefthook`), Tier 3 (standalone `.git/hooks/post-commit` shell script wrapper).
 - **FR-031**: System MUST provide CLI sub-command `llm-wiki-core git-delta [files...]` capable of receiving changed paths from `prek` and dispatching JSON-RPC notifications to the daemon socket.
@@ -266,7 +371,7 @@ color_groups:
     label: "Secrets & Keys"
 ```
 
-### 2. Declarative Git Hook Configuration Schema (`.pre-commit-config.yaml` for `prek`)
+### 2. Declarative Git Hook Configuration Schema (*.pre-commit-config.yaml* for `prek`)
 ```yaml
 repos:
   - repo: local

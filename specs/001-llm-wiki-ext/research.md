@@ -1,3 +1,92 @@
+---
+wiki:
+  content_hash: daa8d008be098d1739c2220520f1deb5d9873dbb711215b2d0e2b5b18f43622b
+  fragments:
+    phase-0-research-technical-decisions-architectural-investigations:
+      tokens: 3595
+      inbound: 0
+      outbound: 0
+    1-ipc-protocol-inter-process-communication:
+      tokens: 583
+      inbound: 0
+      outbound: 0
+    decision:
+      tokens: 128
+      inbound: 0
+      outbound: 0
+    rationale:
+      tokens: 333
+      inbound: 0
+      outbound: 0
+    alternatives-considered:
+      tokens: 110
+      inbound: 0
+      outbound: 0
+    2-markdown-ast-parsing-wikilink-hashtag-extraction:
+      tokens: 322
+      inbound: 0
+      outbound: 0
+    decision-1:
+      tokens: 53
+      inbound: 0
+      outbound: 0
+    rationale-1:
+      tokens: 151
+      inbound: 0
+      outbound: 0
+    alternatives-considered-1:
+      tokens: 102
+      inbound: 0
+      outbound: 0
+    3-graph-topology-centrality-algorithms-bpe-token-economics:
+      tokens: 418
+      inbound: 0
+      outbound: 0
+    decision-2:
+      tokens: 72
+      inbound: 0
+      outbound: 0
+    rationale-2:
+      tokens: 241
+      inbound: 0
+      outbound: 0
+    alternatives-considered-2:
+      tokens: 87
+      inbound: 0
+      outbound: 0
+    4-git-hook-lifecycle-rust-native-prek-orchestration:
+      tokens: 1694
+      inbound: 0
+      outbound: 0
+    decision-3:
+      tokens: 1331
+      inbound: 0
+      outbound: 0
+    rationale-3:
+      tokens: 257
+      inbound: 0
+      outbound: 0
+    alternatives-considered-3:
+      tokens: 87
+      inbound: 0
+      outbound: 0
+    5-sandboxed-webview-graph-rendering-hop-opacity-invariant:
+      tokens: 510
+      inbound: 0
+      outbound: 0
+    decision-4:
+      tokens: 71
+      inbound: 0
+      outbound: 0
+    rationale-4:
+      tokens: 342
+      inbound: 0
+      outbound: 0
+    alternatives-considered-4:
+      tokens: 80
+      inbound: 0
+      outbound: 0
+---
 # Phase 0 Research: Technical Decisions & Architectural Investigations
 
 **Feature**: LLM Wiki Extension for VS Code (`llm_wiki_ext4vsc`)  
@@ -63,12 +152,12 @@ We use **`petgraph::graph::DiGraph`** for directed topological mapping, **Brande
 ## 4. Git Hook Lifecycle & Rust-Native `prek` Orchestration
 
 ### Decision
-We adopt **`prek`** as the primary Git hook engine, utilizing declarative `.pre-commit-config.yaml` integration with a 3-tier discovery fallback hierarchy and a strict $500\text{ ms}$ non-blocking fail-open timeout.
-
+*.pre-commit-config.yaml*W*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*a*.pre-commit-config.yaml*d*.pre-commit-config.yaml*o*.pre-commit-config.yaml*p*.pre-commit-config.yaml*t*.pre-commit-config.yaml* *.pre-commit-config.yaml***.pre-commit-config.yaml***.pre-commit-config.yaml*`*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*k*.pre-commit-config.yaml*`*.pre-commit-config.yaml***.pre-commit-config.yaml***.pre-commit-config.yaml* *.pre-commit-config.yaml*a*.pre-commit-config.yaml*s*.pre-commit-config.yaml* *.pre-commit-config.yaml*t*.pre-commit-config.yaml*h*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*i*.pre-commit-config.yaml*m*.pre-commit-config.yaml*a*.pre-commit-config.yaml*r*.pre-commit-config.yaml*y*.pre-commit-config.yaml* *.pre-commit-config.yaml*G*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml* *.pre-commit-config.yaml*h*.pre-commit-config.yaml*o*.pre-commit-config.yaml*o*.pre-commit-config.yaml*k*.pre-commit-config.yaml* *.pre-commit-config.yaml*e*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*e*.pre-commit-config.yaml*,*.pre-commit-config.yaml* *.pre-commit-config.yaml*u*.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*l*.pre-commit-config.yaml*i*.pre-commit-config.yaml*z*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml* *.pre-commit-config.yaml*d*.pre-commit-config.yaml*e*.pre-commit-config.yaml*c*.pre-commit-config.yaml*l*.pre-commit-config.yaml*a*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*v*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*.*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*m*.pre-commit-config.yaml*m*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*g*.pre-commit-config.yaml*.*.pre-commit-config.yaml*y*.pre-commit-config.yaml*a*.pre-commit-config.yaml*m*.pre-commit-config.yaml*l*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml*g*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml* *.pre-commit-config.yaml*w*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*h*.pre-commit-config.yaml* *.pre-commit-config.yaml*a*.pre-commit-config.yaml* *.pre-commit-config.yaml*3*.pre-commit-config.yaml*-*.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml* *.pre-commit-config.yaml*d*.pre-commit-config.yaml*i*.pre-commit-config.yaml*s*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*v*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml*y*.pre-commit-config.yaml* *.pre-commit-config.yaml*f*.pre-commit-config.yaml*a*.pre-commit-config.yaml*l*.pre-commit-config.yaml*l*.pre-commit-config.yaml*b*.pre-commit-config.yaml*a*.pre-commit-config.yaml*c*.pre-commit-config.yaml*k*.pre-commit-config.yaml* *.pre-commit-config.yaml*h*.pre-commit-config.yaml*i*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*r*.pre-commit-config.yaml*c*.pre-commit-config.yaml*h*.pre-commit-config.yaml*y*.pre-commit-config.yaml* *.pre-commit-config.yaml*a*.pre-commit-config.yaml*n*.pre-commit-config.yaml*d*.pre-commit-config.yaml* *.pre-commit-config.yaml*a*.pre-commit-config.yaml* *.pre-commit-config.yaml*s*.pre-commit-config.yaml*t*.pre-commit-config.yaml*r*.pre-commit-config.yaml*i*.pre-commit-config.yaml*c*.pre-commit-config.yaml*t*.pre-commit-config.yaml* *.pre-commit-config.yaml*$*.pre-commit-config.yaml*5*.pre-commit-config.yaml*0*.pre-commit-config.yaml*0*.pre-commit-config.yaml*\*.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml*x*.pre-commit-config.yaml*t*.pre-commit-config.yaml*{*.pre-commit-config.yaml* *.pre-commit-config.yaml*m*.pre-commit-config.yaml*s*.pre-commit-config.yaml*}*.pre-commit-config.yaml*$*.pre-commit-config.yaml* *.pre-commit-config.yaml*n*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*-*.pre-commit-config.yaml*b*.pre-commit-config.yaml*l*.pre-commit-config.yaml*o*.pre-commit-config.yaml*c*.pre-commit-config.yaml*k*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml* *.pre-commit-config.yaml*f*.pre-commit-config.yaml*a*.pre-commit-config.yaml*i*.pre-commit-config.yaml*l*.pre-commit-config.yaml*-*.pre-commit-config.yaml*o*.pre-commit-config.yaml*p*.pre-commit-config.yaml*e*.pre-commit-config.yaml*n*.pre-commit-config.yaml* *.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*m*.pre-commit-config.yaml*e*.pre-commit-config.yaml*o*.pre-commit-config.yaml*u*.pre-commit-config.yaml*t*.pre-commit-config.yaml*.*.pre-commit-config.yaml*
+*.pre-commit-config.yaml*
 ### Rationale
 - **Rust-to-Rust Homogeneity**: `prek` is a single static binary written in Rust. It requires no Python interpreter, no `pip`, no `venv`, and has negligible startup latency ($<5\text{ ms}$ vs $150\text{--}300\text{ ms}$ for Python `pre-commit`).
 - **Parallel Hook Execution**: `prek` executes hooks concurrently across a worker thread pool. The `llm-wiki-sync` hook executes in parallel with code linters (`cargo clippy`, `eslint`, `ruff`), eliminating commit bottlenecks.
-- **Pattern Reusability via `.pre-commit-config.yaml`**: Drop-in replacement for standard repositories without needing proprietary configuration DSLs.
+- **Pattern Reusability via *.pre-commit-config.yaml***: Drop-in replacement for standard repositories without needing proprietary configuration DSLs.
 - **Zero-Overhead File Filtering**: Pre-filtering via `files: '(?i)\.md$'` ensures non-Markdown commits exit in $<2\text{ ms}$ without spawning `llm-wiki-core`.
 - **Fail-Open Policy**: If `llm-wiki-core git-delta` cannot connect to the local WebSocket within $500\text{ ms}$, it exits with code 0, guaranteeing developers are never blocked from committing code.
 

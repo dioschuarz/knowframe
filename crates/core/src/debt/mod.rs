@@ -1,13 +1,13 @@
 //! Brownfield Knowledge Debt Baseline structures and stable signatures.
 
-pub mod signatures;
 pub mod baseline;
+pub mod signatures;
 
 pub use baseline::*;
 pub use signatures::*;
 
-use std::collections::HashSet;
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 /// Persistent snapshot of legacy debt established on repository onboarding or baseline reset.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -24,6 +24,9 @@ pub struct KnowledgeDebtBaseline {
     pub collisions: Vec<CollisionSignature>,
     /// Known legacy technical drift findings
     pub technical_drifts: Vec<DriftSignature>,
+    /// Known legacy unreviewed documentation obligations
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unreviewed_docs: Vec<String>,
     /// Aggregate legacy debt counter
     pub total_debt: u32,
 }
@@ -37,6 +40,7 @@ impl Default for KnowledgeDebtBaseline {
             orphan_nodes: HashSet::new(),
             collisions: Vec::new(),
             technical_drifts: Vec::new(),
+            unreviewed_docs: Vec::new(),
             total_debt: 0,
         }
     }

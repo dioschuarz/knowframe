@@ -97,20 +97,57 @@ export type KnowledgeOrganizationStrategy =
   | 'lightweight_index'
   | 'faceted_classification'
   | 'preserve_document'
-  | 'hybrid';
+  | 'hybrid'
+  | 'split_decompose'
+  | 'extract_facet_metadata'
+  | 'consolidate_index'
+  | 'merge_candidates'
+  | 'standardize_terminology'
+  | 'classification'
+  | 'taxonomy'
+  | 'controlled_vocabulary'
+  | 'thesaurus'
+  | 'semantic_networks'
+  | 'conceptual_maps'
+  | 'ontology_engineering'
+  | 'domain_analysis'
+  | 'metadata_application_profiles'
+  | 'information_architecture'
+  | 'information_retrieval'
+  | 'terminology_management'
+  | 'knowledge_graph_network_analysis'
+  | 'knowledge_quality'
+  | 'provenance'
+  | 'knowledge_drift'
+  | 'context_routing';
+
+export interface MetricDeltaComparisonItem {
+  metricName: string;
+  beforeValue: string | number;
+  afterValue: string | number;
+  impact: string;
+}
 
 export interface MetricDeltaReport {
   efficiencyDelta: number;
   traceDepthDelta: number;
   couplingDelta: number;
   docCountDelta: number;
+  refCountDelta?: number;
+  narrativeSummary?: string;
+  contextEfficiencyDeltaPct?: number;
+  navigationalComplexityDeltaPct?: number;
+  maintenanceCouplingDeltaPct?: number;
 }
 
 export type TransformationAction =
   | { type: 'create_document'; payload: { filePath: string; initialContent: string } }
   | { type: 'update_document_content'; payload: { filePath: string; updatedContent: string } }
+  | { type: 'update_document_tags'; payload: { filePath: string; tags: string[] } }
+  | { type: 'append_document_content'; payload: { filePath: string; content: string } }
   | { type: 'rewrite_link_references'; payload: { sourcePath: string; oldTarget: string; newTarget: string } }
-  | { type: 'inject_fragment_frontmatter'; payload: { filePath: string; fragments?: Array<{ tokens: number; inbound: number; outbound: number }> } };
+  | { type: 'inject_fragment_frontmatter'; payload: { filePath: string; fragments?: Array<{ anchor: string; heading: string; start_line: number; end_line: number; tokens: number; inbound: number; outbound: number }> } }
+  | { type: 'delete_document'; payload: { filePath: string; file_path?: string } };
 
 export interface TransformationPlan {
   planId: string;
@@ -119,6 +156,9 @@ export interface TransformationPlan {
   diffPreview: string;
   projectedDelta: MetricDeltaReport;
   requiresApproval: boolean;
+  targetDocument?: string;
+  expectedImpact?: MetricDeltaComparisonItem[];
+  tradeOffs?: string[];
 }
 
 export interface StructuralRecommendation {
@@ -191,12 +231,15 @@ export interface GetRecommendationsResponse {
 }
 
 export interface GeneratePlanRequest {
-  recommendationId: string;
+  recommendationId?: string;
+  opportunityId?: string;
+  selectedStrategies?: KnowledgeOrganizationStrategy[];
 }
 
 export interface GeneratePlanResponse {
   planId: string;
-  recommendationId: string;
+  recommendationId?: string;
+  opportunityId?: string;
   actions: TransformationAction[];
   diffPreview: string;
   projectedDelta: MetricDeltaReport;
@@ -211,3 +254,76 @@ export interface ApplyPlanResponse {
   success: boolean;
   actualDelta: MetricDeltaReport;
 }
+
+// Strategy Selection & Combination Types (Feature 007)
+
+export type StrategyRole = 'primary' | 'supporting' | 'alternative';
+export type StrategyRelationshipType = 'complementary' | 'alternative' | 'mutually_exclusive';
+
+export interface StrategyRecommendationItem {
+  recommendationId: string;
+  strategy: KnowledgeOrganizationStrategy;
+  fitScore: number;
+  role: StrategyRole;
+  rationale: string;
+  expectedBenefits: string[];
+  countervailingTradeOffs: string[];
+  transformationCost: number;
+}
+
+export interface CompositePlanValue {
+  baseFitSum: number;
+  synergyBonus: number;
+  overlapPenalty: number;
+  transformationCost: number;
+  netValue: number;
+  narrative: string;
+}
+
+export interface StrategySet {
+  setId: string;
+  opportunityId: string;
+  targetDocument: string;
+  primary: StrategyRecommendationItem;
+  supporting: StrategyRecommendationItem[];
+  alternatives: StrategyRecommendationItem[];
+  compositePlanValue: CompositePlanValue;
+  activeSelection: KnowledgeOrganizationStrategy[];
+}
+
+export interface GetStrategySetRequest {
+  opportunityId: string;
+  documentPath?: string;
+}
+
+export interface GetStrategySetResponse {
+  strategySet: StrategySet;
+}
+
+export interface CalculatePlanValueRequest {
+  opportunityId: string;
+  selectedStrategies: KnowledgeOrganizationStrategy[];
+}
+
+export interface CalculatePlanValueResponse {
+  compositePlanValue: CompositePlanValue;
+  isValid: boolean;
+  conflictMessage?: string | null;
+}
+
+export interface ValidateSelectionRequest {
+  selectedStrategies: KnowledgeOrganizationStrategy[];
+}
+
+export interface IncompatiblePairItem {
+  strategyA: KnowledgeOrganizationStrategy;
+  strategyB: KnowledgeOrganizationStrategy;
+  relationship: StrategyRelationshipType;
+  reason: string;
+}
+
+export interface ValidateSelectionResponse {
+  isValid: boolean;
+  incompatiblePairs: IncompatiblePairItem[];
+}
+

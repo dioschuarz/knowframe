@@ -1,3 +1,60 @@
+---
+wiki:
+  content_hash: 1383eac2c7d7c4e48b53dc9f3fbe3cdbdffe4235253a6e88ccc25de8ba29708f
+  fragments:
+    quickstart-knowledge-organization-systems-structural-evolution-scenarios:
+      tokens: 1225
+      inbound: 0
+      outbound: 0
+    scenario-1-switching-documentation-orientations-real-time-re-weighting:
+      tokens: 233
+      inbound: 0
+      outbound: 0
+    objective:
+      tokens: 62
+      inbound: 0
+      outbound: 0
+    steps:
+      tokens: 153
+      inbound: 0
+      outbound: 0
+    scenario-2-two-tier-custom-configuration-conflict-detection:
+      tokens: 286
+      inbound: 0
+      outbound: 0
+    objective-1:
+      tokens: 31
+      inbound: 0
+      outbound: 0
+    steps-1:
+      tokens: 241
+      inbound: 0
+      outbound: 0
+    scenario-3-10-dimensional-structural-problem-detection-god-document-vs-cohesive-monolith:
+      tokens: 320
+      inbound: 0
+      outbound: 0
+    objective-2:
+      tokens: 32
+      inbound: 0
+      outbound: 0
+    steps-2:
+      tokens: 265
+      inbound: 0
+      outbound: 0
+    scenario-4-kos-strategy-evaluation-user-approval-re-measurement:
+      tokens: 343
+      inbound: 0
+      outbound: 0
+    objective-3:
+      tokens: 31
+      inbound: 0
+      outbound: 0
+    steps-3:
+      tokens: 294
+      inbound: 0
+      outbound: 0
+---
 # Quickstart: Knowledge Organization Systems & Structural Evolution Scenarios
 
 **Feature Branch:** `005-structural-evolution-strategies`  

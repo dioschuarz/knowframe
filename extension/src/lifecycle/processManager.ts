@@ -9,6 +9,8 @@ export class ProcessManager implements vscode.Disposable {
   private isIntentionallyStopped = false;
   private restartAttempts = 0;
   private readonly maxRestartAttempts = 3;
+  private readonly onDidRestartEmitter = new vscode.EventEmitter<number>();
+  public readonly onDidRestart = this.onDidRestartEmitter.event;
 
   constructor(
     private readonly context: vscode.ExtensionContext,
@@ -18,6 +20,17 @@ export class ProcessManager implements vscode.Disposable {
 
   public get port(): number | null {
     return this.activePort;
+  }
+
+  public isRunning(): boolean {
+    return this.process !== null && !this.process.killed && this.activePort !== null;
+  }
+
+  public async ensureRunning(workspaceRoot: string, desiredPort = 0): Promise<number> {
+    if (this.isRunning() && this.activePort) {
+      return this.activePort;
+    }
+    return this.start(workspaceRoot, desiredPort);
   }
 
   public async start(workspaceRoot: string, desiredPort = 0): Promise<number> {
@@ -58,6 +71,7 @@ export class ProcessManager implements vscode.Disposable {
             if (data.event === 'daemon_ready' && data.port) {
               this.activePort = Number(data.port);
               this.restartAttempts = 0;
+              this.onDidRestartEmitter.fire(this.activePort);
               if (!resolved) {
                 resolved = true;
                 resolve(this.activePort);
@@ -143,6 +157,7 @@ export class ProcessManager implements vscode.Disposable {
   }
 
   public dispose(): void {
+    this.onDidRestartEmitter.dispose();
     this.stop().catch(() => {});
   }
 }

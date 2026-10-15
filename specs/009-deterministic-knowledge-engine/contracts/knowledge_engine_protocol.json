@@ -1,0 +1,361 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "DeterministicKnowledgeEngineProtocol",
+  "description": "JSON-RPC 2.0 interface contract between VS Code Extension Host and native Rust engine sidecar.",
+  "type": "object",
+  "definitions": {
+    "JsonRpcRequest": {
+      "type": "object",
+      "required": ["jsonrpc", "id", "method"],
+      "properties": {
+        "jsonrpc": { "type": "string", "enum": ["2.0"] },
+        "id": { "type": ["string", "integer"] },
+        "method": { "type": "string" },
+        "params": { "type": "object" }
+      }
+    },
+    "JsonRpcResponse": {
+      "type": "object",
+      "required": ["jsonrpc", "id"],
+      "properties": {
+        "jsonrpc": { "type": "string", "enum": ["2.0"] },
+        "id": { "type": ["string", "integer"] },
+        "result": { "type": "object" },
+        "error": {
+          "type": "object",
+          "required": ["code", "message"],
+          "properties": {
+            "code": { "type": "integer" },
+            "message": { "type": "string" },
+            "data": { "type": "object" }
+          }
+        }
+      }
+    },
+    "StructuralFinding": {
+      "type": "object",
+      "required": ["id", "methodology", "pillar", "tier", "severity", "document_id", "line_number", "rule_key", "message", "evidence_metrics", "remediation_hint"],
+      "properties": {
+        "id": { "type": "string" },
+        "methodology": { "type": "string" },
+        "pillar": { "type": "string", "enum": ["integrity", "structure", "consistency", "discoverability", "freshness"] },
+        "tier": { "type": "string", "enum": ["tier_a_fully_deterministic", "tier_b_candidate_generation", "tier_c_decision_support", "tier_d_not_reliably_determinable"] },
+        "severity": { "type": "string", "enum": ["critical", "high", "medium", "low", "informational"] },
+        "document_id": { "type": "string" },
+        "fragment_anchor": { "type": ["string", "null"] },
+        "line_number": { "type": "integer" },
+        "rule_key": { "type": "string" },
+        "message": { "type": "string" },
+        "evidence_metrics": { "type": "object" },
+        "remediation_hint": { "type": "string" }
+      }
+    },
+    "PillarHealth": {
+      "type": "object",
+      "required": ["raw_score", "legacy_debt_count", "new_regressions_count", "findings"],
+      "properties": {
+        "raw_score": { "type": "number", "minimum": 0.0, "maximum": 100.0 },
+        "legacy_debt_count": { "type": "integer" },
+        "new_regressions_count": { "type": "integer" },
+        "findings": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/StructuralFinding" }
+        }
+      }
+    },
+    "HealthScore": {
+      "type": "object",
+      "required": ["analysis_id", "aggregate_score", "profile_mode", "integrity", "structure", "consistency", "discoverability", "freshness"],
+      "properties": {
+        "analysis_id": { "type": "string" },
+        "aggregate_score": { "type": "number", "minimum": 0.0, "maximum": 100.0 },
+        "profile_mode": { "type": "string", "enum": ["ai_oriented", "human_oriented", "balanced", "custom"] },
+        "integrity": { "$ref": "#/definitions/PillarHealth" },
+        "structure": { "$ref": "#/definitions/PillarHealth" },
+        "consistency": { "$ref": "#/definitions/PillarHealth" },
+        "discoverability": { "$ref": "#/definitions/PillarHealth" },
+        "freshness": { "$ref": "#/definitions/PillarHealth" }
+      }
+    },
+    "StrategyRecommendation": {
+      "type": "object",
+      "required": ["strategy_id", "strategy_type", "role", "target_documents", "fit_score", "implementation_cost", "expected_benefits", "countervailing_trade_offs", "hard_constraints_satisfied"],
+      "properties": {
+        "strategy_id": { "type": "string" },
+        "strategy_type": { "type": "string", "enum": ["preserve_document", "split_decompose", "extract_facet_metadata", "consolidate_index", "merge_candidates", "standardize_terminology"] },
+        "role": { "type": "string", "enum": ["primary", "supporting", "alternative", "mutually_exclusive"] },
+        "target_documents": { "type": "array", "items": { "type": "string" } },
+        "fit_score": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "implementation_cost": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "expected_benefits": { "type": "array", "items": { "type": "string" } },
+        "countervailing_trade_offs": { "type": "array", "items": { "type": "string" } },
+        "hard_constraints_satisfied": { "type": "boolean" }
+      }
+    },
+    "ReferenceEdge": {
+      "type": "object",
+      "required": ["target_document", "is_resolved", "line_number"],
+      "properties": {
+        "target_document": { "type": "string" },
+        "target_fragment": { "type": ["string", "null"] },
+        "relation_type": { "type": ["string", "null"] },
+        "is_resolved": { "type": "boolean" },
+        "line_number": { "type": "integer" }
+      }
+    },
+    "FragmentMetadata": {
+      "type": "object",
+      "required": ["anchor", "heading_text", "heading_level", "line_start", "line_end", "raw_token_count"],
+      "properties": {
+        "anchor": { "type": "string" },
+        "heading_text": { "type": "string" },
+        "heading_level": { "type": "integer" },
+        "line_start": { "type": "integer" },
+        "line_end": { "type": "integer" },
+        "raw_token_count": { "type": "integer" }
+      }
+    },
+    "DocumentNode": {
+      "type": "object",
+      "required": ["id", "relative_path", "title", "raw_token_count", "fragments", "outgoing_references"],
+      "properties": {
+        "id": { "type": "string" },
+        "relative_path": { "type": "string" },
+        "title": { "type": "string" },
+        "raw_token_count": { "type": "integer" },
+        "frontmatter_schema": { "type": ["string", "null"] },
+        "fragments": { "type": "array", "items": { "$ref": "#/definitions/FragmentMetadata" } },
+        "outgoing_references": { "type": "array", "items": { "$ref": "#/definitions/ReferenceEdge" } },
+        "git_last_modified_commit": { "type": "string" },
+        "git_last_modified_timestamp": { "type": "integer" }
+      }
+    },
+    "GraphTopology": {
+      "type": "object",
+      "required": ["nodes", "edges"],
+      "properties": {
+        "nodes": { "type": "array", "items": { "$ref": "#/definitions/DocumentNode" } },
+        "edges": { "type": "array", "items": { "$ref": "#/definitions/ReferenceEdge" } }
+      }
+    },
+    "TransformationAction": {
+      "type": "object",
+      "required": ["action_type"],
+      "properties": {
+        "action_type": { "type": "string", "enum": ["move_file", "update_frontmatter", "retarget_link", "extract_section_to_file"] },
+        "source": { "type": "string" },
+        "destination": { "type": "string" },
+        "file": { "type": "string" },
+        "key": { "type": "string" },
+        "value": {},
+        "line": { "type": "integer" },
+        "old_target": { "type": "string" },
+        "new_target": { "type": "string" },
+        "source_file": { "type": "string" },
+        "anchor": { "type": "string" },
+        "new_file": { "type": "string" }
+      }
+    },
+    "ReMeasurementDelta": {
+      "type": "object",
+      "required": ["aggregate_score_delta", "raw_token_delta", "pillar_deltas"],
+      "properties": {
+        "aggregate_score_delta": { "type": "number" },
+        "raw_token_delta": { "type": "integer" },
+        "graph_diameter_delta": { "type": "integer" },
+        "pillar_deltas": {
+          "type": "object",
+          "properties": {
+            "integrity": { "type": "number" },
+            "structure": { "type": "number" },
+            "consistency": { "type": "number" },
+            "discoverability": { "type": "number" },
+            "freshness": { "type": "number" }
+          }
+        }
+      }
+    },
+    "OptimizationProfile": {
+      "type": "object",
+      "required": ["mode", "profile_version", "weights", "thresholds", "constraints"],
+      "properties": {
+        "mode": { "type": "string", "enum": ["ai_oriented", "human_oriented", "balanced", "custom"] },
+        "profile_version": { "type": "string" },
+        "weights": { "type": "object" },
+        "thresholds": { "type": "object" },
+        "constraints": { "type": "object" }
+      }
+    },
+    "ContextTrace": {
+      "type": "object",
+      "required": ["query", "trace_path", "hop_count", "total_tokens", "context_reduction_percent", "relevance_score"],
+      "properties": {
+        "query": { "type": "string" },
+        "target_fragment": { "type": ["string", "null"] },
+        "trace_path": { "type": "array", "items": { "type": "string" } },
+        "hop_count": { "type": "integer" },
+        "total_tokens": { "type": "integer" },
+        "context_reduction_percent": { "type": "number" },
+        "relevance_score": { "type": "number" }
+      }
+    }
+  },
+  "methods": {
+    "engine/analyzeRepository": {
+      "description": "Performs full or incremental observation, measurement, and diagnosis across all 18 KOS methodologies.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "workspace_root": { "type": "string" },
+          "changed_files": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "force_cold_scan": { "type": "boolean", "default": false }
+        },
+        "required": ["workspace_root"]
+      },
+      "result": {
+        "type": "object",
+        "required": ["analysis_id", "health_score", "graph", "findings", "recommendations"],
+        "properties": {
+          "analysis_id": { "type": "string" },
+          "health_score": { "$ref": "#/definitions/HealthScore" },
+          "graph": { "$ref": "#/definitions/GraphTopology" },
+          "findings": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/StructuralFinding" }
+          },
+          "recommendations": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/StrategyRecommendation" }
+          }
+        }
+      }
+    },
+    "engine/getGraphTopology": {
+      "description": "Retrieves the full 2D document graph topology and fragment metadata for the Structure drawer.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "workspace_root": { "type": "string" }
+        },
+        "required": ["workspace_root"]
+      },
+      "result": {
+        "type": "object",
+        "required": ["graph"],
+        "properties": {
+          "graph": { "$ref": "#/definitions/GraphTopology" }
+        }
+      }
+    },
+    "engine/setProfileMode": {
+      "description": "Updates active Documentation Evolution Mode.",
+      "params": {
+        "type": "object",
+        "required": ["mode"],
+        "properties": {
+          "mode": {
+            "type": "string",
+            "enum": ["ai_oriented", "human_oriented", "balanced", "custom"]
+          }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["status", "active_profile"],
+        "properties": {
+          "status": { "type": "string", "enum": ["success"] },
+          "active_profile": { "type": "object" }
+        }
+      }
+    },
+    "engine/updateCustomProfile": {
+      "description": "Updates custom weights, thresholds, and constraints for the Custom profile mode.",
+      "params": {
+        "type": "object",
+        "required": ["weights", "thresholds", "constraints"],
+        "properties": {
+          "weights": { "type": "object" },
+          "thresholds": { "type": "object" },
+          "constraints": { "type": "object" }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["status", "active_profile"],
+        "properties": {
+          "status": { "type": "string", "enum": ["success"] },
+          "active_profile": { "type": "object" }
+        }
+      }
+    },
+    "engine/generateTransformationPlan": {
+      "description": "Generates an atomic transformation plan with unified diff preview, action list, and cryptographic approval token.",
+      "params": {
+        "type": "object",
+        "required": ["strategy_id"],
+        "properties": {
+          "strategy_id": { "type": "string" }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["plan_id", "approval_token", "target_files", "unified_diff", "projected_score_delta", "actions"],
+        "properties": {
+          "plan_id": { "type": "string" },
+          "approval_token": { "type": "string" },
+          "target_files": { "type": "array", "items": { "type": "string" } },
+          "unified_diff": { "type": "string" },
+          "projected_score_delta": { "type": "number" },
+          "actions": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/TransformationAction" }
+          }
+        }
+      }
+    },
+    "engine/applyTransformationPlan": {
+      "description": "Applies verified transformation plan to disk requiring valid cryptographic approval token.",
+      "params": {
+        "type": "object",
+        "required": ["plan_id", "approval_token"],
+        "properties": {
+          "plan_id": { "type": "string" },
+          "approval_token": { "type": "string" }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["status", "re_measurement_delta"],
+        "properties": {
+          "status": { "type": "string", "enum": ["applied"] },
+          "re_measurement_delta": { "$ref": "#/definitions/ReMeasurementDelta" }
+        }
+      }
+    },
+    "engine/traceContext": {
+      "description": "Executes deterministic Context Trace from active harness entry point to target query/fragment.",
+      "params": {
+        "type": "object",
+        "required": ["query"],
+        "properties": {
+          "query": { "type": "string" },
+          "target_fragment": { "type": "string" }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["trace_path", "hop_count", "total_tokens", "context_reduction_percent", "relevance_score"],
+        "properties": {
+          "trace_path": { "type": "array", "items": { "type": "string" } },
+          "hop_count": { "type": "integer" },
+          "total_tokens": { "type": "integer" },
+          "context_reduction_percent": { "type": "number" },
+          "relevance_score": { "type": "number" }
+        }
+      }
+    }
+  }
+}

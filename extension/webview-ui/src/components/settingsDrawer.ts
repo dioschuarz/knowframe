@@ -10,8 +10,119 @@
  * - Issues (Node counts, protocol metrics, cache stats)
  */
 
-import type { ClusterColorGroup, NoteNode } from '../../../src/types/graph.ts';
+import type { ClusterColorGroup, NoteNode, TokenSummary } from '../../../src/types/graph.ts';
 import type { KnowledgeIssue, KnowledgeIssuesReport } from '../../../src/types/admission.ts';
+import type {
+  HarnessEntryPoint,
+  AIOrientedCapabilityMatrix,
+  SkillDefinition,
+  ProcedureCandidate,
+  DirectoryStructureMetrics,
+  HarnessToolStatus,
+} from '../../../src/types/governance.ts';
+
+export const FALLBACK_HARNESS_TOOLS: HarnessToolStatus[] = [
+  {
+    id: 'prek',
+    name: 'prek (Rust Git Hook Orchestrator)',
+    category: 'core',
+    binary: 'prek',
+    description: 'Rust-native Git hook orchestrator enforcing sub-500ms pre-commit admission control & post-commit sync.',
+    is_installed: false,
+    install_command: 'cargo install prek',
+    required_for: 'Dual Git Hooks (Tier 1)',
+  },
+  {
+    id: 'uv',
+    name: 'uv (Fast Python Environment & Tools)',
+    category: 'runtime',
+    binary: 'uv',
+    description: 'Fast Python tool & virtualenv manager mandated by Mandatory Rule 10 for script execution and transcripts.',
+    is_installed: false,
+    install_command: 'curl -LsSf https://astral.sh/uv/install.sh | sh',
+    required_for: 'Python Skills & Scripts (Rule 10)',
+  },
+  {
+    id: 'ai_memory',
+    name: 'ai-memory (Cross-Session Memory CLI)',
+    category: 'core',
+    binary: 'ai-memory',
+    description: 'Cross-session long-term memory engine and handoffs manager mandated in root AGENTS.md.',
+    is_installed: false,
+    install_command: 'cargo install ai-memory',
+    required_for: 'Persistent Agent Memory',
+  },
+  {
+    id: 'notebooklm',
+    name: 'notebooklm (NotebookLM CLI & Research)',
+    category: 'core',
+    binary: 'notebooklm',
+    description: 'Zero-token grounded RAG research engine for gap closing and technical video studies.',
+    is_installed: false,
+    install_command: 'uv tool install notebooklm-py',
+    required_for: 'Grounded RAG & Gap Closing',
+  },
+  {
+    id: 'claude',
+    name: 'Claude Code (Anthropic CLI Agent)',
+    category: 'agent',
+    binary: 'claude',
+    description: 'Anthropic agentic CLI for code modifications, subagents, and CLAUDE.md execution.',
+    is_installed: false,
+    install_command: 'npm install -g @anthropic-ai/claude-code',
+    required_for: 'CLAUDE.md Agent Harness',
+  },
+  {
+    id: 'agy',
+    name: 'Antigravity CLI (Google DeepMind)',
+    category: 'agent',
+    binary: 'agy',
+    description: 'Antigravity pair-programming agent CLI and skills runner for GEMINI.md.',
+    is_installed: false,
+    install_command: 'uv tool install antigravity-cli',
+    required_for: 'GEMINI.md Agent Harness',
+  },
+  {
+    id: 'codex',
+    name: 'Codex CLI (OpenAI)',
+    category: 'agent',
+    binary: 'codex',
+    description: 'OpenAI Codex CLI agent executing instructions in AGENTS.md.',
+    is_installed: false,
+    install_command: 'npm install -g @openai/codex',
+    required_for: 'AGENTS.md Agent Harness',
+  },
+  {
+    id: 'cursor',
+    name: 'Cursor CLI',
+    category: 'agent',
+    binary: 'cursor',
+    description: 'Cursor AI code editor CLI and agent rule evaluator (.cursor/rules).',
+    is_installed: false,
+    install_command: 'curl -fsSL https://cursor.com -o cursor.AppImage',
+    required_for: 'Cursor Rules Harness',
+  },
+  {
+    id: 'gh',
+    name: 'GitHub CLI & Copilot (gh)',
+    category: 'agent',
+    binary: 'gh',
+    description: 'GitHub CLI with Copilot extension for command assistance & PR reviews.',
+    is_installed: false,
+    install_command: 'gh extension install github/gh-copilot',
+    required_for: 'GitHub Copilot Harness',
+  },
+  {
+    id: 'graphify',
+    name: 'graphify (Code Architecture Graph Extractor)',
+    category: 'core',
+    binary: 'graphify',
+    description: 'Optional offline diagnostic tool for observed code relations and AST dependency extraction. Passively supplements LLM Wiki without mutating canonical markdown.',
+    is_installed: false,
+    install_command: 'uv tool install graphifyy',
+    required_for: 'Optional Code Diagnostics',
+  },
+];
 import type {
   DocumentationOrientation,
   Tier1Objectives,
@@ -37,6 +148,7 @@ import {
   DEFAULT_PALETTE,
   CLUSTER_PALETTE_SWATCHES,
 } from './colorManager.ts';
+import { formatCompactNumber } from '../utils/numberFormat.ts';
 
 export const DEFAULT_TIER1_OBJECTIVES: Tier1Objectives = {
   aiDiscoverability: 'high',
@@ -62,17 +174,18 @@ export const DEFAULT_TIER2_PARAMETERS: Tier2Parameters = {
 };
 
 export type DrawerPrimaryTab = 'insights' | 'settings';
-export type InsightsSubTab = 'health' | 'structure' | 'evolution';
-export type SettingsSubTab = 'knowledge' | 'exclusions' | 'clusters' | 'git_harness';
+export type InsightsSubTab = 'health' | 'structure' | 'evolution' | 'load';
+export type SettingsSubTab = 'knowledge' | 'exclusions' | 'clusters' | 'git' | 'harness' | 'git_harness';
 export type SettingsTab =
   | InsightsSubTab
   | SettingsSubTab
   | 'diagnostics' // backwards-compatibility alias for health
-  | 'git_sync'    // backwards-compatibility alias for git_harness
-  | 'advanced';   // backwards-compatibility alias for git_harness
+  | 'git_sync'    // backwards-compatibility alias for git
+  | 'advanced';   // backwards-compatibility alias for git
 
 export interface SettingsDrawerProps {
   activeTab: SettingsTab;
+  tokenSummary?: TokenSummary | null;
   primaryHub?: string | null;
   brokenLinksCount?: number;
   scanExclusions: string[];
@@ -95,6 +208,9 @@ export interface SettingsDrawerProps {
   excludedNotes?: number;
   issuesReport?: KnowledgeIssuesReport | null;
   selectedPillarFilter?: string;
+  selectedDebtScope?: 'active' | 'legacy' | 'all';
+  includeExcluded?: boolean;
+  selectedRuleScope?: 'scan' | 'graph';
   structuralSignatures?: StructuralProblemSignature[];
   structuralRecommendations?: StructuralRecommendation[];
   activeOrientation?: DocumentationOrientation;
@@ -107,6 +223,30 @@ export interface SettingsDrawerProps {
   isEvolutionLoading?: boolean;
   generatingPlanRecId?: string | null;   // recId currently being planned (shows spinner)
   planGenerationError?: { recId: string; message: string } | string | null;   // inline error message to display near the button
+  evolutionFindingsPage?: number;
+  evolutionFindingsPageSize?: number;
+  selectedKosFilter?: string;
+  evolutionPillarFilter?: string;
+  evolutionSignaturesPage?: number;
+  evolutionSignaturesPageSize?: number;
+  selectedSignatureTypeFilter?: string;
+  harnessStatus?: {
+    harnesses: HarnessEntryPoint[];
+    active_harness: HarnessEntryPoint | null;
+    capability_matrix?: AIOrientedCapabilityMatrix;
+  } | null;
+  skills?: SkillDefinition[];
+  procedureCandidates?: ProcedureCandidate[];
+  directoryMetrics?: DirectoryStructureMetrics | null;
+  selectedPrepActiveHarness?: string;
+  toolSelection?: {
+    cursor?: boolean;
+    codex?: boolean;
+    agy?: boolean;
+    claude?: boolean;
+    copilot?: boolean;
+  };
+  harnessTools?: HarnessToolStatus[];
 }
 
 export interface SettingsDrawerCallbacks {
@@ -114,17 +254,39 @@ export interface SettingsDrawerCallbacks {
   onChangeHub?: () => void;
   onFixBrokenLinks?: () => void;
   onRescanVault?: () => void;
+  onSelectActiveHarness?: (harnessFile: string) => void;
+  onInitializeHarness?: (targetHarness?: string) => void;
+  onConfigureHarnessBase?: (options: {
+    active_harness?: string;
+    enabled_harnesses: string[];
+    create_folders?: string[];
+    consolidate_index?: boolean;
+    clean_unused?: boolean;
+  }) => void;
+  onSyncHarnesses?: () => void;
+  onRequestSkillCatalog?: () => void;
   onAddExclusion?: (pattern: string, scope: 'scan' | 'graph') => void;
   onDeleteExclusion?: (pattern: string, scope: 'scan' | 'graph') => void;
+  onRequestExclusions?: () => void;
   onTestPreview?: (pattern: string) => void;
   onSaveColorGroups?: (groups: ClusterColorGroup[]) => void;
   onInstallGitHooks?: () => void;
   onInstallLLMWikiSkill?: () => void;
+  onInstallHarnessTool?: (toolId: string) => void;
+  onRequestHarnessTools?: () => void;
+  onRequestHarnessStatus?: () => void;
   onCaptureBaseline?: () => void;
   onToggleThreshold?: (key: string, enabled: boolean) => void;
   onOpenFile?: (filePath: string, line?: number) => void;
   onFixBrokenLink?: (source: string, target: string, line?: number) => void;
   onRequestIssues?: (pillar?: string) => void;
+  onRequestIssuesWithOptions?: (options: {
+    include_debt?: boolean;
+    include_excluded?: boolean;
+    filter_path?: string;
+    pillar?: string;
+    limit?: number;
+  }) => void;
   onRequestEvolution?: () => void;
   onSelectOrientation?: (orientation: DocumentationOrientation) => void;
   onToggleCustomDrawer?: (isOpen: boolean) => void;
@@ -134,8 +296,12 @@ export interface SettingsDrawerCallbacks {
   onResetCustomConfig?: () => void;
   onValidateConstraints?: (constraints: ConstraintRule[]) => void;
   onGeneratePlan?: (recommendationId: string) => void;
+  onGeneratePlanWithStrategies?: (opportunityId: string, selectedStrategies: string[]) => void;
+  onGenerateGovernancePlan?: (strategyType: string, targetFileOrDir: string) => void;
   onReviewPlan?: (planId: string) => void;
   onApplyPlan?: (planId: string) => void;
+  onMarkReviewed?: (docId: string) => void;
+  onOpen?: () => void;
   onClose?: () => void;
 }
 
@@ -148,7 +314,8 @@ export interface SettingsDrawerController {
 
 export function normalizeTab(tab: SettingsTab): InsightsSubTab | SettingsSubTab {
   if (tab === 'diagnostics') return 'health';
-  if (tab === 'git_sync' || tab === 'advanced') return 'git_harness';
+  if (tab === 'git_sync' || tab === 'advanced') return 'git';
+  if (tab === 'git_harness') return 'harness';
   return tab as InsightsSubTab | SettingsSubTab;
 }
 
@@ -167,6 +334,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
     connectedNotes = 0,
     orphanNotes = 0,
     excludedNotes = 0,
+    selectedRuleScope = 'graph',
   } = props;
 
   let tabContentHtml = '';
@@ -260,29 +428,29 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
           <div class="settings-add-rule-box">
             <input type="text" id="input-new-rule" class="settings-input" placeholder="e.g. packages/**/README.md or vendor/**" />
             <div class="settings-scope-dropdown" id="scope-dropdown">
-              <button type="button" class="settings-scope-btn" id="btn-scope-toggle" aria-haspopup="listbox">
-                <span id="label-scope-selected">Graph Tier</span>
+              <button type="button" class="settings-scope-btn" id="btn-scope-toggle" aria-haspopup="listbox" aria-expanded="false" title="Exclusion tier">
+                <span id="label-scope-selected">${selectedRuleScope === 'scan' ? 'Scan' : 'Graph'}</span>
                 <span class="scope-dropdown-arrow">▾</span>
               </button>
-              <div class="settings-scope-menu" id="menu-scope-options" style="display: none;">
-                <div class="scope-menu-item active" data-value="graph">
-                  <div class="scope-item-title">Graph Tier</div>
-                  <div class="scope-item-desc">Hides from graph canvas, preserves link resolution</div>
+              <div class="settings-scope-menu" id="menu-scope-options" style="display: none;" role="listbox">
+                <div class="scope-menu-item ${selectedRuleScope === 'graph' ? 'active' : ''}" data-value="graph" role="option" aria-selected="${selectedRuleScope === 'graph'}">
+                  <span class="scope-item-check" style="${selectedRuleScope === 'graph' ? '' : 'visibility: hidden;'}">✓</span>
+                  <span class="scope-item-title">Graph</span>
                 </div>
-                <div class="scope-menu-item" data-value="scan">
-                  <div class="scope-item-title">Scan Tier</div>
-                  <div class="scope-item-desc">Completely skips parsing during vault index</div>
+                <div class="scope-menu-item ${selectedRuleScope === 'scan' ? 'active' : ''}" data-value="scan" role="option" aria-selected="${selectedRuleScope === 'scan'}">
+                  <span class="scope-item-check" style="${selectedRuleScope === 'scan' ? '' : 'visibility: hidden;'}">✓</span>
+                  <span class="scope-item-title">Scan</span>
                 </div>
               </div>
-              <input type="hidden" id="select-rule-scope" value="graph" />
+              <input type="hidden" id="select-rule-scope" value="${selectedRuleScope}" />
             </div>
             <button class="btn-primary" id="btn-add-rule">+ Add Rule</button>
           </div>
 
-          <div class="settings-subheading">Graph Exclusions (Visual & Context Hiding)</div>
+          <div class="settings-subheading">Graph Exclusions</div>
           <div class="settings-rules-list">${graphRulesHtml}</div>
 
-          <div class="settings-subheading" style="margin-top: 14px;">Scan Exclusions (Completely Ignored)</div>
+          <div class="settings-subheading" style="margin-top: 14px;">Scan Exclusions</div>
           <div class="settings-rules-list">${scanRulesHtml}</div>
         </div>
       `;
@@ -403,8 +571,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
       break;
     }
 
-    case 'git_harness':
-    case 'git_sync': {
+    case 'git': {
       const preActive = props.preCommitHookInstalled ?? gitHooksInstalled;
       const postActive = props.postCommitHookInstalled ?? gitHooksInstalled;
       const bBroken = props.blockOnBrokenLinks ?? true;
@@ -412,25 +579,15 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
       const bDrift = props.blockOnTechnicalDrift ?? false;
       const baseCommitStr = props.baselineCommit || 'Initial (HEAD)';
       const baseDebtNum = props.baselineDebtCount ?? 0;
-      const skillAvailable = props.llmWikiSkillAvailable ?? false;
+      const effectiveToolsList = (props.harnessTools && props.harnessTools.length > 0)
+        ? props.harnessTools
+        : FALLBACK_HARNESS_TOOLS;
+      const prekTool = effectiveToolsList.find(t => t.id === 'prek');
+      const isPrekActive = prekTool?.is_installed ?? false;
 
       tabContentHtml = `
         <div class="settings-section">
-          <div class="settings-skill-card" style="margin-top: 0;">
-            <div class="settings-subheading">LLM-Wiki Skill</div>
-            <p class="settings-desc">Install the workspace skill that documents the complete LLM Wiki CLI and its UI-equivalent workflows.</p>
-            <div class="settings-hook-row">
-              <span class="hook-label">Skill availability:</span>
-              <span class="hook-status-badge ${skillAvailable ? 'status-clean' : 'status-warn'}">
-                ${skillAvailable ? '● Available' : '○ Not Installed'}
-              </span>
-            </div>
-            <button class="btn-secondary" id="btn-install-llm-wiki-skill" style="margin-top: 12px;">
-              ${skillAvailable ? 'Reinstall LLM-Wiki Skill' : 'Install LLM-Wiki Skill'}
-            </button>
-          </div>
-
-          <div class="settings-sec-title">Git Hook Integration & Dual Hooks (prek)</div>
+          <div class="settings-sec-title">Git Hook Integration & Dual Hooks</div>
           <p class="settings-desc">
             Dual-process enforcement boundary: pre-commit validates in ephemeral RAM; post-commit incorporates git deltas into persistent knowledge graph.
           </p>
@@ -439,18 +596,31 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             <div class="settings-hook-row">
               <span class="hook-label">1. Pre-Commit Validation:</span>
               <span class="hook-status-badge ${preActive ? 'status-clean' : 'status-warn'}">
-                ${preActive ? '● Active (Admission Gate)' : '○ Not Installed'}
+                ${preActive ? '● Active' : '○ Not Installed'}
               </span>
             </div>
             <div class="settings-hook-row">
               <span class="hook-label">2. Post-Commit Graph Sync:</span>
               <span class="hook-status-badge ${postActive ? 'status-clean' : 'status-warn'}">
-                ${postActive ? '● Active (Ratchet Sync)' : '○ Not Installed'}
+                ${postActive ? '● Active' : '○ Not Installed'}
               </span>
             </div>
             <div class="settings-hook-row">
+              <span class="hook-label">3. prek Orchestrator (Rust):</span>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span class="hook-status-badge ${isPrekActive ? 'status-clean' : 'status-warn'}">
+                  ${isPrekActive ? '● Active' : '○ Not Installed'}
+                </span>
+                ${!isPrekActive ? `
+                  <button class="btn-tiny btn-install-harness-tool" data-tool-id="prek" style="padding: 1px 7px; font-size: 10px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); color: #38bdf8; border-radius: 3px; cursor: pointer;">
+                    Install prek
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+            <div class="settings-hook-row">
               <span class="hook-label">Last Hook Latency:</span>
-              <span class="hook-val">${gitCommitLatencyMs} ms (&le; 500ms ceiling)</span>
+              <span class="hook-val">${gitCommitLatencyMs} ms — &le; 500ms ceiling</span>
             </div>
           </div>
 
@@ -493,7 +663,523 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:5px;"><path d="M2.5 8a5.5 5.5 0 1 1 1.6 3.9L1.5 14M1.5 9.5v4.5h4.5"/></svg>
             Reinstall Dual Git Hooks
           </button>
+        </div>
+      `;
+      break;
+    }
 
+    case 'harness':
+    case 'git_harness': {
+      const skillAvailable = props.llmWikiSkillAvailable ?? false;
+      const harnessStatus = props.harnessStatus;
+      let activeHarness = harnessStatus?.active_harness;
+      let harnesses = harnessStatus?.harnesses ? [...harnessStatus.harnesses] : [];
+
+      // Resilient fallback: if backend governance status has not yet arrived or activeHarness is null,
+      // inspect primaryHub or nodes in the graph for recognized harness entries (AGENTS.md, notes/AGENTS.md, CLAUDE.md, GEMINI.md).
+      if (!activeHarness) {
+        const hubPath = props.primaryHub || '';
+        const matchingNode = props.nodes?.find(n =>
+          n.id === 'AGENTS.md' || n.id === 'notes/AGENTS.md' || n.id.endsWith('AGENTS.md') ||
+          n.filePath === 'AGENTS.md' || n.filePath === 'notes/AGENTS.md' || n.filePath?.endsWith('AGENTS.md') ||
+          n.label?.includes('AGENTS.md') ||
+          n.id === 'CLAUDE.md' || n.id === 'notes/CLAUDE.md' || n.id.endsWith('CLAUDE.md') ||
+          n.filePath === 'CLAUDE.md' || n.filePath === 'notes/CLAUDE.md' || n.filePath?.endsWith('CLAUDE.md') ||
+          n.id === 'GEMINI.md' || n.id === 'notes/GEMINI.md' || n.id.endsWith('GEMINI.md') ||
+          n.filePath === 'GEMINI.md' || n.filePath === 'notes/GEMINI.md' || n.filePath?.endsWith('GEMINI.md') ||
+          (hubPath && (n.id === hubPath || n.filePath === hubPath || n.label === hubPath))
+        );
+        if (matchingNode || (hubPath && (hubPath.endsWith('AGENTS.md') || hubPath.endsWith('CLAUDE.md') || hubPath.endsWith('GEMINI.md')))) {
+          const filePath = matchingNode?.filePath || matchingNode?.id || hubPath || 'AGENTS.md';
+          activeHarness = {
+            file_path: filePath,
+            harness_type: filePath.toLowerCase().includes('claude') ? 'claude_md' : filePath.toLowerCase().includes('gemini') ? 'gemini_md' : 'agents_md',
+            is_primary: true,
+            total_tokens: matchingNode?.tokens || 3270,
+            heading_count: matchingNode?.fragments?.length || 13,
+            embedded_index: null,
+            secondary_layers_detected: [],
+            quality_ratings: {
+              integrity_score: 90,
+              structure_score: 95,
+              consistency_score: 90,
+              discoverability_score: 85,
+              freshness_score: 90,
+              context_efficiency: 85,
+            },
+            last_modified: null,
+          };
+          if (harnesses.length === 0) {
+            harnesses.push(activeHarness);
+          }
+        }
+      }
+
+      const effectiveToolsList = (props.harnessTools && props.harnessTools.length > 0)
+        ? props.harnessTools
+        : FALLBACK_HARNESS_TOOLS;
+
+      const harnessToolsCardHtml = `
+        <div class="harness-tools-catalog-card" id="harness-tools-catalog-card" style="margin-bottom: 16px; border: 1px solid rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.03); padding: 12px; border-radius: 4px;">
+          <div class="harness-header-row" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#38bdf8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14 11.5a2.5 2.5 0 0 1-5 0V9H5.5a2.5 2.5 0 0 1 0-5H9V1.5a2.5 2.5 0 0 1 5 0v10z"/>
+                <path d="M2 9h4M2 13h4"/>
+              </svg>
+              <span style="font-weight: 600; font-size: 13px;">AI Harness & Agent Tooling (Optional Accelerators)</span>
+            </div>
+            <button class="btn-tiny" id="btn-refresh-harness-tools" title="Scan installed tools" style="padding: 2px 8px; font-size: 11px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; border-radius: 3px; cursor: pointer; display: flex; align-items: center; gap: 4px;">
+              <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 8a5.5 5.5 0 1 1 1.6 3.9L1.5 14M1.5 9.5v4.5h4.5"/></svg>
+              Scan Tools
+            </button>
+          </div>
+          <p class="settings-desc" style="margin-top: 4px; margin-bottom: 12px;">
+            LLM Wiki operates completely autonomously out of the box with zero external dependencies. The tools below are optional complementary accelerators for agent memory, dual Git hooks, and multi-agent execution if installed. None are required for LLM Wiki to organize and govern your documentation.
+          </p>
+          <div class="harness-tools-list" style="display: flex; flex-direction: column; gap: 8px;">
+            ${effectiveToolsList.map((tool) => `
+              <div class="harness-tool-item-card" data-tool-id="${tool.id}" style="padding: 10px; border-radius: 4px; border: 1px solid var(--vscode-widget-border, #333333); background: rgba(0, 0, 0, 0.15);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap;">
+                  <div style="flex: 1 1 auto; min-width: 200px;">
+                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                      <strong style="font-size: 12px; color: var(--vscode-foreground);">${tool.name}</strong>
+                      <span class="hook-status-badge ${tool.is_installed ? 'status-clean' : 'status-warn'}">
+                        ${tool.is_installed ? '● Active' : '○ Not Installed'}
+                      </span>
+                      ${tool.required_for ? `<span style="font-size: 9.5px; padding: 1px 5px; border-radius: 3px; background: rgba(255,255,255,0.06); color: var(--vscode-descriptionForeground);">${tool.required_for}</span>` : ''}
+                    </div>
+                    <div style="font-size: 11px; color: var(--vscode-descriptionForeground); margin-top: 4px; line-height: 1.4;">
+                      ${tool.description}
+                    </div>
+                    <div style="font-size: 10.5px; margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                      <code style="color: #38bdf8;">${tool.binary}</code>
+                      ${tool.is_installed && tool.version ? `<span style="opacity: 0.85;">Version: <strong>${tool.version}</strong></span>` : ''}
+                      ${tool.is_installed && tool.bin_path ? `<span style="opacity: 0.65; font-size: 10px;">(${tool.bin_path})</span>` : ''}
+                      ${!tool.is_installed ? `<span style="opacity: 0.75;">Install: <code>${tool.install_command}</code></span>` : ''}
+                    </div>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-top: 2px;">
+                    ${!tool.is_installed ? `
+                      <button class="btn-primary btn-install-harness-tool" data-tool-id="${tool.id}" style="padding: 4px 10px; font-size: 11px; white-space: nowrap; border-radius: 3px; cursor: pointer;">
+                        Install ${tool.binary}
+                      </button>
+                    ` : `
+                      <button class="btn-secondary btn-install-harness-tool" data-tool-id="${tool.id}" style="padding: 3px 8px; font-size: 10.5px; white-space: nowrap; border-radius: 3px; opacity: 0.85; cursor: pointer;" title="Reinstall or update tool via terminal">
+                        Reinstall
+                      </button>
+                    `}
+                  </div>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+
+      const hasAgents = harnesses.some(h => h.file_path === 'AGENTS.md' || h.file_path.endsWith('AGENTS.md'));
+      const hasGemini = harnesses.some(h => h.file_path === 'GEMINI.md' || h.file_path.endsWith('GEMINI.md'));
+      const hasClaude = harnesses.some(h => h.file_path === 'CLAUDE.md' || h.file_path.endsWith('CLAUDE.md'));
+      const hasCopilot = harnesses.some(h => h.file_path === '.github/copilot-instructions.md' || h.file_path.endsWith('copilot-instructions.md'));
+
+      const isCursorChecked = props.toolSelection?.cursor ?? (hasAgents || harnesses.length === 0);
+      const isCodexChecked = props.toolSelection?.codex ?? (hasAgents || harnesses.length === 0);
+      const isAgyChecked = props.toolSelection?.agy ?? (hasGemini || harnesses.length === 0);
+      const isClaudeChecked = props.toolSelection?.claude ?? hasClaude;
+      const isCopilotChecked = props.toolSelection?.copilot ?? hasCopilot;
+
+      const candidateHarnesses = new Set<string>();
+      if (isCursorChecked || isCodexChecked) candidateHarnesses.add(hasAgents ? harnesses.find(h => h.file_path.endsWith('AGENTS.md'))!.file_path : 'AGENTS.md');
+      if (isAgyChecked) candidateHarnesses.add(hasGemini ? harnesses.find(h => h.file_path.endsWith('GEMINI.md'))!.file_path : 'GEMINI.md');
+      if (isClaudeChecked) candidateHarnesses.add(hasClaude ? harnesses.find(h => h.file_path.endsWith('CLAUDE.md'))!.file_path : 'CLAUDE.md');
+      if (isCopilotChecked) candidateHarnesses.add(hasCopilot ? harnesses.find(h => h.file_path.endsWith('copilot-instructions.md'))!.file_path : '.github/copilot-instructions.md');
+      harnesses.forEach(h => candidateHarnesses.add(h.file_path));
+      if (candidateHarnesses.size === 0) candidateHarnesses.add('AGENTS.md');
+
+      const preferredActive = props.selectedPrepActiveHarness
+        || activeHarness?.file_path
+        || (candidateHarnesses.has('AGENTS.md') ? 'AGENTS.md' : Array.from(candidateHarnesses)[0]);
+      const currentActive = candidateHarnesses.has(preferredActive)
+        ? preferredActive
+        : (candidateHarnesses.has('AGENTS.md') ? 'AGENTS.md' : Array.from(candidateHarnesses)[0]);
+
+      const basePrepCardHtml = `
+        <div class="harness-entry-card" id="harness-base-prep-card" style="margin-bottom: 16px; border: 1px solid rgba(56, 189, 248, 0.35); background: rgba(56, 189, 248, 0.03);">
+          <div class="harness-header-row">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#38bdf8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="2" y="3" width="12" height="10" rx="1.5"/>
+                <path d="M5 8h6M8 5v6"/>
+              </svg>
+              <span style="font-weight: 600; font-size: 13px;">AI Tool & Base Preparation</span>
+            </div>
+            <span class="harness-status-pill primary" style="background: rgba(56, 189, 248, 0.15); color: #38bdf8; border: 1px solid rgba(56, 189, 248, 0.3);">Harness Manager</span>
+          </div>
+          <p class="settings-desc" style="margin-top: 6px; margin-bottom: 10px;">
+            Select which AI harnesses and agent tooling environments are used in this project. The system provisions corresponding directories, initializes entry points with embedded <code>## Knowledge Index</code> routing, and removes unselected harness files to eliminate collision debt.
+          </p>
+
+          <div class="harness-tools-selection-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px; background: rgba(0,0,0,0.15); padding: 10px; border-radius: 4px; border: 1px solid var(--vscode-widget-border, #333333);">
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;">
+              <input type="checkbox" id="chk-tool-cursor" ${isCursorChecked ? 'checked' : ''} />
+              <span><strong>Cursor</strong> <small style="opacity: 0.75;">· AGENTS.md + .cursor/rules/</small></span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;">
+              <input type="checkbox" id="chk-tool-codex" ${isCodexChecked ? 'checked' : ''} />
+              <span><strong>Codex</strong> <small style="opacity: 0.75;">· AGENTS.md</small></span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;">
+              <input type="checkbox" id="chk-tool-agy" ${isAgyChecked ? 'checked' : ''} />
+              <span><strong>Agy / Antigravity</strong> <small style="opacity: 0.75;">· GEMINI.md + .agents/</small></span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer;">
+              <input type="checkbox" id="chk-tool-claude" ${isClaudeChecked ? 'checked' : ''} />
+              <span><strong>Claude Code</strong> <small style="opacity: 0.75;">· CLAUDE.md</small></span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; font-size: 12px; cursor: pointer; grid-column: 1 / -1;">
+              <input type="checkbox" id="chk-tool-copilot" ${isCopilotChecked ? 'checked' : ''} />
+              <span><strong>GitHub Copilot</strong> <small style="opacity: 0.75;">· .github/copilot-instructions.md</small></span>
+            </label>
+          </div>
+
+          <div class="harness-prep-options" style="display: flex; flex-direction: column; gap: 6px; margin-bottom: 12px; font-size: 11.5px; opacity: 0.9;">
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" id="chk-prep-create-dirs" checked />
+              <span>Provision directory structures: <code>.agents/skills</code>, <code>.cursor/rules</code></span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" id="chk-prep-consolidate-index" checked />
+              <span>Consolidate pre-existing <code>index.md</code> into active harness</span>
+            </label>
+            <label style="display: flex; align-items: center; gap: 6px; cursor: pointer;">
+              <input type="checkbox" id="chk-prep-clean-unused" checked />
+              <span>Clean & remove unselected harness files from workspace</span>
+            </label>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px;">
+            <div style="display: flex; align-items: center; gap: 8px; flex: 1;">
+              <label style="font-size: 11px; white-space: nowrap; color: var(--vscode-descriptionForeground);">Primary Active:</label>
+              <div class="settings-scope-dropdown" id="prep-active-dropdown">
+                <button type="button" class="settings-scope-btn" id="btn-prep-active-toggle" aria-haspopup="listbox" aria-expanded="false" style="max-width: 180px; padding: 3px 8px; font-size: 11.5px;">
+                  <span id="label-prep-active-selected">${currentActive}</span>
+                  <span class="scope-dropdown-arrow">▾</span>
+                </button>
+                <div class="settings-scope-menu" id="menu-prep-active-options" style="display: none; min-width: 160px;" role="listbox">
+                  ${Array.from(candidateHarnesses).map((cand) => `
+                    <div class="scope-menu-item ${cand === currentActive ? 'active' : ''}" data-value="${cand}" role="option" aria-selected="${cand === currentActive}">
+                      <span class="scope-item-check" style="${cand === currentActive ? '' : 'visibility: hidden;'}">✓</span>
+                      <span class="scope-item-title">${cand}</span>
+                    </div>
+                  `).join('')}
+                </div>
+                <input type="hidden" id="select-prep-active-harness" value="${currentActive}" />
+              </div>
+            </div>
+            <button class="btn-primary" id="btn-prepare-harness-base" style="padding: 4px 12px; font-size: 12px; display: flex; align-items: center; gap: 6px; white-space: nowrap;">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+                <polygon points="9 1 3 9 8 9 7 15 13 7 8 7 9 1"/>
+              </svg>
+              Prepare & Configure Base
+            </button>
+          </div>
+          <div id="prep-base-feedback" style="display: none; margin-top: 8px; font-size: 11px; padding: 6px 10px; border-radius: 4px;"></div>
+        </div>
+      `;
+
+      let harnessCardHtml = '';
+      if (activeHarness) {
+        const ratings = activeHarness.quality_ratings;
+        const secondaryLayers = activeHarness.secondary_layers_detected || [];
+        const embeddedIdx = activeHarness.embedded_index;
+
+        harnessCardHtml = `
+          <div class="harness-entry-card" id="harness-entry-point-card">
+            <div class="harness-header-row">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 3h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>
+                  <path d="M5 6l2 2-2 2M9 10h2"/>
+                </svg>
+                <span style="font-weight: 600; font-size: 13px;">AI Harness Entry Point</span>
+              </div>
+              <span class="harness-status-pill primary">Primary Entry</span>
+            </div>
+            <div style="font-size: 12px; margin-bottom: 8px; display: flex; align-items: center; gap: 8px;">
+              <code style="color: #38bdf8; font-weight: 600;">${activeHarness.file_path}</code>
+              <span style="color: var(--vscode-descriptionForeground);">•</span>
+              <span>${activeHarness.total_tokens.toLocaleString()} tokens</span>
+              <span style="color: var(--vscode-descriptionForeground);">•</span>
+              <span>${activeHarness.heading_count} headings</span>
+            </div>
+            <div class="harness-actions-bar" style="margin-top: 8px; margin-bottom: 10px; display: flex; flex-direction: column; gap: 6px;">
+              ${harnesses.length > 1 ? `
+                <div style="margin-bottom: 6px;">
+                  <label style="font-size: 11px; color: var(--vscode-descriptionForeground); display: block; margin-bottom: 4px;">Primary Active Harness:</label>
+                  <div class="settings-scope-dropdown" id="active-harness-dropdown" style="width: 100%;">
+                    <button type="button" class="settings-scope-btn" id="btn-active-harness-toggle" aria-haspopup="listbox" aria-expanded="false" style="width: 100%; justify-content: space-between; padding: 4px 8px; font-size: 12px;">
+                      <span id="label-active-harness-selected">${currentActive} · ${harnesses.find(h => h.file_path === currentActive)?.harness_type || 'custom'}</span>
+                      <span class="scope-dropdown-arrow">▾</span>
+                    </button>
+                    <div class="settings-scope-menu" id="menu-active-harness-options" style="display: none; width: 100%; min-width: 200px;" role="listbox">
+                      ${harnesses.map(h => `
+                        <div class="scope-menu-item ${h.file_path === currentActive ? 'active' : ''}" data-value="${h.file_path}" role="option" aria-selected="${h.file_path === currentActive}">
+                          <span class="scope-item-check" style="${h.file_path === currentActive ? '' : 'visibility: hidden;'}">✓</span>
+                          <span class="scope-item-title">${h.file_path} <span style="opacity: 0.65; font-size: 11px;">· ${h.harness_type}</span></span>
+                        </div>
+                      `).join('')}
+                    </div>
+                    <input type="hidden" id="select-active-harness" value="${currentActive}" />
+                  </div>
+                </div>
+              ` : ''}
+              <div style="display: flex; gap: 6px; align-items: center; flex-wrap: wrap;">
+                ${['AGENTS.md', 'CLAUDE.md', 'GEMINI.md']
+                  .filter(cand => !harnesses.some(h => h.file_path === cand))
+                  .map(cand => `<button class="btn-tiny btn-init-specific-harness" data-harness="${cand}" style="padding: 2px 8px; font-size: 10.5px; background: rgba(56, 189, 248, 0.12); border: 1px solid rgba(56, 189, 248, 0.3); color: #38bdf8; border-radius: 4px; cursor: pointer;">+ ${cand}</button>`)
+                  .join('')}
+                ${harnesses.length > 1 ? `
+                  <button class="btn-tiny" id="btn-sync-all-harnesses" style="padding: 2px 8px; font-size: 10.5px; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.35); color: #c084fc; border-radius: 4px; cursor: pointer;" title="Review and synchronize Knowledge Index across configured AI harnesses">⚡ Review & Sync Harnesses</button>
+                ` : ''}
+              </div>
+            </div>
+            ${ratings ? `
+            <div class="harness-ratings-grid">
+              <div class="harness-rating-item">
+                <div class="harness-rating-label">Integrity</div>
+                <div class="harness-rating-value">${Math.round(ratings.integrity_score)}%</div>
+              </div>
+              <div class="harness-rating-item">
+                <div class="harness-rating-label">Structure</div>
+                <div class="harness-rating-value">${Math.round(ratings.structure_score)}%</div>
+              </div>
+              <div class="harness-rating-item">
+                <div class="harness-rating-label">Consistency</div>
+                <div class="harness-rating-value">${Math.round(ratings.consistency_score)}%</div>
+              </div>
+              <div class="harness-rating-item">
+                <div class="harness-rating-label">Discoverability</div>
+                <div class="harness-rating-value">${Math.round(ratings.discoverability_score)}%</div>
+              </div>
+              <div class="harness-rating-item">
+                <div class="harness-rating-label">Freshness</div>
+                <div class="harness-rating-value">${Math.round(ratings.freshness_score)}%</div>
+              </div>
+              <div class="harness-rating-item">
+                <div class="harness-rating-label">Context Efficiency</div>
+                <div class="harness-rating-value">${Math.round(ratings.context_efficiency)}%</div>
+              </div>
+            </div>
+            ` : ''}
+            ${embeddedIdx ? `
+              <div style="font-size: 11px; color: var(--vscode-descriptionForeground); margin-top: 6px;">
+                Embedded Knowledge Index: <strong>${embeddedIdx.routes.length} routes</strong> (${Math.round(embeddedIdx.domain_coverage_ratio * 100)}% domain coverage)
+              </div>
+            ` : `
+              <div style="font-size: 11px; color: #f59e0b; margin-top: 6px; display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                <span>⚠️ Missing embedded <code>## Knowledge Index</code> section in entry point</span>
+                <button class="btn-tiny btn-gov-embed-index" data-harness="${activeHarness.file_path}" style="padding: 2px 8px; font-size: 10.5px; background: rgba(56, 189, 248, 0.15); border: 1px solid rgba(56, 189, 248, 0.35); color: #38bdf8; border-radius: 4px; cursor: pointer; white-space: nowrap;">Embed Index</button>
+              </div>
+            `}
+            ${harnessStatus?.capability_matrix ? `
+              <div class="harness-capability-matrix-card" id="governance-capability-scorecard" style="margin-top: 10px; padding: 10px; background: rgba(56, 189, 248, 0.05); border: 1px solid rgba(56, 189, 248, 0.2); border-radius: 4px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                  <span style="font-size: 11.5px; font-weight: 700; color: #38bdf8;">4-Capability Governance Model</span>
+                  <span style="font-size: 12px; font-weight: 800; color: #38bdf8;">Overall: ${Math.round(harnessStatus.capability_matrix.overall_governance_score)}/100</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; text-align: center;">
+                  <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 4px; padding: 4px;">
+                    <div style="font-size: 9px; color: var(--vscode-descriptionForeground);">Entry</div>
+                    <div style="font-size: 12px; font-weight: 700; margin-top: 2px;">${Math.round(harnessStatus.capability_matrix.entry_score)}%</div>
+                  </div>
+                  <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 4px; padding: 4px;">
+                    <div style="font-size: 9px; color: var(--vscode-descriptionForeground);">Discovery</div>
+                    <div style="font-size: 12px; font-weight: 700; margin-top: 2px;">${Math.round(harnessStatus.capability_matrix.discovery_score)}%</div>
+                  </div>
+                  <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 4px; padding: 4px;">
+                    <div style="font-size: 9px; color: var(--vscode-descriptionForeground);">Retrieval</div>
+                    <div style="font-size: 12px; font-weight: 700; margin-top: 2px;">${Math.round(harnessStatus.capability_matrix.retrieval_score)}%</div>
+                  </div>
+                  <div style="background: rgba(255, 255, 255, 0.03); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 4px; padding: 4px;">
+                    <div style="font-size: 9px; color: var(--vscode-descriptionForeground);">Reuse</div>
+                    <div style="font-size: 12px; font-weight: 700; margin-top: 2px;">${Math.round(harnessStatus.capability_matrix.reuse_score)}%</div>
+                  </div>
+                </div>
+              </div>
+            ` : ''}
+            ${secondaryLayers.map(sec => `
+              <div class="secondary-layer-alert-card" style="min-width: 0; max-width: 100%; box-sizing: border-box;">
+                <div class="secondary-layer-alert-title" style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 8px; min-width: 0; max-width: 100%; box-sizing: border-box;">
+                  <span style="display: flex; align-items: flex-start; gap: 6px; min-width: 0; max-width: 100%; flex: 1 1 auto; word-break: break-all; overflow-wrap: anywhere;">
+                    <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" style="flex-shrink: 0; margin-top: 2px;"><path d="M8 2l6 11H2L8 2zM8 6v3M8 11h.01"/></svg>
+                    <span>Secondary Routing Layer: <code style="word-break: break-all; overflow-wrap: anywhere; white-space: normal;">${sec.file_path}</code></span>
+                  </span>
+                  <button class="btn-tiny btn-gov-eliminate-secondary" data-target="${sec.file_path}" style="padding: 4px 8px; font-size: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; border-radius: 4px; cursor: pointer; white-space: normal; word-break: break-all; overflow-wrap: anywhere; text-align: left; max-width: 100%; line-height: 1.35; display: inline-block; box-sizing: border-box;">Safely Remove ${sec.file_path}</button>
+                </div>
+                <div class="secondary-layer-alert-desc" style="word-break: break-word; overflow-wrap: anywhere; white-space: normal; min-width: 0;">
+                  ${sec.description} (${sec.outgoing_routes_count} outgoing routes, +${sec.intermediate_hops} hops, -${sec.penalty_points} penalty points).
+                  <br/><em>${sec.recommendation_hint}</em>
+                </div>
+              </div>
+            `).join('')}
+          </div>
+        `;
+      } else {
+        harnessCardHtml = `
+          <div class="harness-entry-card" id="harness-entry-point-card">
+            <div class="harness-header-row">
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#f59e0b" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M2 3h12a1 1 0 0 1 1 1v8a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/>
+                  <path d="M5 6l2 2-2 2M9 10h2"/>
+                </svg>
+                <span style="font-weight: 600; font-size: 13px;">AI Harness Entry Point</span>
+              </div>
+              <span class="harness-status-pill" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b; border: 1px solid rgba(245, 158, 11, 0.4);">Not Detected</span>
+            </div>
+            <p class="settings-desc" style="margin-top: 6px; margin-bottom: 12px;">
+              No standard AI Harness Entry Point (<code>AGENTS.md</code>, <code>CLAUDE.md</code>, <code>GEMINI.md</code>) detected. AI agents lack a deterministic root navigation index.
+            </p>
+            <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+              <button class="btn-primary btn-init-specific-harness" id="btn-init-harness" data-harness="AGENTS.md">
+                Initialize AGENTS.md
+              </button>
+              <button class="btn-secondary btn-init-specific-harness" data-harness="CLAUDE.md" style="padding: 4px 10px; font-size: 12px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; cursor: pointer;">
+                Initialize CLAUDE.md
+              </button>
+              <button class="btn-secondary btn-init-specific-harness" data-harness="GEMINI.md" style="padding: 4px 10px; font-size: 12px; background: rgba(255, 255, 255, 0.08); border: 1px solid var(--vscode-dropdown-border); border-radius: 4px; cursor: pointer;">
+                Initialize GEMINI.md
+              </button>
+            </div>
+          </div>
+        `;
+      }
+
+      const skills = props.skills || [];
+      const procedureCandidates = props.procedureCandidates || [];
+
+      const skillsCatalogHtml = `
+        <div class="skills-catalog-card" id="skills-catalog-card">
+          <div class="skill-header-row">
+            <div style="display: flex; align-items: center; gap: 8px;">
+              <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#a855f7" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M4 2v12l4-2 4 2V2z"/>
+              </svg>
+              <span style="font-weight: 600; font-size: 13px;">Agent Skills Catalog</span>
+            </div>
+            <button class="btn-tiny" id="btn-refresh-skills" title="Rescan skills">
+              <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M2.5 8a5.5 5.5 0 1 1 1.6 3.9L1.5 14M1.5 9.5v4.5h4.5"/></svg>
+              Scan
+            </button>
+          </div>
+          <p class="settings-desc" style="margin-top: 4px; margin-bottom: 8px;">
+            Reusable operational capabilities defined in <code>.agents/skills/</code> conforming to the Agent Skill Standard.
+          </p>
+
+          ${skills.length === 0 ? `
+            <div style="font-size: 11px; color: var(--vscode-descriptionForeground); font-style: italic; padding: 6px 0;">
+              No packaged skills discovered in repository.
+            </div>
+          ` : `
+            <div class="skills-list">
+              ${skills.map(skill => {
+                let badgeClass = 'valid';
+                let badgeLabel = 'Valid';
+                if (skill.status === 'broken_asset_reference') {
+                  badgeClass = 'broken';
+                  badgeLabel = 'Broken Asset';
+                } else if (skill.status === 'missing_manifest') {
+                  badgeClass = 'missing';
+                  badgeLabel = 'Missing Skill.md';
+                } else if (skill.status === 'duplicate_capability') {
+                  badgeClass = 'duplicate';
+                  badgeLabel = 'Duplicate Capability';
+                }
+
+                return `
+                  <div class="skill-item-card">
+                    <div class="skill-header-row">
+                      <div class="skill-name">${skill.name || skill.skill_id}</div>
+                      <span class="skill-badge ${badgeClass}">${badgeLabel}</span>
+                    </div>
+                    <div style="font-size: 11px; color: var(--vscode-descriptionForeground); margin-bottom: 6px;">
+                      ${skill.description || 'No description provided.'}
+                    </div>
+                    <div style="font-size: 10.5px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center;">
+                      <code style="color: #a855f7;">${skill.dir_path}</code>
+                      ${skill.unreferenced ? '<span style="color: #f59e0b; background: rgba(245, 158, 11, 0.1); padding: 1px 5px; border-radius: 4px;">Unreferenced</span>' : ''}
+                      ${skill.overlap_ids && skill.overlap_ids.length > 0 ? `<span style="color: #c084fc; background: rgba(192, 132, 252, 0.1); padding: 1px 5px; border-radius: 4px;">Overlap: ${skill.overlap_ids.join(', ')}</span>` : ''}
+                    </div>
+                    ${skill.assets && skill.assets.length > 0 ? `
+                      <div style="margin-top: 6px; padding-top: 6px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 10px;">
+                        ${skill.assets.map(a => `
+                          <div style="display: flex; align-items: center; gap: 4px; color: ${a.exists_on_disk ? 'var(--vscode-descriptionForeground)' : '#f87171'};">
+                            <span>${a.exists_on_disk ? '✓' : '✗'}</span>
+                            <span>[${a.asset_type}] ${a.file_path}</span>
+                            ${!a.exists_on_disk ? '<strong>· missing on disk</strong>' : ''}
+                          </div>
+                        `).join('')}
+                      </div>
+                    ` : ''}
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          `}
+
+          ${procedureCandidates.length > 0 ? `
+            <div style="margin-top: 14px; padding-top: 10px; border-top: 1px solid var(--vscode-widget-border, #333333);">
+              <div style="font-size: 12px; font-weight: 600; color: #38bdf8; display: flex; align-items: center; gap: 6px; margin-bottom: 6px;">
+                <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 2"/></svg>
+                Procedure Candidates for Skill Promotion (${procedureCandidates.length})
+              </div>
+              <p class="settings-desc" style="margin-bottom: 8px;">
+                Repeated procedural sequences detected across multiple documents meeting the &ge; 70% recurrence threshold (FR-023).
+              </p>
+              ${procedureCandidates.map(cand => `
+                <div class="procedure-candidate-card">
+                  <div style="display: flex; justify-content: space-between; align-items: center; gap: 8px;">
+                    <strong style="font-size: 12px; color: var(--vscode-editor-foreground);">${cand.recommended_skill_name}</strong>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                      <span style="font-size: 10px; font-weight: 600; color: #38bdf8; background: rgba(56, 189, 248, 0.15); padding: 2px 6px; border-radius: 3px;">
+                        ${Math.round(cand.recurrence_score * 100)}% Recurrence · ${cand.occurrence_count} docs
+                      </span>
+                      <button class="btn-tiny btn-gov-promote-skill" data-target="${cand.source_documents[0] || ''}" data-skill-name="${cand.recommended_skill_name}" style="padding: 2px 8px; font-size: 10px; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.35); color: #c084fc; border-radius: 4px; cursor: pointer; white-space: nowrap;">Promote to Skill</button>
+                    </div>
+                  </div>
+                  <ol class="procedure-step-list">
+                    ${cand.step_signatures.map(step => `<li>${step}</li>`).join('')}
+                  </ol>
+                  <div class="procedure-meta-row">
+                    <span>Sources: ${cand.source_documents.map(d => `<code>${d}</code>`).join(', ')}</span>
+                    ${cand.associated_scripts && cand.associated_scripts.length > 0 ? `<span>• Scripts: ${cand.associated_scripts.map(s => `<code>${s}</code>`).join(', ')}</span>` : ''}
+                  </div>
+                </div>
+              `).join('')}
+            </div>
+          ` : ''}
+        </div>
+      `;
+
+      tabContentHtml = `
+        <div class="settings-section">
+          ${harnessToolsCardHtml}
+          ${basePrepCardHtml}
+          ${harnessCardHtml}
+          ${skillsCatalogHtml}
+          <div class="settings-skill-card" style="margin-top: 0;">
+            <div class="settings-subheading">LLM-Wiki Skill</div>
+            <p class="settings-desc">Install the workspace skill that documents the complete LLM Wiki CLI and its UI-equivalent workflows.</p>
+            <div class="settings-hook-row">
+              <span class="hook-label">Skill availability:</span>
+              <span class="hook-status-badge ${skillAvailable ? 'status-clean' : 'status-warn'}">
+                ${skillAvailable ? '● Available' : '○ Not Installed'}
+              </span>
+            </div>
+            <button class="btn-secondary" id="btn-install-llm-wiki-skill" style="margin-top: 12px;">
+              ${skillAvailable ? 'Reinstall LLM-Wiki Skill' : 'Install LLM-Wiki Skill'}
+            </button>
+          </div>
         </div>
       `;
       break;
@@ -502,38 +1188,64 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
     case 'health':
     case 'diagnostics': {
       const report = props.issuesReport;
-      const issues = report?.issues ?? [];
+      const allIssues = report?.issues ?? [];
       const overallScore = report ? Math.round(report.overall_score) : 100;
+      const rawScore = report?.raw_score !== undefined && report.raw_score !== null ? Math.round(report.raw_score) : null;
+      const selectedScope = props.selectedDebtScope || 'active';
+      const includeExcluded = Boolean(props.includeExcluded);
 
+      // Determine active vs legacy counts
+      const activeCount = report?.active_issues_count !== undefined
+        ? report.active_issues_count
+        : allIssues.filter((i) => !i.is_legacy).length;
+      const legacyDebtCount = report?.legacy_debt_count !== undefined
+        ? report.legacy_debt_count
+        : allIssues.filter((i) => !!i.is_legacy).length || (props.baselineDebtCount ?? 0);
+      const allCount = activeCount + legacyDebtCount;
+
+      // Filter issues by scope
+      let issues = allIssues;
+      if (selectedScope === 'active') {
+        issues = allIssues.filter((i) => !i.is_legacy);
+      } else if (selectedScope === 'legacy') {
+        issues = allIssues.filter((i) => !!i.is_legacy);
+      }
+
+      // Compute pillar counts for displayed scope
       const integFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'integrity').length;
-      const integrityCount = (report?.integrity_count !== undefined && report.integrity_count >= integFilterCount)
-        ? report.integrity_count
-        : (integFilterCount || brokenLinksCount);
+      const integrityCount = report
+        ? (selectedScope === 'all' && report.integrity_count !== undefined && report.integrity_count >= integFilterCount
+            ? report.integrity_count
+            : integFilterCount)
+        : (selectedScope !== 'legacy' ? brokenLinksCount : 0);
 
       const structFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'structure').length;
-      const structureCount = (report?.structure_count !== undefined && report.structure_count >= structFilterCount)
-        ? report.structure_count
-        : structFilterCount;
+      const structureCount = report
+        ? (selectedScope === 'all' && report.structure_count !== undefined && report.structure_count >= structFilterCount
+            ? report.structure_count
+            : structFilterCount)
+        : 0;
 
       const consFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'consistency').length;
-      const consistencyCount = (report?.consistency_count !== undefined && report.consistency_count >= consFilterCount)
-        ? report.consistency_count
-        : consFilterCount;
+      const consistencyCount = report
+        ? (selectedScope === 'all' && report.consistency_count !== undefined && report.consistency_count >= consFilterCount
+            ? report.consistency_count
+            : consFilterCount)
+        : 0;
 
       const discFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'discoverability').length;
-      const discoverabilityCount = (report?.discoverability_count !== undefined && report.discoverability_count >= discFilterCount)
-        ? report.discoverability_count
-        : (discFilterCount || orphanNotes);
+      const discoverabilityCount = report
+        ? (selectedScope === 'all' && report.discoverability_count !== undefined && report.discoverability_count >= discFilterCount
+            ? report.discoverability_count
+            : discFilterCount)
+        : (selectedScope !== 'legacy' ? orphanNotes : 0);
 
       const freshFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'freshness').length;
-      const freshnessCount = (report?.freshness_count !== undefined && report.freshness_count >= freshFilterCount)
-        ? report.freshness_count
-        : freshFilterCount;
-
-      const computedTotal = integrityCount + structureCount + consistencyCount + discoverabilityCount + freshnessCount;
-      const totalIssues = (report?.total_issues !== undefined && report.total_issues >= issues.length)
-        ? report.total_issues
-        : computedTotal;
+      const freshnessCount = report
+        ? (selectedScope === 'all' && report.freshness_count !== undefined && report.freshness_count >= freshFilterCount
+            ? report.freshness_count
+            : freshFilterCount)
+        : 0;
 
       const selectedPillars = new Set(
         (props.selectedPillarFilter || '')
@@ -560,7 +1272,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         : pillarDefs.filter((p) => selectedPillars.has(p.id));
 
       let accordionsHtml = '';
-      if (issuesForDisplay.length === 0 && !report) {
+      if (allIssues.length === 0 && !report) {
         accordionsHtml = `
           <div class="diag-empty-box">
             <svg viewBox="0 0 16 16" width="24" height="24" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;">
@@ -571,7 +1283,26 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             <div>Loading knowledge issues from engine...</div>
           </div>
         `;
-      } else if (totalIssues === 0) {
+      } else if (selectedScope === 'active' && activeCount === 0 && legacyDebtCount > 0) {
+        const filterNames = selectedPillars.size > 0
+          ? Array.from(selectedPillars).map((p) => p.charAt(0).toUpperCase() + p.slice(1)).join(', ')
+          : '';
+        accordionsHtml = `
+          <div class="diag-empty-box" style="border-color: #22c55e; color: #22c55e;">
+            <svg viewBox="0 0 16 16" width="28" height="28" fill="none" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;">
+              <circle cx="8" cy="8" r="7"/>
+              <polyline points="5 8 7.5 10.5 11 5.5"/>
+            </svg>
+            <div style="font-weight: 600; font-size: 13px; color: #22c55e;">Zero Active Knowledge Regressions${filterNames ? ` in ${filterNames}` : ''}</div>
+            <div style="font-size: 11px; opacity: 0.85; margin-top: 4px; color: var(--vscode-foreground);">
+              ${filterNames ? `All active documents meet quality standards for <strong>${filterNames}</strong> (0 active regressions).` : 'All active documents meet quality standards.'} ${legacyDebtCount} finding${legacyDebtCount === 1 ? '' : 's'} acknowledged in baseline.
+            </div>
+            <button type="button" class="btn-tiny btn-primary diag-inspect-debt-btn" data-scope="legacy" style="margin-top: 10px;">
+              Inspect Baselined (${legacyDebtCount})
+            </button>
+          </div>
+        `;
+      } else if (allCount === 0) {
         accordionsHtml = `
           <div class="diag-empty-box" style="border-color: #22c55e; color: #22c55e;">
             <svg viewBox="0 0 16 16" width="24" height="24" fill="none" stroke="#22c55e" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="margin-bottom: 8px;">
@@ -580,6 +1311,12 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             </svg>
             <div style="font-weight: 600; font-size: 13px;">Zero Defects Detected</div>
             <div style="font-size: 11px; opacity: 0.8; margin-top: 4px;">Knowledge graph is in full architectural compliance.</div>
+          </div>
+        `;
+      } else if (issuesForDisplay.length === 0) {
+        accordionsHtml = `
+          <div class="diag-empty-box">
+            <div style="font-size: 12px; color: var(--vscode-descriptionForeground);">No issues found in the selected scope or filters.</div>
           </div>
         `;
       } else {
@@ -592,17 +1329,45 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             const targetHtml = issue.target ? `<span class="diag-arrow">→</span><span class="diag-target-text" title="${issue.target}">${issue.target}</span>` : '';
             const lineStr = issue.line_number ? `:${issue.line_number}` : '';
             const isBroken = issue.category === 'broken_link' || issue.category === 'invalid_anchor' || issue.category === 'broken_fragment_anchor';
+            const isSecondary =
+              issue.category === 'secondaryroutinglayer' ||
+              issue.category === 'secondary_routing_layer' ||
+              (issue.description && issue.description.toLowerCase().includes('secondary routing layer'));
+            const isDrift =
+              issue.category === 'harness_drift' ||
+              issue.category === 'harnessdrift' ||
+              (issue.description && (issue.description.toLowerCase().includes('harness route drift') || issue.description.toLowerCase().includes('harness drift')));
             const fixBtnHtml = isBroken
               ? `<button type="button" class="btn-tiny btn-primary diag-fix-ref-btn" data-file="${issue.file_path}" data-target="${issue.target || ''}" data-line="${issue.line_number ?? ''}">Fix Reference</button>`
               : '';
             const excludeBtnHtml = isBroken
               ? `<button type="button" class="btn-tiny diag-exclude-path-btn" data-file="${issue.file_path}">Exclude Path</button>`
               : '';
+            const removeSecBtnHtml = isSecondary
+              ? `<button type="button" class="btn-tiny btn-gov-eliminate-secondary" data-target="${issue.file_path}" style="padding: 4px 8px; font-size: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; border-radius: 4px; cursor: pointer; white-space: normal; word-break: break-all; overflow-wrap: anywhere; text-align: left; max-width: 100%; line-height: 1.35; display: inline-block; box-sizing: border-box;">Safely Remove ${issue.file_path}</button>`
+              : '';
+            const syncHarnessBtnHtml = isDrift
+              ? `<button type="button" class="btn-tiny btn-gov-sync-harnesses" data-target="${issue.file_path}" style="padding: 4px 8px; font-size: 10px; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.35); color: #c084fc; border-radius: 4px; cursor: pointer; white-space: normal; word-break: break-word; overflow-wrap: anywhere; text-align: left; max-width: 100%; line-height: 1.35; display: inline-block; box-sizing: border-box;">⚡ Review & Sync Harnesses</button>`
+              : '';
+            const isReview =
+              issue.category === 'review_required' ||
+              issue.category === 'document_review' ||
+              issue.category === 'unreviewed' ||
+              (issue as any).obligation !== undefined ||
+              (issue as any).review_status !== undefined;
+            const reviewBtnHtml = isReview
+              ? `<button type="button" class="btn-tiny btn-primary diag-mark-reviewed-btn" data-action="mark-reviewed" data-file="${issue.file_path}" data-doc-id="${issue.file_path}">Mark Reviewed</button>`
+              : '';
 
             return `
-              <div class="diag-issue-card">
+              <div class="diag-issue-card ${issue.is_legacy ? 'diag-issue-legacy' : ''}">
                 <div class="diag-issue-top">
-                  <span class="diag-cat-badge ${catClass}">${issue.category}</span>
+                  <div style="display: flex; align-items: center; gap: 6px;">
+                    <span class="diag-cat-badge ${catClass}">${issue.category}</span>
+                    ${(issue as any).review_status ? `<span class="diag-cat-badge diag-cat-review" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">Review: ${(issue as any).review_status}</span>` : ''}
+                    ${issue.is_legacy ? '<span class="diag-legacy-badge" title="Acknowledged in debt baseline">Baselined</span>' : ''}
+                    ${issue.is_excluded ? '<span class="diag-excluded-badge" title="From path excluded in .context-vault.yaml">Excluded</span>' : ''}
+                  </div>
                   <span class="diag-penalty-badge">-${issue.deduction_points.toFixed(1)} pts (${issue.weight.toFixed(2)}x)</span>
                 </div>
                 <div class="diag-issue-loc">
@@ -621,6 +1386,9 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
                   <button type="button" class="btn-tiny diag-open-doc-btn" data-file="${issue.file_path}" data-line="${issue.line_number ?? ''}">Open Note</button>
                   ${fixBtnHtml}
                   ${excludeBtnHtml}
+                  ${removeSecBtnHtml}
+                  ${syncHarnessBtnHtml}
+                  ${reviewBtnHtml}
                 </div>
               </div>
             `;
@@ -630,7 +1398,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             <div class="diag-accordion-group" data-pillar="${p.id}">
               <div class="diag-accordion-header collapsed" data-pillar="${p.id}">
                 <div class="diag-accordion-title">
-                  <span>${p.label.toUpperCase()}</span>
+                  <span>${p.label}</span>
                   <span class="diag-count-badge">${pillarIssues.length}</span>
                 </div>
                 <span class="diag-accordion-chevron">
@@ -659,8 +1427,26 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               <span class="diag-overview-title">Quality & Defect Overview</span>
               <div class="diag-overview-actions">
                 <button type="button" class="diag-toggle-all" id="diag-toggle-all">Expand all</button>
-                <span class="diag-score-badge ${scoreClass}">${overallScore}/100</span>
+                ${rawScore !== null && rawScore !== overallScore ? `<span class="diag-score-raw-label" title="Raw unmasked audit score">Audit: ${rawScore}/100</span>` : ''}
+                <span class="diag-score-badge ${scoreClass}" title="Effective Score: ${overallScore}/100${rawScore !== null ? ` | Raw Historical Audit: ${rawScore}/100` : ''}">${overallScore}/100</span>
               </div>
+            </div>
+            <div class="diag-scope-row">
+              <div class="diag-scope-selector" role="radiogroup" aria-label="Issue debt scope">
+                <button type="button" class="diag-scope-btn ${selectedScope === 'active' ? 'active' : ''}" data-scope="active" title="Show active regressions (quiet by default)">
+                  Active (${activeCount})
+                </button>
+                <button type="button" class="diag-scope-btn ${selectedScope === 'legacy' ? 'active' : ''}" data-scope="legacy" title="Show acknowledged baseline issues">
+                  Baselined (${legacyDebtCount})
+                </button>
+                <button type="button" class="diag-scope-btn ${selectedScope === 'all' ? 'active' : ''}" data-scope="all" title="Show all issues (active + baselined)">
+                  All (${allCount})
+                </button>
+              </div>
+              <label class="diag-include-excluded-label" title="Include issues from paths excluded via scan/graph rules">
+                <input type="checkbox" id="chk-include-excluded" ${includeExcluded ? 'checked' : ''} />
+                <span>Include Excluded</span>
+              </label>
             </div>
             <div class="diag-pillar-filter-row">
               <div class="diag-pillar-chips" role="group" aria-label="Filter issues by quality pillar">
@@ -777,20 +1563,77 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             ${isolatedHtml}
           </div>
         </div>
+
+        ${props.directoryMetrics ? `
+        <div class="settings-section">
+          <div class="settings-sec-title">Physical Directory & Knowledge Organization</div>
+          <p class="settings-desc">Non-prescriptive directory depth, Shannon concentration entropy, cross-folder coupling, and organizational signals.</p>
+
+          <div class="settings-diag-grid">
+            <div class="diag-item">
+              <span class="diag-lbl">Max Depth</span>
+              <span class="diag-val">${props.directoryMetrics.max_directory_depth}</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-lbl">Avg Depth</span>
+              <span class="diag-val">${props.directoryMetrics.average_directory_depth.toFixed(1)}</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-lbl">Entropy</span>
+              <span class="diag-val">${Math.round(props.directoryMetrics.concentration_entropy * 100)}%</span>
+            </div>
+            <div class="diag-item">
+              <span class="diag-lbl">Cross Coupling</span>
+              <span class="diag-val">${Math.round(props.directoryMetrics.cross_folder_coupling * 100)}%</span>
+            </div>
+          </div>
+
+          <div style="margin-top: 12px;">
+            <div style="font-size: 11px; font-weight: 600; color: var(--vscode-descriptionForeground); margin-bottom: 6px;">
+              Organizational Signals (${props.directoryMetrics.organizational_signals.length})
+            </div>
+            ${props.directoryMetrics.organizational_signals.length > 0
+              ? `
+              <div class="directory-signals-list" style="display: flex; flex-direction: column; gap: 8px;">
+                ${props.directoryMetrics.organizational_signals.map((sig) => `
+                  <div class="directory-signal-item" style="padding: 8px 12px; border-radius: 4px; background: var(--vscode-editor-inactiveSelectionBackground); border: 1px solid var(--vscode-widget-border);">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                      <span class="signal-badge" style="font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; background: rgba(245, 158, 11, 0.2); color: #f59e0b;">
+                        ${sig.signal_type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
+                      </span>
+                      ${sig.target_directory ? `<code style="font-size: 11px;">${sig.target_directory}</code>` : ''}
+                    </div>
+                    <div style="font-size: 12px; margin-bottom: 2px;">${sig.message}</div>
+                    <div style="font-size: 11px; color: var(--vscode-descriptionForeground);"><code>${sig.cost_evidence}</code></div>
+                  </div>
+                `).join('')}
+              </div>
+              `
+              : '<div class="settings-empty-msg">No organizational degradation signals detected</div>'
+            }
+          </div>
+        </div>
+        ` : ''}
       `;
       break;
     }
 
     case 'evolution': {
       try {
-        // Extract structure debt findings from issuesReport (Pillar 2: Structure)
-        const structureFindings = (props.issuesReport?.issues || [])
-          .filter((i) => i.pillar && i.pillar.toLowerCase() === 'structure')
-          .map((i) => ({
-            file_path: i.file_path,
-            description: i.description,
-            remediation_hint: i.remediation_hint,
-          }));
+        // Extract all vault debt findings from issuesReport across all pillars & 18 KOS methodologies
+        const vaultFindings = (props.issuesReport?.issues || (props.issuesReport as any)?.findings || []).map((i) => ({
+          file_path: i.file_path,
+          description: i.description,
+          remediation_hint: i.remediation_hint,
+          category: i.category,
+          debt_type: i.category,
+          pillar: i.pillar,
+          target: i.target,
+          line_number: i.line_number,
+          deduction_points: i.deduction_points,
+          weight: i.weight,
+          is_legacy: i.is_legacy,
+        }));
 
         const activeOrientation = props.activeOrientation || 'ai_oriented';
         const isCustomOpen = props.isCustomDrawerOpen !== undefined
@@ -804,7 +1647,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         const customToggleBtnHtml = `
           <div class="evolution-custom-toggle-bar">
             <button type="button" class="btn btn-secondary evolution-custom-toggle-btn" id="btn-toggle-custom-params">
-              ${isCustomOpen ? '▲ Hide Custom Parameters (Tier 1 & Tier 2)' : '⚙️ Custom Parameters (Tier 1 & Tier 2)'}
+              ${isCustomOpen ? '▲ Hide Custom Parameters' : '⚙️ Custom Parameters'}
             </button>
           </div>
         `;
@@ -824,10 +1667,18 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
           signatures: props.structuralSignatures || [],
           recommendations: props.structuralRecommendations || [],
           activeOrientation,
-          structureFindings,
+          structureFindings: vaultFindings,
+          vaultFindings,
           isLoading: props.isEvolutionLoading,
           generatingPlanRecId: props.generatingPlanRecId,
           planGenerationError: props.planGenerationError,
+          findingsPage: props.evolutionFindingsPage,
+          findingsPageSize: props.evolutionFindingsPageSize,
+          selectedKosFilter: props.selectedKosFilter,
+          selectedPillarFilter: props.evolutionPillarFilter,
+          signaturesPage: props.evolutionSignaturesPage,
+          signaturesPageSize: props.evolutionSignaturesPageSize,
+          selectedSignatureTypeFilter: props.selectedSignatureTypeFilter,
         });
 
         tabContentHtml = `
@@ -853,6 +1704,106 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
       }
       break;
     }
+
+    case 'load': {
+      const summary = props.tokenSummary || {
+        activeHarnessTokens: props.nodes?.find((n) => n.hopDistance === 0)?.tokens || 0,
+        subcallAccessibleTokens: (props.nodes || [])
+          .filter((n) => n.hopDistance >= 0 && n.hopDistance <= 2)
+          .reduce((acc, n) => acc + (n.tokens || 0), 0),
+        warningThreshold: 60000,
+        criticalThreshold: 100000,
+        status: 'normal' as const,
+        contextReductionPercent: 90,
+      };
+
+      const activeTokens = summary.activeHarnessTokens || 0;
+      const reachableTokens = summary.subcallAccessibleTokens || 0;
+      const critLimit = summary.criticalThreshold || 100000;
+      const warnLimit = summary.warningThreshold || 60000;
+
+      const budgetPct = Math.min(100, Math.round((activeTokens / critLimit) * 100));
+      let barColor = '#3b82f6';
+      let badgeClass = 'status-normal';
+      if (activeTokens >= critLimit) {
+        barColor = '#ef4444';
+        badgeClass = 'status-critical';
+      } else if (activeTokens >= warnLimit) {
+        barColor = '#f59e0b';
+        badgeClass = 'status-warning';
+      }
+
+      const reductionPct = summary.contextReductionPercent !== undefined
+        ? summary.contextReductionPercent
+        : (reachableTokens > 0 ? Math.max(0, Math.round(((reachableTokens - activeTokens) / reachableTokens) * 100)) : 90);
+
+      const topNodes = [...(props.nodes || [])]
+        .filter((n) => (n.tokens || 0) > 0)
+        .sort((a, b) => (b.tokens || 0) - (a.tokens || 0))
+        .slice(0, 15);
+
+      const topConsumersHtml = topNodes.length > 0
+        ? topNodes.map((n) => `
+          <li class="load-consumer-item" data-path="${n.filePath || n.id}" title="Click to open ${n.filePath || n.id}">
+            <div class="load-consumer-info">
+              <span class="load-consumer-title">${n.label || n.id}</span>
+              <span class="load-consumer-path">${n.filePath || n.id}</span>
+            </div>
+            <span class="load-consumer-tokens">${formatCompactNumber(n.tokens)} tok</span>
+          </li>`).join('')
+        : '<li class="load-empty-item">No indexed documents found</li>';
+
+      const statusLabel = summary.status ? summary.status.charAt(0).toUpperCase() + summary.status.slice(1).toLowerCase() : 'Normal';
+
+      tabContentHtml = `
+        <div class="settings-section">
+          <div class="settings-sec-title">Active Prompt Load — L0 Budget</div>
+          <p class="settings-desc">Persistent prompt token load from the primary active AI harness and designated central hub note.</p>
+          <div class="load-budget-card">
+            <div class="load-metric-row">
+              <div class="load-metric-main">
+                <span class="load-metric-number">${formatCompactNumber(activeTokens)}</span>
+                <span class="load-metric-unit">tok</span>
+              </div>
+              <div class="load-metric-badge-group">
+                <span class="load-status-badge ${badgeClass}">${statusLabel}</span>
+                <span class="load-reduction-badge">~${reductionPct}% reduction</span>
+              </div>
+            </div>
+            <div class="token-progress-track" style="margin: 10px 0 6px 0; height: 6px;">
+              <div class="token-progress-fill" style="width: ${budgetPct}%; background-color: ${barColor};"></div>
+            </div>
+            <div class="load-budget-limits">
+              <span>Budget used: <strong>${budgetPct}%</strong> of critical limit</span>
+              <span class="load-limits-sub">Warning: ${formatCompactNumber(warnLimit)} tok · Critical: ${formatCompactNumber(critLimit)} tok</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section" style="margin-top: 14px;">
+          <div class="settings-sec-title">Reachable Subcall Context — L1–L2</div>
+          <p class="settings-desc">On-demand knowledge accessible within 2 hops of the active hub. Subagents and LLM tools fetch these on demand without burdening the permanent prompt context.</p>
+          <div class="load-reachable-card">
+            <div class="load-reachable-row">
+              <span class="load-reachable-label">On-demand Subcall Context:</span>
+              <span class="load-reachable-val">${formatCompactNumber(reachableTokens)} tok</span>
+            </div>
+            <div class="load-advice-text">
+              Reachable notes are within 2 hops of the active hub. They can be fetched on demand by LLM tools without burdening the permanent prompt context.
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-section" style="margin-top: 14px;">
+          <div class="settings-sec-title">Top Token Consumers</div>
+          <p class="settings-desc">Heaviest documents indexed in the workspace. Click any document to open it in the editor.</p>
+          <ul class="load-consumers-list">
+            ${topConsumersHtml}
+          </ul>
+        </div>
+      `;
+      break;
+    }
   }
 
   return `
@@ -871,20 +1822,22 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
 
       <div class="settings-nav-tiers">
         <div class="settings-nav-group" data-tier="insights">
-          <span class="settings-nav-label">INSIGHTS</span>
+          <span class="settings-nav-label">Insights</span>
           <div class="settings-tabs-subgroup">
             <button class="settings-tab-btn ${normalizedTab === 'health' ? 'active' : ''}" data-tab="health">Health</button>
             <button class="settings-tab-btn ${normalizedTab === 'structure' ? 'active' : ''}" data-tab="structure">Structure</button>
             <button class="settings-tab-btn ${normalizedTab === 'evolution' ? 'active' : ''}" data-tab="evolution">Evolution</button>
+            <button class="settings-tab-btn ${normalizedTab === 'load' ? 'active' : ''}" data-tab="load">Load</button>
           </div>
         </div>
         <div class="settings-nav-group" data-tier="settings">
-          <span class="settings-nav-label">SETTINGS</span>
+          <span class="settings-nav-label">Settings</span>
           <div class="settings-tabs-subgroup">
             <button class="settings-tab-btn ${normalizedTab === 'knowledge' ? 'active' : ''}" data-tab="knowledge">Knowledge</button>
             <button class="settings-tab-btn ${normalizedTab === 'exclusions' ? 'active' : ''}" data-tab="exclusions">Exclusions</button>
             <button class="settings-tab-btn ${normalizedTab === 'clusters' ? 'active' : ''}" data-tab="clusters">Clusters</button>
-            <button class="settings-tab-btn ${normalizedTab === 'git_harness' ? 'active' : ''}" data-tab="git_harness">Git / Harness</button>
+            <button class="settings-tab-btn ${normalizedTab === 'git' ? 'active' : ''}" data-tab="git">Git</button>
+            <button class="settings-tab-btn ${normalizedTab === 'harness' || normalizedTab === 'git_harness' ? 'active' : ''}" data-tab="harness">Harness</button>
           </div>
         </div>
       </div>
@@ -902,7 +1855,18 @@ export function renderSettingsDrawer(
   initialProps: SettingsDrawerProps,
   callbacks: SettingsDrawerCallbacks,
 ): SettingsDrawerController {
-  let state = { ...initialProps };
+  let state = {
+    selectedDebtScope: (initialProps.selectedDebtScope || 'active') as 'active' | 'legacy' | 'all',
+    includeExcluded: initialProps.includeExcluded ?? false,
+    evolutionFindingsPage: initialProps.evolutionFindingsPage || 1,
+    evolutionFindingsPageSize: initialProps.evolutionFindingsPageSize || 10,
+    selectedKosFilter: initialProps.selectedKosFilter || 'all',
+    evolutionPillarFilter: initialProps.evolutionPillarFilter || 'all',
+    evolutionSignaturesPage: initialProps.evolutionSignaturesPage || 1,
+    evolutionSignaturesPageSize: initialProps.evolutionSignaturesPageSize || 10,
+    selectedSignatureTypeFilter: initialProps.selectedSignatureTypeFilter || 'all',
+    ...initialProps,
+  };
   let isVisible = false;
   let isEntering = false;
   let enterTimer: any = null;
@@ -925,6 +1889,100 @@ export function renderSettingsDrawer(
     container.querySelector('#btn-settings-rescan')?.addEventListener('click', (e) => {
       e.stopPropagation();
       callbacks.onRescanVault?.();
+    });
+  }
+
+  function wireExclusionsListeners(): void {
+    const addBtn = container.querySelector('#btn-add-rule') as HTMLElement | null;
+    const input = container.querySelector('#input-new-rule') as HTMLInputElement | null;
+    const scopeBtn = container.querySelector('#btn-scope-toggle') as HTMLElement | null;
+    const scopeMenu = container.querySelector('#menu-scope-options') as HTMLElement | null;
+    const scopeLabel = container.querySelector('#label-scope-selected') as HTMLElement | null;
+    const scopeHidden = container.querySelector('#select-rule-scope') as HTMLInputElement | null;
+
+    if (scopeBtn && scopeMenu) {
+      scopeBtn.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const isHidden = scopeMenu.style.display === 'none' || !scopeMenu.style.display;
+        scopeMenu.style.display = isHidden ? 'block' : 'none';
+        scopeBtn.setAttribute('aria-expanded', String(isHidden));
+      };
+
+      scopeMenu.querySelectorAll<HTMLElement>('.scope-menu-item').forEach((item) => {
+        item.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const val = item.getAttribute('data-value') as 'scan' | 'graph';
+          if (val) {
+            state.selectedRuleScope = val;
+            if (scopeHidden) scopeHidden.value = val;
+            if (scopeLabel) scopeLabel.textContent = val === 'graph' ? 'Graph' : 'Scan';
+            scopeMenu.querySelectorAll('.scope-menu-item').forEach((i) => {
+              const isSelected = i === item;
+              i.classList.toggle('active', isSelected);
+              i.setAttribute('aria-selected', String(isSelected));
+              const check = i.querySelector('.scope-item-check') as HTMLElement | null;
+              if (check) check.style.visibility = isSelected ? 'visible' : 'hidden';
+            });
+            scopeMenu.style.display = 'none';
+            scopeBtn.setAttribute('aria-expanded', 'false');
+          }
+        };
+      });
+    }
+
+    const doAddRule = () => {
+      const pat = input?.value.trim();
+      const scope = state.selectedRuleScope || (scopeHidden?.value as 'scan' | 'graph') || 'graph';
+      if (pat) {
+        callbacks.onAddExclusion?.(pat, scope);
+        if (scope === 'graph') {
+          if (!state.graphExclusions.includes(pat)) {
+            state.graphExclusions.push(pat);
+          }
+        } else {
+          if (!state.scanExclusions.includes(pat)) {
+            state.scanExclusions.push(pat);
+          }
+        }
+        if (input) input.value = '';
+        render();
+      }
+    };
+
+    if (addBtn) {
+      addBtn.onclick = (e) => {
+        e.stopPropagation();
+        doAddRule();
+      };
+    }
+
+    if (input) {
+      input.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+          e.preventDefault();
+          e.stopPropagation();
+          doAddRule();
+        }
+      };
+    }
+
+    container.querySelectorAll<HTMLElement>('.rule-del-btn').forEach((btn) => {
+      btn.onclick = (e) => {
+        e.stopPropagation();
+        const pat = btn.getAttribute('data-rule');
+        const scope = (btn.getAttribute('data-scope') as 'scan' | 'graph') || 'graph';
+        if (pat) {
+          callbacks.onDeleteExclusion?.(pat, scope);
+          if (scope === 'graph') {
+            state.graphExclusions = state.graphExclusions.filter((r) => r !== pat);
+          } else {
+            state.scanExclusions = state.scanExclusions.filter((r) => r !== pat);
+          }
+          render();
+        }
+      };
     });
   }
 
@@ -952,91 +2010,19 @@ export function renderSettingsDrawer(
         wireDiagnosticsAccordionListeners();
         wireEvolutionListeners();
         wireHealthAndStructureActions();
+        wireExclusionsListeners();
+        wireGitListeners();
+        wireHarnessListeners();
+        wireLoadListeners();
+        applyDiagnosticsFilterToDom();
       }
     });
   }
 
-  function render(): void {
-    // Full render — replaces the entire drawer shell + content
-    container.innerHTML = renderSettingsDrawerHtml(state, isEntering);
-    _lastRenderedTab = state.activeTab;
-
-    const drawer = container.querySelector('#settings-drawer') as HTMLElement;
-    if (drawer) {
-      drawer.style.display = isVisible ? 'flex' : 'none';
-      drawer.addEventListener('mousedown', (e) => e.stopPropagation());
-      drawer.addEventListener('mouseup', (e) => e.stopPropagation());
-      drawer.addEventListener('click', (e) => e.stopPropagation());
-    }
-
-    container.querySelector('#settings-btn-close')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      close();
-    });
-
-    // Wire custom scope dropdown in Excluded Paths tab
-    const scopeBtn = container.querySelector('#btn-scope-toggle') as HTMLElement;
-    const scopeMenu = container.querySelector('#menu-scope-options') as HTMLElement;
-    const scopeLabel = container.querySelector('#label-scope-selected') as HTMLElement;
-    const scopeHidden = container.querySelector('#select-rule-scope') as HTMLInputElement;
-
-    if (scopeBtn && scopeMenu) {
-      scopeBtn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const isOpen = scopeMenu.style.display === 'block';
-        scopeMenu.style.display = isOpen ? 'none' : 'block';
-      });
-
-      scopeMenu.querySelectorAll('.scope-menu-item').forEach((item) => {
-        item.addEventListener('click', (e) => {
-          e.stopPropagation();
-          const val = item.getAttribute('data-value') as 'scan' | 'graph';
-          if (val && scopeHidden && scopeLabel) {
-            scopeHidden.value = val;
-            scopeLabel.textContent = val === 'graph' ? 'Graph Tier' : 'Scan Tier';
-            scopeMenu.querySelectorAll('.scope-menu-item').forEach((i) => i.classList.remove('active'));
-            item.classList.add('active');
-            scopeMenu.style.display = 'none';
-          }
-        });
-      });
-
-      document.addEventListener('click', () => {
-        if (scopeMenu) scopeMenu.style.display = 'none';
-      });
-    }
-
-    container.querySelectorAll('.settings-tab-btn').forEach((btn) => {
-      btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const tab = btn.getAttribute('data-tab') as SettingsTab;
-        if (tab && tab !== state.activeTab) {
-          state.activeTab = tab;
-          callbacks.onChangeTab?.(tab);
-          if (tab === 'diagnostics' || tab === 'health') {
-            callbacks.onRequestIssues?.(state.selectedPillarFilter);
-          }
-          if (tab === 'evolution') {
-            if (!state.issuesReport) {
-              callbacks.onRequestIssues?.();
-            }
-            callbacks.onRequestEvolution?.();
-          }
-          render();
-        }
-      });
-    });
-
-    wireKnowledgeListeners();
-
+  function wireGitListeners(): void {
     container.querySelector('#btn-reinstall-hooks')?.addEventListener('click', (e) => {
       e.stopPropagation();
       callbacks.onInstallGitHooks?.();
-    });
-
-    container.querySelector('#btn-install-llm-wiki-skill')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      callbacks.onInstallLLMWikiSkill?.();
     });
 
     container.querySelector('#btn-capture-baseline')?.addEventListener('click', (e) => {
@@ -1065,38 +2051,412 @@ export function renderSettingsDrawer(
       callbacks.onToggleThreshold?.('blockOnTechnicalDrift', toggleDrift.checked);
     });
 
-    container.querySelector('#btn-add-rule')?.addEventListener('click', (e) => {
-      e.stopPropagation();
-      const input = container.querySelector('#input-new-rule') as HTMLInputElement;
-      const select = container.querySelector('#select-rule-scope') as HTMLInputElement;
-      const pat = input?.value.trim();
-      const scope = (select?.value as 'scan' | 'graph') || 'graph';
-      if (pat) {
-        callbacks.onAddExclusion?.(pat, scope);
-        if (scope === 'graph') {
-          state.graphExclusions.push(pat);
-        } else {
-          state.scanExclusions.push(pat);
+    container.querySelectorAll('.settings-hook-card .btn-install-harness-tool').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const toolId = (btn as HTMLElement).getAttribute('data-tool-id');
+        if (toolId) {
+          callbacks.onInstallHarnessTool?.(toolId);
         }
-        render();
+      });
+    });
+  }
+
+  function wireHarnessListeners(): void {
+    const prepDropdown = container.querySelector('#prep-active-dropdown');
+    const prepBtn = container.querySelector('#btn-prep-active-toggle');
+    const prepMenu = container.querySelector('#menu-prep-active-options') as HTMLElement | null;
+    const prepLabel = container.querySelector('#label-prep-active-selected');
+    const prepHidden = container.querySelector('#select-prep-active-harness') as HTMLInputElement | null;
+
+    const activeDropdown = container.querySelector('#active-harness-dropdown');
+    const activeBtn = container.querySelector('#btn-active-harness-toggle');
+    const activeMenu = container.querySelector('#menu-active-harness-options') as HTMLElement | null;
+    const activeLabel = container.querySelector('#label-active-harness-selected');
+    const activeHidden = container.querySelector('#select-active-harness') as HTMLInputElement | null;
+
+    const selectHarnessChoice = (val: string) => {
+      if (!val) return;
+      state.selectedPrepActiveHarness = val;
+
+      // 1. Update prep dropdown
+      if (prepHidden) prepHidden.value = val;
+      if (prepLabel) prepLabel.textContent = val;
+      if (prepMenu) {
+        prepMenu.querySelectorAll('.scope-menu-item').forEach((item) => {
+          const itemVal = item.getAttribute('data-value');
+          const isSelected = itemVal === val;
+          item.classList.toggle('active', isSelected);
+          item.setAttribute('aria-selected', String(isSelected));
+          const check = item.querySelector('.scope-item-check') as HTMLElement | null;
+          if (check) check.style.visibility = isSelected ? 'visible' : 'hidden';
+        });
+      }
+
+      // 2. Update active dropdown
+      if (activeHidden) activeHidden.value = val;
+      if (activeLabel) {
+        const harnesses = state.harnessStatus?.harnesses ?? [];
+        const hObj = harnesses.find((h) => h.file_path === val);
+        activeLabel.textContent = hObj ? `${val} (${hObj.harness_type})` : val;
+      }
+      if (activeMenu) {
+        activeMenu.querySelectorAll('.scope-menu-item').forEach((item) => {
+          const itemVal = item.getAttribute('data-value');
+          const isSelected = itemVal === val;
+          item.classList.toggle('active', isSelected);
+          item.setAttribute('aria-selected', String(isSelected));
+          const check = item.querySelector('.scope-item-check') as HTMLElement | null;
+          if (check) check.style.visibility = isSelected ? 'visible' : 'hidden';
+        });
+      }
+
+      // 3. Notify backend if harness exists on disk
+      const harnesses = state.harnessStatus?.harnesses ?? [];
+      const exists = harnesses.some((h) => h.file_path === val);
+      if (exists) {
+        callbacks.onSelectActiveHarness?.(val);
+      }
+    };
+
+    // Toggle popover menus
+    prepBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!prepMenu) return;
+      const isHidden = prepMenu.style.display === 'none' || !prepMenu.style.display;
+      prepMenu.style.display = isHidden ? 'block' : 'none';
+      prepBtn.setAttribute('aria-expanded', String(isHidden));
+      if (activeMenu) {
+        activeMenu.style.display = 'none';
+        activeBtn?.setAttribute('aria-expanded', 'false');
       }
     });
 
-    container.querySelectorAll('.rule-del-btn').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        const pat = btn.getAttribute('data-rule');
-        const scope = (btn.getAttribute('data-scope') as 'scan' | 'graph') || 'graph';
-        if (pat) {
-          callbacks.onDeleteExclusion?.(pat, scope);
-          if (scope === 'graph') {
-            state.graphExclusions = state.graphExclusions.filter((r) => r !== pat);
-          } else {
-            state.scanExclusions = state.scanExclusions.filter((r) => r !== pat);
+    activeBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!activeMenu) return;
+      const isHidden = activeMenu.style.display === 'none' || !activeMenu.style.display;
+      activeMenu.style.display = isHidden ? 'block' : 'none';
+      activeBtn.setAttribute('aria-expanded', String(isHidden));
+      if (prepMenu) {
+        prepMenu.style.display = 'none';
+        prepBtn?.setAttribute('aria-expanded', 'false');
+      }
+    });
+
+    const wirePrepMenuItems = () => {
+      if (!prepMenu) return;
+      prepMenu.querySelectorAll<HTMLElement>('.scope-menu-item').forEach((item) => {
+        item.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const val = item.getAttribute('data-value');
+          if (val) {
+            selectHarnessChoice(val);
+            prepMenu.style.display = 'none';
+            prepBtn?.setAttribute('aria-expanded', 'false');
+          }
+        };
+      });
+    };
+    wirePrepMenuItems();
+
+    if (activeMenu) {
+      activeMenu.querySelectorAll<HTMLElement>('.scope-menu-item').forEach((item) => {
+        item.onclick = (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          const val = item.getAttribute('data-value');
+          if (val) {
+            selectHarnessChoice(val);
+            activeMenu.style.display = 'none';
+            activeBtn?.setAttribute('aria-expanded', 'false');
+          }
+        };
+      });
+    }
+
+    const updatePrepActiveOptions = () => {
+      const chkCursor = container.querySelector('#chk-tool-cursor') as HTMLInputElement | null;
+      const chkCodex = container.querySelector('#chk-tool-codex') as HTMLInputElement | null;
+      const chkAgy = container.querySelector('#chk-tool-agy') as HTMLInputElement | null;
+      const chkClaude = container.querySelector('#chk-tool-claude') as HTMLInputElement | null;
+      const chkCopilot = container.querySelector('#chk-tool-copilot') as HTMLInputElement | null;
+
+      const candidates = new Set<string>();
+      if (chkCursor?.checked || chkCodex?.checked) candidates.add('AGENTS.md');
+      if (chkAgy?.checked) candidates.add('GEMINI.md');
+      if (chkClaude?.checked) candidates.add('CLAUDE.md');
+      if (chkCopilot?.checked) candidates.add('.github/copilot-instructions.md');
+      (state.harnessStatus?.harnesses ?? []).forEach((h) => candidates.add(h.file_path));
+      if (candidates.size === 0) candidates.add('AGENTS.md');
+
+      const currentVal = prepHidden?.value || state.selectedPrepActiveHarness || state.harnessStatus?.active_harness?.file_path || 'AGENTS.md';
+      const effectiveVal = candidates.has(currentVal) ? currentVal : (candidates.has('AGENTS.md') ? 'AGENTS.md' : Array.from(candidates)[0]);
+
+      if (prepMenu) {
+        prepMenu.innerHTML = Array.from(candidates)
+          .map((cand) => `
+            <div class="scope-menu-item ${cand === effectiveVal ? 'active' : ''}" data-value="${cand}" role="option" aria-selected="${cand === effectiveVal}">
+              <span class="scope-item-check" style="${cand === effectiveVal ? '' : 'visibility: hidden;'}">✓</span>
+              <span class="scope-item-title">${cand}</span>
+            </div>
+          `)
+          .join('');
+        wirePrepMenuItems();
+      }
+
+      selectHarnessChoice(effectiveVal);
+    };
+
+    const syncToolSelection = () => {
+      const chkCursor = container.querySelector('#chk-tool-cursor') as HTMLInputElement | null;
+      const chkCodex = container.querySelector('#chk-tool-codex') as HTMLInputElement | null;
+      const chkAgy = container.querySelector('#chk-tool-agy') as HTMLInputElement | null;
+      const chkClaude = container.querySelector('#chk-tool-claude') as HTMLInputElement | null;
+      const chkCopilot = container.querySelector('#chk-tool-copilot') as HTMLInputElement | null;
+
+      state.toolSelection = {
+        cursor: chkCursor?.checked ?? false,
+        codex: chkCodex?.checked ?? false,
+        agy: chkAgy?.checked ?? false,
+        claude: chkClaude?.checked ?? false,
+        copilot: chkCopilot?.checked ?? false,
+      };
+
+      updatePrepActiveOptions();
+    };
+
+    ['#chk-tool-cursor', '#chk-tool-codex', '#chk-tool-agy', '#chk-tool-claude', '#chk-tool-copilot'].forEach((sel) => {
+      container.querySelector(sel)?.addEventListener('change', (e) => {
+        e.stopPropagation();
+        syncToolSelection();
+      });
+    });
+
+    prepHidden?.addEventListener('change', (e) => {
+      e.stopPropagation();
+      selectHarnessChoice(prepHidden.value);
+    });
+
+    activeHidden?.addEventListener('change', (e) => {
+      e.stopPropagation();
+      selectHarnessChoice(activeHidden.value);
+    });
+
+    container.querySelector('#btn-prepare-harness-base')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const chkCursor = container.querySelector('#chk-tool-cursor') as HTMLInputElement | null;
+      const chkCodex = container.querySelector('#chk-tool-codex') as HTMLInputElement | null;
+      const chkAgy = container.querySelector('#chk-tool-agy') as HTMLInputElement | null;
+      const chkClaude = container.querySelector('#chk-tool-claude') as HTMLInputElement | null;
+      const chkCopilot = container.querySelector('#chk-tool-copilot') as HTMLInputElement | null;
+
+      const enabledHarnesses = new Set<string>();
+      const createFolders = new Set<string>();
+
+      if (chkCursor?.checked) {
+        enabledHarnesses.add('AGENTS.md');
+        createFolders.add('.cursor/rules');
+      }
+      if (chkCodex?.checked) {
+        enabledHarnesses.add('AGENTS.md');
+      }
+      if (chkAgy?.checked) {
+        enabledHarnesses.add('GEMINI.md');
+        createFolders.add('.agents');
+      }
+      if (chkClaude?.checked) {
+        enabledHarnesses.add('CLAUDE.md');
+      }
+      if (chkCopilot?.checked) {
+        enabledHarnesses.add('.github/copilot-instructions.md');
+        createFolders.add('.github');
+      }
+
+      if (enabledHarnesses.size === 0) {
+        enabledHarnesses.add('AGENTS.md');
+      }
+
+      const createDirs = (container.querySelector('#chk-prep-create-dirs') as HTMLInputElement | null)?.checked ?? true;
+      const consolidateIndex = (container.querySelector('#chk-prep-consolidate-index') as HTMLInputElement | null)?.checked ?? true;
+      const cleanUnused = (container.querySelector('#chk-prep-clean-unused') as HTMLInputElement | null)?.checked ?? true;
+      const selectActive = container.querySelector('#select-prep-active-harness') as HTMLSelectElement | null;
+      const activeHarness = selectActive?.value || state.selectedPrepActiveHarness || (enabledHarnesses.has('AGENTS.md') ? 'AGENTS.md' : Array.from(enabledHarnesses)[0]);
+
+      const feedback = container.querySelector('#prep-base-feedback') as HTMLElement | null;
+      if (feedback) {
+        feedback.style.display = 'block';
+        feedback.style.background = 'rgba(56, 189, 248, 0.15)';
+        feedback.style.color = '#38bdf8';
+        feedback.style.border = '1px solid rgba(56, 189, 248, 0.3)';
+        feedback.textContent = `Provisioning ${Array.from(enabledHarnesses).join(', ')}...`;
+      }
+
+      callbacks.onConfigureHarnessBase?.({
+        active_harness: activeHarness,
+        enabled_harnesses: Array.from(enabledHarnesses),
+        create_folders: createDirs ? Array.from(createFolders) : [],
+        consolidate_index: consolidateIndex,
+        clean_unused: cleanUnused,
+      });
+    });
+
+    container.querySelector('#btn-init-harness')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callbacks.onInitializeHarness?.('AGENTS.md');
+    });
+
+    container.querySelectorAll('.btn-init-specific-harness').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const harness = (btn as HTMLElement).getAttribute('data-harness') || 'AGENTS.md';
+        state.selectedPrepActiveHarness = harness;
+        callbacks.onInitializeHarness?.(harness);
+      });
+    });
+
+    container.querySelector('#btn-sync-all-harnesses')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const target = state.selectedPrepActiveHarness || 'AGENTS.md';
+      callbacks.onGenerateGovernancePlan?.('sync_harness_routes', target);
+    });
+
+    container.querySelector('#btn-refresh-skills')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callbacks.onRequestSkillCatalog?.();
+    });
+
+    container.querySelector('#btn-install-llm-wiki-skill')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callbacks.onInstallLLMWikiSkill?.();
+    });
+
+    container.querySelectorAll('.btn-gov-embed-index').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const harness = (btn as HTMLElement).getAttribute('data-harness') || 'AGENTS.md';
+        callbacks.onGenerateGovernancePlan?.('embed_knowledge_index', harness);
+      });
+    });
+
+    container.querySelectorAll('.btn-gov-eliminate-secondary').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = (btn as HTMLElement).getAttribute('data-target') || '';
+        if (target) {
+          callbacks.onGenerateGovernancePlan?.('eliminate_secondary_routing_layer', target);
+        }
+      });
+    });
+
+    container.querySelectorAll('.btn-gov-sync-harnesses').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = (btn as HTMLElement).getAttribute('data-target') || 'AGENTS.md';
+        callbacks.onGenerateGovernancePlan?.('sync_harness_routes', target);
+      });
+    });
+
+    container.querySelectorAll('.btn-gov-promote-skill').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = (btn as HTMLElement).getAttribute('data-target') || '';
+        if (target) {
+          callbacks.onGenerateGovernancePlan?.('create_skill_from_procedure', target);
+        }
+      });
+    });
+
+    container.querySelector('#btn-refresh-harness-tools')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      callbacks.onRequestHarnessTools?.();
+    });
+
+    container.querySelectorAll('.harness-tools-catalog-card .btn-install-harness-tool').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const toolId = (btn as HTMLElement).getAttribute('data-tool-id');
+        if (toolId) {
+          callbacks.onInstallHarnessTool?.(toolId);
+        }
+      });
+    });
+  }
+
+  function wireLoadListeners(): void {
+    container.querySelectorAll('.load-consumer-item').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const filePath = item.getAttribute('data-path');
+        if (filePath) {
+          callbacks.onOpenFile?.(filePath);
+        }
+      });
+    });
+  }
+
+  function render(): void {
+    // Full render — replaces the entire drawer shell + content
+    container.innerHTML = renderSettingsDrawerHtml(state, isEntering);
+    _lastRenderedTab = state.activeTab;
+
+    const drawer = container.querySelector('#settings-drawer') as HTMLElement;
+    if (drawer) {
+      drawer.style.display = isVisible ? 'flex' : 'none';
+      drawer.addEventListener('mousedown', (e) => e.stopPropagation());
+      drawer.addEventListener('mouseup', (e) => e.stopPropagation());
+      drawer.addEventListener('click', (e) => e.stopPropagation());
+    }
+
+    container.querySelector('#settings-btn-close')?.addEventListener('click', (e) => {
+      e.stopPropagation();
+      close();
+    });
+
+    container.querySelectorAll('.settings-tab-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const tab = btn.getAttribute('data-tab') as SettingsTab;
+        if (tab && tab !== state.activeTab) {
+          state.activeTab = tab;
+          callbacks.onChangeTab?.(tab);
+          if (tab === 'exclusions') {
+            callbacks.onRequestExclusions?.();
+          }
+          if (tab === 'diagnostics' || tab === 'health') {
+            if (callbacks.onRequestIssuesWithOptions) {
+              callbacks.onRequestIssuesWithOptions({
+                include_debt: state.selectedDebtScope !== 'active',
+                include_excluded: state.includeExcluded,
+                pillar: state.selectedPillarFilter || undefined,
+              });
+            } else {
+              callbacks.onRequestIssues?.(state.selectedPillarFilter);
+            }
+          }
+          if (tab === 'evolution') {
+            if (!state.issuesReport) {
+              callbacks.onRequestIssues?.();
+            }
+            callbacks.onRequestEvolution?.();
+          }
+          if (tab === 'git' || tab === 'harness' || tab === 'git_harness') {
+            callbacks.onRequestHarnessTools?.();
+            callbacks.onRequestHarnessStatus?.();
           }
           render();
         }
       });
     });
+
+    wireKnowledgeListeners();
+    wireExclusionsListeners();
+    wireGitListeners();
+    wireHarnessListeners();
+    wireLoadListeners();
 
     // Cluster Groups event wiring
     const addClusterBtn = container.querySelector('#btn-add-cluster-group');
@@ -1447,6 +2807,25 @@ export function renderSettingsDrawer(
         }
       });
     });
+
+    // Secondary Routing Layer Elimination (Safely Remove & Consolidate)
+    container.querySelectorAll('.btn-gov-eliminate-secondary').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = (btn as HTMLElement).getAttribute('data-target') || '';
+        if (target) {
+          callbacks.onGenerateGovernancePlan?.('eliminate_secondary_routing_layer', target);
+        }
+      });
+    });
+
+    container.querySelectorAll('.btn-gov-sync-harnesses').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = (btn as HTMLElement).getAttribute('data-target') || 'AGENTS.md';
+        callbacks.onGenerateGovernancePlan?.('sync_harness_routes', target);
+      });
+    });
   }
 
   function applyDiagnosticsFilterToDom(): void {
@@ -1481,15 +2860,28 @@ export function renderSettingsDrawer(
       const target = event.target as HTMLElement;
       const filterButton = target.closest<HTMLElement>('.diag-pillar-chip');
       const clearButton = target.closest<HTMLElement>('#diag-clear-filters');
-      if (!filterButton && !clearButton) return;
+      const scopeButton = target.closest<HTMLElement>('.diag-scope-btn, .diag-inspect-debt-btn');
+      if (!filterButton && !clearButton && !scopeButton) return;
 
       event.preventDefault();
       event.stopPropagation();
 
+      if (scopeButton) {
+        const scope = (scopeButton.getAttribute('data-scope') || 'active') as 'active' | 'legacy' | 'all';
+        state.selectedDebtScope = scope;
+        callbacks.onRequestIssuesWithOptions?.({
+          include_debt: scope !== 'active',
+          include_excluded: state.includeExcluded,
+          pillar: state.selectedPillarFilter || undefined,
+        });
+        scheduleRender();
+        return;
+      }
+
       if (clearButton) {
         state.selectedPillarFilter = '';
-      } else {
-        const filter = filterButton?.getAttribute('data-filter');
+      } else if (filterButton) {
+        const filter = filterButton.getAttribute('data-filter');
         if (!filter) return;
         const selected = new Set(
           (state.selectedPillarFilter || '')
@@ -1504,6 +2896,212 @@ export function renderSettingsDrawer(
 
       applyDiagnosticsFilterToDom();
     }, true);
+
+    container.addEventListener('change', (event) => {
+      const target = event.target as HTMLElement;
+      const chkExcluded = target.closest<HTMLInputElement>('#chk-include-excluded');
+      if (chkExcluded) {
+        state.includeExcluded = chkExcluded.checked;
+        callbacks.onRequestIssuesWithOptions?.({
+          include_debt: state.selectedDebtScope !== 'active',
+          include_excluded: state.includeExcluded,
+          pillar: state.selectedPillarFilter || undefined,
+        });
+        scheduleRender();
+      }
+    });
+  }
+
+  function closeAllEvolutionDropdowns(): void {
+    const kosMenu = container.querySelector('#menu-kos-filter-options') as HTMLElement | null;
+    if (kosMenu && kosMenu.style.display === 'block') {
+      kosMenu.style.display = 'none';
+      container.querySelector('#btn-kos-filter-toggle')?.setAttribute('aria-expanded', 'false');
+    }
+    container.querySelectorAll<HTMLElement>('.page-size-menu').forEach((m) => {
+      if (m.style.display === 'block') m.style.display = 'none';
+    });
+    container.querySelectorAll('.btn-page-size-toggle').forEach((b) => {
+      b.setAttribute('aria-expanded', 'false');
+    });
+    container.querySelectorAll<HTMLElement>('.signatures-page-size-menu').forEach((m) => {
+      if (m.style.display === 'block') m.style.display = 'none';
+    });
+    container.querySelectorAll('.btn-signatures-page-size-toggle').forEach((b) => {
+      b.setAttribute('aria-expanded', 'false');
+    });
+    container.querySelectorAll<HTMLElement>('.rule-level-menu').forEach((m) => {
+      if (m.style.display === 'block') m.style.display = 'none';
+    });
+    container.querySelectorAll('.btn-rule-level-toggle').forEach((b) => {
+      b.setAttribute('aria-expanded', 'false');
+    });
+  }
+
+  function wireExclusionsDelegatedListeners(): void {
+    if (container.dataset.exclusionsDelegatedWired === 'true') return;
+    container.dataset.exclusionsDelegatedWired = 'true';
+
+    container.addEventListener(
+      'click',
+      (event) => {
+        const target = event.target as HTMLElement | null;
+        if (!target) return;
+
+        // Dismiss scope dropdown if clicked outside #scope-dropdown
+        if (!target.closest('#scope-dropdown')) {
+          const menu = container.querySelector('#menu-scope-options') as HTMLElement | null;
+          if (menu && menu.style.display === 'block') {
+            menu.style.display = 'none';
+            const btn = container.querySelector('#btn-scope-toggle');
+            btn?.setAttribute('aria-expanded', 'false');
+          }
+        }
+
+        // Dismiss prep active dropdown if clicked outside #prep-active-dropdown
+        if (!target.closest('#prep-active-dropdown')) {
+          const menu = container.querySelector('#menu-prep-active-options') as HTMLElement | null;
+          if (menu && menu.style.display === 'block') {
+            menu.style.display = 'none';
+            const btn = container.querySelector('#btn-prep-active-toggle');
+            btn?.setAttribute('aria-expanded', 'false');
+          }
+        }
+
+        // Dismiss active harness dropdown if clicked outside #active-harness-dropdown
+        if (!target.closest('#active-harness-dropdown')) {
+          const menu = container.querySelector('#menu-active-harness-options') as HTMLElement | null;
+          if (menu && menu.style.display === 'block') {
+            menu.style.display = 'none';
+            const btn = container.querySelector('#btn-active-harness-toggle');
+            btn?.setAttribute('aria-expanded', 'false');
+          }
+        }
+
+        // Dismiss KOS filter dropdown if clicked outside #kos-discipline-dropdown
+        if (!target.closest('#kos-discipline-dropdown')) {
+          const menu = container.querySelector('#menu-kos-filter-options') as HTMLElement | null;
+          if (menu && menu.style.display === 'block') {
+            menu.style.display = 'none';
+            container.querySelector('#btn-kos-filter-toggle')?.setAttribute('aria-expanded', 'false');
+          }
+        }
+
+        // Dismiss page size dropdown if clicked outside .page-size-dropdown
+        if (!target.closest('.page-size-dropdown')) {
+          container.querySelectorAll<HTMLElement>('.page-size-menu').forEach((m) => {
+            if (m.style.display === 'block') m.style.display = 'none';
+          });
+          container.querySelectorAll('.btn-page-size-toggle').forEach((b) => {
+            b.setAttribute('aria-expanded', 'false');
+          });
+        }
+
+        // Dismiss rule level dropdown if clicked outside .rule-level-dropdown
+        if (!target.closest('.rule-level-dropdown')) {
+          container.querySelectorAll<HTMLElement>('.rule-level-menu').forEach((m) => {
+            if (m.style.display === 'block') m.style.display = 'none';
+          });
+          container.querySelectorAll('.btn-rule-level-toggle').forEach((b) => {
+            b.setAttribute('aria-expanded', 'false');
+          });
+        }
+
+        const delBtn = target.closest<HTMLElement>('.rule-del-btn');
+        if (delBtn) {
+          event.stopPropagation();
+          const pat = delBtn.getAttribute('data-rule');
+          const scope = (delBtn.getAttribute('data-scope') as 'scan' | 'graph') || 'graph';
+          if (pat) {
+            callbacks.onDeleteExclusion?.(pat, scope);
+            if (scope === 'graph') {
+              state.graphExclusions = state.graphExclusions.filter((r) => r !== pat);
+            } else {
+              state.scanExclusions = state.scanExclusions.filter((r) => r !== pat);
+            }
+            render();
+          }
+        }
+      },
+      true,
+    );
+
+    // Also close dropdown when clicking outside container (e.g. document/canvas)
+    document.addEventListener('click', (e) => {
+      const target = e.target as HTMLElement | null;
+      if (!target || !target.closest('#scope-dropdown')) {
+        const menu = container.querySelector('#menu-scope-options') as HTMLElement | null;
+        if (menu && menu.style.display === 'block') {
+          menu.style.display = 'none';
+          const btn = container.querySelector('#btn-scope-toggle');
+          btn?.setAttribute('aria-expanded', 'false');
+        }
+      }
+      if (!target || !target.closest('#prep-active-dropdown')) {
+        const menu = container.querySelector('#menu-prep-active-options') as HTMLElement | null;
+        if (menu && menu.style.display === 'block') {
+          menu.style.display = 'none';
+          const btn = container.querySelector('#btn-prep-active-toggle');
+          btn?.setAttribute('aria-expanded', 'false');
+        }
+      }
+      if (!target || !target.closest('#active-harness-dropdown')) {
+        const menu = container.querySelector('#menu-active-harness-options') as HTMLElement | null;
+        if (menu && menu.style.display === 'block') {
+          menu.style.display = 'none';
+          const btn = container.querySelector('#btn-active-harness-toggle');
+          btn?.setAttribute('aria-expanded', 'false');
+        }
+      }
+      if (!target || !target.closest('#kos-discipline-dropdown')) {
+        const menu = container.querySelector('#menu-kos-filter-options') as HTMLElement | null;
+        if (menu && menu.style.display === 'block') {
+          menu.style.display = 'none';
+          container.querySelector('#btn-kos-filter-toggle')?.setAttribute('aria-expanded', 'false');
+        }
+      }
+      if (!target || !target.closest('.page-size-dropdown')) {
+        container.querySelectorAll<HTMLElement>('.page-size-menu').forEach((m) => {
+          if (m.style.display === 'block') m.style.display = 'none';
+        });
+        container.querySelectorAll('.btn-page-size-toggle').forEach((b) => {
+          b.setAttribute('aria-expanded', 'false');
+        });
+      }
+      if (!target || !target.closest('.rule-level-dropdown')) {
+        container.querySelectorAll<HTMLElement>('.rule-level-menu').forEach((m) => {
+          if (m.style.display === 'block') m.style.display = 'none';
+        });
+        container.querySelectorAll('.btn-rule-level-toggle').forEach((b) => {
+          b.setAttribute('aria-expanded', 'false');
+        });
+      }
+    });
+
+    // Close dropdown on Escape
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        const menu = container.querySelector('#menu-scope-options') as HTMLElement | null;
+        if (menu && menu.style.display === 'block') {
+          menu.style.display = 'none';
+          const btn = container.querySelector('#btn-scope-toggle');
+          btn?.setAttribute('aria-expanded', 'false');
+        }
+        const prepMenu = container.querySelector('#menu-prep-active-options') as HTMLElement | null;
+        if (prepMenu && prepMenu.style.display === 'block') {
+          prepMenu.style.display = 'none';
+          const btn = container.querySelector('#btn-prep-active-toggle');
+          btn?.setAttribute('aria-expanded', 'false');
+        }
+        const activeMenu = container.querySelector('#menu-active-harness-options') as HTMLElement | null;
+        if (activeMenu && activeMenu.style.display === 'block') {
+          activeMenu.style.display = 'none';
+          const btn = container.querySelector('#btn-active-harness-toggle');
+          btn?.setAttribute('aria-expanded', 'false');
+        }
+        closeAllEvolutionDropdowns();
+      }
+    });
   }
 
   function wireDiagnosticsAccordionListeners(): void {
@@ -1614,17 +3212,36 @@ export function renderSettingsDrawer(
       );
     });
 
-    // 7. Hard & Soft Constraints Level Select
-    container.querySelectorAll('.rule-level-select').forEach((sel) => {
-      sel.addEventListener('change', (e) => {
+    // 7. Hard & Soft Constraints Level Custom Dropdowns
+    container.querySelectorAll('.btn-rule-level-toggle').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
         e.stopPropagation();
-        const ruleId = sel.getAttribute('data-rule-id');
-        const level = (sel as HTMLSelectElement).value as ConstraintLevel;
+        const ruleId = btn.getAttribute('data-rule-id');
+        const menu = container.querySelector(`.rule-level-menu[data-rule-id="${ruleId}"]`) as HTMLElement | null;
+        if (!menu) return;
+        const isHidden = menu.style.display === 'none' || !menu.style.display;
+        closeAllEvolutionDropdowns();
+        if (isHidden) {
+          menu.style.display = 'block';
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    container.querySelectorAll('.rule-level-menu .scope-menu-item').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const ruleId = item.getAttribute('data-rule-id');
+        const level = item.getAttribute('data-value') as ConstraintLevel;
         if (ruleId && state.constraints) {
           const rule = state.constraints.find((r) => r.id === ruleId);
           if (rule) {
             rule.level = level;
+            closeAllEvolutionDropdowns();
             callbacks.onValidateConstraints?.(state.constraints);
+            render();
           }
         }
       });
@@ -1655,14 +3272,386 @@ export function renderSettingsDrawer(
       });
     });
 
-    // 9. Finding File Link Navigation
-    container.querySelectorAll('.finding-loc').forEach((el) => {
+    // Strategy Selection & Incompatibility Guards (Feature 007 / T019, T020, T021, T027)
+    container.querySelectorAll('.strategy-checkbox').forEach((checkbox) => {
+      checkbox.addEventListener('change', (e) => {
+        e.stopPropagation();
+        const target = e.target as HTMLInputElement;
+        const oppId = target.getAttribute('data-opp-id');
+        const strategy = target.getAttribute('data-strategy');
+        if (!oppId || !strategy) return;
+
+        const parentContainer = target.closest(`.strategy-set-container[data-opp-id="${oppId}"]`);
+        if (!parentContainer) return;
+
+        const conflictBanner = parentContainer.querySelector(`#conflict-banner-${oppId}`);
+        const conflictMsg = conflictBanner?.querySelector('.conflict-msg');
+
+        if (target.checked) {
+          // If PreserveDocument was checked: uncheck and disable all other strategies (T020)
+          if (strategy === 'preserve_document') {
+            parentContainer.querySelectorAll<HTMLInputElement>('.strategy-checkbox').forEach((cb) => {
+              if (cb !== target) {
+                cb.checked = false;
+                cb.disabled = true;
+              }
+            });
+            if (conflictBanner && conflictMsg) {
+              conflictMsg.textContent = 'Document preservation selected: Zero transformation actions will be applied.';
+              conflictBanner.classList.remove('hidden');
+            }
+          } else {
+            // If another strategy was checked, ensure preserve_document is unchecked
+            const preserveCb = parentContainer.querySelector<HTMLInputElement>(
+              '.strategy-checkbox[data-strategy="preserve_document"]'
+            );
+            if (preserveCb && preserveCb.checked) {
+              preserveCb.checked = false;
+            }
+
+            // Incompatibility resolution (Alternative guard):
+            if (strategy === 'faceted_classification') {
+              const secCb = parentContainer.querySelector<HTMLInputElement>(
+                '.strategy-checkbox[data-strategy="section_addressing"]'
+              );
+              if (secCb && secCb.checked) {
+                secCb.checked = false;
+                if (conflictBanner && conflictMsg) {
+                  conflictMsg.textContent =
+                    "Swapped conflicting strategy. 'Faceted Classification' is an alternative to 'Section Addressing'.";
+                  conflictBanner.classList.remove('hidden');
+                }
+              }
+            } else if (strategy === 'section_addressing') {
+              const facetCb = parentContainer.querySelector<HTMLInputElement>(
+                '.strategy-checkbox[data-strategy="faceted_classification"]'
+              );
+              if (facetCb && facetCb.checked) {
+                facetCb.checked = false;
+                if (conflictBanner && conflictMsg) {
+                  conflictMsg.textContent =
+                    "Swapped conflicting strategy. 'Section Addressing' is an alternative to 'Faceted Classification'.";
+                  conflictBanner.classList.remove('hidden');
+                }
+              }
+            }
+          }
+        } else {
+          // If preserve_document was unchecked, re-enable all other checkboxes
+          if (strategy === 'preserve_document') {
+            parentContainer.querySelectorAll<HTMLInputElement>('.strategy-checkbox').forEach((cb) => {
+              cb.disabled = false;
+            });
+            if (conflictBanner) {
+              conflictBanner.classList.add('hidden');
+            }
+          }
+        }
+
+        // Recalculate Composite Plan Value (T027)
+        const checkedBoxes = Array.from(
+          parentContainer.querySelectorAll<HTMLInputElement>('.strategy-checkbox:checked')
+        );
+        const selectedStrats = checkedBoxes.map((cb) => cb.getAttribute('data-strategy') || '');
+
+        let baseFitSum = 0;
+        for (const cb of checkedBoxes) {
+          baseFitSum += parseInt(cb.getAttribute('data-fit') || '0', 10);
+        }
+
+        let synergyBonus = 0;
+        let overlapPenalty = 0;
+
+        const hasSec = selectedStrats.includes('section_addressing');
+        const hasIdx = selectedStrats.includes('lightweight_index');
+        const hasFacet = selectedStrats.includes('faceted_classification');
+
+        if (hasSec && hasIdx) {
+          synergyBonus += 15;
+          overlapPenalty += 5;
+        }
+        if (hasFacet && hasIdx) {
+          synergyBonus += 12;
+          overlapPenalty += 3;
+        }
+
+        const netValue = baseFitSum + synergyBonus - overlapPenalty;
+
+        const baseFitEl = parentContainer.querySelector(`#base-fit-${oppId}`);
+        const synergyEl = parentContainer.querySelector(`#synergy-bonus-${oppId}`);
+        const overlapEl = parentContainer.querySelector(`#overlap-penalty-${oppId}`);
+        const netValEl = parentContainer.querySelector(`#net-val-badge-${oppId}`);
+        const narrativeEl = parentContainer.querySelector(`#plan-narrative-${oppId}`);
+
+        if (baseFitEl) baseFitEl.textContent = String(baseFitSum);
+        if (synergyEl) synergyEl.textContent = `+${synergyBonus}`;
+        if (overlapEl) overlapEl.textContent = `-${overlapPenalty}`;
+        if (netValEl) netValEl.textContent = `Net Value: ${netValue}`;
+
+        if (narrativeEl) {
+          narrativeEl.textContent =
+            selectedStrats.length > 1 && synergyBonus > overlapPenalty
+              ? `Combined plan yields net value ${netValue} with +${synergyBonus} synergy bonus exceeding ${overlapPenalty} overlap overhead.`
+              : `Active plan yields net value ${netValue} (fit: ${baseFitSum}).`;
+        }
+
+        // Empty selection guard (T021)
+        const findingCard = target.closest('.evolution-finding-item') || parentContainer;
+        const multiPlanBtn = findingCard.querySelector<HTMLButtonElement>(
+          `[data-action="generate-multi-plan"][data-opp-id="${oppId}"], [data-action="generate-multi-plan"]`
+        );
+        const emptyWarning = parentContainer.querySelector(`#empty-warning-${oppId}`);
+
+        if (checkedBoxes.length === 0) {
+          if (multiPlanBtn) multiPlanBtn.disabled = true;
+          if (emptyWarning) emptyWarning.classList.remove('hidden');
+        } else {
+          if (multiPlanBtn) multiPlanBtn.disabled = false;
+          if (emptyWarning) emptyWarning.classList.add('hidden');
+        }
+      });
+    });
+
+    // Multi-strategy plan button handler
+    container.querySelectorAll('[data-action="generate-multi-plan"]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const oppId = btn.getAttribute('data-opp-id');
+        if (!oppId) return;
+
+        const findingCard = btn.closest('.evolution-finding-item') || btn.closest('.strategy-set-container') || container;
+        const strategyContainer = findingCard.querySelector(`.strategy-set-container[data-opp-id="${oppId}"]`) || findingCard.querySelector('.strategy-set-container');
+
+        let selectedStrategies: string[] = [];
+        if (strategyContainer) {
+          const checkedBoxes = Array.from(
+            strategyContainer.querySelectorAll<HTMLInputElement>('.strategy-checkbox:checked')
+          );
+          selectedStrategies = checkedBoxes
+            .map((cb) => cb.getAttribute('data-strategy') || '')
+            .filter(Boolean);
+        }
+
+        if (selectedStrategies.length === 0) {
+          const firstStrategyPill = findingCard.querySelector<HTMLInputElement>('.strategy-checkbox');
+          const firstStrat = firstStrategyPill?.getAttribute('data-strategy');
+          selectedStrategies = firstStrat ? [firstStrat] : ['preserve_document'];
+        }
+
+        callbacks.onGeneratePlanWithStrategies?.(oppId, selectedStrategies);
+      });
+    });
+
+    // 9. Finding File Link Navigation & Actions
+    container.querySelectorAll('.finding-loc, [data-action="open-file"]').forEach((el) => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
+        const dataFile = el.getAttribute('data-file');
+        const lineAttr = el.getAttribute('data-line');
+        const line = lineAttr ? parseInt(lineAttr, 10) : undefined;
+        if (dataFile) {
+          callbacks.onOpenFile?.(dataFile, line);
+          return;
+        }
         const pathSpan = el.querySelector('.finding-path');
-        const file = pathSpan?.textContent?.trim();
+        const text = pathSpan?.textContent?.trim();
+        if (text) {
+          const [file, l] = text.split(':');
+          callbacks.onOpenFile?.(file, l ? parseInt(l, 10) : undefined);
+        }
+      });
+    });
+
+    // 9b. Broken Reference Fix Action
+    container.querySelectorAll('[data-action="fix-broken"]').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const file = btn.getAttribute('data-file');
+        const target = btn.getAttribute('data-target') || '';
+        const lineAttr = btn.getAttribute('data-line');
+        const line = lineAttr ? parseInt(lineAttr, 10) : undefined;
         if (file) {
-          callbacks.onOpenFile?.(file);
+          callbacks.onFixBrokenLink?.(file, target, line);
+        }
+      });
+    });
+
+    // 9c. Document Review Resolution Action (T032)
+    container.querySelectorAll('[data-action="mark-reviewed"], .diag-mark-reviewed-btn').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const docId = btn.getAttribute('data-doc-id') || btn.getAttribute('data-file');
+        if (docId) {
+          callbacks.onMarkReviewed?.(docId);
+        }
+      });
+    });
+
+    // 10. Secondary Routing Layer Elimination (Safely Remove)
+    container.querySelectorAll('.btn-gov-eliminate-secondary').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = (btn as HTMLElement).getAttribute('data-target') || '';
+        if (target) {
+          callbacks.onGenerateGovernancePlan?.('eliminate_secondary_routing_layer', target);
+        }
+      });
+    });
+
+    // 11. Multi-Harness Parity Synchronization
+    container.querySelectorAll('.btn-gov-sync-harnesses').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = (btn as HTMLElement).getAttribute('data-target') || 'AGENTS.md';
+        callbacks.onGenerateGovernancePlan?.('sync_harness_routes', target);
+      });
+    });
+
+    // 12. 18 KOS Methodology Filter (Custom Popover Dropdown & Chips)
+    const kosBtn = container.querySelector('#btn-kos-filter-toggle');
+    const kosMenu = container.querySelector('#menu-kos-filter-options') as HTMLElement | null;
+
+    kosBtn?.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!kosMenu) return;
+      const isHidden = kosMenu.style.display === 'none' || !kosMenu.style.display;
+      closeAllEvolutionDropdowns();
+      if (isHidden) {
+        kosMenu.style.display = 'block';
+        kosBtn.setAttribute('aria-expanded', 'true');
+      }
+    });
+
+    kosMenu?.querySelectorAll('.scope-menu-item').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const val = item.getAttribute('data-value') || 'all';
+        state.selectedKosFilter = val;
+        state.evolutionFindingsPage = 1;
+        closeAllEvolutionDropdowns();
+        scheduleRender();
+      });
+    });
+
+    container.querySelectorAll<HTMLElement>('.kos-filter-chip').forEach((chip) => {
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const kosId = chip.getAttribute('data-kos-id') || 'all';
+        state.selectedKosFilter = kosId;
+        state.evolutionFindingsPage = 1;
+        closeAllEvolutionDropdowns();
+        scheduleRender();
+      });
+    });
+
+    // 13. Findings Pagination Controls (Custom Page Size Dropdown & Navigation)
+    container.querySelectorAll('.btn-page-size-toggle').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const pos = btn.getAttribute('data-position') || 'top';
+        const menu = container.querySelector(`.page-size-menu[data-position="${pos}"]`) as HTMLElement | null;
+        if (!menu) return;
+        const isHidden = menu.style.display === 'none' || !menu.style.display;
+        closeAllEvolutionDropdowns();
+        if (isHidden) {
+          menu.style.display = 'block';
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    container.querySelectorAll('.page-size-menu .scope-menu-item').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const valStr = item.getAttribute('data-value');
+        const newSize = parseInt(valStr || '25', 10);
+        if (newSize && [10, 25, 50].includes(newSize)) {
+          state.evolutionFindingsPageSize = newSize;
+          state.evolutionFindingsPage = 1;
+          closeAllEvolutionDropdowns();
+          scheduleRender();
+        }
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('.btn-page-nav').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const targetPage = parseInt(btn.getAttribute('data-page') || '1', 10);
+        if (!isNaN(targetPage) && targetPage >= 1) {
+          state.evolutionFindingsPage = targetPage;
+          scheduleRender();
+        }
+      });
+    });
+
+    // 14. Quality Pillar Filter Chips (Findings)
+    container.querySelectorAll<HTMLElement>('.findings-pillar-chip').forEach((chip) => {
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const pillarId = chip.getAttribute('data-pillar-id') || 'all';
+        state.evolutionPillarFilter = pillarId;
+        state.evolutionFindingsPage = 1;
+        closeAllEvolutionDropdowns();
+        scheduleRender();
+      });
+    });
+
+    // 15. Opportunity Type Filter Chips (Problem Signatures)
+    container.querySelectorAll<HTMLElement>('.signature-filter-chip').forEach((chip) => {
+      chip.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sigType = chip.getAttribute('data-sig-type') || 'all';
+        state.selectedSignatureTypeFilter = sigType;
+        state.evolutionSignaturesPage = 1;
+        closeAllEvolutionDropdowns();
+        scheduleRender();
+      });
+    });
+
+    // 16. Structural Opportunities Pagination (Page Size & Nav)
+    container.querySelectorAll('.btn-signatures-page-size-toggle').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const pos = btn.getAttribute('data-position') || 'top';
+        const menu = container.querySelector(`.signatures-page-size-menu[data-position="${pos}"]`) as HTMLElement | null;
+        if (!menu) return;
+        const isHidden = menu.style.display === 'none' || !menu.style.display;
+        closeAllEvolutionDropdowns();
+        if (isHidden) {
+          menu.style.display = 'block';
+          btn.setAttribute('aria-expanded', 'true');
+        }
+      });
+    });
+
+    container.querySelectorAll('.signatures-page-size-menu .scope-menu-item').forEach((item) => {
+      item.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        const valStr = item.getAttribute('data-value');
+        const newSize = parseInt(valStr || '10', 10);
+        if (newSize && [10, 25, 50].includes(newSize)) {
+          state.evolutionSignaturesPageSize = newSize;
+          state.evolutionSignaturesPage = 1;
+          closeAllEvolutionDropdowns();
+          scheduleRender();
+        }
+      });
+    });
+
+    container.querySelectorAll<HTMLButtonElement>('.btn-signatures-page-nav').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const targetPage = parseInt(btn.getAttribute('data-page') || '1', 10);
+        if (!isNaN(targetPage) && targetPage >= 1) {
+          state.evolutionSignaturesPage = targetPage;
+          scheduleRender();
         }
       });
     });
@@ -1673,6 +3662,7 @@ export function renderSettingsDrawer(
     const prevTab = state.activeTab;
     if (tab) state.activeTab = tab;
     isVisible = true;
+    callbacks.onOpen?.();
 
     // Skip full re-render if already visible on the same tab (deduplicate rapid open calls)
     if (wasVisible && state.activeTab === prevTab) {
@@ -1693,6 +3683,9 @@ export function renderSettingsDrawer(
       }, 250);
     }
 
+    if (state.activeTab === 'exclusions') {
+      callbacks.onRequestExclusions?.();
+    }
     if (state.activeTab === 'diagnostics' || state.activeTab === 'evolution') {
       if (!state.issuesReport) {
         callbacks.onRequestIssues?.(state.selectedPillarFilter);
@@ -1700,6 +3693,10 @@ export function renderSettingsDrawer(
       if (state.activeTab === 'evolution') {
         callbacks.onRequestEvolution?.();
       }
+    }
+    if (state.activeTab === 'git' || state.activeTab === 'harness' || state.activeTab === 'git_harness') {
+      callbacks.onRequestHarnessTools?.();
+      callbacks.onRequestHarnessStatus?.();
     }
     render();
   }
@@ -1720,6 +3717,7 @@ export function renderSettingsDrawer(
   }
 
   wireDiagnosticsFilterListeners();
+  wireExclusionsDelegatedListeners();
   render();
   wireInfoBubbleListeners(container);
 

@@ -27,6 +27,7 @@ pub struct OverlayDelta {
 /// Ephemeral candidate graph view referencing base committed graph.
 pub struct CandidateOverlay<'a> {
     pub base_graph: &'a GraphTopology,
+    pub workspace_root: &'a Path,
     pub staged_delta: &'a GitDelta,
     pub overlay: OverlayDelta,
 }
@@ -35,7 +36,7 @@ impl<'a> CandidateOverlay<'a> {
     /// Builds a candidate overlay from base graph and staged Git delta.
     pub fn new(
         base_graph: &'a GraphTopology,
-        workspace_root: &Path,
+        workspace_root: &'a Path,
         staged_delta: &'a GitDelta,
     ) -> Self {
         let mut overlay = OverlayDelta::default();
@@ -61,16 +62,12 @@ impl<'a> CandidateOverlay<'a> {
                     let ast = parse_markdown_ast(&rel_path, &content);
                     let token_count = count_bpe_tokens(&content).unwrap_or(0);
 
-                    let label = ast
-                        .headings
-                        .first()
-                        .cloned()
-                        .unwrap_or_else(|| {
-                            Path::new(&rel_path)
-                                .file_stem()
-                                .map(|s| s.to_string_lossy().to_string())
-                                .unwrap_or_else(|| rel_path.clone())
-                        });
+                    let label = ast.headings.first().cloned().unwrap_or_else(|| {
+                        Path::new(&rel_path)
+                            .file_stem()
+                            .map(|s| s.to_string_lossy().to_string())
+                            .unwrap_or_else(|| rel_path.clone())
+                    });
 
                     let node = NoteNode {
                         id: rel_path.clone(),
@@ -87,9 +84,12 @@ impl<'a> CandidateOverlay<'a> {
                         broken_links: 0,
                         fragments: Vec::new(),
                         freshness: None,
+                        code_dependencies: Vec::new(),
                     };
 
-                    overlay.mutated_headings.insert(rel_path.clone(), ast.headings);
+                    overlay
+                        .mutated_headings
+                        .insert(rel_path.clone(), ast.headings);
                     overlay.mutated_edges.extend(ast.edges);
                     overlay.mutated_nodes.insert(rel_path, node);
                 }
@@ -98,6 +98,7 @@ impl<'a> CandidateOverlay<'a> {
 
         Self {
             base_graph,
+            workspace_root,
             staged_delta,
             overlay,
         }
@@ -141,7 +142,9 @@ impl<'a> CandidateOverlay<'a> {
         let mut nodes = HashMap::new();
 
         for (k, node) in &self.base_graph.nodes {
-            if !self.overlay.deleted_nodes.contains(k) && !self.overlay.mutated_nodes.contains_key(k) {
+            if !self.overlay.deleted_nodes.contains(k)
+                && !self.overlay.mutated_nodes.contains_key(k)
+            {
                 nodes.insert(k.clone(), PathBuf::from(&node.file_path));
             }
         }
@@ -158,7 +161,9 @@ impl<'a> CandidateOverlay<'a> {
         let mut map = HashMap::new();
 
         for (k, v) in &self.base_graph.headings {
-            if !self.overlay.deleted_nodes.contains(k) && !self.overlay.mutated_headings.contains_key(k) {
+            if !self.overlay.deleted_nodes.contains(k)
+                && !self.overlay.mutated_headings.contains_key(k)
+            {
                 map.insert(k.clone(), v.clone());
             }
         }

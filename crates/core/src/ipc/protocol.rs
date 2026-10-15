@@ -269,3 +269,40 @@ pub struct FixBrokenLinkNotificationParams {
     pub target_path: String,
     pub line_number: u32,
 }
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct GetAffectedDocumentsParams {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub changed_paths: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub git_range: Option<String>,
+    #[serde(default = "default_true_field")]
+    pub include_unchanged_reviews: bool,
+}
+
+fn default_true_field() -> bool {
+    true
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ResolveDocumentReviewParams {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub doc_ids: Option<Vec<String>>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub resolved_reviews: Option<Vec<String>>,
+    #[serde(default = "default_user_action")]
+    pub receipt_source: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub commit_hash: Option<String>,
+}
+
+fn default_user_action() -> String {
+    "user_action".to_string()
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ResolveDocumentReviewResult {
+    pub resolved_count: usize,
+    pub receipt_id: String,
+}
+

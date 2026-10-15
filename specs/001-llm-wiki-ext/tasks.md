@@ -1,3 +1,116 @@
+---
+wiki:
+  content_hash: 6a43686253f7d0add533f22058c7000fe78f1c7fcd0e1858cfd5e20990df0201
+  fragments:
+    tasks-llm-wiki-extension-for-vs-code-llm-wiki-ext4vsc:
+      tokens: 8614
+      inbound: 0
+      outbound: 2
+    phase-1-setup-shared-infrastructure:
+      tokens: 252
+      inbound: 0
+      outbound: 0
+    phase-2-foundational-blocking-prerequisites:
+      tokens: 446
+      inbound: 0
+      outbound: 0
+    phase-3-user-story-1-organic-vault-discovery-graph-centrality-computation-priority-p1-mvp:
+      tokens: 823
+      inbound: 0
+      outbound: 0
+    tests-for-user-story-1-tdd-first:
+      tokens: 171
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-1:
+      tokens: 451
+      inbound: 0
+      outbound: 0
+    phase-4-user-story-2-sidecar-process-lifecycle-typed-websocket-ipc-priority-p1:
+      tokens: 675
+      inbound: 0
+      outbound: 0
+    tests-for-user-story-2-tdd-first:
+      tokens: 96
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-2:
+      tokens: 413
+      inbound: 0
+      outbound: 0
+    ? phase-5-user-story-3-interactive-force-directed-webview-with-hop-opacity-cluster-hashtag-path-coloring-token-economics-priority-p2
+    : tokens: 2304
+      inbound: 0
+      outbound: 0
+    tests-for-user-story-3-tdd-first:
+      tokens: 1471
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-3:
+      tokens: 617
+      inbound: 0
+      outbound: 0
+    phase-6-user-story-4-event-driven-git-hook-synchronization-with-rust-native-prek-orchestration-priority-p2:
+      tokens: 2541
+      inbound: 0
+      outbound: 0
+    tests-for-user-story-4-tdd-first:
+      tokens: 150
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-4:
+      tokens: 290
+      inbound: 0
+      outbound: 0
+    phase-7-user-story-5-multi-repo-unified-vault-git-submodule-resolution-priority-p3:
+      tokens: 257
+      inbound: 0
+      outbound: 0
+    tests-for-user-story-5-tdd-first:
+      tokens: 53
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-5:
+      tokens: 100
+      inbound: 0
+      outbound: 0
+    phase-8-polish-cross-cutting-concerns:
+      tokens: 208
+      inbound: 0
+      outbound: 0
+    dependencies-execution-order:
+      tokens: 424
+      inbound: 0
+      outbound: 0
+    phase-dependencies:
+      tokens: 418
+      inbound: 0
+      outbound: 0
+    parallel-opportunities:
+      tokens: 329
+      inbound: 0
+      outbound: 0
+    within-setup-foundational:
+      tokens: 179
+      inbound: 0
+      outbound: 0
+    across-user-stories:
+      tokens: 146
+      inbound: 0
+      outbound: 0
+    implementation-strategy:
+      tokens: 288
+      inbound: 0
+      outbound: 0
+    mvp-first-user-story-1:
+      tokens: 130
+      inbound: 0
+      outbound: 0
+    incremental-feature-delivery:
+      tokens: 154
+      inbound: 0
+      outbound: 0
+---
 # Tasks: LLM Wiki Extension for VS Code (`llm_wiki_ext4vsc`)
 
 **Branch**: `001-llm-wiki-ext` | **Date**: 2026-09-11 | **Plan**: [`plan.md`](plan.md) | **Spec**: [`spec.md`](spec.md)
@@ -21,9 +134,9 @@
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [x] T005 [P] Define core domain types and enums (`NodeStatus` with enum `['active', 'connected_inactive', 'orphan']`, `LinkType` with enum `['markdown', 'wikilink']`, `ClusterQueryType` with enum `['tag', 'path']`) in `crates/core/src/types.rs`
-- [x] T006 [P] Implement `NoteNode` and `NoteEdge` structs with serde serialization in `crates/core/src/models/mod.rs` enforcing constraints: `id` non-empty POSIX path, `color` 7-char Hex `#RRGGBB`, `hop_distance` $0$ for Hub, $\ge 1$ for hops, $-1$ for orphan
-- [x] T007 [P] Implement `ContextVaultConfig` and `ClusterColorGroup` schema in `crates/core/src/config/schema.rs` adhering to `contracts/context_vault_schema.json` with regex validation for `query` (`^(tag:#[a-zA-Z0-9_/-]+|path:.+)$`)
+- [x] T005 [P] Define core domain types and enums (`NodeStatus` with enum `['active', 'connected_inactive', 'orphan']`, `LinkType` with enum `['markdown', 'wikilink']`, `ClusterQueryType` with enum `['tag', 'path']`) in `crates/core/src/ipc/protocol.rs`
+- [x] T006 [P] Implement `NoteNode` and `NoteEdge` structs with serde serialization in `crates/core/src/model/mod.rs` enforcing constraints: `id` non-empty POSIX path, `color` 7-char Hex `#RRGGBB`, `hop_distance` $0$ for Hub, $\ge 1$ for hops, $-1$ for orphan
+- [x] T007 [P] Implement `ContextVaultConfig` and `ClusterColorGroup` schema in `crates/core/src/config/mod.rs` adhering to `contracts/context_vault_schema.json` with regex validation for `query` (`^(tag:#[a-zA-Z0-9_/-]+|path:.+)$`)
 - [x] T008 [P] Implement JSON-RPC 2.0 protocol types (`JsonRpcRequest`, `JsonRpcResponse`, `JsonRpcError`) adhering to `contracts/ipc_jsonrpc_protocol.json` in `crates/core/src/ipc/protocol.rs`
 - [x] T009 [P] Define shared TypeScript interfaces for JSON-RPC messages and Webview RPC in `extension/src/types/protocol.ts` adhering to `contracts/ipc_jsonrpc_protocol.json` and `contracts/webview_rpc_protocol.json`
 - [x] T010 Implement error handling and result types (`WikiError`, `Result<T>`) in `crates/core/src/error.rs`
@@ -91,9 +204,9 @@
 **Independent Test**: Webview tests and visual verification: verify CSP header contains random nonce, canvas renders at 60 FPS, nodes with `#architecture` take purple base hue modulated by hop distance alpha, active tokens sum Level 0 nodes, and clicking a node dispatches `openFile` to open editor document.
 
 ### Tests for User Story 3 (TDD First) ⚠️
-- [x] T033 [P] [US3] Write unit tests for Hue + Opacity color composition invariant and cluster rule matching in `extension/webview-ui/test/colorResolver.test.ts`
-- [x] T034 [P] [US3] Write unit tests for Webview typed RPC message dispatcher and CSP generator in `extension/test/suite/webview.test.ts`
-
+- [x] T033 [P] [US3] Write unit tests for Hue + Opacity color composition invariant and cluster rule matching in `extension/test/suite/colorResolver.test.ts`
+*extension/test/suite/webview.test.ts*-*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*[*extension/test/suite/webview.test.ts*x*extension/test/suite/webview.test.ts*]*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*T*extension/test/suite/webview.test.ts*0*extension/test/suite/webview.test.ts*3*extension/test/suite/webview.test.ts*4*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*[*extension/test/suite/webview.test.ts*P*extension/test/suite/webview.test.ts*]*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*[*extension/test/suite/webview.test.ts*U*extension/test/suite/webview.test.ts*S*extension/test/suite/webview.test.ts*3*extension/test/suite/webview.test.ts*]*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*W*extension/test/suite/webview.test.ts*r*extension/test/suite/webview.test.ts*i*extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*u*extension/test/suite/webview.test.ts*n*extension/test/suite/webview.test.ts*i*extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*s*extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*s*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*f*extension/test/suite/webview.test.ts*o*extension/test/suite/webview.test.ts*r*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*W*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*b*extension/test/suite/webview.test.ts*v*extension/test/suite/webview.test.ts*i*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*w*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*y*extension/test/suite/webview.test.ts*p*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*d*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*R*extension/test/suite/webview.test.ts*P*extension/test/suite/webview.test.ts*C*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*m*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*s*extension/test/suite/webview.test.ts*s*extension/test/suite/webview.test.ts*a*extension/test/suite/webview.test.ts*g*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*d*extension/test/suite/webview.test.ts*i*extension/test/suite/webview.test.ts*s*extension/test/suite/webview.test.ts*p*extension/test/suite/webview.test.ts*a*extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*c*extension/test/suite/webview.test.ts*h*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*r*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*a*extension/test/suite/webview.test.ts*n*extension/test/suite/webview.test.ts*d*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*C*extension/test/suite/webview.test.ts*S*extension/test/suite/webview.test.ts*P*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*g*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*n*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*r*extension/test/suite/webview.test.ts*a*extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*o*extension/test/suite/webview.test.ts*r*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*i*extension/test/suite/webview.test.ts*n*extension/test/suite/webview.test.ts* *extension/test/suite/webview.test.ts*`*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*x*extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*n*extension/test/suite/webview.test.ts*s*extension/test/suite/webview.test.ts*i*extension/test/suite/webview.test.ts*o*extension/test/suite/webview.test.ts*n*extension/test/suite/webview.test.ts*/*extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*s*extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*/*extension/test/suite/webview.test.ts*s*extension/test/suite/webview.test.ts*u*extension/test/suite/webview.test.ts*i*extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*/*extension/test/suite/webview.test.ts*w*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*b*extension/test/suite/webview.test.ts*v*extension/test/suite/webview.test.ts*i*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*w*extension/test/suite/webview.test.ts*.*extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*e*extension/test/suite/webview.test.ts*s*extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*.*extension/test/suite/webview.test.ts*t*extension/test/suite/webview.test.ts*s*extension/test/suite/webview.test.ts*`*extension/test/suite/webview.test.ts*
+*extension/test/suite/webview.test.ts*
 ### Implementation for User Story 3
 - [x] T035 [P] [US3] Implement CSP helper generating cryptographic nonces (`script-src 'nonce-${nonce}'`) and `asWebviewUri` resource mapping in `extension/src/webview/cspHelper.ts`
 - [x] T036 [US3] Implement `WebviewPanel` lifecycle manager with `vscode.setState()`/`getState()` and `WebviewPanelSerializer` (no `retainContextWhenHidden`) in `extension/src/webview/panelManager.ts`
@@ -103,10 +216,10 @@
 - [x] T040 [US3] Implement Hue + Opacity color resolver applying cluster rule base hue with hop distance alpha decay in `extension/webview-ui/src/graph/colorResolver.ts`
 - [x] T041 [P] [US3] Implement diagnostic token counter widget displaying active harness tokens, reachable subcall tokens, and threshold alert badges in `extension/webview-ui/src/components/tokenCounter.ts`
 - [x] T042 [P] [US3] Implement interactive Cluster Groups manager UI (add/edit/toggle tag/path rules) with live preview and save in `extension/webview-ui/src/components/colorManager.ts`
-- [x] T043 [P] [US3] Implement `actionsToolbar.ts` in `extension/webview-ui/src/components/actionsToolbar.ts` providing quick action buttons (Set as Hub, Rescan Vault, and Fix Broken Links)
+- [x] T043 [P] [US3] Implement `extension/webview-ui/src/components/actionsToolbar.ts` in `extension/webview-ui/src/components/actionsToolbar.ts` providing quick action buttons (Set as Hub, Rescan Vault, and Fix Broken Links)
 - [x] T044 [US3] Implement Webview client RPC bridge handling `openFile`, `setHub`, `updateColorGroups`, `fixBrokenLinks`, and `graphDataUpdate` in `extension/webview-ui/src/rpc/webviewRpc.ts`
 - [x] T045 [US3] Implement Extension Host command `llmWiki.showKnowledgeGraph` (`LLM Wiki: Show Knowledge Graph`) in `extension/src/commands/showGraph.ts`
-- [x] T046 [US3] Implement extension commands `llmWiki.setHub` (`setHub.ts`), `llmWiki.rescanVault` (`rescanVault.ts`), and `llmWiki.fixBrokenLinks` (`fixBrokenLinks.ts` with QuickPick dead link navigation) in `extension/src/commands/`
+- [x] T046 [US3] Implement extension commands `llmWiki.setHub` (`extension/src/commands/setHub.ts`), `llmWiki.rescanVault` (`extension/src/commands/rescanVault.ts`), and `llmWiki.fixBrokenLinks` (`extension/src/commands/fixBrokenLinks.ts` with QuickPick dead link navigation) in `extension/src/commands/`
 
 **Checkpoint**: Full visual graph interface operational with context economics, toolbar quick actions, and cluster coloring.
 
@@ -114,8 +227,8 @@
 
 ## Phase 6: User Story 4 - Event-Driven Git Hook Synchronization with Rust-Native `prek` Orchestration (Priority: P2)
 
-**Goal**: Provide event-driven Git hook synchronization using `prek`, generating `.pre-commit-config.yaml` with declarative regex file filtering (`files: '(?i)\.md$'`), executing `llm-wiki-core git-delta` CLI, patching in-memory graph within 50ms, and strictly enforcing $\le 500\text{ ms}$ non-blocking fail-open bypass.
-
+*.pre-commit-config.yaml***.pre-commit-config.yaml***.pre-commit-config.yaml*G*.pre-commit-config.yaml*o*.pre-commit-config.yaml*a*.pre-commit-config.yaml*l*.pre-commit-config.yaml***.pre-commit-config.yaml***.pre-commit-config.yaml*:*.pre-commit-config.yaml* *.pre-commit-config.yaml*P*.pre-commit-config.yaml*r*.pre-commit-config.yaml*o*.pre-commit-config.yaml*v*.pre-commit-config.yaml*i*.pre-commit-config.yaml*d*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*e*.pre-commit-config.yaml*v*.pre-commit-config.yaml*e*.pre-commit-config.yaml*n*.pre-commit-config.yaml*t*.pre-commit-config.yaml*-*.pre-commit-config.yaml*d*.pre-commit-config.yaml*r*.pre-commit-config.yaml*i*.pre-commit-config.yaml*v*.pre-commit-config.yaml*e*.pre-commit-config.yaml*n*.pre-commit-config.yaml* *.pre-commit-config.yaml*G*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml* *.pre-commit-config.yaml*h*.pre-commit-config.yaml*o*.pre-commit-config.yaml*o*.pre-commit-config.yaml*k*.pre-commit-config.yaml* *.pre-commit-config.yaml*s*.pre-commit-config.yaml*y*.pre-commit-config.yaml*n*.pre-commit-config.yaml*c*.pre-commit-config.yaml*h*.pre-commit-config.yaml*r*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*i*.pre-commit-config.yaml*z*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml* *.pre-commit-config.yaml*u*.pre-commit-config.yaml*s*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*k*.pre-commit-config.yaml*`*.pre-commit-config.yaml*,*.pre-commit-config.yaml* *.pre-commit-config.yaml*g*.pre-commit-config.yaml*e*.pre-commit-config.yaml*n*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*.*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*m*.pre-commit-config.yaml*m*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*g*.pre-commit-config.yaml*.*.pre-commit-config.yaml*y*.pre-commit-config.yaml*a*.pre-commit-config.yaml*m*.pre-commit-config.yaml*l*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*w*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*h*.pre-commit-config.yaml* *.pre-commit-config.yaml*d*.pre-commit-config.yaml*e*.pre-commit-config.yaml*c*.pre-commit-config.yaml*l*.pre-commit-config.yaml*a*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*v*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*g*.pre-commit-config.yaml*e*.pre-commit-config.yaml*x*.pre-commit-config.yaml* *.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*l*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*l*.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml* *.pre-commit-config.yaml*(*.pre-commit-config.yaml*`*.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*l*.pre-commit-config.yaml*e*.pre-commit-config.yaml*s*.pre-commit-config.yaml*:*.pre-commit-config.yaml* *.pre-commit-config.yaml*'*.pre-commit-config.yaml*(*.pre-commit-config.yaml*?*.pre-commit-config.yaml*i*.pre-commit-config.yaml*)*.pre-commit-config.yaml*\*.pre-commit-config.yaml*.*.pre-commit-config.yaml*m*.pre-commit-config.yaml*d*.pre-commit-config.yaml*$*.pre-commit-config.yaml*'*.pre-commit-config.yaml*`*.pre-commit-config.yaml*)*.pre-commit-config.yaml*,*.pre-commit-config.yaml* *.pre-commit-config.yaml*e*.pre-commit-config.yaml*x*.pre-commit-config.yaml*e*.pre-commit-config.yaml*c*.pre-commit-config.yaml*u*.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*l*.pre-commit-config.yaml*l*.pre-commit-config.yaml*m*.pre-commit-config.yaml*-*.pre-commit-config.yaml*w*.pre-commit-config.yaml*i*.pre-commit-config.yaml*k*.pre-commit-config.yaml*i*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*g*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*-*.pre-commit-config.yaml*d*.pre-commit-config.yaml*e*.pre-commit-config.yaml*l*.pre-commit-config.yaml*t*.pre-commit-config.yaml*a*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*C*.pre-commit-config.yaml*L*.pre-commit-config.yaml*I*.pre-commit-config.yaml*,*.pre-commit-config.yaml* *.pre-commit-config.yaml*p*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*c*.pre-commit-config.yaml*h*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml* *.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*-*.pre-commit-config.yaml*m*.pre-commit-config.yaml*e*.pre-commit-config.yaml*m*.pre-commit-config.yaml*o*.pre-commit-config.yaml*r*.pre-commit-config.yaml*y*.pre-commit-config.yaml* *.pre-commit-config.yaml*g*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*p*.pre-commit-config.yaml*h*.pre-commit-config.yaml* *.pre-commit-config.yaml*w*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*h*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml* *.pre-commit-config.yaml*5*.pre-commit-config.yaml*0*.pre-commit-config.yaml*m*.pre-commit-config.yaml*s*.pre-commit-config.yaml*,*.pre-commit-config.yaml* *.pre-commit-config.yaml*a*.pre-commit-config.yaml*n*.pre-commit-config.yaml*d*.pre-commit-config.yaml* *.pre-commit-config.yaml*s*.pre-commit-config.yaml*t*.pre-commit-config.yaml*r*.pre-commit-config.yaml*i*.pre-commit-config.yaml*c*.pre-commit-config.yaml*t*.pre-commit-config.yaml*l*.pre-commit-config.yaml*y*.pre-commit-config.yaml* *.pre-commit-config.yaml*e*.pre-commit-config.yaml*n*.pre-commit-config.yaml*f*.pre-commit-config.yaml*o*.pre-commit-config.yaml*r*.pre-commit-config.yaml*c*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml* *.pre-commit-config.yaml*$*.pre-commit-config.yaml*\*.pre-commit-config.yaml*l*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*5*.pre-commit-config.yaml*0*.pre-commit-config.yaml*0*.pre-commit-config.yaml*\*.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml*x*.pre-commit-config.yaml*t*.pre-commit-config.yaml*{*.pre-commit-config.yaml* *.pre-commit-config.yaml*m*.pre-commit-config.yaml*s*.pre-commit-config.yaml*}*.pre-commit-config.yaml*$*.pre-commit-config.yaml* *.pre-commit-config.yaml*n*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*-*.pre-commit-config.yaml*b*.pre-commit-config.yaml*l*.pre-commit-config.yaml*o*.pre-commit-config.yaml*c*.pre-commit-config.yaml*k*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml* *.pre-commit-config.yaml*f*.pre-commit-config.yaml*a*.pre-commit-config.yaml*i*.pre-commit-config.yaml*l*.pre-commit-config.yaml*-*.pre-commit-config.yaml*o*.pre-commit-config.yaml*p*.pre-commit-config.yaml*e*.pre-commit-config.yaml*n*.pre-commit-config.yaml* *.pre-commit-config.yaml*b*.pre-commit-config.yaml*y*.pre-commit-config.yaml*p*.pre-commit-config.yaml*a*.pre-commit-config.yaml*s*.pre-commit-config.yaml*s*.pre-commit-config.yaml*.*.pre-commit-config.yaml*
+*.pre-commit-config.yaml*
 **Independent Test**: Execute `cargo test -p llm-wiki-core --test delta_test`, commit a `.rs` file (verify `prek` skips hook in $<2\text{ ms}$), commit a `.md` file (verify `git-delta` updates graph in $<50\text{ ms}$), and commit with offline daemon (verify hook exits 0 in $<500\text{ ms}$).
 
 ### Tests for User Story 4 (TDD First) ⚠️
@@ -126,7 +239,7 @@
 ### Implementation for User Story 4
 - [x] T050 [US4] Implement `llm-wiki-core git-delta` CLI subcommand with 500ms timeout discovering active daemon port via `.git/llm-wiki.port` (fallback 8989) and dispatching loopback `git/commitDelta` notification to daemon socket in `crates/core/src/cli/delta.rs`
 - [x] T051 [US4] Implement in-memory incremental graph updater patching nodes, edges, betweenness, and tokens in $\le 50\text{ ms}$ in `crates/core/src/delta/updater.rs`
-- [x] T052 [P] [US4] Implement declarative `.pre-commit-config.yaml` writer with `files: '(?i)\.md$'` and `prek install` runner in `extension/src/hooks/prekInstaller.ts`
+- [x] T052 [P] [US4] Implement declarative *.pre-commit-config.yaml* writer with `files: '(?i)\.md$'` and `prek install` runner in `extension/src/hooks/prekInstaller.ts`
 - [x] T053 [P] [US4] Implement 3-tier fallback installer (Tier 1 `prek`, Tier 2 `pre-commit`, Tier 3 `.git/hooks/post-commit` shell script) in `extension/src/hooks/fallbackInstaller.ts`
 - [x] T054 [US4] Implement VS Code command `LLM Wiki: Install Git Hooks` in `extension/src/commands/installHooks.ts`
 
@@ -145,7 +258,7 @@
 
 ### Implementation for User Story 5
 - [x] T056 [US5] Implement cross-submodule relative path resolver and vault boundary traversal in `crates/core/src/graph/resolver.rs`
-- [x] T057 [US5] Support `mode: multi-repo` and `mode: vault` path normalization in `crates/core/src/config/schema.rs` and `crates/core/src/graph/builder.rs`
+- [x] T057 [US5] Support `mode: multi-repo` and `mode: vault` path normalization in `crates/core/src/config/mod.rs` and `crates/core/src/graph/builder.rs`
 
 **Checkpoint**: All 5 User Stories complete and verified.
 

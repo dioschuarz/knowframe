@@ -1,3 +1,64 @@
+---
+wiki:
+  content_hash: eb3db137e203d72e6e942eca987631f491b59c5ff292beff9b444ea75a5fe8fd
+  fragments:
+    quickstart-runnable-validation-scenarios-ai-context-observatory-002-context-observatory-ux:
+      tokens: 1024
+      inbound: 0
+      outbound: 0
+    prerequisites:
+      tokens: 75
+      inbound: 0
+      outbound: 0
+    scenario-1-calm-status-dashboard-zero-action-duplication:
+      tokens: 212
+      inbound: 0
+      outbound: 0
+    execution-steps:
+      tokens: 160
+      inbound: 0
+      outbound: 0
+    expected-outcome:
+      tokens: 18
+      inbound: 0
+      outbound: 0
+    scenario-2-contextual-selection-inspector:
+      tokens: 206
+      inbound: 0
+      outbound: 0
+    execution-steps-1:
+      tokens: 154
+      inbound: 0
+      outbound: 0
+    expected-outcome-1:
+      tokens: 25
+      inbound: 0
+      outbound: 0
+    scenario-3-curated-knowledge-exclusions-target-resolvability:
+      tokens: 262
+      inbound: 0
+      outbound: 0
+    execution-steps-2:
+      tokens: 194
+      inbound: 0
+      outbound: 0
+    expected-outcome-2:
+      tokens: 33
+      inbound: 0
+      outbound: 0
+    scenario-4-hop-constrained-focus-modes-semantic-sizing:
+      tokens: 194
+      inbound: 0
+      outbound: 0
+    execution-steps-3:
+      tokens: 137
+      inbound: 0
+      outbound: 0
+    expected-outcome-3:
+      tokens: 25
+      inbound: 0
+      outbound: 0
+---
 # Quickstart & Runnable Validation Scenarios: AI Context Observatory (`002-context-observatory-ux`)
 
 **Feature Branch**: `002-context-observatory-ux`  

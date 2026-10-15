@@ -1,8 +1,12 @@
 pub mod baseline_cmd;
 pub mod delta;
+pub mod governance_cmd;
 pub mod issues_cmd;
 pub mod materialize_cmd;
+pub mod method_evolution;
 pub mod quality_cmd;
+pub mod review_cmd;
 pub mod scan;
 pub mod trace_cmd;
+pub mod trace_impact;
 pub mod validate;

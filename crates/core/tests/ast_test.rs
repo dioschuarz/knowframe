@@ -44,6 +44,19 @@ Real link outside: [Real Link](real.md).
 }
 
 #[test]
+fn test_heading_text_includes_inline_code_for_fragment_anchor_validation() {
+    let parsed = parse_markdown_ast(
+        "spec.md",
+        "# Feature Specification (`llm_wiki_ext4vsc`)\n\nContent.\n",
+    );
+
+    assert_eq!(
+        parsed.headings,
+        vec!["Feature Specification (llm_wiki_ext4vsc)".to_string()]
+    );
+}
+
+#[test]
 fn test_obsidian_wikilinks_and_aliases() {
     let content = r#"# Wikilink Test
 
@@ -81,4 +94,42 @@ Check #Security and #DEV_OPS/v1 inline tags.
     assert!(parsed.tags.contains(&"core".to_string()));
     assert!(parsed.tags.contains(&"security".to_string()));
     assert!(parsed.tags.contains(&"dev_ops/v1".to_string()));
+}
+
+#[test]
+fn test_heading_anchor_stability_and_slug_generation_t022() {
+    use llm_wiki_core::fragment::extractor::{slugify_heading, AnchorDisambiguator};
+
+    let cases = vec![
+        ("4.2 Caching & Memory (v2.1) 🚀", "42-caching-memory-v21"),
+        ("`execute_query()` Performance & Metrics", "execute-query-performance-metrics"),
+        ("Title: Subtitle -- What's Next?", "title-subtitle-whats-next"),
+        ("Special chars: @#$%^&*()_+={}[]|:;\"'<>,.?/", "special-chars"),
+        ("   Multiple   Spaces   and---Hyphens   ", "multiple-spaces-and-hyphens"),
+        ("Architecture", "architecture"),
+    ];
+
+    for (heading, expected_slug) in &cases {
+        let slug = slugify_heading(heading);
+        assert_eq!(&slug, expected_slug, "Failed on heading: {}", heading);
+
+        // Slugification must be idempotent
+        let second_pass = slugify_heading(&slug);
+        assert_eq!(&second_pass, expected_slug, "Slugification was not idempotent for: {}", heading);
+    }
+
+    // Verify disambiguation counter stability across multiple runs
+    let mut disambiguator = AnchorDisambiguator::new();
+    let d1 = disambiguator.disambiguate("anchor");
+    let d2 = disambiguator.disambiguate("anchor");
+    let d3 = disambiguator.disambiguate("anchor");
+    assert_eq!(d1, "anchor");
+    assert_eq!(d2, "anchor-1");
+    assert_eq!(d3, "anchor-2");
+
+    // Re-instantiating must produce bit-exact identical sequence
+    let mut disambiguator2 = AnchorDisambiguator::new();
+    assert_eq!(disambiguator2.disambiguate("anchor"), d1);
+    assert_eq!(disambiguator2.disambiguate("anchor"), d2);
+    assert_eq!(disambiguator2.disambiguate("anchor"), d3);
 }

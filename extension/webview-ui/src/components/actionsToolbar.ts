@@ -377,6 +377,18 @@ export function renderActionsToolbar(
             <div class="m-desc">Center graph and reset zoom level</div>
           </div>
         </div>
+        <div class="menu-item" id="menu-act-rescan">
+          <span class="m-icon">
+            <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M1.5 8a6.5 6.5 0 1 0 1.9-4.6L1.5 5.5"/>
+              <polyline points="1.5 1.5 1.5 5.5 5.5 5.5"/>
+            </svg>
+          </span>
+          <div class="m-text">
+            <div class="m-title">Rescan Vault</div>
+            <div class="m-desc">Re-index documents & refresh graph topology</div>
+          </div>
+        </div>
         <div class="menu-divider"></div>
         <div class="menu-item" id="menu-act-settings">
           <span class="m-icon">
@@ -385,8 +397,20 @@ export function renderActionsToolbar(
             </svg>
           </span>
           <div class="m-text">
-            <div class="m-title">Advanced Settings...</div>
-            <div class="m-desc">Hub rules, exclusions, cluster colors, git hooks, diagnostics</div>
+            <div class="m-title">Management & Settings...</div>
+            <div class="m-desc">Hub rules, exclusions, cluster colors, git hooks</div>
+          </div>
+        </div>
+        <div class="menu-item" id="menu-act-harness">
+          <span class="m-icon">
+            <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="#38bdf8" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M14 11.5a2.5 2.5 0 0 1-5 0V9H5.5a2.5 2.5 0 0 1 0-5H9V1.5a2.5 2.5 0 0 1 5 0v10z"/>
+              <path d="M2 9h4M2 13h4"/>
+            </svg>
+          </span>
+          <div class="m-text">
+            <div class="m-title">AI Harness & Tooling...</div>
+            <div class="m-desc">Scan & install complementary tools (prek, uv, ai-memory, graphify...)</div>
           </div>
         </div>
       </div>
@@ -917,9 +941,17 @@ export function renderActionsToolbar(
     closeAllPopovers();
     callbacks.onResetZoom?.();
   });
+  container.querySelector('#menu-act-rescan')?.addEventListener('click', () => {
+    closeAllPopovers();
+    callbacks.onRescanVault?.();
+  });
   container.querySelector('#menu-act-settings')?.addEventListener('click', () => {
     closeAllPopovers();
     callbacks.onOpenSettings?.();
+  });
+  container.querySelector('#menu-act-harness')?.addEventListener('click', () => {
+    closeAllPopovers();
+    callbacks.onOpenSettings?.('harness');
   });
 
   // Click outside to dismiss

@@ -5,8 +5,8 @@ use std::collections::HashSet;
 
 use super::overlay::CandidateOverlay;
 use super::{
-    AdmissionDecision, CandidateValidationReport, RegressionCategory,
-    RegressionItem, RegressionSeverity, ResolvedItem, WarningItem,
+    AdmissionDecision, CandidateValidationReport, RegressionCategory, RegressionItem,
+    RegressionSeverity, ResolvedItem, WarningItem,
 };
 use crate::debt::baseline::{diff_against_baseline, CandidateFindings};
 use crate::debt::{BrokenLinkSignature, CollisionSignature, DriftSignature, KnowledgeDebtBaseline};
@@ -18,6 +18,8 @@ pub struct AdmissionConfig {
     pub block_on_broken_links: bool,
     pub block_on_duplicate_collision: bool,
     pub block_on_technical_drift: bool,
+    pub block_on_unreviewed_docs: bool,
+    pub block_on_legacy_debt: bool,
 }
 
 impl Default for AdmissionConfig {
@@ -26,6 +28,8 @@ impl Default for AdmissionConfig {
             block_on_broken_links: true,
             block_on_duplicate_collision: true,
             block_on_technical_drift: false, // default WARN
+            block_on_unreviewed_docs: true,  // default BLOCK per FR-007
+            block_on_legacy_debt: false,     // default FALSE per Invariant XI and FR-009
         }
     }
 }
@@ -65,13 +69,30 @@ pub fn evaluate_candidate(
         resolve_edge_integrity(&mut candidate_edge, &resolver_index, &headings_map);
 
         if candidate_edge.is_broken {
+            let target_ref = if candidate_edge.resolution_status
+                == Some(crate::model::LinkResolutionStatus::BrokenFragmentAnchor)
+            {
+                if let Some(ref a) = candidate_edge
+                    .anchor
+                    .as_ref()
+                    .or(candidate_edge.target_fragment.as_ref())
+                {
+                    format!("{}#{}", candidate_edge.target, a.trim_start_matches('#'))
+                } else {
+                    candidate_edge.target.clone()
+                }
+            } else {
+                candidate_edge.target.clone()
+            };
             candidate_broken_links.push(BrokenLinkSignature {
                 source_path: candidate_edge.source.clone(),
-                target_ref: candidate_edge.target.clone(),
+                target_ref,
                 line_number: candidate_edge.line.unwrap_or(1),
             });
         } else {
-            *out_degrees.entry(candidate_edge.source.clone()).or_insert(0) += 1;
+            *out_degrees
+                .entry(candidate_edge.source.clone())
+                .or_insert(0) += 1;
             *in_degrees.entry(candidate_edge.target.clone()).or_insert(0) += 1;
         }
     }
@@ -82,13 +103,30 @@ pub fn evaluate_candidate(
         resolve_edge_integrity(&mut candidate_edge, &resolver_index, &headings_map);
 
         if candidate_edge.is_broken {
+            let target_ref = if candidate_edge.resolution_status
+                == Some(crate::model::LinkResolutionStatus::BrokenFragmentAnchor)
+            {
+                if let Some(ref a) = candidate_edge
+                    .anchor
+                    .as_ref()
+                    .or(candidate_edge.target_fragment.as_ref())
+                {
+                    format!("{}#{}", candidate_edge.target, a.trim_start_matches('#'))
+                } else {
+                    candidate_edge.target.clone()
+                }
+            } else {
+                candidate_edge.target.clone()
+            };
             candidate_broken_links.push(BrokenLinkSignature {
                 source_path: candidate_edge.source.clone(),
-                target_ref: candidate_edge.target.clone(),
+                target_ref,
                 line_number: candidate_edge.line.unwrap_or(1),
             });
         } else {
-            *out_degrees.entry(candidate_edge.source.clone()).or_insert(0) += 1;
+            *out_degrees
+                .entry(candidate_edge.source.clone())
+                .or_insert(0) += 1;
             *in_degrees.entry(candidate_edge.target.clone()).or_insert(0) += 1;
         }
     }
@@ -105,12 +143,7 @@ pub fn evaluate_candidate(
 
     // Run collision detection if not explicitly passed
     let (detected_collisions, detected_sigs, collision_warnings) = if collisions.is_empty() {
-        let ws_root = known_nodes
-            .values()
-            .next()
-            .and_then(|p| p.parent())
-            .unwrap_or(std::path::Path::new("."));
-        crate::collision::detect_collisions_in_candidate(overlay, ws_root)
+        crate::collision::detect_collisions_in_candidate(overlay, overlay.workspace_root)
     } else {
         (Vec::new(), collisions.clone(), Vec::new())
     };
@@ -123,14 +156,13 @@ pub fn evaluate_candidate(
 
     // Run technical drift detection if not explicitly passed
     let (detected_drifts, detected_drift_sigs) = if technical_drifts.is_empty() {
-        let ws_root = known_nodes
-            .values()
-            .next()
-            .and_then(|p| p.parent())
-            .unwrap_or(std::path::Path::new("."));
         let doc_paths: Vec<String> = known_nodes.keys().cloned().collect();
-        let reverse_index = crate::drift::detector::build_reverse_impact_index(ws_root, &doc_paths);
-        crate::drift::detector::detect_technical_drift(ws_root, overlay.staged_delta, &reverse_index)
+        let reverse_index = crate::drift::detector::build_reverse_impact_index(overlay.workspace_root, &doc_paths);
+        crate::drift::detector::detect_technical_drift(
+            overlay.workspace_root,
+            overlay.staged_delta,
+            &reverse_index,
+        )
     } else {
         (Vec::new(), technical_drifts.clone())
     };
@@ -141,11 +173,36 @@ pub fn evaluate_candidate(
         technical_drifts
     };
 
+    // Run review obligations calculation
+    let unreviewed_docs: Vec<String> = {
+        let doc_paths: Vec<String> = known_nodes.keys().cloned().collect();
+        let reverse_index = crate::drift::detector::build_reverse_impact_index(overlay.workspace_root, &doc_paths);
+        let gating_config = crate::model::ReviewGatingConfig {
+            enforce_doc_review: config.block_on_unreviewed_docs,
+            block_on_legacy_debt: config.block_on_legacy_debt,
+        };
+        let affected = crate::drift::review::calculate_affected_documents(
+            overlay.workspace_root,
+            &overlay.staged_delta.items,
+            &reverse_index,
+            Some(&gating_config),
+            None,
+            None,
+        );
+        affected
+            .obligations
+            .into_iter()
+            .filter(|o| o.status == crate::model::ReviewStatus::Blocked || o.status == crate::model::ReviewStatus::Pending)
+            .map(|o| o.doc_id)
+            .collect()
+    };
+
     let candidate_findings = CandidateFindings {
         broken_links: candidate_broken_links,
         orphan_nodes: candidate_orphans,
         collisions: all_collisions,
         technical_drifts: all_drifts,
+        unreviewed_docs,
     };
 
     // 4. Differential evaluation against baseline
@@ -167,17 +224,35 @@ pub fn evaluate_candidate(
             RegressionSeverity::Warning
         };
 
+        let is_fragment_anchor = bl.target_ref.contains('#');
+        let (category, message, remediation) = if is_fragment_anchor {
+            (
+                RegressionCategory::InvalidHeadingAnchor,
+                format!("Broken fragment anchor in link to '{}'", bl.target_ref),
+                format!(
+                    "Fix or restore target heading anchor in '[{}]' from '{}'",
+                    bl.target_ref, bl.source_path
+                ),
+            )
+        } else {
+            (
+                RegressionCategory::BrokenReference,
+                format!("Broken link to '{}'", bl.target_ref),
+                format!(
+                    "Fix or remove target reference '[{}]' in '{}'",
+                    bl.target_ref, bl.source_path
+                ),
+            )
+        };
+
         regressions.push(RegressionItem {
             id: format!("broken-link-{}", bl.source_path),
-            category: RegressionCategory::BrokenReference,
+            category,
             severity,
             file_path: bl.source_path.clone(),
             line_number: Some(bl.line_number),
-            message: format!("Broken link to '{}'", bl.target_ref),
-            remediation_hint: format!(
-                "Fix or remove target reference '[{}]' in '{}'",
-                bl.target_ref, bl.source_path
-            ),
+            message,
+            remediation_hint: remediation,
         });
     }
 
@@ -213,7 +288,10 @@ pub fn evaluate_candidate(
             )
         } else {
             (
-                format!("Semantic collision between '{}' and '{}'", col.doc_a, col.doc_b),
+                format!(
+                    "Semantic collision between '{}' and '{}'",
+                    col.doc_a, col.doc_b
+                ),
                 format!(
                     "Consolidate or differentiate content with canonical note '{}'",
                     col.doc_b
@@ -241,9 +319,9 @@ pub fn evaluate_candidate(
             RegressionSeverity::Warning
         };
 
-        let diagnostic = detected_drifts.iter().find(|d| {
-            d.doc_id == drift.doc_path && d.code_target == drift.referenced_code_path
-        });
+        let diagnostic = detected_drifts
+            .iter()
+            .find(|d| d.doc_id == drift.doc_path && d.code_target == drift.referenced_code_path);
 
         let (message, remediation, line_num) = if let Some(diag) = diagnostic {
             (
@@ -286,10 +364,55 @@ pub fn evaluate_candidate(
         }
     }
 
+    // Evaluate unreviewed documentation obligations (Feature 010, Invariant XI & FR-007, FR-009)
+    for doc in &diff.new_unreviewed_docs {
+        let severity = if config.block_on_unreviewed_docs {
+            has_blocker = true;
+            RegressionSeverity::Blocker
+        } else {
+            RegressionSeverity::Warning
+        };
+
+        if severity == RegressionSeverity::Blocker {
+            regressions.push(RegressionItem {
+                id: format!("review-obligation-{}", doc),
+                category: RegressionCategory::UnreviewedDocumentationObligation,
+                severity,
+                file_path: doc.clone(),
+                line_number: None,
+                message: format!("Documentation '{}' has pending review obligations for modified code files", doc),
+                remediation_hint: format!("Update '{}', or run 'llm-wiki-core review resolve {}', or include 'Reviewed-Docs: {}' in commit message", doc, doc, doc),
+            });
+        } else {
+            warnings.push(WarningItem {
+                message: format!("Documentation '{}' has pending review obligations for modified code files", doc),
+                file_path: Some(doc.clone()),
+            });
+        }
+    }
+
+    if config.block_on_legacy_debt {
+        for doc in &baseline.unreviewed_docs {
+            has_blocker = true;
+            regressions.push(RegressionItem {
+                id: format!("legacy-review-obligation-{}", doc),
+                category: RegressionCategory::UnreviewedDocumentationObligation,
+                severity: RegressionSeverity::Blocker,
+                file_path: doc.clone(),
+                line_number: None,
+                message: format!("Legacy unreviewed documentation '{}' blocked by review policy (block_on_legacy_debt: true)", doc),
+                remediation_hint: format!("Update '{}' or run 'llm-wiki-core review resolve {}'", doc, doc),
+            });
+        }
+    }
+
     // Add orphan warnings (orphans warn by default, do not block commits)
     for orphan in &diff.new_orphans {
         warnings.push(WarningItem {
-            message: format!("New orphan note '{}' has 0 inbound and 0 outbound links", orphan),
+            message: format!(
+                "New orphan note '{}' has 0 inbound and 0 outbound links",
+                orphan
+            ),
             file_path: Some(orphan.clone()),
         });
     }
@@ -317,7 +440,10 @@ pub fn evaluate_candidate(
             id: format!("resolved-col-{}-{}", col.doc_a, col.doc_b),
             category: "collision".to_string(),
             file_path: col.doc_a.clone(),
-            description: format!("Resolved collision between '{}' and '{}'", col.doc_a, col.doc_b),
+            description: format!(
+                "Resolved collision between '{}' and '{}'",
+                col.doc_a, col.doc_b
+            ),
         });
     }
 

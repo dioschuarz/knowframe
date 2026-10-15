@@ -2,11 +2,27 @@
   "version": "0.2.0",
   "configurations": [
     {
-      "name": "Launch LLM Wiki Extension",
+      "name": "Launch LLM Wiki Extension (Projects Vault)",
       "type": "extensionHost",
       "request": "launch",
       "args": [
-        "--extensionDevelopmentPath=${workspaceFolder}/extension"
+        "-n",
+        "--extensionDevelopmentPath=${workspaceFolder}/extension",
+        "/home/ds/projects"
+      ],
+      "outFiles": [
+        "${workspaceFolder}/extension/dist/**/*.js"
+      ],
+      "preLaunchTask": "build-extension"
+    },
+    {
+      "name": "Launch LLM Wiki Extension (llm_wiki_ext4vsc)",
+      "type": "extensionHost",
+      "request": "launch",
+      "args": [
+        "-n",
+        "--extensionDevelopmentPath=${workspaceFolder}/extension",
+        "${workspaceFolder}"
       ],
       "outFiles": [
         "${workspaceFolder}/extension/dist/**/*.js"

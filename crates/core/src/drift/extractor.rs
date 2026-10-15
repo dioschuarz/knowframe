@@ -2,11 +2,14 @@
 //! Extracts referenced code file paths and symbols without requiring multi-language compiler frontends.
 
 use std::path::Path;
+use crate::model::{CodeDependency, DependencySource};
 
 const CODE_EXTENSIONS: &[&str] = &[
-    "rs", "ts", "tsx", "js", "jsx", "py", "go", "java", "cpp", "c", "h", "hpp", "rb", "php",
-    "cs", "swift", "kt", "sh", "sql", "toml", "yaml", "yml", "json",
+    "rs", "ts", "tsx", "js", "jsx", "py", "go", "java", "cpp", "c", "h", "hpp", "rb", "php", "cs",
+    "swift", "kt", "sh", "sql", "toml", "yaml", "yml", "json",
 ];
+
+pub const PATH_TRAVERSAL_PROHIBITED: &str = "PATH_TRAVERSAL_PROHIBITED";
 
 /// Extracted reference from a markdown document to a source code file or symbol.
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
@@ -40,11 +43,17 @@ pub fn is_code_path(target: &str) -> bool {
     }
 }
 
-/// Normalizes a referenced code path relative to workspace root.
-pub fn normalize_code_path(referencing_doc: &str, target: &str) -> String {
+/// Normalizes and validates a referenced code path ensuring strict containment within workspace root.
+/// Returns Ok(normalized_relative_posix_path), or Err(PATH_TRAVERSAL_PROHIBITED) if the path
+/// attempts to escape outside the workspace root via `..`.
+pub fn validate_and_normalize_code_path(
+    referencing_doc: Option<&str>,
+    target: &str,
+) -> Result<String, &'static str> {
     let clean = target
         .trim()
         .trim_start_matches("file://")
+        .trim_start_matches("file:")
         .split('#')
         .next()
         .unwrap_or("")
@@ -53,36 +62,53 @@ pub fn normalize_code_path(referencing_doc: &str, target: &str) -> String {
         .unwrap_or("")
         .replace('\\', "/");
 
-    if clean.starts_with('/') {
-        return clean.trim_start_matches('/').to_string();
+    if clean.is_empty() {
+        return Ok(String::new());
     }
 
-    if clean.starts_with("./") || clean.starts_with("../") {
-        if let Some(parent) = Path::new(referencing_doc).parent() {
+    let combined = if (clean.starts_with("./") || clean.starts_with("../")) && referencing_doc.is_some() {
+        let doc = referencing_doc.unwrap();
+        if let Some(parent) = Path::new(doc).parent() {
             let parent_str = parent.to_string_lossy().replace('\\', "/");
             if !parent_str.is_empty() && parent_str != "." {
-                let combined = format!("{}/{}", parent_str, clean);
-                return normalize_path_components(&combined);
+                format!("{}/{}", parent_str, clean)
+            } else {
+                clean
             }
+        } else {
+            clean
         }
-    }
+    } else {
+        clean
+    };
 
-    normalize_path_components(&clean)
-}
-
-fn normalize_path_components(path: &str) -> String {
     let mut parts = Vec::new();
-    for seg in path.split('/') {
+    for seg in combined.split('/') {
         if seg.is_empty() || seg == "." {
             continue;
         }
         if seg == ".." {
+            if parts.is_empty() {
+                return Err(PATH_TRAVERSAL_PROHIBITED);
+            }
             parts.pop();
         } else {
             parts.push(seg);
         }
     }
-    parts.join("/")
+
+    Ok(parts.join("/"))
+}
+
+/// Validates containment of a standalone path without document context.
+pub fn validate_path_containment(target: &str) -> Result<String, &'static str> {
+    validate_and_normalize_code_path(None, target)
+}
+
+/// Normalizes a referenced code path relative to workspace root (fallback for legacy callers).
+pub fn normalize_code_path(referencing_doc: &str, target: &str) -> String {
+    validate_and_normalize_code_path(Some(referencing_doc), target)
+        .unwrap_or_else(|_| target.replace('\\', "/"))
 }
 
 /// Extracts all code citations (files and backticked symbols) from Markdown content.
@@ -156,4 +182,58 @@ pub fn extract_code_citations(doc_id: &str, content: &str) -> Vec<CodeCitation> 
     }
 
     citations
+}
+
+/// Extracts all code dependencies (both frontmatter declarations and inline citations).
+pub fn extract_all_code_dependencies(doc_id: &str, content: &str) -> (Vec<CodeDependency>, Vec<String>) {
+    let mut dependencies = Vec::new();
+    let mut errors = Vec::new();
+
+    // 1. Frontmatter code_dependencies
+    match crate::fragment::frontmatter::parse_code_dependencies(content) {
+        Ok(fm_deps) => {
+            for dep in fm_deps {
+                match validate_path_containment(&dep) {
+                    Ok(norm_path) => {
+                        dependencies.push(CodeDependency {
+                            code_path: norm_path,
+                            source: DependencySource::Frontmatter,
+                            line_number: None,
+                        });
+                    }
+                    Err(err) => {
+                        errors.push(format!("{}: {}", err, dep));
+                    }
+                }
+            }
+        }
+        Err(err) => {
+            errors.push(err);
+        }
+    }
+
+    // 2. Inline markdown links and citations
+    for citation in extract_code_citations(doc_id, content) {
+        if !citation.code_path.is_empty() {
+            match validate_and_normalize_code_path(Some(doc_id), &citation.code_path) {
+                Ok(norm_path) => {
+                    let source = if citation.symbol.is_some() {
+                        DependencySource::InlineSymbolCitation
+                    } else {
+                        DependencySource::InlineMarkdownLink
+                    };
+                    dependencies.push(CodeDependency {
+                        code_path: norm_path,
+                        source,
+                        line_number: Some(citation.line_number),
+                    });
+                }
+                Err(err) => {
+                    errors.push(format!("{}: {}", err, citation.code_path));
+                }
+            }
+        }
+    }
+
+    (dependencies, errors)
 }

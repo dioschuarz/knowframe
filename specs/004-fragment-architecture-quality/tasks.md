@@ -1,3 +1,56 @@
+---
+wiki:
+  content_hash: 6626f4222beaa0172a99e3fe264a0bfc2111bce202e90a0035b8e61238a122c9
+  fragments:
+    tasks-fragment-level-architecture-5-pillar-quality-model:
+      tokens: 8753
+      inbound: 0
+      outbound: 3
+    task-matrix-dependencies:
+      tokens: 257
+      inbound: 0
+      outbound: 0
+    phase-1-core-fragment-data-models-serde-types-tasks-t001t006:
+      tokens: 569
+      inbound: 0
+      outbound: 0
+    phase-2-heading-anchor-derivation-fragment-extraction-tasks-t007t012:
+      tokens: 498
+      inbound: 0
+      outbound: 0
+    phase-3-materialized-frontmatter-layer-pre-commit-sync-tasks-t013t018b:
+      tokens: 572
+      inbound: 0
+      outbound: 0
+    phase-4-reference-concentration-pillar-2-structure-engine-tasks-t019t024:
+      tokens: 515
+      inbound: 0
+      outbound: 0
+    phase-5-evidence-based-deterministic-freshness-engine-pillar-5-tasks-t025t030:
+      tokens: 441
+      inbound: 0
+      outbound: 0
+    phase-6-context-trace-section-level-routing-beam-search-tasks-t031t036:
+      tokens: 457
+      inbound: 0
+      outbound: 0
+    phase-7-raw-numeric-integrity-presentation-formatter-tasks-t037t041:
+      tokens: 926
+      inbound: 0
+      outbound: 0
+    phase-8-webview-fragment-inspector-5-pillar-diagnostics-ui-tasks-t042t048:
+      tokens: 3652
+      inbound: 0
+      outbound: 0
+    phase-9-microbenchmarks-non-functional-verification-tasks-t049t054b:
+      tokens: 472
+      inbound: 0
+      outbound: 0
+    phase-10-vsix-packaging-memory-documentation-sync-tasks-t055t058:
+      tokens: 264
+      inbound: 0
+      outbound: 0
+---
 # Tasks: Fragment-Level Architecture & 5-Pillar Quality Model
 
 **Feature Branch:** `004-fragment-architecture-quality`  
@@ -35,11 +88,11 @@ graph TD
   - **Mapped Requirements**: FR-001, FR-003, FR-009, FR-014, Invariant V, Invariant IX
   - **Verification**: `cargo test test_fragment_model_serialization`
 
-- [x] **T002**: Update `NoteNode` in `crates/core/src/graph/node.rs` to include `fragments: Vec<FragmentMetadata>` and `freshness: Option<FreshnessEvidence>`, preserving $O(N)$ document-level graph nodes.
+- [x] **T002**: Update `NoteNode` in `crates/core/src/model/mod.rs` to include `fragments: Vec<FragmentMetadata>` and `freshness: Option<FreshnessEvidence>`, preserving $O(N)$ document-level graph nodes.
   - **Mapped Requirements**: FR-001, FR-003, Invariant V
   - **Verification**: `cargo test test_note_node_with_fragments`
 
-- [x] **T003**: Update `NoteEdge` in `crates/core/src/graph/edge.rs` to support `target_fragment: Option<String>` and `LinkResolutionStatus::BrokenFragmentAnchor`.
+- [x] **T003**: Update `NoteEdge` in `crates/core/src/model/mod.rs` to support `target_fragment: Option<String>` and `LinkResolutionStatus::BrokenFragmentAnchor`.
   - **Mapped Requirements**: FR-004, FR-005, FR-007
   - **Verification**: `cargo test test_edge_fragment_targeting`
 
@@ -51,7 +104,7 @@ graph TD
   - **Mapped Requirements**: FR-038, FR-039
   - **Verification**: `cargo test test_freshness_evidence_serialization`
 
-- [x] **T006**: Define `FivePillarQualityScore`, `QualityPillar` (5 variants: Integrity, Structure, Consistency, Discoverability, Freshness), `DebtSummary`, and `ContextTraceSectionResult` in `crates/core/src/quality/score.rs`, `crates/core/src/debt/mod.rs`, and `crates/core/src/trace/mod.rs`.
+- [x] **T006**: Define `FivePillarQualityScore`, `QualityPillar` (5 variants: Integrity, Structure, Consistency, Discoverability, Freshness), `DebtSummary`, and `ContextTraceSectionResult` in `crates/core/src/quality/scorer.rs`, `crates/core/src/debt/mod.rs`, and `crates/core/src/trace/mod.rs`.
   - **Mapped Requirements**: FR-030, FR-033, FR-036, FR-040
   - **Verification**: `cargo test test_five_pillar_score_model`
 
@@ -67,11 +120,11 @@ graph TD
   - **Mapped Requirements**: FR-002, FR-003, Invariant VII
   - **Verification**: `cargo test test_ast_heading_extraction`
 
-- [x] **T009**: Integrate BPE token accounting (`tiktoken-rs` with `cl100k_base`) per fragment in `extractor.rs`, storing exact integer tokens.
+- [x] **T009**: Integrate BPE token accounting (`tiktoken-rs` with `cl100k_base`) per fragment in `crates/core/src/drift/extractor.rs`, storing exact integer tokens.
   - **Mapped Requirements**: FR-003, Invariant IX
   - **Verification**: `cargo test test_fragment_bpe_token_counting`
 
-- [x] **T010**: Implement inbound and outbound link reference counting per fragment in `extractor.rs`.
+- [x] **T010**: Implement inbound and outbound link reference counting per fragment in `crates/core/src/drift/extractor.rs`.
   - **Mapped Requirements**: FR-003, FR-007
   - **Verification**: `cargo test test_fragment_reference_counts`
 
@@ -95,7 +148,7 @@ graph TD
   - **Mapped Requirements**: FR-013, Invariant VII, Invariant VIII
   - **Verification**: `cargo test test_frontmatter_cache_validity`
 
-- [x] **T015**: Integrate frontmatter materialization into `llm-wiki-validate` pre-commit workflow in `crates/core/src/candidate/validator.rs`, generating metadata for staged Markdown files and automatically executing `git add <file>` to re-stage the updated frontmatter into the Git index.
+- [x] **T015**: Integrate frontmatter materialization into `llm-wiki-validate` pre-commit workflow in `crates/core/src/candidate/evaluator.rs`, generating metadata for staged Markdown files and automatically executing `git add <file>` to re-stage the updated frontmatter into the Git index.
   - **Mapped Requirements**: FR-010, Invariant I, Invariant II, Invariant VIII
   - **Verification**: `cargo test test_pre_commit_frontmatter_materialization_and_restaging`
 
@@ -107,7 +160,7 @@ graph TD
   - **Mapped Requirements**: FR-012, FR-042
   - **Verification**: `cargo test test_oversized_doc_metadata_warning`
 
-- [x] **T017b**: Wire `BrokenFragmentAnchor` regression detection into `crates/core/src/candidate/validator.rs`, asserting that commits introducing new dangling fragment anchors return `BLOCK` (exit code 1).
+- [x] **T017b**: Wire `BrokenFragmentAnchor` regression detection into `crates/core/src/candidate/evaluator.rs`, asserting that commits introducing new dangling fragment anchors return `BLOCK` (exit code 1).
   - **Mapped Requirements**: FR-005, FR-042, Invariant XII
   - **Verification**: `cargo test test_pre_commit_block_on_broken_fragment_anchor`
 
@@ -131,7 +184,7 @@ graph TD
   - **Mapped Requirements**: FR-028, FR-029
   - **Verification**: `cargo test test_structure_score_calculation`
 
-- [x] **T022**: Integrate `Structure` as Pillar 2 (20% weight) into the overall composite quality score in `crates/core/src/quality/score.rs` with betweenness centrality weighting multiplier $(1.0 + 3.0 \cdot B(v))$.
+- [x] **T022**: Integrate `Structure` as Pillar 2 (20% weight) into the overall composite quality score in `crates/core/src/quality/scorer.rs` with betweenness centrality weighting multiplier $(1.0 + 3.0 \cdot B(v))$.
   - **Mapped Requirements**: FR-036, FR-037
   - **Verification**: `cargo test test_five_pillar_composite_score`
 
@@ -179,11 +232,11 @@ graph TD
   - **Mapped Requirements**: FR-030, FR-035
   - **Verification**: `cargo test test_beam_search_traversal`
 
-- [x] **T032**: Implement candidate scoring in `beam.rs` combining query term match, document title match, fragment heading match, tag overlap, and graph proximity.
+- [x] **T032**: Implement candidate scoring in `crates/core/src/trace/beam.rs` combining query term match, document title match, fragment heading match, tag overlap, and graph proximity.
   - **Mapped Requirements**: FR-031
   - **Verification**: `cargo test test_beam_candidate_scoring`
 
-- [x] **T033**: Implement section-level refinement in `beam.rs` routing to `doc.md#fragment` when fragment heading matches query terms.
+- [x] **T033**: Implement section-level refinement in `crates/core/src/trace/beam.rs` routing to `doc.md#fragment` when fragment heading matches query terms.
   - **Mapped Requirements**: FR-032
   - **Verification**: `cargo test test_section_level_refinement`
 
@@ -209,11 +262,11 @@ graph TD
 
 - [x] **T038**: Implement TypeScript `formatCompactNumber` in `src/utils/numberFormat.ts` enforcing strict $\le 5$ character length across all scales (`543`, `4.23k`, `13.3k`, `1.04M`, `123M`, `1.2B`).
   - **Mapped Requirements**: FR-015, FR-016, Invariant X
-  - **Verification**: `npm test -- numberFormat.test.ts`
-
+*npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts*-*npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts***npm test -- numberFormat.test.ts***npm test -- numberFormat.test.ts*V*npm test -- numberFormat.test.ts*e*npm test -- numberFormat.test.ts*r*npm test -- numberFormat.test.ts*i*npm test -- numberFormat.test.ts*f*npm test -- numberFormat.test.ts*i*npm test -- numberFormat.test.ts*c*npm test -- numberFormat.test.ts*a*npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts*i*npm test -- numberFormat.test.ts*o*npm test -- numberFormat.test.ts*n*npm test -- numberFormat.test.ts***npm test -- numberFormat.test.ts***npm test -- numberFormat.test.ts*:*npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts*`*npm test -- numberFormat.test.ts*n*npm test -- numberFormat.test.ts*p*npm test -- numberFormat.test.ts*m*npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts*e*npm test -- numberFormat.test.ts*s*npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts*-*npm test -- numberFormat.test.ts*-*npm test -- numberFormat.test.ts* *npm test -- numberFormat.test.ts*n*npm test -- numberFormat.test.ts*u*npm test -- numberFormat.test.ts*m*npm test -- numberFormat.test.ts*b*npm test -- numberFormat.test.ts*e*npm test -- numberFormat.test.ts*r*npm test -- numberFormat.test.ts*F*npm test -- numberFormat.test.ts*o*npm test -- numberFormat.test.ts*r*npm test -- numberFormat.test.ts*m*npm test -- numberFormat.test.ts*a*npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts*.*npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts*e*npm test -- numberFormat.test.ts*s*npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts*.*npm test -- numberFormat.test.ts*t*npm test -- numberFormat.test.ts*s*npm test -- numberFormat.test.ts*`*npm test -- numberFormat.test.ts*
+*npm test -- numberFormat.test.ts*
 - [x] **T039**: Unit tests in `test/suite/numberFormat.test.ts` asserting strict $\le 5$ character limits across boundary numbers ($0$, $999$, $1000$, $4230$, $13300$, $543000$, $1043256$, $123456789$, $999900000$, $1200000000$).
   - **Mapped Requirements**: FR-018, SC-006
-  - **Verification**: `npm test -- numberFormat.test.ts`
+  - **Verification**: *npm test -- numberFormat.test.ts*
 
 - [x] **T040**: Verify zero formatted strings are stored or fed into analytical calculation pipelines.
   - **Mapped Requirements**: FR-017, Invariant X
@@ -227,27 +280,27 @@ graph TD
 
 ## Phase 8: Webview Fragment Inspector & 5-Pillar Diagnostics UI (Tasks T042–T048)
 
-- [x] **T042**: Extend `src/rpc/rpcClient.ts` with typed methods for `graph/getDocumentFragments`, `graph/materializeFrontmatter`, `trace/contextTraceSection`, and `quality/getFivePillarScore`.
-  - **Mapped Requirements**: FR-007, FR-010, FR-030, FR-036
-  - **Verification**: `npm test -- rpcClient.test.ts`
-
-- [x] **T043**: Implement "Fragments" collapsible section in `src/views/inspectorDrawer.ts` rendering the 3-column table: `Fragment | Tok | I/O`. Include empty state banner (`"No heading sections found"`) and enforce progressive disclosure hierarchy (Primary metrics -> Fragments -> Advanced Quality).
+*src/rpc/rpcClient.ts*-*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts*[*src/rpc/rpcClient.ts*x*src/rpc/rpcClient.ts*]*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts***src/rpc/rpcClient.ts***src/rpc/rpcClient.ts*T*src/rpc/rpcClient.ts*0*src/rpc/rpcClient.ts*4*src/rpc/rpcClient.ts*2*src/rpc/rpcClient.ts***src/rpc/rpcClient.ts***src/rpc/rpcClient.ts*:*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts*E*src/rpc/rpcClient.ts*x*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*n*src/rpc/rpcClient.ts*d*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts*`*src/rpc/rpcClient.ts*s*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*c*src/rpc/rpcClient.ts*/*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*p*src/rpc/rpcClient.ts*c*src/rpc/rpcClient.ts*/*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*p*src/rpc/rpcClient.ts*c*src/rpc/rpcClient.ts*C*src/rpc/rpcClient.ts*l*src/rpc/rpcClient.ts*i*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*n*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*.*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*s*src/rpc/rpcClient.ts*`*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts*w*src/rpc/rpcClient.ts*i*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*h*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*y*src/rpc/rpcClient.ts*p*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*d*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts*m*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*h*src/rpc/rpcClient.ts*o*src/rpc/rpcClient.ts*d*src/rpc/rpcClient.ts*s*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts*f*src/rpc/rpcClient.ts*o*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts*`*src/rpc/rpcClient.ts*g*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*a*src/rpc/rpcClient.ts*p*src/rpc/rpcClient.ts*h*src/rpc/rpcClient.ts*/*src/rpc/rpcClient.ts*g*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*D*src/rpc/rpcClient.ts*o*src/rpc/rpcClient.ts*c*src/rpc/rpcClient.ts*u*src/rpc/rpcClient.ts*m*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*n*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*F*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*a*src/rpc/rpcClient.ts*g*src/rpc/rpcClient.ts*m*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*n*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*s*src/rpc/rpcClient.ts*`*src/rpc/rpcClient.ts*,*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts*`*src/rpc/rpcClient.ts*g*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*a*src/rpc/rpcClient.ts*p*src/rpc/rpcClient.ts*h*src/rpc/rpcClient.ts*/*src/rpc/rpcClient.ts*m*src/rpc/rpcClient.ts*a*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*i*src/rpc/rpcClient.ts*a*src/rpc/rpcClient.ts*l*src/rpc/rpcClient.ts*i*src/rpc/rpcClient.ts*z*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*F*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*o*src/rpc/rpcClient.ts*n*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*m*src/rpc/rpcClient.ts*a*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*`*src/rpc/rpcClient.ts*,*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts*`*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*a*src/rpc/rpcClient.ts*c*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*/*src/rpc/rpcClient.ts*c*src/rpc/rpcClient.ts*o*src/rpc/rpcClient.ts*n*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*x*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*T*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*a*src/rpc/rpcClient.ts*c*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*S*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*c*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*i*src/rpc/rpcClient.ts*o*src/rpc/rpcClient.ts*n*src/rpc/rpcClient.ts*`*src/rpc/rpcClient.ts*,*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts*a*src/rpc/rpcClient.ts*n*src/rpc/rpcClient.ts*d*src/rpc/rpcClient.ts* *src/rpc/rpcClient.ts*`*src/rpc/rpcClient.ts*q*src/rpc/rpcClient.ts*u*src/rpc/rpcClient.ts*a*src/rpc/rpcClient.ts*l*src/rpc/rpcClient.ts*i*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*y*src/rpc/rpcClient.ts*/*src/rpc/rpcClient.ts*g*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*t*src/rpc/rpcClient.ts*F*src/rpc/rpcClient.ts*i*src/rpc/rpcClient.ts*v*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*P*src/rpc/rpcClient.ts*i*src/rpc/rpcClient.ts*l*src/rpc/rpcClient.ts*l*src/rpc/rpcClient.ts*a*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*S*src/rpc/rpcClient.ts*c*src/rpc/rpcClient.ts*o*src/rpc/rpcClient.ts*r*src/rpc/rpcClient.ts*e*src/rpc/rpcClient.ts*`*src/rpc/rpcClient.ts*.*src/rpc/rpcClient.ts*
+*src/rpc/rpcClient.ts*  - **Mapped Requirements**: FR-007, FR-010, FR-030, FR-036
+*npm test -- rpcClient.test.ts* *npm test -- rpcClient.test.ts* *npm test -- rpcClient.test.ts*-*npm test -- rpcClient.test.ts* *npm test -- rpcClient.test.ts***npm test -- rpcClient.test.ts***npm test -- rpcClient.test.ts*V*npm test -- rpcClient.test.ts*e*npm test -- rpcClient.test.ts*r*npm test -- rpcClient.test.ts*i*npm test -- rpcClient.test.ts*f*npm test -- rpcClient.test.ts*i*npm test -- rpcClient.test.ts*c*npm test -- rpcClient.test.ts*a*npm test -- rpcClient.test.ts*t*npm test -- rpcClient.test.ts*i*npm test -- rpcClient.test.ts*o*npm test -- rpcClient.test.ts*n*npm test -- rpcClient.test.ts***npm test -- rpcClient.test.ts***npm test -- rpcClient.test.ts*:*npm test -- rpcClient.test.ts* *npm test -- rpcClient.test.ts*`*npm test -- rpcClient.test.ts*n*npm test -- rpcClient.test.ts*p*npm test -- rpcClient.test.ts*m*npm test -- rpcClient.test.ts* *npm test -- rpcClient.test.ts*t*npm test -- rpcClient.test.ts*e*npm test -- rpcClient.test.ts*s*npm test -- rpcClient.test.ts*t*npm test -- rpcClient.test.ts* *npm test -- rpcClient.test.ts*-*npm test -- rpcClient.test.ts*-*npm test -- rpcClient.test.ts* *npm test -- rpcClient.test.ts*r*npm test -- rpcClient.test.ts*p*npm test -- rpcClient.test.ts*c*npm test -- rpcClient.test.ts*C*npm test -- rpcClient.test.ts*l*npm test -- rpcClient.test.ts*i*npm test -- rpcClient.test.ts*e*npm test -- rpcClient.test.ts*n*npm test -- rpcClient.test.ts*t*npm test -- rpcClient.test.ts*.*npm test -- rpcClient.test.ts*t*npm test -- rpcClient.test.ts*e*npm test -- rpcClient.test.ts*s*npm test -- rpcClient.test.ts*t*npm test -- rpcClient.test.ts*.*npm test -- rpcClient.test.ts*t*npm test -- rpcClient.test.ts*s*npm test -- rpcClient.test.ts*`*npm test -- rpcClient.test.ts*
+*npm test -- rpcClient.test.ts*
+- [x] **T043**: Implement "Fragments" collapsible section in `extension/webview-ui/src/components/inspectorDrawer.ts` rendering the 3-column table: `Fragment | Tok | I/O`. Include empty state banner (`"No heading sections found"`) and enforce progressive disclosure hierarchy (Primary metrics -> Fragments -> Advanced Quality).
   - **Mapped Requirements**: FR-019, FR-020, FR-023, FR-024
-  - **Verification**: Extension host test in `test/suite/inspectorDrawer.test.ts`
-
-- [x] **T044**: Wire click handlers on fragment rows in `inspectorDrawer.ts` to dispatch `webview/openDocument` with line coordinates (`start_line`, `end_line`).
+*test/suite/inspectorDrawer.test.ts* *test/suite/inspectorDrawer.test.ts* *test/suite/inspectorDrawer.test.ts*-*test/suite/inspectorDrawer.test.ts* *test/suite/inspectorDrawer.test.ts***test/suite/inspectorDrawer.test.ts***test/suite/inspectorDrawer.test.ts*V*test/suite/inspectorDrawer.test.ts*e*test/suite/inspectorDrawer.test.ts*r*test/suite/inspectorDrawer.test.ts*i*test/suite/inspectorDrawer.test.ts*f*test/suite/inspectorDrawer.test.ts*i*test/suite/inspectorDrawer.test.ts*c*test/suite/inspectorDrawer.test.ts*a*test/suite/inspectorDrawer.test.ts*t*test/suite/inspectorDrawer.test.ts*i*test/suite/inspectorDrawer.test.ts*o*test/suite/inspectorDrawer.test.ts*n*test/suite/inspectorDrawer.test.ts***test/suite/inspectorDrawer.test.ts***test/suite/inspectorDrawer.test.ts*:*test/suite/inspectorDrawer.test.ts* *test/suite/inspectorDrawer.test.ts*E*test/suite/inspectorDrawer.test.ts*x*test/suite/inspectorDrawer.test.ts*t*test/suite/inspectorDrawer.test.ts*e*test/suite/inspectorDrawer.test.ts*n*test/suite/inspectorDrawer.test.ts*s*test/suite/inspectorDrawer.test.ts*i*test/suite/inspectorDrawer.test.ts*o*test/suite/inspectorDrawer.test.ts*n*test/suite/inspectorDrawer.test.ts* *test/suite/inspectorDrawer.test.ts*h*test/suite/inspectorDrawer.test.ts*o*test/suite/inspectorDrawer.test.ts*s*test/suite/inspectorDrawer.test.ts*t*test/suite/inspectorDrawer.test.ts* *test/suite/inspectorDrawer.test.ts*t*test/suite/inspectorDrawer.test.ts*e*test/suite/inspectorDrawer.test.ts*s*test/suite/inspectorDrawer.test.ts*t*test/suite/inspectorDrawer.test.ts* *test/suite/inspectorDrawer.test.ts*i*test/suite/inspectorDrawer.test.ts*n*test/suite/inspectorDrawer.test.ts* *test/suite/inspectorDrawer.test.ts*`*test/suite/inspectorDrawer.test.ts*t*test/suite/inspectorDrawer.test.ts*e*test/suite/inspectorDrawer.test.ts*s*test/suite/inspectorDrawer.test.ts*t*test/suite/inspectorDrawer.test.ts*/*test/suite/inspectorDrawer.test.ts*s*test/suite/inspectorDrawer.test.ts*u*test/suite/inspectorDrawer.test.ts*i*test/suite/inspectorDrawer.test.ts*t*test/suite/inspectorDrawer.test.ts*e*test/suite/inspectorDrawer.test.ts*/*test/suite/inspectorDrawer.test.ts*i*test/suite/inspectorDrawer.test.ts*n*test/suite/inspectorDrawer.test.ts*s*test/suite/inspectorDrawer.test.ts*p*test/suite/inspectorDrawer.test.ts*e*test/suite/inspectorDrawer.test.ts*c*test/suite/inspectorDrawer.test.ts*t*test/suite/inspectorDrawer.test.ts*o*test/suite/inspectorDrawer.test.ts*r*test/suite/inspectorDrawer.test.ts*D*test/suite/inspectorDrawer.test.ts*r*test/suite/inspectorDrawer.test.ts*a*test/suite/inspectorDrawer.test.ts*w*test/suite/inspectorDrawer.test.ts*e*test/suite/inspectorDrawer.test.ts*r*test/suite/inspectorDrawer.test.ts*.*test/suite/inspectorDrawer.test.ts*t*test/suite/inspectorDrawer.test.ts*e*test/suite/inspectorDrawer.test.ts*s*test/suite/inspectorDrawer.test.ts*t*test/suite/inspectorDrawer.test.ts*.*test/suite/inspectorDrawer.test.ts*t*test/suite/inspectorDrawer.test.ts*s*test/suite/inspectorDrawer.test.ts*`*test/suite/inspectorDrawer.test.ts*
+*test/suite/inspectorDrawer.test.ts*
+- [x] **T044**: Wire click handlers on fragment rows in `extension/webview-ui/src/components/inspectorDrawer.ts` to dispatch `webview/openDocument` with line coordinates (`start_line`, `end_line`).
   - **Mapped Requirements**: FR-021
-  - **Verification**: Extension host test in `test/suite/inspectorDrawer.test.ts`
+  - **Verification**: Extension host test in *test/suite/inspectorDrawer.test.ts*
 
 - [x] **T045**: Add tooltips to `I/O` cells displaying top inbound and outbound document references.
   - **Mapped Requirements**: FR-022
   - **Verification**: Manual UI test in webview
 
-- [x] **T046**: Update Diagnostics drawer in `src/views/settingsDrawer.ts` to support 5 pillar tabs (`All`, `Integrity`, `Structure`, `Consistency`, `Discoverability`, `Freshness`) and render itemized Structure and Freshness findings.
+- [x] **T046**: Update Diagnostics drawer in `extension/webview-ui/src/components/settingsDrawer.ts` to support 5 pillar tabs (`All`, `Integrity`, `Structure`, `Consistency`, `Discoverability`, `Freshness`) and render itemized Structure and Freshness findings.
   - **Mapped Requirements**: FR-041
   - **Verification**: Extension test in `test/suite/settingsDrawer.test.ts`
 
-- [x] **T047**: Update `src/views/statusDashboard.ts` Quality Pillar meter to display 5 dimensions and debt summary.
+- [x] **T047**: Update `extension/webview-ui/src/components/statusDashboard.ts` Quality Pillar meter to display 5 dimensions and debt summary.
   - **Mapped Requirements**: FR-041
   - **Verification**: Extension test in `test/suite/statusDashboard.test.ts`
 

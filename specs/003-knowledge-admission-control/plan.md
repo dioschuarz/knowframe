@@ -1,3 +1,68 @@
+---
+wiki:
+  content_hash: 990aea03941472c4e9c6199eb2ec46cbeab1a96e653fdc3856f24ad4bf834ebe
+  fragments:
+    implementation-plan-knowledge-quality-admission-control-continuous-enforcement:
+      tokens: 4242
+      inbound: 0
+      outbound: 0
+    1-architectural-overview-component-topology:
+      tokens: 307
+      inbound: 0
+      outbound: 0
+    2-directory-module-layout:
+      tokens: 944
+      inbound: 0
+      outbound: 0
+    rust-core-cratescoresrc:
+      tokens: 806
+      inbound: 0
+      outbound: 0
+    typescript-extension-extensionsrc-webview-ui:
+      tokens: 129
+      inbound: 0
+      outbound: 0
+    3-phased-implementation-roadmap:
+      tokens: 2909
+      inbound: 0
+      outbound: 0
+    phase-1-knowledge-debt-baseline-engine-rust:
+      tokens: 115
+      inbound: 0
+      outbound: 0
+    phase-2-in-memory-candidate-graph-validation-pipeline-rust:
+      tokens: 76
+      inbound: 0
+      outbound: 0
+    phase-3-dual-git-hook-orchestration-validate-git-delta:
+      tokens: 801
+      inbound: 0
+      outbound: 0
+    phase-4-deterministic-semantic-collision-engine-rust:
+      tokens: 158
+      inbound: 0
+      outbound: 0
+    phase-5-reverse-impact-index-technical-drift-engine-rust:
+      tokens: 65
+      inbound: 0
+      outbound: 0
+    phase-6-context-trace-bpe-token-pathfinding-rust:
+      tokens: 77
+      inbound: 0
+      outbound: 0
+    phase-7-network-aware-knowledge-quality-score-rust:
+      tokens: 85
+      inbound: 0
+      outbound: 0
+    phase-8-vs-code-extension-host-webview-ui-integration:
+      tokens: 68
+      inbound: 0
+      outbound: 0
+    phase-9-automated-verification-e2e-validation:
+      tokens: 1454
+      inbound: 0
+      outbound: 0
+---
 # Implementation Plan: Knowledge Quality Admission Control & Continuous Enforcement
 
 **Feature Branch:** `003-knowledge-admission-control`  
@@ -40,35 +105,35 @@ graph TD
 ## 2. Directory & Module Layout
 
 ### Rust Core (`crates/core/src/`)
-- `debt/`: Baseline persistence (`baseline.json`), signature generation, differential comparison, ratchet logic.
-  - `debt/mod.rs`
-  - `debt/baseline.rs`
-  - `debt/signatures.rs`
-  - `debt/evaluator.rs`
+- `debt/`: Baseline persistence (*.context-vault/baseline.json*), signature generation, differential comparison, ratchet logic.
+  - `crates/cli/src/commands/mod.rs`
+  - `crates/cli/src/commands/baseline.rs`
+  - `crates/core/src/debt/signatures.rs`
+  - `crates/core/src/candidate/evaluator.rs`
 - `candidate/`: Ephemeral candidate overlay graph, in-memory mutation view, validation runner.
-  - `candidate/mod.rs`
-  - `candidate/overlay.rs`
-  - `candidate/validator.rs`
-- `collision/`: Deterministic multi-signal document fingerprinting, inverted index pruning, semantic scoring, canonical candidate heuristics.
-  - `collision/mod.rs`
-  - `collision/fingerprint.rs`
-  - `collision/scorer.rs`
-  - `collision/canonical.rs`
+  - `crates/cli/src/commands/mod.rs`
+  - `crates/core/src/candidate/overlay.rs`
+*candidate/validator.rs* *candidate/validator.rs* *candidate/validator.rs*-*candidate/validator.rs* *candidate/validator.rs*`*candidate/validator.rs*c*candidate/validator.rs*a*candidate/validator.rs*n*candidate/validator.rs*d*candidate/validator.rs*i*candidate/validator.rs*d*candidate/validator.rs*a*candidate/validator.rs*t*candidate/validator.rs*e*candidate/validator.rs*/*candidate/validator.rs*v*candidate/validator.rs*a*candidate/validator.rs*l*candidate/validator.rs*i*candidate/validator.rs*d*candidate/validator.rs*a*candidate/validator.rs*t*candidate/validator.rs*o*candidate/validator.rs*r*candidate/validator.rs*.*candidate/validator.rs*r*candidate/validator.rs*s*candidate/validator.rs*`*candidate/validator.rs*
+*candidate/validator.rs*- `collision/`: Deterministic multi-signal document fingerprinting, inverted index pruning, semantic scoring, canonical candidate heuristics.
+  - `crates/cli/src/commands/mod.rs`
+  - `crates/core/src/collision/fingerprint.rs`
+  - `crates/core/src/quality/scorer.rs`
+  - `crates/core/src/collision/canonical.rs`
 - `drift/`: Reverse code-doc impact index, symbol extraction, deletion/rename drift detection.
-  - `drift/mod.rs`
-  - `drift/indexer.rs`
-  - `drift/detector.rs`
+  - `crates/cli/src/commands/mod.rs`
+*drift/indexer.rs* *drift/indexer.rs* *drift/indexer.rs*-*drift/indexer.rs* *drift/indexer.rs*`*drift/indexer.rs*d*drift/indexer.rs*r*drift/indexer.rs*i*drift/indexer.rs*f*drift/indexer.rs*t*drift/indexer.rs*/*drift/indexer.rs*i*drift/indexer.rs*n*drift/indexer.rs*d*drift/indexer.rs*e*drift/indexer.rs*x*drift/indexer.rs*e*drift/indexer.rs*r*drift/indexer.rs*.*drift/indexer.rs*r*drift/indexer.rs*s*drift/indexer.rs*`*drift/indexer.rs*
+*drift/indexer.rs*  - `crates/core/src/drift/detector.rs`
 - `trace/`: Graph-constrained traversal from entry points, Dijkstra pathfinding, BPE token accounting (`cl100k_base`), path quality score.
-  - `trace/mod.rs`
-  - `trace/traversal.rs`
+  - `crates/cli/src/commands/mod.rs`
+  - `crates/core/src/trace/traversal.rs`
 - `quality/`: 4-pillar topological scoring engine (Integrity, Consistency, Discoverability, Freshness) weighted by node betweenness.
-  - `quality/mod.rs`
-  - `quality/scorer.rs`
+  - `crates/cli/src/commands/mod.rs`
+  - `crates/core/src/quality/scorer.rs`
 - `cli/`: Subcommands for `validate`, `git-delta`, `baseline`, `trace`, `quality`.
-  - `cli/validate.rs`
-  - `cli/baseline_cmd.rs`
-  - `cli/trace_cmd.rs`
-  - `cli/quality_cmd.rs`
+  - `crates/cli/src/commands/validate.rs`
+  - `crates/core/src/cli/baseline_cmd.rs`
+  - `crates/core/src/cli/trace_cmd.rs`
+  - `crates/core/src/cli/quality_cmd.rs`
 
 ### TypeScript Extension (`extension/src/` & `webview-ui/`)
 - `extension/src/types/admission.ts`: TypeScript definitions matching JSON-RPC contracts.
@@ -83,7 +148,7 @@ graph TD
 
 ### Phase 1: Knowledge Debt Baseline Engine (Rust)
 - Implement `BrokenLinkSignature`, `CollisionSignature`, and `DriftSignature`.
-- Implement `KnowledgeDebtBaseline` serialization and persistence at `.context-vault/baseline.json`.
+- Implement `KnowledgeDebtBaseline` serialization and persistence at *.context-vault/baseline.json*.
 - Implement baseline differential comparison: $\text{New Regressions} = \text{Candidate Findings} \setminus \text{Baseline Findings}$.
 - Implement baseline ratcheting on debt resolution.
 - Unit tests: 100% coverage on baseline diffing, legacy tolerance, and ratcheting.
@@ -98,8 +163,8 @@ graph TD
 - Implement `llm-wiki-core validate` CLI command for `pre-commit` stage with human-readable diagnostic output and JSON mode.
 - Enforce strict $\le 500\text{ ms}$ non-blocking fail-open.
 - Verify `llm-wiki-core git-delta` in `post-commit` stage for incremental persistent graph updates ($\le 50\text{ ms}$).
-- Configure default `.pre-commit-config.yaml` template with both `llm-wiki-validate` and `llm-wiki-sync`.
-- Implement 3-tier hook discovery hierarchy: Tier 1 (`prek`), Tier 2 (Python `pre-commit` / `lefthook`), Tier 3 (standalone `.git/hooks/` fallback shell scripts).
+*.pre-commit-config.yaml*-*.pre-commit-config.yaml* *.pre-commit-config.yaml*C*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*g*.pre-commit-config.yaml*u*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*d*.pre-commit-config.yaml*e*.pre-commit-config.yaml*f*.pre-commit-config.yaml*a*.pre-commit-config.yaml*u*.pre-commit-config.yaml*l*.pre-commit-config.yaml*t*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*.*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*m*.pre-commit-config.yaml*m*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*g*.pre-commit-config.yaml*.*.pre-commit-config.yaml*y*.pre-commit-config.yaml*a*.pre-commit-config.yaml*m*.pre-commit-config.yaml*l*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml*m*.pre-commit-config.yaml*p*.pre-commit-config.yaml*l*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*w*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*h*.pre-commit-config.yaml* *.pre-commit-config.yaml*b*.pre-commit-config.yaml*o*.pre-commit-config.yaml*t*.pre-commit-config.yaml*h*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*l*.pre-commit-config.yaml*l*.pre-commit-config.yaml*m*.pre-commit-config.yaml*-*.pre-commit-config.yaml*w*.pre-commit-config.yaml*i*.pre-commit-config.yaml*k*.pre-commit-config.yaml*i*.pre-commit-config.yaml*-*.pre-commit-config.yaml*v*.pre-commit-config.yaml*a*.pre-commit-config.yaml*l*.pre-commit-config.yaml*i*.pre-commit-config.yaml*d*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*a*.pre-commit-config.yaml*n*.pre-commit-config.yaml*d*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*l*.pre-commit-config.yaml*l*.pre-commit-config.yaml*m*.pre-commit-config.yaml*-*.pre-commit-config.yaml*w*.pre-commit-config.yaml*i*.pre-commit-config.yaml*k*.pre-commit-config.yaml*i*.pre-commit-config.yaml*-*.pre-commit-config.yaml*s*.pre-commit-config.yaml*y*.pre-commit-config.yaml*n*.pre-commit-config.yaml*c*.pre-commit-config.yaml*`*.pre-commit-config.yaml*.*.pre-commit-config.yaml*
+*.pre-commit-config.yaml*- Implement 3-tier hook discovery hierarchy: Tier 1 (`prek`), Tier 2 (Python `pre-commit` / `lefthook`), Tier 3 (standalone `.git/hooks/` fallback shell scripts).
 
 ### Phase 4: Deterministic Semantic Collision Engine (Rust)
 - Implement `DocumentFingerprint`: title tokens, heading tokens, BM25 term frequencies, n-grams, tags.
@@ -130,6 +195,7 @@ graph TD
 - Add Settings Drawer controls for Quality & Git Hooks.
 
 ### Phase 9: Automated Verification & E2E Validation
-- Criterion benchmarks: candidate validation $\le 150\text{ ms}$ (`candidate_benchmark.rs`), post-commit git-delta $\le 50\text{ ms}$ (`sync_benchmark.rs`), fingerprint retrieval $\le 80\text{ ms}$ (`fingerprint_benchmark.rs`).
-- Fail-open verification $\le 500\text{ ms}$ on socket hang (`hook_timeout_test.rs`).
-- Complete regression simulation: zero false positive blocks on brownfield debt (`brownfield_simulation_test.rs`).
+- Criterion benchmarks: candidate validation $\le 150\text{ ms}$ (`crates/core/benches/candidate_benchmark.rs`), post-commit git-delta $\le 50\text{ ms}$ (`crates/core/benches/sync_benchmark.rs`), fingerprint retrieval $\le 80\text{ ms}$ (`crates/core/benches/incremental_bench.rs`).
+*hook_timeout_test.rs*-*hook_timeout_test.rs* *hook_timeout_test.rs*F*hook_timeout_test.rs*a*hook_timeout_test.rs*i*hook_timeout_test.rs*l*hook_timeout_test.rs*-*hook_timeout_test.rs*o*hook_timeout_test.rs*p*hook_timeout_test.rs*e*hook_timeout_test.rs*n*hook_timeout_test.rs* *hook_timeout_test.rs*v*hook_timeout_test.rs*e*hook_timeout_test.rs*r*hook_timeout_test.rs*i*hook_timeout_test.rs*f*hook_timeout_test.rs*i*hook_timeout_test.rs*c*hook_timeout_test.rs*a*hook_timeout_test.rs*t*hook_timeout_test.rs*i*hook_timeout_test.rs*o*hook_timeout_test.rs*n*hook_timeout_test.rs* *hook_timeout_test.rs*$*hook_timeout_test.rs*\*hook_timeout_test.rs*l*hook_timeout_test.rs*e*hook_timeout_test.rs* *hook_timeout_test.rs*5*hook_timeout_test.rs*0*hook_timeout_test.rs*0*hook_timeout_test.rs*\*hook_timeout_test.rs*t*hook_timeout_test.rs*e*hook_timeout_test.rs*x*hook_timeout_test.rs*t*hook_timeout_test.rs*{*hook_timeout_test.rs* *hook_timeout_test.rs*m*hook_timeout_test.rs*s*hook_timeout_test.rs*}*hook_timeout_test.rs*$*hook_timeout_test.rs* *hook_timeout_test.rs*o*hook_timeout_test.rs*n*hook_timeout_test.rs* *hook_timeout_test.rs*s*hook_timeout_test.rs*o*hook_timeout_test.rs*c*hook_timeout_test.rs*k*hook_timeout_test.rs*e*hook_timeout_test.rs*t*hook_timeout_test.rs* *hook_timeout_test.rs*h*hook_timeout_test.rs*a*hook_timeout_test.rs*n*hook_timeout_test.rs*g*hook_timeout_test.rs* *hook_timeout_test.rs*(*hook_timeout_test.rs*`*hook_timeout_test.rs*h*hook_timeout_test.rs*o*hook_timeout_test.rs*o*hook_timeout_test.rs*k*hook_timeout_test.rs*_*hook_timeout_test.rs*t*hook_timeout_test.rs*i*hook_timeout_test.rs*m*hook_timeout_test.rs*e*hook_timeout_test.rs*o*hook_timeout_test.rs*u*hook_timeout_test.rs*t*hook_timeout_test.rs*_*hook_timeout_test.rs*t*hook_timeout_test.rs*e*hook_timeout_test.rs*s*hook_timeout_test.rs*t*hook_timeout_test.rs*.*hook_timeout_test.rs*r*hook_timeout_test.rs*s*hook_timeout_test.rs*`*hook_timeout_test.rs*)*hook_timeout_test.rs*.*hook_timeout_test.rs*
+*hook_timeout_test.rs**brownfield_simulation_test.rs*-*brownfield_simulation_test.rs* *brownfield_simulation_test.rs*C*brownfield_simulation_test.rs*o*brownfield_simulation_test.rs*m*brownfield_simulation_test.rs*p*brownfield_simulation_test.rs*l*brownfield_simulation_test.rs*e*brownfield_simulation_test.rs*t*brownfield_simulation_test.rs*e*brownfield_simulation_test.rs* *brownfield_simulation_test.rs*r*brownfield_simulation_test.rs*e*brownfield_simulation_test.rs*g*brownfield_simulation_test.rs*r*brownfield_simulation_test.rs*e*brownfield_simulation_test.rs*s*brownfield_simulation_test.rs*s*brownfield_simulation_test.rs*i*brownfield_simulation_test.rs*o*brownfield_simulation_test.rs*n*brownfield_simulation_test.rs* *brownfield_simulation_test.rs*s*brownfield_simulation_test.rs*i*brownfield_simulation_test.rs*m*brownfield_simulation_test.rs*u*brownfield_simulation_test.rs*l*brownfield_simulation_test.rs*a*brownfield_simulation_test.rs*t*brownfield_simulation_test.rs*i*brownfield_simulation_test.rs*o*brownfield_simulation_test.rs*n*brownfield_simulation_test.rs*:*brownfield_simulation_test.rs* *brownfield_simulation_test.rs*z*brownfield_simulation_test.rs*e*brownfield_simulation_test.rs*r*brownfield_simulation_test.rs*o*brownfield_simulation_test.rs* *brownfield_simulation_test.rs*f*brownfield_simulation_test.rs*a*brownfield_simulation_test.rs*l*brownfield_simulation_test.rs*s*brownfield_simulation_test.rs*e*brownfield_simulation_test.rs* *brownfield_simulation_test.rs*p*brownfield_simulation_test.rs*o*brownfield_simulation_test.rs*s*brownfield_simulation_test.rs*i*brownfield_simulation_test.rs*t*brownfield_simulation_test.rs*i*brownfield_simulation_test.rs*v*brownfield_simulation_test.rs*e*brownfield_simulation_test.rs* *brownfield_simulation_test.rs*b*brownfield_simulation_test.rs*l*brownfield_simulation_test.rs*o*brownfield_simulation_test.rs*c*brownfield_simulation_test.rs*k*brownfield_simulation_test.rs*s*brownfield_simulation_test.rs* *brownfield_simulation_test.rs*o*brownfield_simulation_test.rs*n*brownfield_simulation_test.rs* *brownfield_simulation_test.rs*b*brownfield_simulation_test.rs*r*brownfield_simulation_test.rs*o*brownfield_simulation_test.rs*w*brownfield_simulation_test.rs*n*brownfield_simulation_test.rs*f*brownfield_simulation_test.rs*i*brownfield_simulation_test.rs*e*brownfield_simulation_test.rs*l*brownfield_simulation_test.rs*d*brownfield_simulation_test.rs* *brownfield_simulation_test.rs*d*brownfield_simulation_test.rs*e*brownfield_simulation_test.rs*b*brownfield_simulation_test.rs*t*brownfield_simulation_test.rs* *brownfield_simulation_test.rs*(*brownfield_simulation_test.rs*`*brownfield_simulation_test.rs*b*brownfield_simulation_test.rs*r*brownfield_simulation_test.rs*o*brownfield_simulation_test.rs*w*brownfield_simulation_test.rs*n*brownfield_simulation_test.rs*f*brownfield_simulation_test.rs*i*brownfield_simulation_test.rs*e*brownfield_simulation_test.rs*l*brownfield_simulation_test.rs*d*brownfield_simulation_test.rs*_*brownfield_simulation_test.rs*s*brownfield_simulation_test.rs*i*brownfield_simulation_test.rs*m*brownfield_simulation_test.rs*u*brownfield_simulation_test.rs*l*brownfield_simulation_test.rs*a*brownfield_simulation_test.rs*t*brownfield_simulation_test.rs*i*brownfield_simulation_test.rs*o*brownfield_simulation_test.rs*n*brownfield_simulation_test.rs*_*brownfield_simulation_test.rs*t*brownfield_simulation_test.rs*e*brownfield_simulation_test.rs*s*brownfield_simulation_test.rs*t*brownfield_simulation_test.rs*.*brownfield_simulation_test.rs*r*brownfield_simulation_test.rs*s*brownfield_simulation_test.rs*`*brownfield_simulation_test.rs*)*brownfield_simulation_test.rs*.*brownfield_simulation_test.rs*
+*brownfield_simulation_test.rs*

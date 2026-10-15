@@ -1,3 +1,72 @@
+---
+wiki:
+  content_hash: 9fdd68ec46f34a7c11cea188cd28d6e6a2713a70f8bf1efd6196983e08e255d6
+  fragments:
+    quickstart-validation-guide-llm-wiki-ext4vsc:
+      tokens: 1856
+      inbound: 0
+      outbound: 1
+    1-prerequisites:
+      tokens: 129
+      inbound: 0
+      outbound: 0
+    2-workspace-setup-build:
+      tokens: 169
+      inbound: 0
+      outbound: 0
+    step-1-clone-and-inspect-workspace:
+      tokens: 32
+      inbound: 0
+      outbound: 0
+    step-2-build-rust-core-sidecar-llm-wiki-core:
+      tokens: 75
+      inbound: 0
+      outbound: 0
+    step-3-compile-typescript-extension-host-webview:
+      tokens: 53
+      inbound: 0
+      outbound: 0
+    3-validation-scenario-1-headless-vault-discovery-centrality-p1:
+      tokens: 578
+      inbound: 0
+      outbound: 0
+    verification-criteria:
+      tokens: 486
+      inbound: 0
+      outbound: 0
+    4-validation-scenario-2-git-hook-sync-via-prek-p2:
+      tokens: 506
+      inbound: 0
+      outbound: 0
+    setup-hook-configuration:
+      tokens: 120
+      inbound: 0
+      outbound: 0
+    scenario-2a-code-only-commit-bypass-test:
+      tokens: 105
+      inbound: 0
+      outbound: 0
+    scenario-2b-documentation-commit-delta-sync-test:
+      tokens: 133
+      inbound: 0
+      outbound: 0
+    scenario-2c-fail-open-resilience-test-offline-sidecar:
+      tokens: 104
+      inbound: 0
+      outbound: 0
+    5-validation-scenario-3-sandboxed-webview-cluster-coloring-p2:
+      tokens: 330
+      inbound: 0
+      outbound: 0
+    visual-verification-checklist:
+      tokens: 270
+      inbound: 0
+      outbound: 0
+    6-references-contracts:
+      tokens: 74
+      inbound: 0
+      outbound: 1
+---
 # Quickstart & Validation Guide: `llm_wiki_ext4vsc`
 
 **Feature**: LLM Wiki Extension for VS Code (`llm_wiki_ext4vsc`)  
@@ -51,9 +120,9 @@ target/release/llm-wiki-core scan /home/ds/projects/notes --format json > /tmp/s
 
 ### Verification Criteria:
 1. **Execution Time**: Completes in $< 200\text{ ms}$ for 1,000 Markdown files.
-2. **Centrality**: Inspect `/tmp/scan_result.json`:
-   - `hub_id` identifies the top betweenness centrality node (e.g. `wiki_index.md` or `active_context.md`).
-3. **Dead Link Detection**: Broken links in `/tmp/scan_result.json` have `is_broken: true`.
+*tmp/scan_result.json*2*tmp/scan_result.json*.*tmp/scan_result.json* *tmp/scan_result.json***tmp/scan_result.json***tmp/scan_result.json*C*tmp/scan_result.json*e*tmp/scan_result.json*n*tmp/scan_result.json*t*tmp/scan_result.json*r*tmp/scan_result.json*a*tmp/scan_result.json*l*tmp/scan_result.json*i*tmp/scan_result.json*t*tmp/scan_result.json*y*tmp/scan_result.json***tmp/scan_result.json***tmp/scan_result.json*:*tmp/scan_result.json* *tmp/scan_result.json*I*tmp/scan_result.json*n*tmp/scan_result.json*s*tmp/scan_result.json*p*tmp/scan_result.json*e*tmp/scan_result.json*c*tmp/scan_result.json*t*tmp/scan_result.json* *tmp/scan_result.json*`*tmp/scan_result.json*/*tmp/scan_result.json*t*tmp/scan_result.json*m*tmp/scan_result.json*p*tmp/scan_result.json*/*tmp/scan_result.json*s*tmp/scan_result.json*c*tmp/scan_result.json*a*tmp/scan_result.json*n*tmp/scan_result.json*_*tmp/scan_result.json*r*tmp/scan_result.json*e*tmp/scan_result.json*s*tmp/scan_result.json*u*tmp/scan_result.json*l*tmp/scan_result.json*t*tmp/scan_result.json*.*tmp/scan_result.json*j*tmp/scan_result.json*s*tmp/scan_result.json*o*tmp/scan_result.json*n*tmp/scan_result.json*`*tmp/scan_result.json*:*tmp/scan_result.json*
+*tmp/scan_result.json*   - `hub_id` identifies the top betweenness centrality node (e.g. `wiki_index.md` or `active_context.md`).
+3. **Dead Link Detection**: Broken links in `/*tmp/scan_result.json*` have `is_broken: true`.
 4. **Token Accuracy**: `tiktoken-rs` returns exact `cl100k_base` token counts for each file.
 
 ---
@@ -144,7 +213,7 @@ npm run test:e2e
 ## 6. References & Contracts
 
 - Data Model: [data-model.md](data-model.md)
-- JSON-RPC Contract: [contracts/ipc_jsonrpc_protocol.json](contracts/ipc_jsonrpc_protocol.json)
-- Webview RPC Contract: [contracts/webview_rpc_protocol.json](contracts/webview_rpc_protocol.json)
-- Config Schema: [contracts/context_vault_schema.json](contracts/context_vault_schema.json)
-- Git Delta Schema: [contracts/git_delta_contract.json](contracts/git_delta_contract.json)
+- JSON-RPC Contract: `contracts/ipc_jsonrpc_protocol.json`
+- Webview RPC Contract: `contracts/webview_rpc_protocol.json`
+- Config Schema: `contracts/context_vault_schema.json`
+- Git Delta Schema: `contracts/git_delta_contract.json`

@@ -1,3 +1,40 @@
+---
+wiki:
+  content_hash: 7e637502d41eccf0ca672496636365691fdca62ef37b27ec07fcb412dbfa90d4
+  fragments:
+    implementation-plan-feature:
+      tokens: 904
+      inbound: 0
+      outbound: 0
+    summary:
+      tokens: 17
+      inbound: 0
+      outbound: 0
+    technical-context:
+      tokens: 279
+      inbound: 0
+      outbound: 0
+    constitution-check:
+      tokens: 32
+      inbound: 0
+      outbound: 0
+    project-structure:
+      tokens: 417
+      inbound: 0
+      outbound: 0
+    documentation-this-feature:
+      tokens: 137
+      inbound: 0
+      outbound: 0
+    source-code-repository-root:
+      tokens: 276
+      inbound: 0
+      outbound: 0
+    complexity-tracking:
+      tokens: 86
+      inbound: 0
+      outbound: 0
+---
 # Implementation Plan: [FEATURE]
 
 **Branch**: `[###-feature-name]` | **Date**: [DATE] | **Spec**: [link]

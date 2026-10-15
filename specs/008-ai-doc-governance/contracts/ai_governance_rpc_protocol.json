@@ -1,0 +1,719 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AIGovernanceRPCProtocol",
+  "description": "JSON-RPC 2.0 interface contracts for AI-Oriented Documentation Governance in llm-wiki-core",
+  "type": "object",
+  "definitions": {
+    "HarnessType": {
+      "type": "string",
+      "enum": [
+        "agents_md",
+        "claude_md",
+        "gemini_md",
+        "copilot_instructions",
+        "custom"
+      ]
+    },
+    "RouteResolutionStatus": {
+      "type": "string",
+      "enum": [
+        "resolved",
+        "broken_file",
+        "broken_anchor",
+        "excluded_path"
+      ]
+    },
+    "GovernanceStrategyType": {
+      "type": "string",
+      "enum": [
+        "embed_knowledge_index",
+        "eliminate_secondary_routing_layer",
+        "create_skill_from_procedure",
+        "consolidate_duplicate_skills",
+        "decompose_harness",
+        "introduce_section_addressing",
+        "restructure_directory_domain",
+        "sync_harness_routes"
+      ]
+    },
+    "KnowledgeIndexRoute": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string"
+        },
+        "label": {
+          "type": "string"
+        },
+        "target_file": {
+          "type": "string"
+        },
+        "target_anchor": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "resolution_status": {
+          "$ref": "#/definitions/RouteResolutionStatus"
+        },
+        "hop_distance_from_entry": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "target_tokens": {
+          "type": "integer",
+          "minimum": 0
+        },
+        "line_number": {
+          "type": "integer",
+          "minimum": 1
+        }
+      },
+      "required": [
+        "domain",
+        "label",
+        "target_file",
+        "resolution_status",
+        "hop_distance_from_entry",
+        "target_tokens",
+        "line_number"
+      ]
+    },
+    "EmbeddedIndexMetadata": {
+      "type": "object",
+      "properties": {
+        "heading_anchor": {
+          "type": "string"
+        },
+        "start_line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "end_line": {
+          "type": "integer",
+          "minimum": 1
+        },
+        "routes": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/KnowledgeIndexRoute"
+          }
+        },
+        "domain_coverage_ratio": {
+          "type": "number",
+          "minimum": 0.0,
+          "maximum": 1.0
+        }
+      },
+      "required": [
+        "heading_anchor",
+        "start_line",
+        "end_line",
+        "routes",
+        "domain_coverage_ratio"
+      ]
+    },
+    "SecondaryRoutingLayer": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string"
+        },
+        "parent_harness": {
+          "type": "string"
+        },
+        "outgoing_routes_count": {
+          "type": "integer"
+        },
+        "intermediate_hops": {
+          "type": "integer"
+        },
+        "penalty_points": {
+          "type": "number"
+        },
+        "description": {
+          "type": "string"
+        },
+        "recommendation_hint": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "file_path",
+        "parent_harness",
+        "outgoing_routes_count",
+        "intermediate_hops",
+        "penalty_points",
+        "description",
+        "recommendation_hint"
+      ]
+    },
+    "HarnessQualityRatings": {
+      "type": "object",
+      "properties": {
+        "integrity_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "structure_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "consistency_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "discoverability_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "freshness_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "context_efficiency": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "integrity_score",
+        "structure_score",
+        "consistency_score",
+        "discoverability_score",
+        "freshness_score",
+        "context_efficiency"
+      ]
+    },
+    "HarnessEntryPoint": {
+      "type": "object",
+      "properties": {
+        "file_path": {
+          "type": "string"
+        },
+        "harness_type": {
+          "$ref": "#/definitions/HarnessType"
+        },
+        "is_primary": {
+          "type": "boolean"
+        },
+        "total_tokens": {
+          "type": "integer"
+        },
+        "heading_count": {
+          "type": "integer"
+        },
+        "embedded_index": {
+          "anyOf": [
+            {
+              "$ref": "#/definitions/EmbeddedIndexMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ]
+        },
+        "secondary_layers_detected": {
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/SecondaryRoutingLayer"
+          }
+        },
+        "quality_ratings": {
+          "$ref": "#/definitions/HarnessQualityRatings"
+        },
+        "last_modified": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      },
+      "required": [
+        "file_path",
+        "harness_type",
+        "is_primary",
+        "total_tokens",
+        "heading_count",
+        "embedded_index",
+        "secondary_layers_detected",
+        "quality_ratings"
+      ]
+    },
+    "AIOrientedCapabilityMatrix": {
+      "type": "object",
+      "properties": {
+        "entry_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "discovery_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "retrieval_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "reuse_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        },
+        "overall_governance_score": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 100
+        }
+      },
+      "required": [
+        "entry_score",
+        "discovery_score",
+        "retrieval_score",
+        "reuse_score",
+        "overall_governance_score"
+      ]
+    },
+    "SkillValidationStatus": {
+      "type": "string",
+      "enum": [
+        "valid",
+        "missing_manifest",
+        "broken_asset_reference",
+        "duplicate_capability"
+      ]
+    },
+    "SkillDefinition": {
+      "type": "object",
+      "properties": {
+        "skill_id": {
+          "type": "string"
+        },
+        "dir_path": {
+          "type": "string"
+        },
+        "manifest_path": {
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "description": {
+          "type": "string"
+        },
+        "status": {
+          "$ref": "#/definitions/SkillValidationStatus"
+        },
+        "unreferenced": {
+          "type": "boolean"
+        },
+        "overlap_ids": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        }
+      },
+      "required": [
+        "skill_id",
+        "dir_path",
+        "manifest_path",
+        "name",
+        "description",
+        "status",
+        "unreferenced",
+        "overlap_ids"
+      ]
+    },
+    "ProcedureCandidate": {
+      "type": "object",
+      "properties": {
+        "candidate_id": {
+          "type": "string"
+        },
+        "step_signatures": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "occurrence_count": {
+          "type": "integer"
+        },
+        "source_documents": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "associated_scripts": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "recurrence_score": {
+          "type": "number"
+        },
+        "recommended_skill_name": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "candidate_id",
+        "step_signatures",
+        "occurrence_count",
+        "source_documents",
+        "associated_scripts",
+        "recurrence_score",
+        "recommended_skill_name"
+      ]
+    },
+    "DirectoryStructureMetrics": {
+      "type": "object",
+      "properties": {
+        "max_directory_depth": {
+          "type": "integer"
+        },
+        "average_directory_depth": {
+          "type": "number"
+        },
+        "concentration_entropy": {
+          "type": "number"
+        },
+        "domain_mixing_score": {
+          "type": "number"
+        },
+        "cross_folder_coupling": {
+          "type": "number"
+        },
+        "organizational_signals": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "target_directory": {
+                "type": "string"
+              },
+              "signal_type": {
+                "type": "string"
+              },
+              "message": {
+                "type": "string"
+              },
+              "cost_evidence": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "target_directory",
+              "signal_type",
+              "message",
+              "cost_evidence"
+            ]
+          }
+        }
+      },
+      "required": [
+        "max_directory_depth",
+        "average_directory_depth",
+        "concentration_entropy",
+        "domain_mixing_score",
+        "cross_folder_coupling",
+        "organizational_signals"
+      ]
+    }
+  },
+  "methods": {
+    "governance/getHarnessStatus": {
+      "description": "Returns active AI harness entry points, embedded index metadata, secondary layers, and the capability matrix.",
+      "params": {
+        "type": "object",
+        "properties": {}
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "harnesses": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/HarnessEntryPoint"
+            }
+          },
+          "active_harness": {
+            "$ref": "#/definitions/HarnessEntryPoint"
+          },
+          "capability_matrix": {
+            "$ref": "#/definitions/AIOrientedCapabilityMatrix"
+          }
+        },
+        "required": [
+          "harnesses",
+          "active_harness",
+          "capability_matrix"
+        ]
+      }
+    },
+    "governance/setActiveHarness": {
+      "description": "Sets the active primary AI harness entry point for context trace and navigation.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "harness_file": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "harness_file"
+        ]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "active_harness": {
+            "type": "string"
+          },
+          "previous_harness": {
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "required": [
+          "active_harness"
+        ]
+      }
+    },
+    "governance/getSkillCatalog": {
+      "description": "Returns all detected and validated skills, procedure candidates, and integrity findings.",
+      "params": {
+        "type": "object",
+        "properties": {}
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "skills": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/SkillDefinition"
+            }
+          },
+          "procedure_candidates": {
+            "type": "array",
+            "items": {
+              "$ref": "#/definitions/ProcedureCandidate"
+            }
+          }
+        },
+        "required": [
+          "skills",
+          "procedure_candidates"
+        ]
+      }
+    },
+    "governance/analyzeDirectoryStructure": {
+      "description": "Returns physical repository directory structure metrics and evidence-based organizational signals.",
+      "params": {
+        "type": "object",
+        "properties": {}
+      },
+      "result": {
+        "$ref": "#/definitions/DirectoryStructureMetrics"
+      }
+    },
+    "governance/traceFromHarness": {
+      "description": "Runs Context Trace anchored strictly to the configured Harness Entry Point.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "query": {
+            "type": "string"
+          },
+          "harness_file": {
+            "type": "string"
+          },
+          "max_hops": {
+            "type": "integer",
+            "default": 3
+          }
+        },
+        "required": [
+          "query"
+        ]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "harness_file": {
+            "type": "string"
+          },
+          "total_hops": {
+            "type": "integer"
+          },
+          "total_tokens_traversed": {
+            "type": "integer"
+          },
+          "target_fragment": {
+            "type": "string"
+          },
+          "path": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "relevance_progression": {
+            "type": "array",
+            "items": {
+              "type": "number"
+            }
+          }
+        },
+        "required": [
+          "harness_file",
+          "total_hops",
+          "total_tokens_traversed",
+          "target_fragment",
+          "path"
+        ]
+      }
+    },
+    "governance/generateGovernancePlan": {
+      "description": "Proposes a structural transformation plan with unified diff, trade-offs, and an approval token.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "strategy_type": {
+            "$ref": "#/definitions/GovernanceStrategyType"
+          },
+          "target_file_or_dir": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "strategy_type",
+          "target_file_or_dir"
+        ]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "plan_id": {
+            "type": "string"
+          },
+          "approval_token": {
+            "type": "string"
+          },
+          "strategy_type": {
+            "$ref": "#/definitions/GovernanceStrategyType"
+          },
+          "title": {
+            "type": "string"
+          },
+          "unified_diff": {
+            "type": "string"
+          },
+          "expected_benefits": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "countervailing_trade_offs": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "projected_delta_tokens": {
+            "type": "integer"
+          },
+          "projected_delta_hops": {
+            "type": "integer"
+          }
+        },
+        "required": [
+          "plan_id",
+          "approval_token",
+          "strategy_type",
+          "title",
+          "unified_diff",
+          "expected_benefits",
+          "countervailing_trade_offs"
+        ]
+      }
+    },
+    "governance/applyGovernancePlan": {
+      "description": "Applies an approved structural transformation plan using the validated approval token (Invariant XVI).",
+      "params": {
+        "type": "object",
+        "properties": {
+          "plan_id": {
+            "type": "string"
+          },
+          "approval_token": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "plan_id",
+          "approval_token"
+        ]
+      },
+      "result": {
+        "type": "object",
+        "properties": {
+          "applied": {
+            "type": "boolean"
+          },
+          "plan_id": {
+            "type": "string"
+          },
+          "files_modified": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "re_measurement": {
+            "type": "object",
+            "properties": {
+              "delta_tokens": {
+                "type": "integer"
+              },
+              "delta_hops": {
+                "type": "integer"
+              },
+              "delta_governance_score": {
+                "type": "number"
+              }
+            },
+            "required": [
+              "delta_tokens",
+              "delta_hops",
+              "delta_governance_score"
+            ]
+          }
+        },
+        "required": [
+          "applied",
+          "plan_id",
+          "files_modified",
+          "re_measurement"
+        ]
+      }
+    }
+  }
+}

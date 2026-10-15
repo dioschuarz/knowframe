@@ -17,7 +17,11 @@ use llm_wiki_core::debt::baseline::load_baseline;
 
 fn init_git_repo(dir: &TempDir) {
     let p = dir.path();
-    Command::new("git").args(["init"]).current_dir(p).output().unwrap();
+    Command::new("git")
+        .args(["init"])
+        .current_dir(p)
+        .output()
+        .unwrap();
     Command::new("git")
         .args(["config", "user.email", "test@example.com"])
         .current_dir(p)
@@ -41,8 +45,16 @@ async fn test_cli_validate_command() {
     let target_md = dir.path().join("target.md");
     fs::write(&target_md, "# Target\nContent here.\n").unwrap();
 
-    Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
-    Command::new("git").args(["commit", "-m", "initial"]).current_dir(dir.path()).output().unwrap();
+    Command::new("git")
+        .args(["add", "."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    Command::new("git")
+        .args(["commit", "-m", "initial"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
 
     // Establish baseline
     execute_baseline_init(dir.path(), false).unwrap();
@@ -54,11 +66,18 @@ async fn test_cli_validate_command() {
     // Stage a new note with a broken link
     let bad_note = dir.path().join("bad.md");
     fs::write(&bad_note, "# Bad note\nLink to [[missing_target]].\n").unwrap();
-    Command::new("git").args(["add", "bad.md"]).current_dir(dir.path()).output().unwrap();
+    Command::new("git")
+        .args(["add", "bad.md"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
 
     // Validation should return exit code 1 (BLOCK)
     let code_bad = execute_validate(dir.path(), true, true, false, 500).await;
-    assert_eq!(code_bad, 1, "New regression should return exit code 1 (BLOCK)");
+    assert_eq!(
+        code_bad, 1,
+        "New regression should return exit code 1 (BLOCK)"
+    );
 }
 
 #[tokio::test]
@@ -69,14 +88,26 @@ async fn test_cli_validate_json_output() {
     // Initial committed baseline state
     let agents = dir.path().join("AGENTS.md");
     fs::write(&agents, "# Entrypoint\nWelcome.\n").unwrap();
-    Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
-    Command::new("git").args(["commit", "-m", "initial"]).current_dir(dir.path()).output().unwrap();
+    Command::new("git")
+        .args(["add", "."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    Command::new("git")
+        .args(["commit", "-m", "initial"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
     execute_baseline_init(dir.path(), false).unwrap();
 
     // Stage a note with a new broken link regression
     let doc = dir.path().join("test.md");
     fs::write(&doc, "# Doc\nRef: [[does_not_exist]].\n").unwrap();
-    Command::new("git").args(["add", "test.md"]).current_dir(dir.path()).output().unwrap();
+    Command::new("git")
+        .args(["add", "test.md"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
 
     // Should return 1 on block with JSON output
     let code = execute_validate(dir.path(), true, false, true, 500).await;
@@ -90,7 +121,11 @@ async fn test_cli_validate_fail_open_on_timeout() {
 
     let doc = dir.path().join("test.md");
     fs::write(&doc, "# Doc\nRef: [[does_not_exist]].\n").unwrap();
-    Command::new("git").args(["add", "test.md"]).current_dir(dir.path()).output().unwrap();
+    Command::new("git")
+        .args(["add", "test.md"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
 
     // With 0 ms timeout, timeout fires immediately, triggering fail-open (exit 0)
     let code = execute_validate(dir.path(), true, true, false, 0).await;
@@ -104,12 +139,22 @@ async fn test_cli_baseline_init_command() {
 
     let doc1 = dir.path().join("doc1.md");
     fs::write(&doc1, "# Doc 1\nHas [[broken_ref]].\n").unwrap();
-    Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
-    Command::new("git").args(["commit", "-m", "init"]).current_dir(dir.path()).output().unwrap();
+    Command::new("git")
+        .args(["add", "."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    Command::new("git")
+        .args(["commit", "-m", "init"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
 
     execute_baseline_init(dir.path(), false).unwrap();
 
-    let baseline = load_baseline(dir.path()).unwrap().expect("Baseline must exist");
+    let baseline = load_baseline(dir.path())
+        .unwrap()
+        .expect("Baseline must exist");
     assert_eq!(baseline.broken_links.len(), 1);
     assert_eq!(baseline.orphan_nodes.len(), 1);
     assert_eq!(baseline.total_debt, 2);
@@ -135,8 +180,16 @@ async fn test_cli_git_delta_ratchet_sync() {
     fs::write(&agents, "# Agents\n[[doc1]]\n").unwrap();
     let doc1 = dir.path().join("doc1.md");
     fs::write(&doc1, "# Doc 1\nHas [[broken_ref]].\n").unwrap();
-    Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
-    Command::new("git").args(["commit", "-m", "broken"]).current_dir(dir.path()).output().unwrap();
+    Command::new("git")
+        .args(["add", "."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    Command::new("git")
+        .args(["commit", "-m", "broken"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
 
     // Baseline captured with 1 broken link (0 orphans because AGENTS -> doc1)
     execute_baseline_init(dir.path(), false).unwrap();
@@ -147,8 +200,16 @@ async fn test_cli_git_delta_ratchet_sync() {
     // Now fix the broken link by creating target note
     let target = dir.path().join("broken_ref.md");
     fs::write(&target, "# Target\nFixed!\n").unwrap();
-    Command::new("git").args(["add", "."]).current_dir(dir.path()).output().unwrap();
-    Command::new("git").args(["commit", "-m", "fix"]).current_dir(dir.path()).output().unwrap();
+    Command::new("git")
+        .args(["add", "."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    Command::new("git")
+        .args(["commit", "-m", "fix"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
 
     // Run post-commit delta
     execute_git_delta(
@@ -163,7 +224,10 @@ async fn test_cli_git_delta_ratchet_sync() {
 
     // Baseline should have ratcheted down to 0
     let base2 = load_baseline(dir.path()).unwrap().unwrap();
-    assert_eq!(base2.total_debt, 0, "Resolved debt should ratchet baseline to 0");
+    assert_eq!(
+        base2.total_debt, 0,
+        "Resolved debt should ratchet baseline to 0"
+    );
     assert!(base2.broken_links.is_empty());
 }
 
@@ -253,3 +317,132 @@ fn test_tier3_standalone_shell_hook_installation() {
         assert_eq!(post_perms & 0o111, 0o111, "post-commit must be executable");
     }
 }
+
+#[tokio::test]
+async fn test_pre_commit_admission_control_blocks_broken_harness_route_t020() {
+    let dir = TempDir::new().unwrap();
+    init_git_repo(&dir);
+
+    // Initial clean commit with valid AGENTS.md
+    let agents_md = dir.path().join("AGENTS.md");
+    fs::write(
+        &agents_md,
+        "# Agents\n## Knowledge Index\n### Core\n- [Valid](target.md)\n",
+    )
+    .unwrap();
+    let target_md = dir.path().join("target.md");
+    fs::write(&target_md, "# Target\nContent here.\n").unwrap();
+
+    Command::new("git")
+        .args(["add", "."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    Command::new("git")
+        .args(["commit", "-m", "initial"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    // Establish baseline
+    execute_baseline_init(dir.path(), false).unwrap();
+
+    // Now stage a broken route in AGENTS.md
+    fs::write(
+        &agents_md,
+        "# Agents\n## Knowledge Index\n### Core\n- [Valid](target.md)\n- [Broken Route](missing_doc.md)\n",
+    )
+    .unwrap();
+    Command::new("git")
+        .args(["add", "AGENTS.md"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    // Execute validate command
+    let exit_code = execute_validate(dir.path(), true, true, false, 500).await;
+    // Invariant XII: Must reject admission because a new broken reference is introduced in staged changes
+    assert_eq!(
+        exit_code, 1,
+        "Staged broken index route must block commit (Invariant XII)"
+    );
+}
+
+#[tokio::test]
+async fn test_pr_block_policy_on_unreviewed_code_and_receipt_pass_t017() {
+    use llm_wiki_core::drift::review::resolve_document_review;
+    use llm_wiki_core::cli::validate::execute_validate_with_paths;
+
+    let dir = TempDir::new().unwrap();
+    init_git_repo(&dir);
+
+    // Initial commit: doc citing code
+    fs::create_dir_all(dir.path().join("notes")).unwrap();
+    fs::create_dir_all(dir.path().join("src")).unwrap();
+
+    let doc_content = r#"---
+code_dependencies:
+  - src/auth.rs
+---
+# Authentication
+Documentation for authentication module.
+"#;
+    fs::write(dir.path().join("notes/auth.md"), doc_content).unwrap();
+    fs::write(dir.path().join("src/auth.rs"), "pub fn auth() {}\n").unwrap();
+
+    Command::new("git")
+        .args(["add", "."])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+    Command::new("git")
+        .args(["commit", "-m", "initial commit"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    // Establish baseline
+    execute_baseline_init(dir.path(), false).unwrap();
+
+    // Modify code file without updating documentation note
+    fs::write(dir.path().join("src/auth.rs"), "pub fn auth_v2() {}\n").unwrap();
+    Command::new("git")
+        .args(["add", "src/auth.rs"])
+        .current_dir(dir.path())
+        .output()
+        .unwrap();
+
+    // Pre-commit validation without receipt: must BLOCK (exit code 1) per FR-007
+    let code_blocked = execute_validate(dir.path(), true, true, false, 500).await;
+    assert_eq!(
+        code_blocked, 1,
+        "Unreviewed modification to cited code file must block commit"
+    );
+
+    // Record review receipt for notes/auth.md
+    resolve_document_review(dir.path(), &["notes/auth.md".to_string()], Some("HEAD"))
+        .expect("record review receipt");
+
+    // Pre-commit validation with receipt: must PASS (exit code 0) per FR-008
+    let code_passed = execute_validate(dir.path(), true, true, false, 500).await;
+    assert_eq!(
+        code_passed, 0,
+        "Commit must pass when review receipt is recorded in reviews.json"
+    );
+
+    // Also verify execute_validate_with_paths passes cleanly with receipt
+    let code_paths_passed = execute_validate_with_paths(
+        dir.path(),
+        Some(vec!["src/auth.rs".to_string()]),
+        true,
+        true,
+        false,
+        500,
+    )
+    .await;
+    assert_eq!(
+        code_paths_passed, 0,
+        "execute_validate_with_paths must pass when receipt is present"
+    );
+}
+

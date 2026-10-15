@@ -1,3 +1,36 @@
+---
+wiki:
+  content_hash: c23c3c10aaf31505a2d6f6b1cee512357b1e9ad05f5f358155ef1b7f97afdef1
+  fragments:
+    research-technical-decisions-fragment-level-architecture-5-pillar-quality:
+      tokens: 1144
+      inbound: 0
+      outbound: 0
+    1-research-questions-resolution-matrix:
+      tokens: 1060
+      inbound: 0
+      outbound: 0
+    rq-1-deterministic-heading-anchor-normalization-collision-handling:
+      tokens: 152
+      inbound: 0
+      outbound: 0
+    rq-2-safe-non-destructive-frontmatter-materialization-git-index-staging:
+      tokens: 218
+      inbound: 0
+      outbound: 0
+    rq-3-constrained-beam-search-vs-bfs-for-context-trace:
+      tokens: 263
+      inbound: 0
+      outbound: 0
+    rq-4-evidence-based-freshness-vs-file-age-pillar-5:
+      tokens: 228
+      inbound: 0
+      outbound: 0
+    rq-5-pillar-2-structure-mathematical-formulation:
+      tokens: 189
+      inbound: 0
+      outbound: 0
+---
 # Research & Technical Decisions: Fragment-Level Architecture & 5-Pillar Quality
 
 **Feature Branch:** `004-fragment-architecture-quality`  

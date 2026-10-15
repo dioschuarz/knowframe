@@ -182,11 +182,7 @@ fn test_cli_quality_command() {
         "# AGENTS\n\nEntrypoint referencing [[doc1]].\n",
     )
     .unwrap();
-    fs::write(
-        root.join("doc1.md"),
-        "# Doc 1\n\nReferencing [[doc2]].\n",
-    )
-    .unwrap();
+    fs::write(root.join("doc1.md"), "# Doc 1\n\nReferencing [[doc2]].\n").unwrap();
     fs::write(
         root.join("doc2.md"),
         "# Doc 2\n\nTerminal documentation note.\n",
@@ -212,11 +208,7 @@ async fn test_ipc_get_quality_score_handler() {
         "# AGENTS\n\nEntrypoint referencing [[doc1]].\n",
     )
     .unwrap();
-    fs::write(
-        root.join("doc1.md"),
-        "# Doc 1\n\nReferencing [[doc2]].\n",
-    )
-    .unwrap();
+    fs::write(root.join("doc1.md"), "# Doc 1\n\nReferencing [[doc2]].\n").unwrap();
 
     let state = Arc::new(RwLock::new(AppState::new(root.to_path_buf())));
     let req = JsonRpcRequest {

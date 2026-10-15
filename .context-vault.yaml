@@ -1,0 +1,40 @@
+version: '2.0'
+vault:
+  name: LLM Wiki Knowledge Base
+  mode: single-repo
+  auto_discovered_hub: null
+  hubs:
+  - AGENTS.md
+  - GEMINI.md
+include: null
+exclude: null
+scan:
+  include:
+  - '**/*.md'
+  exclude:
+  - node_modules/**
+  - target/**
+  - dist/**
+  - .git/**
+  - .agents/**
+  - .specify/**
+  - extension/**
+graph:
+  exclude:
+  - .specify/**
+  - extension/**
+  - .agents/**
+  focus_mode: all
+  show_orphans: true
+  show_excluded: false
+token_budget:
+  warning_threshold: 60000
+  critical_threshold: 100000
+color_groups: []
+orientation: ai_oriented
+harness:
+  active: AGENTS.md
+  entry_points:
+  - AGENTS.md
+  - GEMINI.md
+harness_paths: []

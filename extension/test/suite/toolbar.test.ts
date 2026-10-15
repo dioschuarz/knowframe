@@ -112,4 +112,12 @@ suite('ActionsToolbar & Token Economics Test Suite (T048)', () => {
     const reductionEl = container.querySelector('#popover-context-reduction');
     assert.strictEqual(reductionEl.textContent, '~90%', 'Must default to ~90% context reduction');
   });
+
+  test('renders Rescan Vault menu item in actions dropdown', () => {
+    const container = createMockElement('div');
+    renderActionsToolbar(container, {});
+
+    assert.ok(container.innerHTML.includes('id="menu-act-rescan"'), 'Must include menu-act-rescan element');
+    assert.ok(container.innerHTML.includes('Rescan Vault'), 'Must include Rescan Vault title in actions menu');
+  });
 });

@@ -1,3 +1,380 @@
+---
+wiki:
+  content_hash: d2154880bac92faf7cf44a3cff4cbb38c6f62f5eef1b2e773b7914a22154f4a7
+  fragments:
+    review-extension-ux:
+      tokens: 346
+      inbound: 0
+      outbound: 0
+    user:
+      tokens: 86
+      inbound: 0
+      outbound: 0
+    tool-output:
+      tokens: 13
+      inbound: 0
+      outbound: 0
+    tool-output-1:
+      tokens: 13
+      inbound: 0
+      outbound: 0
+    tool-output-2:
+      tokens: 13
+      inbound: 0
+      outbound: 0
+    tool-output-3:
+      tokens: 13
+      inbound: 0
+      outbound: 0
+    tool-output-4:
+      tokens: 13
+      inbound: 0
+      outbound: 0
+    chatgpt:
+      tokens: 121
+      inbound: 0
+      outbound: 0
+    my-overall-verdict:
+      tokens: 88
+      inbound: 0
+      outbound: 0
+    1-the-biggest-problem-too-many-places-to-do-the-same-thing:
+      tokens: 152
+      inbound: 0
+      outbound: 0
+    left-sidebar:
+      tokens: 29
+      inbound: 0
+      outbound: 0
+    top-right-toolbar:
+      tokens: 30
+      inbound: 0
+      outbound: 0
+    vs-code-native-ui:
+      tokens: 63
+      inbound: 0
+      outbound: 0
+    2-i-would-completely-rethink-the-left-panel:
+      tokens: 298
+      inbound: 0
+      outbound: 0
+    3-open-knowledge-graph-is-especially-wrong-in-the-current-state:
+      tokens: 132
+      inbound: 0
+      outbound: 0
+    better:
+      tokens: 42
+      inbound: 0
+      outbound: 0
+    4-dont-expose-set-central-hub-as-a-primary-action:
+      tokens: 185
+      inbound: 0
+      outbound: 0
+    default-experience:
+      tokens: 96
+      inbound: 0
+      outbound: 0
+    5-rescan-vault-should-almost-never-be-visible:
+      tokens: 180
+      inbound: 0
+      outbound: 0
+    normal-state:
+      tokens: 18
+      inbound: 0
+      outbound: 0
+    something-is-happening:
+      tokens: 15
+      inbound: 0
+      outbound: 0
+    something-is-wrong:
+      tokens: 65
+      inbound: 0
+      outbound: 0
+    6-fix-broken-links-is-also-too-implementation-oriented:
+      tokens: 192
+      inbound: 0
+      outbound: 0
+    7-git-hooks-absolutely-should-not-be-a-prominent-button:
+      tokens: 159
+      inbound: 0
+      outbound: 0
+    8-the-graph-needs-to-become-the-unquestionable-hero:
+      tokens: 122
+      inbound: 0
+      outbound: 0
+    9-the-top-toolbar-should-be-dramatically-simplified:
+      tokens: 199
+      inbound: 0
+      outbound: 0
+    what-belongs-here:
+      tokens: 39
+      inbound: 0
+      outbound: 0
+    what-does-not-belong-here:
+      tokens: 34
+      inbound: 0
+      outbound: 0
+    10-the-token-indicator-is-good-but-currently-underspecified:
+      tokens: 191
+      inbound: 0
+      outbound: 0
+    11-i-would-introduce-one-major-concept-context:
+      tokens: 174
+      inbound: 0
+      outbound: 0
+    knowledge-graph:
+      tokens: 8
+      inbound: 0
+      outbound: 0
+    ai-context:
+      tokens: 12
+      inbound: 0
+      outbound: 0
+    issues:
+      tokens: 47
+      inbound: 0
+      outbound: 0
+    12-the-graph-should-have-a-focus-state:
+      tokens: 179
+      inbound: 0
+      outbound: 0
+    13-your-graph-needs-semantic-visual-hierarchy-not-just-physics:
+      tokens: 190
+      inbound: 0
+      outbound: 0
+    level-0:
+      tokens: 13
+      inbound: 0
+      outbound: 0
+    level-1:
+      tokens: 9
+      inbound: 0
+      outbound: 0
+    level-2:
+      tokens: 9
+      inbound: 0
+      outbound: 0
+    level-3:
+      tokens: 8
+      inbound: 0
+      outbound: 0
+    orphans:
+      tokens: 97
+      inbound: 0
+      outbound: 0
+    14-cluster-colors-dont-expose-this-in-the-main-interface:
+      tokens: 114
+      inbound: 0
+      outbound: 0
+    15-the-three-dot-menu-should-become-your-advanced-layer:
+      tokens: 119
+      inbound: 0
+      outbound: 0
+    16-i-would-remove-most-text-buttons-from-the-graph-screen:
+      tokens: 137
+      inbound: 0
+      outbound: 0
+    17-id-change-the-information-architecture-to-this:
+      tokens: 200
+      inbound: 0
+      outbound: 0
+    18-one-thing-i-would-not-do:
+      tokens: 117
+      inbound: 0
+      outbound: 0
+    19-my-proposed-screen:
+      tokens: 316
+      inbound: 0
+      outbound: 0
+    20-and-then-use-contextual-ui:
+      tokens: 334
+      inbound: 0
+      outbound: 0
+    21-the-deeper-product-opportunity:
+      tokens: 175
+      inbound: 0
+      outbound: 0
+    ai-context-observatory:
+      tokens: 133
+      inbound: 0
+      outbound: 0
+    22-my-priority-list:
+      tokens: 256
+      inbound: 0
+      outbound: 0
+    p0-remove-duplication:
+      tokens: 40
+      inbound: 0
+      outbound: 0
+    p0-establish-hierarchy:
+      tokens: 21
+      inbound: 0
+      outbound: 0
+    p0-simplify-toolbar:
+      tokens: 21
+      inbound: 0
+      outbound: 0
+    p1-convert-actions-into-states:
+      tokens: 62
+      inbound: 0
+      outbound: 0
+    p1-contextual-inspector:
+      tokens: 20
+      inbound: 0
+      outbound: 0
+    p1-focus-mode:
+      tokens: 34
+      inbound: 0
+      outbound: 0
+    p2-advanced-configuration:
+      tokens: 33
+      inbound: 0
+      outbound: 0
+    23-the-rule-id-use-going-forward:
+      tokens: 638
+      inbound: 0
+      outbound: 0
+    user-1:
+      tokens: 81
+      inbound: 0
+      outbound: 0
+    chatgpt-1:
+      tokens: 114
+      inbound: 0
+      outbound: 0
+    1-add-a-first-class-excluded-concept:
+      tokens: 179
+      inbound: 0
+      outbound: 0
+    excluded:
+      tokens: 161
+      inbound: 0
+      outbound: 0
+    2-dont-call-it-blocklist-in-the-ui:
+      tokens: 80
+      inbound: 0
+      outbound: 0
+    3-support-both-files-and-folders:
+      tokens: 105
+      inbound: 0
+      outbound: 0
+    4-two-different-kinds-of-exclusion:
+      tokens: 236
+      inbound: 0
+      outbound: 0
+    why-this-matters:
+      tokens: 76
+      inbound: 0
+      outbound: 0
+    5-the-ui-should-make-this-ridiculously-easy:
+      tokens: 167
+      inbound: 0
+      outbound: 0
+    if-they-choose-exclude-this-folder:
+      tokens: 79
+      inbound: 0
+      outbound: 0
+    6-even-better-contextual-exclusion:
+      tokens: 141
+      inbound: 0
+      outbound: 0
+    7-add-an-excluded-paths-section-to-settings:
+      tokens: 135
+      inbound: 0
+      outbound: 0
+    8-give-users-a-one-click-solution-for-noisy-folders:
+      tokens: 168
+      inbound: 0
+      outbound: 0
+    9-but-dont-automatically-exclude-things-without-consent:
+      tokens: 105
+      inbound: 0
+      outbound: 0
+    10-orphans-should-become-more-useful-after-this:
+      tokens: 99
+      inbound: 0
+      outbound: 0
+    11-i-would-also-add-show-excluded-but-only-as-an-optional-diagnostic-mode:
+      tokens: 137
+      inbound: 0
+      outbound: 0
+    12-important-excluded-deleted:
+      tokens: 123
+      inbound: 0
+      outbound: 0
+    13-id-change-your-graph-state-schema:
+      tokens: 148
+      inbound: 0
+      outbound: 0
+    14-add-these-requirements-to-the-specification:
+      tokens: 303
+      inbound: 0
+      outbound: 0
+    graph-exclusion-noise-management:
+      tokens: 285
+      inbound: 0
+      outbound: 0
+    fr-046-user-defined-graph-exclusions:
+      tokens: 29
+      inbound: 0
+      outbound: 0
+    fr-047-glob-based-exclusion:
+      tokens: 39
+      inbound: 0
+      outbound: 0
+    fr-048-excluded-nodes-are-not-orphans:
+      tokens: 33
+      inbound: 0
+      outbound: 0
+    fr-049-excluded-targets-remain-resolvable:
+      tokens: 41
+      inbound: 0
+      outbound: 0
+    fr-050-contextual-exclusion-actions:
+      tokens: 41
+      inbound: 0
+      outbound: 0
+    fr-051-exclusion-management:
+      tokens: 27
+      inbound: 0
+      outbound: 0
+    fr-052-exclusion-preview:
+      tokens: 28
+      inbound: 0
+      outbound: 0
+    fr-053-exclusion-transparency:
+      tokens: 39
+      inbound: 0
+      outbound: 0
+    15-id-also-modify-the-configuration:
+      tokens: 177
+      inbound: 0
+      outbound: 0
+    scanexclude:
+      tokens: 15
+      inbound: 0
+      outbound: 0
+    graphexclude:
+      tokens: 35
+      inbound: 0
+      outbound: 0
+    16-one-more-thing-id-add-git-aware-defaults:
+      tokens: 155
+      inbound: 0
+      outbound: 0
+    safe-defaults:
+      tokens: 22
+      inbound: 0
+      outbound: 0
+    suggested-exclusions:
+      tokens: 36
+      inbound: 0
+      outbound: 0
+    17-this-actually-improves-the-core-product-positioning:
+      tokens: 189
+      inbound: 0
+      outbound: 0
+---
 # Review Extension UX
 
 > **Source:** https://chatgpt.com/share/6aa4710d-2b38-83e9-8d47-01a5cf0c31b3 | **Date:** 2026-09-11 21:22:21 UTC | **Model:** `gpt-5-6`

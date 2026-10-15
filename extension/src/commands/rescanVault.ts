@@ -4,25 +4,51 @@ import { ScanResultPayload } from '../types/protocol';
 import { GraphPanelManager } from '../webview/panelManager';
 
 export function registerRescanVaultCommand(
-  getIpcClient: () => IpcClient | null,
+  getOrEnsureIpcClient: () => Promise<IpcClient | null> | (IpcClient | null),
   onScanResultUpdated: (newResult: ScanResultPayload) => void
 ): vscode.Disposable {
   return vscode.commands.registerCommand('llmWiki.rescanVault', async () => {
-    const ipc = getIpcClient();
-    if (!ipc) {
-      vscode.window.showWarningMessage('LLM Wiki: Daemon is not running.');
-      return;
-    }
+    await vscode.window.withProgress(
+      {
+        location: vscode.ProgressLocation.Notification,
+        title: 'LLM Wiki: Rescanning Vault...',
+        cancellable: false,
+      },
+      async (progress) => {
+        try {
+          progress.report({ message: 'Connecting to daemon...' });
+          const ipc = await getOrEnsureIpcClient();
+          if (!ipc) {
+            vscode.window.showWarningMessage('LLM Wiki: Daemon is not running and could not be started.');
+            return;
+          }
 
-    try {
-      const scan = await ipc.sendRequest<ScanResultPayload>('workspace/scan');
-      onScanResultUpdated(scan);
-      if (GraphPanelManager.currentPanel) {
-        GraphPanelManager.currentPanel.updateData(scan);
+          progress.report({ message: 'Scanning markdown documents & graph topology...' });
+          if (GraphPanelManager.currentPanel) {
+            GraphPanelManager.currentPanel.sendLoadingProgress('graph', 30, 'Rescanning vault...');
+          }
+
+          const scan = await ipc.sendRequest<ScanResultPayload>('workspace/scan');
+
+          progress.report({ message: 'Updating graph and quality metrics...' });
+          onScanResultUpdated(scan);
+          if (GraphPanelManager.currentPanel) {
+            GraphPanelManager.currentPanel.updateData(scan);
+            GraphPanelManager.currentPanel.sendLoadingProgress('complete', 100, 'Ready');
+          }
+
+          const docCount = scan.nodes?.length ?? 0;
+          const refCount = scan.edges?.length ?? 0;
+          vscode.window.showInformationMessage(
+            `LLM Wiki: Vault scan complete (${docCount} documents, ${refCount} references).`
+          );
+        } catch (err: any) {
+          if (GraphPanelManager.currentPanel) {
+            GraphPanelManager.currentPanel.sendLoadingProgress('complete', 100, 'Ready');
+          }
+          vscode.window.showErrorMessage(`LLM Wiki: Rescan failed: ${err.message}`);
+        }
       }
-      vscode.window.showInformationMessage('LLM Wiki: Vault scan complete.');
-    } catch (err: any) {
-      vscode.window.showErrorMessage(`LLM Wiki: Rescan failed: ${err.message}`);
-    }
+    );
   });
 }

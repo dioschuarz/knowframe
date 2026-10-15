@@ -67,7 +67,12 @@ fn bench_plan_generation_and_re_measurement(c: &mut Criterion) {
 
     c.bench_function("post_transformation_re_measurement", |b| {
         b.iter(|| {
-            black_box(ReMeasurementEngine::compute_delta(&before_metrics, &after_metrics, 1, 2));
+            black_box(ReMeasurementEngine::compute_delta(
+                &before_metrics,
+                &after_metrics,
+                1,
+                2,
+            ));
         });
     });
 }

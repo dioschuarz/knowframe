@@ -1,12 +1,15 @@
 pub mod scorer;
 pub mod structure;
 
-pub use scorer::{calculate_quality_score, calculate_topological_weight, extract_all_issues};
+pub use scorer::{
+    calculate_quality_score, calculate_topological_weight, extract_all_issues,
+    extract_all_issues_with_baseline, is_issue_baselined,
+};
 pub use structure::*;
 
+use crate::debt::DebtSummary;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use crate::debt::DebtSummary;
 
 fn default_100() -> f32 {
     100.0
@@ -15,7 +18,7 @@ fn default_100() -> f32 {
 /// 5-pillar knowledge quality score.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct KnowledgeQualityScore {
-    pub overall_score: f32, // 0.0 to 100.0
+    pub overall_score: f32,   // 0.0 to 100.0
     pub integrity_score: f32, // 0.0 to 100.0
     #[serde(default = "default_100")]
     pub structure_score: f32, // 0.0 to 100.0 (Pillar 2)
@@ -27,6 +30,20 @@ pub struct KnowledgeQualityScore {
     pub resolved_debt_count: u32,
     pub central_hub_id: Option<String>,
     pub top_degradation_factors: Vec<QualityDegradationFactor>,
+    #[serde(default)]
+    pub total_issues: u32,
+    #[serde(default)]
+    pub findings_count: u32,
+    #[serde(default)]
+    pub broken_references: u32,
+    #[serde(default)]
+    pub invalid_anchors: u32,
+    #[serde(default)]
+    pub raw_score: Option<f32>,
+    #[serde(default)]
+    pub is_effective: bool,
+    #[serde(default)]
+    pub active_issues_count: u32,
 }
 
 impl Default for KnowledgeQualityScore {
@@ -43,6 +60,13 @@ impl Default for KnowledgeQualityScore {
             resolved_debt_count: 0,
             central_hub_id: None,
             top_degradation_factors: Vec::new(),
+            total_issues: 0,
+            findings_count: 0,
+            broken_references: 0,
+            invalid_anchors: 0,
+            raw_score: None,
+            is_effective: false,
+            active_issues_count: 0,
         }
     }
 }
@@ -109,6 +133,10 @@ pub struct KnowledgeIssue {
     pub weight: f32,
     pub description: String,
     pub remediation_hint: String,
+    #[serde(default)]
+    pub is_legacy: bool,
+    #[serde(default)]
+    pub is_excluded: bool,
 }
 
 /// Comprehensive issues report with counts per pillar.
@@ -123,5 +151,10 @@ pub struct KnowledgeIssuesReport {
     pub discoverability_count: usize,
     pub freshness_count: usize,
     pub issues: Vec<KnowledgeIssue>,
+    #[serde(default)]
+    pub active_issues_count: usize,
+    #[serde(default)]
+    pub legacy_debt_count: usize,
+    #[serde(default)]
+    pub is_quiet_default: bool,
 }
-

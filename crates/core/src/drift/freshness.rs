@@ -3,10 +3,10 @@
 //! FR-038: Deterministic freshness evidence signals (Signals 1 through 4).
 //! FR-039: Discrete tier classification (Fresh >= 80, PotentiallyStale 60..79, Stale < 60).
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::path::Path;
 use std::process::Command;
-use serde::{Deserialize, Serialize};
 
 use super::extractor::{extract_code_citations, CodeCitation};
 use super::TechnicalDriftFinding;
@@ -96,7 +96,9 @@ pub fn check_git_commit_chronology(
 
     if let Some(doc_commit) = get_doc_last_commit_hash(workspace_root, doc_path) {
         for code_path in valid_code_paths {
-            if let Some(cnt) = count_commits_affecting_code_since(workspace_root, &doc_commit, code_path) {
+            if let Some(cnt) =
+                count_commits_affecting_code_since(workspace_root, &doc_commit, code_path)
+            {
                 if cnt > 0 {
                     modified_files.push(code_path.clone());
                     total_commits += cnt;
@@ -218,7 +220,10 @@ pub fn compute_freshness_from_signals(
         let pts = 15.0 * missing_citations.len() as f64;
         deductions += pts;
         for path in &missing_citations {
-            reasons.push(format!("Missing code citation on disk: '{}' (-15.0 pts)", path));
+            reasons.push(format!(
+                "Missing code citation on disk: '{}' (-15.0 pts)",
+                path
+            ));
         }
     }
 
@@ -240,7 +245,10 @@ pub fn compute_freshness_from_signals(
         let pts = 20.0 * deleted_symbols.len() as f64;
         deductions += pts;
         for sym in &deleted_symbols {
-            reasons.push(format!("Cited symbol '{}' deleted or renamed (-20.0 pts)", sym));
+            reasons.push(format!(
+                "Cited symbol '{}' deleted or renamed (-20.0 pts)",
+                sym
+            ));
         }
     }
 
@@ -320,8 +328,12 @@ mod tests {
         let mut evidence = FreshnessEvidence::default();
         evidence.score = 75.0;
         evidence.tier = FreshnessTier::PotentiallyStale;
-        evidence.missing_citations.push("src/auth/service.rs".to_string());
-        evidence.reasons.push("Missing code citation: src/auth/service.rs".to_string());
+        evidence
+            .missing_citations
+            .push("src/auth/service.rs".to_string());
+        evidence
+            .reasons
+            .push("Missing code citation: src/auth/service.rs".to_string());
 
         let json = serde_json::to_string(&evidence).unwrap();
         assert!(json.contains("\"tier\":\"potentially_stale\""));

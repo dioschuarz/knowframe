@@ -1,13 +1,38 @@
 ---
-name: "speckit-clarify"
-description: "Identify underspecified areas in the current feature spec by asking up to 5 highly targeted clarification questions and encoding answers back into the spec."
-compatibility: "Requires spec-kit project structure with .specify/ directory"
+name: speckit-clarify
+description: Identify underspecified areas in the current feature spec by asking up to 5 highly targeted clarification questions and encoding answers back into the spec.
+compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: "github-spec-kit"
-  source: "templates/commands/clarify.md"
+  author: github-spec-kit
+  source: templates/commands/clarify.md
+wiki:
+  content_hash: c0542fb948e069ca0199895d05d8715f95f9dcc5784fc3dcc14175939396227a
+  fragments:
+    user-input:
+      tokens: 30
+      inbound: 0
+      outbound: 0
+    pre-execution-checks:
+      tokens: 496
+      inbound: 0
+      outbound: 0
+    outline:
+      tokens: 2798
+      inbound: 0
+      outbound: 0
+    mandatory-post-execution-hooks:
+      tokens: 505
+      inbound: 0
+      outbound: 0
+    completion-report:
+      tokens: 211
+      inbound: 0
+      outbound: 0
+    done-when:
+      tokens: 84
+      inbound: 0
+      outbound: 0
 ---
-
-
 ## User Input
 
 ```text

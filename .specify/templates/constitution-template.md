@@ -1,3 +1,48 @@
+---
+wiki:
+  content_hash: ce7549540fa45543cca797a150201d868e64495fdff39dc38246fb17bd4024b3
+  fragments:
+    project-name-constitution:
+      tokens: 541
+      inbound: 0
+      outbound: 0
+    core-principles:
+      tokens: 306
+      inbound: 0
+      outbound: 0
+    principle-1-name:
+      tokens: 58
+      inbound: 0
+      outbound: 0
+    principle-2-name:
+      tokens: 57
+      inbound: 0
+      outbound: 0
+    principle-3-name:
+      tokens: 63
+      inbound: 0
+      outbound: 0
+    principle-4-name:
+      tokens: 49
+      inbound: 0
+      outbound: 0
+    principle-5-name:
+      tokens: 75
+      inbound: 0
+      outbound: 0
+    section-2-name:
+      tokens: 44
+      inbound: 0
+      outbound: 0
+    section-3-name:
+      tokens: 45
+      inbound: 0
+      outbound: 0
+    governance:
+      tokens: 126
+      inbound: 0
+      outbound: 0
+---
 # [PROJECT_NAME] Constitution
 <!-- Example: Spec Constitution, TaskFlow Constitution, etc. -->
 

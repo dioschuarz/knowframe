@@ -83,27 +83,46 @@ pub fn get_staged_git_delta(workspace_root: &Path) -> Result<GitDelta, std::io::
 /// Returns exit code (0 for PASS/WARN/Fail-Open, 1 for BLOCK).
 pub async fn execute_validate(
     workspace_root: &Path,
+    staged_only: bool,
+    quiet: bool,
+    json_output: bool,
+    timeout_ms: u64,
+) -> i32 {
+    execute_validate_with_paths(workspace_root, None, staged_only, quiet, json_output, timeout_ms).await
+}
+
+/// Executes admission validation with optional explicit file paths.
+pub async fn execute_validate_with_paths(
+    workspace_root: &Path,
+    paths: Option<Vec<String>>,
     _staged_only: bool,
     quiet: bool,
     json_output: bool,
     timeout_ms: u64,
 ) -> i32 {
     let validate_task = async {
-        let staged_delta = get_staged_git_delta(workspace_root).unwrap_or_default();
+        let staged_delta = if let Some(ref p_list) = paths {
+            let mut items = Vec::new();
+            for p in p_list {
+                let clean = p.replace('\\', "/");
+                if crate::drift::extractor::validate_path_containment(&clean).is_ok() {
+                    let status = if workspace_root.join(&clean).exists() {
+                        FileDeltaStatus::Modified
+                    } else {
+                        FileDeltaStatus::Deleted
+                    };
+                    items.push(FileDeltaItem { path: clean, status });
+                }
+            }
+            GitDelta { commit_sha: None, items }
+        } else {
+            get_staged_git_delta(workspace_root).unwrap_or_default()
+        };
 
-        // If no files are staged, commit proceeds cleanly
+        // If no files are staged/provided, commit proceeds cleanly
         if staged_delta.items.is_empty() {
             if !quiet && !json_output {
                 println!("[llm-wiki-validate] No staged changes found. Commit proceeds.");
-            }
-            return 0;
-        }
-
-        // Quick check: if no markdown files are touched and no code files cited in docs are staged
-        let has_markdown = staged_delta.items.iter().any(|i| i.path.ends_with(".md"));
-        if !has_markdown {
-            if !quiet && !json_output {
-                println!("[llm-wiki-validate] PASS: No markdown documents modified. Commit proceeds.");
             }
             return 0;
         }
@@ -116,12 +135,19 @@ pub async fn execute_validate(
                 if file_path.is_file() {
                     if let Ok(content) = std::fs::read_to_string(&file_path) {
                         let parsed = crate::ast::parser::parse_markdown_ast(&item.path, &content);
-                        let fragments = crate::fragment::extractor::extract_fragments_from_document(&content, &parsed.edges);
-                        let token_count = crate::tokens::counter::count_bpe_tokens(&content).unwrap_or(0);
+                        let fragments = crate::fragment::extractor::extract_fragments_from_document(
+                            &content,
+                            &parsed.edges,
+                        );
+                        let token_count =
+                            crate::tokens::counter::count_bpe_tokens(&content).unwrap_or(0);
 
                         // Structure debt check: oversized document (>50k tokens or >10 headings) lacking frontmatter
-                        let has_frontmatter_metadata = content.contains("wiki:") && content.contains("fragments:");
-                        if (token_count > 50_000 || parsed.headings.len() > 10) && !has_frontmatter_metadata {
+                        let has_frontmatter_metadata =
+                            content.contains("wiki:") && content.contains("fragments:");
+                        if (token_count > 50_000 || parsed.headings.len() > 10)
+                            && !has_frontmatter_metadata
+                        {
                             structure_warnings.push(format!(
                                 "Document '{}' exceeds structural threshold ({} tokens, {} headings) without materialized fragment metadata. Run 'llm-wiki-core materialize {}' to resolve structural debt.",
                                 item.path, token_count, parsed.headings.len(), item.path
@@ -129,7 +155,11 @@ pub async fn execute_validate(
                         }
 
                         // Non-destructively inject materialized frontmatter and re-stage into git index
-                        if let Ok(updated) = crate::fragment::frontmatter::inject_materialized_frontmatter(&content, &fragments) {
+                        if let Ok(updated) =
+                            crate::fragment::frontmatter::inject_materialized_frontmatter(
+                                &content, &fragments,
+                            )
+                        {
                             if updated != content && std::fs::write(&file_path, &updated).is_ok() {
                                 let _ = std::process::Command::new("git")
                                     .arg("add")
@@ -171,10 +201,14 @@ pub async fn execute_validate(
                         broken_links: node.broken_links,
                         fragments: node.fragments,
                         freshness: None,
+                        code_dependencies: Vec::new(),
                     });
                 }
                 for edge in scan_result.edges {
-                    let target_fragment = edge.anchor.as_ref().map(|a| a.trim_start_matches('#').to_string());
+                    let target_fragment = edge
+                        .anchor
+                        .as_ref()
+                        .map(|a| a.trim_start_matches('#').to_string());
                     topology.add_edge(crate::model::NoteEdge {
                         id: edge.id,
                         source: edge.source,
@@ -204,12 +238,28 @@ pub async fn execute_validate(
         };
 
         let overlay = CandidateOverlay::new(&base_graph, workspace_root, &staged_delta);
+
+        let vault_config = crate::config::ContextVaultConfig::load_from_workspace(workspace_root);
+        let (enforce_doc_review, block_on_legacy_debt) = if let Some(ref pol) = vault_config.review_policy {
+            (pol.enforce_doc_review, pol.block_on_legacy_debt)
+        } else {
+            (true, false)
+        };
+
+        let admission_config = AdmissionConfig {
+            block_on_broken_links: true,
+            block_on_duplicate_collision: true,
+            block_on_technical_drift: false,
+            block_on_unreviewed_docs: enforce_doc_review,
+            block_on_legacy_debt,
+        };
+
         let mut report = evaluate_candidate(
             &overlay,
             &baseline,
             vec![],
             vec![],
-            AdmissionConfig::default(),
+            admission_config,
         );
 
         for w in structure_warnings {

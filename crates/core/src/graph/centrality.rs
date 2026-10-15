@@ -32,6 +32,9 @@ pub fn compute_brandes_betweenness(
             }
         }
     }
+    for list in &mut adj_indexed {
+        list.sort();
+    }
 
     // 3. Preallocate reusable data structures across BFS runs
     let mut cb = vec![0.0f64; n];

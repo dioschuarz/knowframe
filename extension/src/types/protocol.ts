@@ -184,16 +184,39 @@ export type WebviewInboundType =
   | 'triggerSetHubQuickPick'
   | 'previewExclusion'
   | 'excludePath'
+  | 'removeExclusion'
+  | 'requestExclusions'
   | 'suggestExclusions'
   | 'setFocusMode'
   | 'openSettings'
   | 'reviewIssues'
+  | 'requestIssues'
+  | 'navigateToDetail'
+  | 'installHooks'
   | 'getEvolutionState'
   | 'setOrientation'
   | 'updateCustomConfig'
   | 'validateConstraints'
   | 'generateTransformationPlan'
-  | 'applyTransformationPlan';
+  | 'applyTransformationPlan'
+  | 'getStrategySet'
+  | 'validateStrategySelection'
+  | 'calculatePlanValue'
+  | 'requestHarnessStatus'
+  | 'getHarnessStatus'
+  | 'setActiveHarness'
+  | 'initializeHarness'
+  | 'syncHarnesses'
+  | 'configureHarnessBase'
+  | 'getSkillCatalog'
+  | 'analyzeDirectoryStructure'
+  | 'generateGovernancePlan'
+  | 'applyGovernancePlan'
+  | 'installLLMWikiSkill'
+  | 'resolveDocumentReview'
+  | 'getAffectedDocuments'
+  | 'requestHarnessTools'
+  | 'installHarnessTool';
 
 export interface WebviewInboundMessage {
   requestId?: string;
@@ -219,10 +242,21 @@ export type WebviewOutboundType =
   | 'issuesReportUpdate'
   | 'openSettingsDrawer'
   | 'evolutionStateUpdate'
+  | 'strategySetResult'
+  | 'strategyValidationResult'
+  | 'planValueResult'
   | 'transformationPlanReady'
   | 'transformationPlanApplied'
   | 'transformationPlanError'
+  | 'transformationPlanApplyError'
   | 'constraintValidationResult'
+  | 'harnessStatus'
+  | 'harnessToolsUpdate'
+  | 'skillCatalogUpdate'
+  | 'directoryMetricsUpdate'
+  | 'contextTraceResult'
+  | 'affectedDocumentsReport'
+  | 'documentReviewResolved'
   | 'error';
 
 export interface WebviewOutboundMessage {
@@ -338,3 +372,231 @@ export interface KnowledgeQualityScorePayload {
   central_hub_id?: string;
   top_degradation_factors: QualityDegradationFactorPayload[];
 }
+
+// ==========================================
+// 006 Management Experience & Evolution Types
+// ==========================================
+
+export type SyncStatus = 'synced' | 'syncing' | 'error' | 'uninitialized';
+
+export interface HealthSummaryState {
+  quality_score: number;
+  integrity: number;
+  structure: number;
+  consistency: number;
+  discoverability: number;
+  freshness: number;
+  findings_count: number;
+  broken_references: number;
+  invalid_anchors: number;
+  legacy_debt: number;
+  new_regressions: number;
+}
+
+export interface StructureSummaryState {
+  total_documents: number;
+  connected_documents: number;
+  isolated_documents: number;
+  total_references: number;
+}
+
+export interface EvolutionSummaryState {
+  orientation: 'ai_oriented' | 'human_oriented' | 'balanced' | 'custom';
+  opportunity_count: number;
+  primary_objective: string;
+  conflicting_constraints: boolean;
+}
+
+export interface SyncSummaryState {
+  status: SyncStatus;
+  last_commit_sha: string | null;
+  last_commit_time: string | null;
+}
+
+export interface ManagerSummaryState {
+  health: HealthSummaryState;
+  structure: StructureSummaryState;
+  evolution: EvolutionSummaryState;
+  sync: SyncSummaryState;
+}
+
+export type DrawerPrimaryTab = 'insights' | 'settings';
+export type InsightsSubTab = 'health' | 'structure' | 'evolution';
+export type SettingsSubTab =
+  | 'knowledge'
+  | 'exclusions'
+  | 'clusters'
+  | 'git'
+  | 'harness'
+  | 'git_harness';
+
+export interface NavigationIntent {
+  primaryTab: DrawerPrimaryTab;
+  subTab: InsightsSubTab | SettingsSubTab;
+  targetSection?: string;
+  targetId?: string;
+}
+
+export interface ManagerViewState {
+  health: {
+    qualityScore: number;
+    integrity: number;
+    structure: number;
+    consistency: number;
+    discoverability: number;
+    freshness: number;
+    findingsCount: number;
+    brokenReferences: number;
+    invalidAnchors: number;
+    legacyDebt: number;
+    newRegressions: number;
+  };
+  structure: {
+    totalDocuments: number;
+    connectedDocuments: number;
+    isolatedDocuments: number;
+    totalReferences: number;
+  };
+  evolution: {
+    orientation: 'ai_oriented' | 'human_oriented' | 'balanced' | 'custom';
+    orientationTitle: string;
+    primaryObjective: string;
+    opportunityCount: number;
+    hasConflictingConstraints: boolean;
+  };
+  sync: {
+    status: SyncStatus;
+    lastCommitSha: string | null;
+    lastCommitTime: string | null;
+  };
+}
+
+export type ProblemSignature =
+  | 'structurally_overloaded_document'
+  | 'knowledge_fragmentation'
+  | 'weak_discovery_path'
+  | 'isolated_knowledge_silo';
+
+export type EvolutionStrategy =
+  | 'section_addressing'
+  | 'topic_decomposition'
+  | 'lightweight_index'
+  | 'faceted_classification'
+  | 'preserve_document'
+  | 'hybrid';
+
+export interface OpportunityEvidence {
+  document_size_tokens: number;
+  reference_concentration: number;
+  cohesion: number;
+  coupling: number;
+  granularity: number;
+  context_efficiency: number;
+  discoverability: number;
+  knowledge_reuse: number;
+  semantic_diversity: number;
+  navigational_complexity: number;
+  maintenance_coupling: number;
+}
+
+export interface BenefitItem {
+  metric: string;
+  direction: 'increase' | 'decrease';
+  description: string;
+}
+
+export interface TradeOffItem {
+  metric: string;
+  description: string;
+}
+
+export interface StrategyRecommendation {
+  strategy: EvolutionStrategy;
+  fit_score: number;
+  confidence: number;
+  why: string;
+  expected_benefits: BenefitItem[];
+  countervailing_trade_offs: TradeOffItem[];
+  effort: 'low' | 'medium' | 'high';
+  is_hybrid: boolean;
+  hybrid_partner?: EvolutionStrategy | null;
+}
+
+export interface StructuralOpportunity {
+  id: string;
+  target_document: string;
+  signature: ProblemSignature;
+  confidence: number;
+  narrative_why: string;
+  evidence: OpportunityEvidence;
+  candidate_strategies: StrategyRecommendation[];
+}
+
+export interface MetricDeltaComparison {
+  metric_name: string;
+  before_value: number;
+  after_value: number;
+  unit: string;
+}
+
+export interface ProposedActionPreview {
+  action_type: 'create_document' | 'update_document_links' | 'inject_frontmatter' | 'delete_section';
+  file_path: string;
+  details: string;
+}
+
+export interface TransformationPlanPreview {
+  plan_id: string;
+  target_document: string;
+  strategy: EvolutionStrategy;
+  hybrid_partner?: EvolutionStrategy | null;
+  proposed_actions: ProposedActionPreview[];
+  expected_impact: MetricDeltaComparison[];
+  trade_offs: string[];
+}
+
+export interface ReMeasurementReport {
+  context_efficiency_delta_pct: number;
+  trace_depth_delta_pct: number;
+  maintenance_coupling_delta_pct: number;
+  document_count_delta: number;
+  reference_count_delta: number;
+  narrative_summary: string;
+}
+
+export interface InfoBubbleContent {
+  title: string;
+  meaning: string;
+  implications: {
+    higher: string;
+    lower: string;
+  };
+  whyItMatters: string;
+  affects: string[];
+  tradeOff: string;
+}
+
+export type InfoBubbleDictionary = Record<string, InfoBubbleContent>;
+
+/**
+ * Invariant X: Format raw numbers to compact display format strictly <= 5 chars.
+ */
+export function formatCompactNumber(n: number): string {
+  if (n < 1000) {
+    return n.toString();
+  }
+  if (n < 10000) {
+    return (n / 1000).toFixed(1) + 'k';
+  }
+  if (n < 100000) {
+    return Math.round(n / 1000) + 'k';
+  }
+  if (n < 1000000) {
+    return Math.round(n / 1000) + 'k';
+  }
+  if (n < 10000000) {
+    return (n / 1000000).toFixed(1) + 'M';
+  }
+  return Math.round(n / 1000000) + 'M';
+}
+

@@ -55,7 +55,8 @@ impl ConflictDetector {
         let mut conflicts = Vec::new();
 
         let has_rule = |key: &str| constraints.iter().any(|c| c.rule_key == key);
-        let has_no_split = has_rule(RULE_NEVER_SPLIT_CANONICAL_DOCS) || has_rule(RULE_NEVER_SPLIT_DOCUMENTS);
+        let has_no_split =
+            has_rule(RULE_NEVER_SPLIT_CANONICAL_DOCS) || has_rule(RULE_NEVER_SPLIT_DOCUMENTS);
 
         // Rule 1: Contradictory splitting directives
         if has_no_split && has_rule(RULE_FORCE_DECOMPOSITION) {

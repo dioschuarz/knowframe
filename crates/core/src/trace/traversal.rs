@@ -172,7 +172,10 @@ pub fn execute_context_trace(
                 // Intermediate node check
                 let q_tokens = tokenize(query);
                 let title_tokens: HashSet<String> = tokenize(&node.label).into_iter().collect();
-                let matches = q_tokens.iter().filter(|t| title_tokens.contains(*t)).count();
+                let matches = q_tokens
+                    .iter()
+                    .filter(|t| title_tokens.contains(*t))
+                    .count();
                 if matches == 0 {
                     weak_nodes.push(node_id.clone());
                 }
@@ -214,3 +217,76 @@ pub fn execute_context_trace(
         latency_ms: start.elapsed().as_millis() as u64,
     }
 }
+
+/// Result of running Context Trace anchored strictly to the active Harness Entry Point.
+#[derive(Debug, Clone, serde::Serialize, serde::Deserialize, PartialEq)]
+pub struct HarnessTraceResult {
+    pub harness_file: String,
+    pub total_hops: u32,
+    pub total_tokens_traversed: usize,
+    pub target_fragment: String,
+    pub path: Vec<String>,
+    pub relevance_progression: Vec<f32>,
+}
+
+/// Runs Context Trace anchored strictly to the configured Harness Entry Point.
+pub fn trace_from_harness(
+    topology: &GraphTopology,
+    query: &str,
+    harness_file: &str,
+    _max_hops: u32,
+) -> HarnessTraceResult {
+    let target_opt = select_query_target(topology, query, harness_file);
+    if target_opt.is_none() {
+        return HarnessTraceResult {
+            harness_file: harness_file.to_string(),
+            total_hops: 0,
+            total_tokens_traversed: 0,
+            target_fragment: String::new(),
+            path: Vec::new(),
+            relevance_progression: Vec::new(),
+        };
+    }
+
+    let (target_node, _rel) = target_opt.unwrap();
+    let path_opt = find_shortest_path(topology, harness_file, &target_node);
+
+    let path = path_opt.unwrap_or_else(|| vec![harness_file.to_string(), target_node.clone()]);
+    let total_hops = (path.len() as u32).saturating_sub(1);
+
+    let mut total_tokens = 0usize;
+    let mut relevance_progression = Vec::new();
+    let q_tokens = tokenize(query);
+
+    for (idx, node_id) in path.iter().enumerate() {
+        if let Some(node) = topology.nodes.get(node_id) {
+            total_tokens += node.tokens as usize;
+            if idx == 0 {
+                relevance_progression.push(0.1);
+            } else if idx == path.len() - 1 {
+                relevance_progression.push(1.0);
+            } else {
+                let title_tokens: HashSet<String> = tokenize(&node.label).into_iter().collect();
+                let matches = q_tokens.iter().filter(|t| title_tokens.contains(*t)).count();
+                let rel = if !q_tokens.is_empty() {
+                    (matches as f32 / q_tokens.len() as f32).max(0.3)
+                } else {
+                    0.5
+                };
+                relevance_progression.push(rel);
+            }
+        } else {
+            relevance_progression.push(0.5);
+        }
+    }
+
+    HarnessTraceResult {
+        harness_file: harness_file.to_string(),
+        total_hops,
+        total_tokens_traversed: total_tokens,
+        target_fragment: target_node,
+        path,
+        relevance_progression,
+    }
+}
+

@@ -1,16 +1,16 @@
 //! Ephemeral candidate graph overlay and admission control evaluation models.
 
-pub mod overlay;
 pub mod evaluator;
+pub mod overlay;
 
 pub use evaluator::*;
 pub use overlay::*;
 
-use std::collections::HashMap;
-use serde::{Deserialize, Serialize};
-use crate::graph::builder::GraphTopology;
 use crate::delta::GitDelta;
-use crate::model::{NoteNode, NoteEdge};
+use crate::graph::builder::GraphTopology;
+use crate::model::{NoteEdge, NoteNode};
+use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
 
 /// Ephemeral candidate graph constructed in RAM during pre-commit admission control.
 /// Discarded immediately upon hook completion without mutating persistent graph.
@@ -89,6 +89,7 @@ pub enum RegressionCategory {
     InvalidHeadingAnchor,
     SemanticCollision,
     TechnicalDriftContradiction,
+    UnreviewedDocumentationObligation,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

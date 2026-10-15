@@ -25,7 +25,10 @@ pub struct StructuralProblemSignature {
 
 /// Detects the structural GodDocument signature enforcing the multi-metric predicate (FR-024, Invariant XIII):
 /// semantic_diversity >= 0.75 && reference_concentration >= 0.70 && context_efficiency <= 0.35 && coupling >= 0.70
-pub fn detect_god_document(node: &NoteNode, metrics: &StructuralMetrics) -> Option<StructuralProblemSignature> {
+pub fn detect_god_document(
+    node: &NoteNode,
+    metrics: &StructuralMetrics,
+) -> Option<StructuralProblemSignature> {
     if metrics.semantic_diversity >= 0.75
         && metrics.reference_concentration >= 0.70
         && metrics.context_efficiency <= 0.35
@@ -53,9 +56,14 @@ pub fn detect_god_document(node: &NoteNode, metrics: &StructuralMetrics) -> Opti
 
 /// Classifies HealthyMonolith ensuring large documents (>50k tokens) with high cohesion (>=0.80)
 /// and distributed references (<=0.30) are certified healthy and NEVER split (FR-025, Invariant XIII).
-pub fn detect_healthy_monolith(node: &NoteNode, metrics: &StructuralMetrics) -> Option<StructuralProblemSignature> {
-    if node.tokens >= 50_000 && metrics.cohesion >= 0.80 && metrics.reference_concentration <= 0.30 {
-        let confidence = (metrics.cohesion * (1.0 - metrics.reference_concentration)).clamp(0.75, 1.0);
+pub fn detect_healthy_monolith(
+    node: &NoteNode,
+    metrics: &StructuralMetrics,
+) -> Option<StructuralProblemSignature> {
+    if node.tokens >= 50_000 && metrics.cohesion >= 0.80 && metrics.reference_concentration <= 0.30
+    {
+        let confidence =
+            (metrics.cohesion * (1.0 - metrics.reference_concentration)).clamp(0.75, 1.0);
         Some(StructuralProblemSignature {
             signature_id: format!("healthy_mono_{}", node.id.replace('/', "_")),
             document_path: node.file_path.clone(),
@@ -74,9 +82,13 @@ pub fn detect_healthy_monolith(node: &NoteNode, metrics: &StructuralMetrics) -> 
 
 /// Detects ImplicitRouter signature (FR-026):
 /// outbound >= 20 && prose < 500 tokens && betweenness >= 0.40
-pub fn detect_implicit_router(node: &NoteNode, metrics: &StructuralMetrics) -> Option<StructuralProblemSignature> {
+pub fn detect_implicit_router(
+    node: &NoteNode,
+    metrics: &StructuralMetrics,
+) -> Option<StructuralProblemSignature> {
     if node.out_degree >= 20 && node.tokens < 500 && node.betweenness >= 0.40 {
-        let confidence = ((node.betweenness as f32) * (node.out_degree as f32 / 20.0).min(1.0)).clamp(0.70, 1.0);
+        let confidence =
+            ((node.betweenness as f32) * (node.out_degree as f32 / 20.0).min(1.0)).clamp(0.70, 1.0);
         Some(StructuralProblemSignature {
             signature_id: format!("implicit_router_{}", node.id.replace('/', "_")),
             document_path: node.file_path.clone(),
@@ -120,7 +132,10 @@ pub fn detect_fragmented_concept(
 
 /// Detects IsolatedSilo signature:
 /// Node has very low discoverability (<= 0.20) and minimal in-degree (<= 1) or is orphan.
-pub fn detect_isolated_silo(node: &NoteNode, metrics: &StructuralMetrics) -> Option<StructuralProblemSignature> {
+pub fn detect_isolated_silo(
+    node: &NoteNode,
+    metrics: &StructuralMetrics,
+) -> Option<StructuralProblemSignature> {
     if (metrics.discoverability <= 0.20 && node.in_degree <= 1) || node.hop_distance < 0 {
         let confidence = if node.hop_distance < 0 { 0.95 } else { 0.75 };
         Some(StructuralProblemSignature {
@@ -170,7 +185,10 @@ pub fn detect_signatures_for_node(
 }
 
 /// Batch signature detector running over all graph nodes in parallel (NFR-003, T029).
-pub fn detect_all_signatures(nodes: &[NoteNode], fragment_target: u32) -> Vec<StructuralProblemSignature> {
+pub fn detect_all_signatures(
+    nodes: &[NoteNode],
+    fragment_target: u32,
+) -> Vec<StructuralProblemSignature> {
     // Build tag frequency map to detect fragmented concepts across >= 3 docs
     let mut tag_counts: std::collections::HashMap<String, usize> = std::collections::HashMap::new();
     for node in nodes {
@@ -206,7 +224,8 @@ pub mod tests {
             problem_type: ProblemSignatureType::HealthyMonolith,
             confidence: 0.95,
             evidence: StructuralMetrics::default(),
-            rationale: "Document has high cohesion and low concentration despite large size".to_string(),
+            rationale: "Document has high cohesion and low concentration despite large size"
+                .to_string(),
         };
 
         let json = serde_json::to_string(&sig).unwrap();
@@ -233,7 +252,10 @@ pub mod tests {
         // Fails predicate if context efficiency is good (e.g. 0.50)
         evidence.context_efficiency = 0.50;
         let no_sig = detect_god_document(&node, &evidence);
-        assert!(no_sig.is_none(), "Must NOT flag if any predicate condition fails");
+        assert!(
+            no_sig.is_none(),
+            "Must NOT flag if any predicate condition fails"
+        );
     }
 
     #[test]
@@ -253,7 +275,10 @@ pub mod tests {
         // Verify Invariant XIII: healthy monolith is NEVER flagged as god document
         let all_sigs = detect_signatures_for_node(&node, &evidence, 0);
         assert_eq!(all_sigs.len(), 1);
-        assert_eq!(all_sigs[0].problem_type, ProblemSignatureType::HealthyMonolith);
+        assert_eq!(
+            all_sigs[0].problem_type,
+            ProblemSignatureType::HealthyMonolith
+        );
     }
 
     #[test]
@@ -266,7 +291,10 @@ pub mod tests {
         let evidence = StructuralMetrics::default();
         let sig = detect_implicit_router(&node, &evidence);
         assert!(sig.is_some(), "Implicit router must be detected");
-        assert_eq!(sig.unwrap().problem_type, ProblemSignatureType::ImplicitRouter);
+        assert_eq!(
+            sig.unwrap().problem_type,
+            ProblemSignatureType::ImplicitRouter
+        );
     }
 
     #[test]
@@ -279,7 +307,10 @@ pub mod tests {
         // 3 matching concept docs
         let frag_sig = detect_fragmented_concept(&node, &evidence, 3);
         assert!(frag_sig.is_some());
-        assert_eq!(frag_sig.unwrap().problem_type, ProblemSignatureType::FragmentedConcept);
+        assert_eq!(
+            frag_sig.unwrap().problem_type,
+            ProblemSignatureType::FragmentedConcept
+        );
 
         // Isolated Silo
         let mut silo_node = NoteNode::new("silo.md", "/path/silo.md", "Silo");
@@ -290,7 +321,10 @@ pub mod tests {
 
         let silo_sig = detect_isolated_silo(&silo_node, &silo_evidence);
         assert!(silo_sig.is_some());
-        assert_eq!(silo_sig.unwrap().problem_type, ProblemSignatureType::IsolatedSilo);
+        assert_eq!(
+            silo_sig.unwrap().problem_type,
+            ProblemSignatureType::IsolatedSilo
+        );
     }
 
     #[test]
@@ -305,7 +339,7 @@ pub mod tests {
             node.tokens = 1000 + (i % 500) as u32;
             node.in_degree = (i % 10) as u32;
             node.out_degree = (i % 8) as u32;
-            node.hop_distance = (i % 4) as i32;
+            node.hop_distance = i % 4;
             node.betweenness = (i % 10) as f64 / 20.0;
             if i % 10 == 0 {
                 node.tags = vec!["architecture".to_string()];
@@ -340,4 +374,3 @@ pub mod tests {
         test_problem_signature_types();
     }
 }
-

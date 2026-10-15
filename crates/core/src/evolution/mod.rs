@@ -4,19 +4,25 @@
 pub mod compiler;
 pub mod conflict;
 pub mod metrics;
+pub mod opportunity;
+pub mod plan_value;
 pub mod profile;
 pub mod re_measure;
 pub mod signatures;
 pub mod strategies;
+pub mod summary;
 pub mod transformation;
 
 pub use compiler::*;
 pub use conflict::*;
 pub use metrics::*;
+pub use opportunity::*;
+pub use plan_value::*;
 pub use profile::*;
 pub use re_measure::*;
 pub use signatures::*;
 pub use strategies::*;
+pub use summary::*;
 pub use transformation::*;
 
 use crate::config::CustomProfileConfig;
@@ -29,7 +35,10 @@ pub struct EvolutionEngine {
 }
 
 impl EvolutionEngine {
-    pub fn new(orientation: DocumentationOrientation, custom_profile: Option<CustomProfileConfig>) -> Self {
+    pub fn new(
+        orientation: DocumentationOrientation,
+        custom_profile: Option<CustomProfileConfig>,
+    ) -> Self {
         let profile = Self::compile_active_profile(orientation, custom_profile.as_ref());
         Self {
             orientation,
@@ -60,7 +69,10 @@ impl EvolutionEngine {
     }
 
     /// Dynamically switches the orientation and recompiles the optimization profile in <= 20 ms without restart (NFR-002, FR-008).
-    pub fn switch_orientation(&mut self, new_orientation: DocumentationOrientation) -> std::time::Duration {
+    pub fn switch_orientation(
+        &mut self,
+        new_orientation: DocumentationOrientation,
+    ) -> std::time::Duration {
         let start = std::time::Instant::now();
         self.orientation = new_orientation;
         self.profile = Self::compile_active_profile(new_orientation, self.custom_profile.as_ref());
@@ -108,4 +120,3 @@ pub mod tests {
         );
     }
 }
-

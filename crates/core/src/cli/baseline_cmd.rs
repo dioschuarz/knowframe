@@ -35,12 +35,24 @@ pub fn execute_baseline_init(
                 "Knowledge Debt Baseline already established for commit {}",
                 existing.baseline_commit
             );
-            println!("  Legacy broken references: {}", existing.broken_links.len());
-            println!("  Legacy orphan nodes:      {}", existing.orphan_nodes.len());
+            println!(
+                "  Legacy broken references: {}",
+                existing.broken_links.len()
+            );
+            println!(
+                "  Legacy orphan nodes:      {}",
+                existing.orphan_nodes.len()
+            );
             println!("  Legacy collisions:        {}", existing.collisions.len());
-            println!("  Legacy technical drifts:  {}", existing.technical_drifts.len());
+            println!(
+                "  Legacy technical drifts:  {}",
+                existing.technical_drifts.len()
+            );
             println!("  Total Legacy Debt:        {}", existing.total_debt);
-            println!("Pre-commit will not block on these {} items.", existing.total_debt);
+            println!(
+                "Pre-commit will not block on these {} items.",
+                existing.total_debt
+            );
             println!("(Use --force or 'baseline reset' to re-capture)");
             return Ok(());
         }
@@ -72,10 +84,14 @@ pub fn execute_baseline_init(
             broken_links: node.broken_links,
             fragments: node.fragments,
             freshness: None,
+            code_dependencies: Vec::new(),
         });
     }
     for edge in scan_res.edges {
-        let target_fragment = edge.anchor.as_ref().map(|a| a.trim_start_matches('#').to_string());
+        let target_fragment = edge
+            .anchor
+            .as_ref()
+            .map(|a| a.trim_start_matches('#').to_string());
         topology.add_edge(crate::model::NoteEdge {
             id: edge.id,
             source: edge.source,
@@ -90,21 +106,49 @@ pub fn execute_baseline_init(
         });
     }
 
+    use crate::debt::{CollisionSignature, DriftSignature};
+    let collisions = crate::collision::detect_collisions_in_graph(&topology, workspace_root, 0.70);
+    let col_sigs: Vec<CollisionSignature> = collisions
+        .iter()
+        .map(|c| CollisionSignature::new(&c.source_id, &c.target_id))
+        .collect();
+    let drifts = crate::drift::detect_all_drifts_in_graph(&topology, workspace_root);
+    let drift_sigs: Vec<DriftSignature> = drifts
+        .iter()
+        .map(|d| DriftSignature {
+            doc_path: d.doc_id.clone(),
+            referenced_code_path: d.code_target.clone(),
+            symbol: d.symbol_name.clone().unwrap_or_default(),
+        })
+        .collect();
+
     let commit_sha =
         get_current_git_commit(workspace_root).unwrap_or_else(|| "initial".to_string());
-    let baseline = capture_initial_baseline(&topology, &commit_sha, vec![], vec![]);
+    let baseline = capture_initial_baseline(&topology, &commit_sha, col_sigs, drift_sigs);
     save_baseline(workspace_root, &baseline)?;
 
     println!(
         "Knowledge Debt Baseline established for commit {}",
         commit_sha
     );
-    println!("  Legacy broken references: {}", baseline.broken_links.len());
-    println!("  Legacy orphan nodes:      {}", baseline.orphan_nodes.len());
+    println!(
+        "  Legacy broken references: {}",
+        baseline.broken_links.len()
+    );
+    println!(
+        "  Legacy orphan nodes:      {}",
+        baseline.orphan_nodes.len()
+    );
     println!("  Legacy collisions:        {}", baseline.collisions.len());
-    println!("  Legacy technical drifts:  {}", baseline.technical_drifts.len());
+    println!(
+        "  Legacy technical drifts:  {}",
+        baseline.technical_drifts.len()
+    );
     println!("  Total Legacy Debt:        {}", baseline.total_debt);
-    println!("Pre-commit will not block on these {} items.", baseline.total_debt);
+    println!(
+        "Pre-commit will not block on these {} items.",
+        baseline.total_debt
+    );
 
     Ok(())
 }

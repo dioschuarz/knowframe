@@ -1,13 +1,54 @@
 ---
-name: "speckit-plan"
-description: "Execute the implementation planning workflow using the plan template to generate design artifacts."
-compatibility: "Requires spec-kit project structure with .specify/ directory"
+name: speckit-plan
+description: Execute the implementation planning workflow using the plan template to generate design artifacts.
+compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: "github-spec-kit"
-  source: "templates/commands/plan.md"
+  author: github-spec-kit
+  source: templates/commands/plan.md
+wiki:
+  content_hash: 3b2e2373349032c9fb9c36386022ae6d9aa6816c998ea9754f61213e86a7c04f
+  fragments:
+    user-input:
+      tokens: 30
+      inbound: 0
+      outbound: 0
+    pre-execution-checks:
+      tokens: 494
+      inbound: 0
+      outbound: 0
+    outline:
+      tokens: 206
+      inbound: 0
+      outbound: 0
+    mandatory-post-execution-hooks:
+      tokens: 501
+      inbound: 0
+      outbound: 0
+    completion-report:
+      tokens: 24
+      inbound: 0
+      outbound: 0
+    phases:
+      tokens: 452
+      inbound: 0
+      outbound: 0
+    phase-0-outline-research:
+      tokens: 171
+      inbound: 0
+      outbound: 0
+    phase-1-design-contracts:
+      tokens: 277
+      inbound: 0
+      outbound: 0
+    key-rules:
+      tokens: 31
+      inbound: 0
+      outbound: 0
+    done-when:
+      tokens: 51
+      inbound: 0
+      outbound: 0
 ---
-
-
 ## User Input
 
 ```text

@@ -1,3 +1,56 @@
+---
+wiki:
+  content_hash: f396936b74924294fcfe65cb833588c3468d2f2afe1081e5fdbde4d5bb4a264d
+  fragments:
+    tasks-knowledge-organization-systems-structural-evidence-trade-offs:
+      tokens: 5707
+      inbound: 0
+      outbound: 3
+    task-matrix-dependencies:
+      tokens: 242
+      inbound: 0
+      outbound: 0
+    phase-1-core-domain-entities-type-definitions-tasks-t001t006b:
+      tokens: 747
+      inbound: 0
+      outbound: 0
+    phase-2-profile-compilation-documentation-orientations-tasks-t007t012:
+      tokens: 465
+      inbound: 0
+      outbound: 0
+    phase-3-two-tier-custom-configuration-parameter-mapping-tasks-t013t018:
+      tokens: 484
+      inbound: 0
+      outbound: 0
+    phase-4-10-dimensional-structural-analytics-extractor-tasks-t019t024:
+      tokens: 523
+      inbound: 0
+      outbound: 0
+    phase-5-problem-signature-detectors-structural-god-document-tasks-t025t030:
+      tokens: 581
+      inbound: 0
+      outbound: 0
+    phase-6-candidate-kos-strategy-evaluator-trade-off-matrix-tasks-t031t036:
+      tokens: 479
+      inbound: 0
+      outbound: 0
+    phase-7-user-controlled-automation-re-measurement-tasks-t037t042:
+      tokens: 497
+      inbound: 0
+      outbound: 0
+    phase-8-extension-host-lifecycle-integration-tasks-t043t048:
+      tokens: 440
+      inbound: 0
+      outbound: 0
+    phase-9-webview-ui-components-tasks-t049t054:
+      tokens: 574
+      inbound: 0
+      outbound: 0
+    phase-10-performance-benchmarks-non-functional-verification-tasks-t055t060:
+      tokens: 538
+      inbound: 0
+      outbound: 0
+---
 # Tasks: Knowledge Organization Systems, Structural Evidence & Trade-Offs
 
 **Feature Branch:** `005-structural-evolution-strategies`  
@@ -56,7 +109,7 @@ graph TD
 
 - [x] **T006b**: [P] Define corresponding TypeScript interfaces, discriminated union `TransformationAction` payloads, and `OptimizationProfile` in `extension/src/types/evolution.ts` matching JSON-RPC contract `contracts/evolution_rpc_protocol.json`.
   - **Mapped Requirements**: FR-001..FR-040, SC-001..SC-007
-  - **Verification**: `npm run test -- extension/src/types/evolution.test.ts`
+  - **Verification**: *npm run test -- extension/src/types/evolution.test.ts*
 
 ---
 
@@ -66,7 +119,7 @@ graph TD
   - **Mapped Requirements**: FR-002, FR-004, FR-005, FR-006, SC-001
   - **Verification**: `cargo test test_orientation_profile_defaults`
 
-- [x] **T008**: Implement configuration parser in `crates/core/src/config/vault.rs` loading and storing `orientation` and `custom_profile` in `.context-vault.yaml`.
+- [x] **T008**: Implement configuration parser in `crates/core/src/config/mod.rs` loading and storing `orientation` and `custom_profile` in `.context-vault.yaml`.
   - **Mapped Requirements**: FR-007, FR-014
   - **Verification**: `cargo test test_vault_orientation_yaml_roundtrip`
 
@@ -233,27 +286,27 @@ graph TD
 
 - [x] **T043**: Implement `extension/src/evolution/evolutionManager.ts` managing active orientation state, vault config syncing, and sidecar RPC dispatching.
   - **Mapped Requirements**: FR-007, FR-008, US1
-  - **Verification**: `npm run test -- extension/src/evolution/evolutionManager.test.ts`
+  - **Verification**: *npm run test -- extension/src/evolution/evolutionManager.test.ts*
 
-- [x] **T044**: Implement custom profile and constraint synchronization logic in `evolutionManager.ts`.
+- [x] **T044**: Implement custom profile and constraint synchronization logic in `extension/src/evolution/evolutionManager.ts`.
   - **Mapped Requirements**: FR-014, FR-022, US2, US3
-  - **Verification**: `npm run test -- extension/src/evolution/customConfigSync.test.ts`
+  - **Verification**: *npm run test -- extension/src/evolution/customConfigSync.test.ts*
 
-- [x] **T045**: Implement structural problem and recommendation subscription store in `evolutionManager.ts`.
+- [x] **T045**: Implement structural problem and recommendation subscription store in `extension/src/evolution/evolutionManager.ts`.
   - **Mapped Requirements**: FR-008, FR-028, FR-030, US4, US5
-  - **Verification**: `npm run test -- extension/src/evolution/problemStore.test.ts`
+  - **Verification**: *npm run test -- extension/src/evolution/problemStore.test.ts*
 
-- [x] **T046**: Implement transformation plan confirmation workflow with VS Code modal confirmation dialogs in `evolutionManager.ts`.
+- [x] **T046**: Implement transformation plan confirmation workflow with VS Code modal confirmation dialogs in `extension/src/evolution/evolutionManager.ts`.
   - **Mapped Requirements**: FR-038, Invariant XVI, US6
-  - **Verification**: `npm run test -- extension/src/evolution/confirmationWorkflow.test.ts`
+  - **Verification**: *npm run test -- extension/src/evolution/confirmationWorkflow.test.ts*
 
 - [x] **T047**: Implement automatic Git index staging coordination after applied transformations ensuring compatibility with `llm-wiki-validate` pre-commit hooks.
   - **Mapped Requirements**: FR-039, Invariant VIII, Invariant XVI
-  - **Verification**: `npm run test -- extension/src/evolution/gitStaging.test.ts`
+  - **Verification**: *npm run test -- extension/src/evolution/gitStaging.test.ts*
 
-- [x] **T048**: Wire `evolutionManager.ts` into extension activation lifecycle in `extension/src/extension.ts`.
+- [x] **T048**: Wire `extension/src/evolution/evolutionManager.ts` into extension activation lifecycle in `extension/src/extension.ts`.
   - **Mapped Requirements**: FR-001..FR-040
-  - **Verification**: `npm run test -- extension/src/extension.test.ts`
+  - **Verification**: *npm run test -- extension/src/extension.test.ts*
 
 ---
 
@@ -261,27 +314,27 @@ graph TD
 
 - [x] **T049**: Implement `OrientationSelector` component in `extension/webview-ui/src/components/orientationSelector.ts` with 4 selectable radio cards (AI, Human, Balanced, Custom).
   - **Mapped Requirements**: FR-001, FR-008, US1
-  - **Verification**: `npm run test -- extension/webview-ui/src/components/orientationSelector.test.ts`
+  - **Verification**: *npm run test -- extension/webview-ui/src/components/orientationSelector.test.ts*
 
 - [x] **T050**: Implement `CustomSettingsDrawer` in `extension/webview-ui/src/components/customSettingsDrawer.ts` featuring Tier 1 discrete knobs, Tier 2 advanced sliders, and visual parameter relationship dependency links.
   - **Mapped Requirements**: FR-009, FR-010, FR-012, FR-013, US2
-  - **Verification**: `npm run test -- extension/webview-ui/src/components/customSettingsDrawer.test.ts`
+  - **Verification**: *npm run test -- extension/webview-ui/src/components/customSettingsDrawer.test.ts*
 
 - [x] **T051**: Implement informational tooltip component (`ⓘ`) for all Tier 1 knobs detailing descriptions, higher/lower impacts, affected problems, countervailing trade-offs, and highlighting affected Tier 2 sliders.
   - **Mapped Requirements**: FR-011, FR-013, SC-002, US2
-  - **Verification**: `npm run test -- extension/webview-ui/src/components/tooltip.test.ts`
+  - **Verification**: *npm run test -- extension/webview-ui/src/components/tooltip.test.ts*
 
 - [x] **T052**: Implement conflicting constraint warning banner in `CustomSettingsDrawer` surfacing contradictory rules in $\le 10\text{ ms}$.
   - **Mapped Requirements**: FR-022, SC-002, US3
-  - **Verification**: `npm run test -- extension/webview-ui/src/components/conflictBanner.test.ts`
+  - **Verification**: *npm run test -- extension/webview-ui/src/components/conflictBanner.test.ts*
 
 - [x] **T053**: Implement `EvolutionTab` in `extension/webview-ui/src/components/evolutionTab.ts` displaying detected problem signatures, evidence metrics ($\le 5$ chars format), and candidate recommendations with trade-off matrices.
   - **Mapped Requirements**: FR-028, FR-029, FR-034, FR-035, Invariant X, US4, US5
-  - **Verification**: `npm run test -- extension/webview-ui/src/components/evolutionTab.test.ts`
+  - **Verification**: *npm run test -- extension/webview-ui/src/components/evolutionTab.test.ts*
 
 - [x] **T054**: Implement `TransformationPlanModal` in `extension/webview-ui/src/components/transformationPlanModal.ts` displaying diff previews, projected deltas, explicit `[Apply Transformation]` confirmation, and Before-vs-After delta reports while maintaining 60 FPS responsiveness.
   - **Mapped Requirements**: FR-037, FR-038, FR-040, NFR-009, US6, Invariant XVI
-  - **Verification**: `npm run test -- extension/webview-ui/src/components/transformationPlanModal.test.ts`
+  - **Verification**: *npm run test -- extension/webview-ui/src/components/transformationPlanModal.test.ts*
 
 ---
 

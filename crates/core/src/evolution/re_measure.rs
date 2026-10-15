@@ -1,12 +1,33 @@
-use serde::{Deserialize, Serialize};
 use super::metrics::StructuralMetrics;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct MetricDeltaReport {
+    #[serde(alias = "efficiencyDelta", default)]
     pub efficiency_delta: f32,
+    #[serde(alias = "traceDepthDelta", default)]
     pub trace_depth_delta: f32,
+    #[serde(alias = "couplingDelta", default)]
     pub coupling_delta: f32,
+    #[serde(alias = "docCountDelta", default)]
     pub doc_count_delta: i32,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub struct GovernanceReMeasurement {
+    pub delta_tokens: i64,
+    pub delta_hops: i32,
+    pub delta_governance_score: f32,
+}
+
+impl Default for GovernanceReMeasurement {
+    fn default() -> Self {
+        Self {
+            delta_tokens: 0,
+            delta_hops: 0,
+            delta_governance_score: 0.0,
+        }
+    }
 }
 
 impl Default for MetricDeltaReport {
@@ -34,23 +55,39 @@ impl ReMeasurementEngine {
         let avg_eff_before: f32 = if before_metrics.is_empty() {
             0.0
         } else {
-            before_metrics.iter().map(|m| m.context_efficiency).sum::<f32>() / before_metrics.len() as f32
+            before_metrics
+                .iter()
+                .map(|m| m.context_efficiency)
+                .sum::<f32>()
+                / before_metrics.len() as f32
         };
         let avg_eff_after: f32 = if after_metrics.is_empty() {
             0.0
         } else {
-            after_metrics.iter().map(|m| m.context_efficiency).sum::<f32>() / after_metrics.len() as f32
+            after_metrics
+                .iter()
+                .map(|m| m.context_efficiency)
+                .sum::<f32>()
+                / after_metrics.len() as f32
         };
 
         let avg_nav_before: f32 = if before_metrics.is_empty() {
             0.0
         } else {
-            before_metrics.iter().map(|m| m.navigational_complexity).sum::<f32>() / before_metrics.len() as f32
+            before_metrics
+                .iter()
+                .map(|m| m.navigational_complexity)
+                .sum::<f32>()
+                / before_metrics.len() as f32
         };
         let avg_nav_after: f32 = if after_metrics.is_empty() {
             0.0
         } else {
-            after_metrics.iter().map(|m| m.navigational_complexity).sum::<f32>() / after_metrics.len() as f32
+            after_metrics
+                .iter()
+                .map(|m| m.navigational_complexity)
+                .sum::<f32>()
+                / after_metrics.len() as f32
         };
 
         let avg_coup_before: f32 = if before_metrics.is_empty() {
@@ -80,20 +117,18 @@ pub mod tests {
 
     #[test]
     fn test_incremental_post_apply_re_measurement() {
-        let before_m = vec![
-            StructuralMetrics {
-                cohesion: 0.6,
-                coupling: 0.75,
-                reference_concentration: 0.8,
-                granularity: 0.4,
-                context_efficiency: 0.3,
-                discoverability: 0.5,
-                reusability: 0.2,
-                semantic_diversity: 0.8,
-                navigational_complexity: 0.7,
-                maintenance_coupling: 0.6,
-            },
-        ];
+        let before_m = vec![StructuralMetrics {
+            cohesion: 0.6,
+            coupling: 0.75,
+            reference_concentration: 0.8,
+            granularity: 0.4,
+            context_efficiency: 0.3,
+            discoverability: 0.5,
+            reusability: 0.2,
+            semantic_diversity: 0.8,
+            navigational_complexity: 0.7,
+            maintenance_coupling: 0.6,
+        }];
 
         let after_m = vec![
             StructuralMetrics {
@@ -126,10 +161,20 @@ pub mod tests {
         let delta = ReMeasurementEngine::compute_delta(&before_m, &after_m, 1, 2);
         let elapsed = start.elapsed();
 
-        assert!(elapsed.as_millis() <= 100, "Re-measurement must be <= 100ms per NFR-006, took {:?}", elapsed);
+        assert!(
+            elapsed.as_millis() <= 100,
+            "Re-measurement must be <= 100ms per NFR-006, took {:?}",
+            elapsed
+        );
         assert_eq!(delta.doc_count_delta, 1);
-        assert!(delta.efficiency_delta > 0.4, "Efficiency must have improved");
+        assert!(
+            delta.efficiency_delta > 0.4,
+            "Efficiency must have improved"
+        );
         assert!(delta.coupling_delta < -0.3, "Coupling must have decreased");
-        assert!(delta.trace_depth_delta < -0.2, "Navigational complexity / trace depth must have decreased");
+        assert!(
+            delta.trace_depth_delta < -0.2,
+            "Navigational complexity / trace depth must have decreased"
+        );
     }
 }

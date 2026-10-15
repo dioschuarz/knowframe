@@ -1,3 +1,88 @@
+---
+wiki:
+  content_hash: 53e87f334ab20ffa9089f469c302224b152686253049a7dd5c9879a3c8ed9718
+  fragments:
+    feature-specification-ai-context-observatory-curated-knowledge-ux-002-context-observatory-ux:
+      tokens: 6176
+      inbound: 0
+      outbound: 0
+    executive-summary-paradigm-shift:
+      tokens: 832
+      inbound: 0
+      outbound: 0
+    user-scenarios-testing-mandatory:
+      tokens: 2392
+      inbound: 0
+      outbound: 0
+    user-story-1-calm-status-dashboard-zero-action-duplication-priority-p0:
+      tokens: 545
+      inbound: 0
+      outbound: 0
+    user-story-2-contextual-selection-inspector-for-nodes-edges-health-priority-p1:
+      tokens: 496
+      inbound: 0
+      outbound: 0
+    user-story-3-noise-management-first-class-graph-exclusions-priority-p1:
+      tokens: 559
+      inbound: 0
+      outbound: 0
+    user-story-4-hop-constrained-focus-modes-semantic-visual-hierarchy-priority-p1:
+      tokens: 425
+      inbound: 0
+      outbound: 0
+    user-story-5-advanced-settings-progressive-disclosure-layer-priority-p2:
+      tokens: 357
+      inbound: 0
+      outbound: 0
+    functional-requirements-fr-046-through-fr-066:
+      tokens: 1237
+      inbound: 0
+      outbound: 0
+    information-architecture-action-hierarchy:
+      tokens: 275
+      inbound: 0
+      outbound: 0
+    contextual-selection-inspector:
+      tokens: 271
+      inbound: 0
+      outbound: 0
+    noise-management-curated-graph-exclusions:
+      tokens: 292
+      inbound: 0
+      outbound: 0
+    focus-modes-semantic-sizing:
+      tokens: 222
+      inbound: 0
+      outbound: 0
+    progressive-disclosure-settings-drawer:
+      tokens: 165
+      inbound: 0
+      outbound: 0
+    success-criteria-sc-008-through-sc-014:
+      tokens: 325
+      inbound: 0
+      outbound: 0
+    data-model-configuration-contract-updates:
+      tokens: 812
+      inbound: 0
+      outbound: 0
+    1-updated-context-vaultyaml-schema:
+      tokens: 315
+      inbound: 0
+      outbound: 0
+    2-json-rpc-protocol-additions:
+      tokens: 489
+      inbound: 0
+      outbound: 0
+    edge-cases-defensive-architecture:
+      tokens: 323
+      inbound: 0
+      outbound: 0
+    non-functional-security-requirements:
+      tokens: 160
+      inbound: 0
+      outbound: 0
+---
 # Feature Specification: AI Context Observatory & Curated Knowledge UX (`002-context-observatory-ux`)
 
 **Feature Branch**: `002-context-observatory-ux`  
@@ -390,7 +475,7 @@ clusters:
 3. **Dangling Link to Excluded Note**: When note A links to note B, and note B is in `graph.exclude`:
    - If note B exists on disk $\rightarrow$ link status is `resolved_excluded`. Edge is not rendered in graph; no broken link warning is created.
    - If note B does NOT exist on disk $\rightarrow$ link status is `broken`. Edge is rendered red dashed; broken link issue card is created with file/line coordinates.
-4. **Empty Graph in Focus Mode**: In a freshly initialized repository where the hub has no connections yet and the user selects `Focus: 1 hop`, the Webview displays the hub node centered with a calm empty state tip: *"This hub has no outgoing connections yet. Add links using [[note-name]] to expand your context graph."*
+4. **Empty Graph in Focus Mode**: In a freshly initialized repository where the hub has no connections yet and the user selects `Focus: 1 hop`, the Webview displays the hub node centered with a calm empty state tip: *"This hub has no outgoing connections yet. Add links using `[[note-name]]` to expand your context graph."*
 5. **Dynamic Vault Rescan**: When the user triggers `Rebuild index` from the advanced menu, the sidecar performs a clean re-scan and emits an incremental update event, ensuring node positions are preserved without visual jumping.
 
 ---

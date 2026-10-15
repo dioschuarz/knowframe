@@ -7,9 +7,18 @@ use crate::debt::baseline::load_baseline;
 use crate::graph::builder::GraphTopology;
 use crate::quality::scorer::calculate_quality_score;
 
-/// Executes the `quality` CLI command.
+/// Executes the `quality` CLI command with default options.
 pub fn execute_quality(
     workspace_root: &Path,
+    json_output: bool,
+) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
+    execute_quality_with_options(workspace_root, false, json_output)
+}
+
+/// Executes the `quality` CLI command with extended options.
+pub fn execute_quality_with_options(
+    workspace_root: &Path,
+    raw_mode: bool,
     json_output: bool,
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let scan_res = execute_scan(ScanOptions {
@@ -54,7 +63,13 @@ pub fn execute_quality(
     let baseline = load_baseline(workspace_root).ok().flatten();
     let collisions = crate::collision::detect_collisions_in_graph(&topology, workspace_root, 0.70);
     let drifts = crate::drift::detect_all_drifts_in_graph(&topology, workspace_root);
-    let quality = calculate_quality_score(&topology, baseline.as_ref(), &collisions, &drifts);
+
+    // When raw mode is requested, evaluate without debt baseline masking
+    let quality = if raw_mode {
+        calculate_quality_score(&topology, None, &collisions, &drifts)
+    } else {
+        calculate_quality_score(&topology, baseline.as_ref(), &collisions, &drifts)
+    };
 
     if json_output {
         println!("{}", serde_json::to_string_pretty(&quality)?);
@@ -62,21 +77,53 @@ pub fn execute_quality(
     }
 
     println!("──────────────────────────────────────────────────────────────");
-    println!("Knowledge Quality Score");
+    if raw_mode {
+        println!("Knowledge Quality Score — Raw Historical Audit Mode");
+    } else {
+        println!("Knowledge Quality Score — Effective Score");
+    }
     println!("──────────────────────────────────────────────────────────────");
-    println!("Overall Score:        {:.1} / 100", quality.overall_score);
+
+    if raw_mode {
+        println!("Overall Score (Raw):  {:.1} / 100", quality.overall_score);
+    } else {
+        println!(
+            "Overall Score:        {:.1} / 100 (Effective)",
+            quality.overall_score
+        );
+        if let Some(raw) = quality.raw_score {
+            if (raw - quality.overall_score).abs() > 0.01 {
+                println!(
+                    "  └─► Raw Audit:      {:.1} / 100 (Historical debt baselined; use --raw to audit)",
+                    raw
+                );
+            }
+        }
+    }
     println!();
     println!("Pillar Breakdown:");
     println!("  Integrity (25%):    {:.1} / 100", quality.integrity_score);
     println!("  Structure (20%):    {:.1} / 100", quality.structure_score);
-    println!("  Consistency (20%):  {:.1} / 100", quality.consistency_score);
-    println!("  Discoverability (20%): {:.1} / 100", quality.discoverability_score);
+    println!(
+        "  Consistency (20%):  {:.1} / 100",
+        quality.consistency_score
+    );
+    println!(
+        "  Discoverability (20%): {:.1} / 100",
+        quality.discoverability_score
+    );
     println!("  Freshness (15%):    {:.1} / 100", quality.freshness_score);
     println!();
     println!("Debt Accounting:");
     println!("  Legacy Debt:        {} items", quality.legacy_debt_count);
-    println!("  New Regressions:    {} items", quality.new_regressions_count);
-    println!("  Resolved Debt:      {} items", quality.resolved_debt_count);
+    println!(
+        "  New Regressions:    {} items",
+        quality.new_regressions_count
+    );
+    println!(
+        "  Resolved Debt:      {} items",
+        quality.resolved_debt_count
+    );
     if let Some(hub) = &quality.central_hub_id {
         println!("  Central Hub:        {}", hub);
     }

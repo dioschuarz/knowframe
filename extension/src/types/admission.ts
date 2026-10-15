@@ -114,6 +114,13 @@ export interface KnowledgeQualityScore {
   structure_debt_count?: number;
   central_hub_id?: string;
   top_degradation_factors: QualityDegradationFactor[];
+  findings_count?: number;
+  total_issues?: number;
+  broken_references?: number;
+  invalid_anchors?: number;
+  raw_score?: number | null;
+  is_effective?: boolean;
+  active_issues_count?: number;
 }
 
 export interface KnowledgeIssue {
@@ -127,6 +134,8 @@ export interface KnowledgeIssue {
   weight: number;
   description: string;
   remediation_hint: string;
+  is_legacy?: boolean;
+  is_excluded?: boolean;
 }
 
 export interface KnowledgeIssuesReport {
@@ -138,4 +147,9 @@ export interface KnowledgeIssuesReport {
   discoverability_count: number;
   freshness_count: number;
   issues: KnowledgeIssue[];
+  active_issues_count?: number;
+  legacy_debt_count?: number;
+  is_quiet_default?: boolean;
+  raw_score?: number | null;
+  is_effective?: boolean;
 }

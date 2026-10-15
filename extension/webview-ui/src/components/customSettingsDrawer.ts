@@ -120,6 +120,8 @@ export function renderCustomSettingsDrawerHtml(props: CustomSettingsProps): stri
 
   // Constraint Rules
   const constraintLevels: ConstraintLevel[] = ['preference', 'constraint', 'hard_constraint'];
+  const formatConstraintLevel = (lvl: string) =>
+    lvl.split('_').map((w) => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
   const constraintsList = Array.isArray(props.constraints) ? props.constraints : [];
   const rulesHtml = constraintsList.map((rawRule: any) => {
     const ruleId = rawRule.id || '';
@@ -129,7 +131,7 @@ export function renderCustomSettingsDrawerHtml(props: CustomSettingsProps): stri
 
     const optionsHtml = constraintLevels.map((lvl) => {
       const selected = currentLevel === lvl ? 'selected' : '';
-      return `<option value="${lvl}" ${selected}>${lvl.replace('_', ' ')}</option>`;
+      return `<option value="${lvl}" ${selected}>${formatConstraintLevel(lvl)}</option>`;
     }).join('');
 
     return `
@@ -139,9 +141,21 @@ export function renderCustomSettingsDrawerHtml(props: CustomSettingsProps): stri
           <span class="rule-desc">${ruleDesc}</span>
         </div>
         <div class="rule-actions">
-          <select class="rule-level-select" data-rule-id="${ruleId}">
-            ${optionsHtml}
-          </select>
+          <div class="settings-scope-dropdown rule-level-dropdown" data-rule-id="${ruleId}">
+            <button type="button" class="settings-scope-btn rule-level-btn btn-rule-level-toggle" data-rule-id="${ruleId}" aria-haspopup="listbox" aria-expanded="false" title="Constraint Enforcement Level">
+              <span class="label-rule-level-selected" data-rule-id="${ruleId}">${formatConstraintLevel(currentLevel)}</span>
+              <span class="scope-dropdown-arrow">▾</span>
+            </button>
+            <div class="settings-scope-menu rule-level-menu" id="menu-rule-level-${ruleId}" data-rule-id="${ruleId}" style="display: none;" role="listbox">
+              ${constraintLevels.map((lvl) => `
+                <div class="scope-menu-item ${currentLevel === lvl ? 'active' : ''}" data-value="${lvl}" data-rule-id="${ruleId}" role="option" aria-selected="${currentLevel === lvl}">
+                  <span class="scope-item-check" style="${currentLevel === lvl ? '' : 'visibility: hidden;'}">✓</span>
+                  <span class="scope-item-title">${formatConstraintLevel(lvl)}</span>
+                </div>
+              `).join('')}
+            </div>
+            <input type="hidden" class="rule-level-select" data-rule-id="${ruleId}" value="${currentLevel}" />
+          </div>
         </div>
       </div>
     `;

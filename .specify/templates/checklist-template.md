@@ -1,3 +1,24 @@
+---
+wiki:
+  content_hash: 856532b3cb66171c662cc16f16b31a5856e4655a8666aad1e545bbfc7f603ca1
+  fragments:
+    checklist-type-checklist-feature-name:
+      tokens: 399
+      inbound: 0
+      outbound: 0
+    category-1:
+      tokens: 36
+      inbound: 0
+      outbound: 0
+    category-2:
+      tokens: 36
+      inbound: 0
+      outbound: 0
+    notes:
+      tokens: 113
+      inbound: 0
+      outbound: 0
+---
 # [CHECKLIST TYPE] Checklist: [FEATURE NAME]
 
 **Purpose**: [Brief description of what this checklist covers]

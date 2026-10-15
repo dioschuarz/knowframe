@@ -1,8 +1,10 @@
 import WebSocket from 'ws';
-import * as vscode from 'vscode';
-import { JsonRpcRequest, JsonRpcResponse, JsonRpcNotification } from '../types/protocol';
+import type * as vscode from 'vscode';
+import * as fs from 'fs';
+import * as path from 'path';
+import type { JsonRpcRequest, JsonRpcResponse, JsonRpcNotification } from '../types/protocol.ts';
 
-import { FragmentMetadata, FivePillarQualityScore, ContextTraceSectionResponse } from '../types/fragment';
+import type { FragmentMetadata, FivePillarQualityScore, ContextTraceSectionResponse } from '../types/fragment.ts';
 
 interface PendingRequest {
   resolve: (value: any) => void;
@@ -16,50 +18,168 @@ export class IpcClient implements vscode.Disposable {
   private pendingRequests = new Map<string | number, PendingRequest>();
   private notificationHandlers = new Map<string, Set<(params: any) => void>>();
   private isDisposed = false;
+  private connectPromise: Promise<void> | null = null;
+  private pingInterval: NodeJS.Timeout | null = null;
+
+  private portOrGetter: number | (() => number | null);
+  private readonly token: string;
+  private readonly outputChannel?: vscode.OutputChannel;
+  private readonly workspaceRoot?: string;
 
   constructor(
-    private readonly port: number,
-    private readonly token: string,
-    private readonly outputChannel?: vscode.OutputChannel,
-  ) {}
+    portOrGetter: number | (() => number | null),
+    token: string,
+    outputChannel?: vscode.OutputChannel,
+    workspaceRoot?: string,
+  ) {
+    this.portOrGetter = portOrGetter;
+    this.token = token;
+    this.outputChannel = outputChannel;
+    this.workspaceRoot = workspaceRoot;
+  }
+
+  public getActivePort(): number | null {
+    let p = typeof this.portOrGetter === 'function' ? this.portOrGetter() : this.portOrGetter;
+    if ((!p || p <= 0) && this.workspaceRoot) {
+      try {
+        const portFile = path.join(this.workspaceRoot, '.git', 'llm-wiki.port');
+        if (fs.existsSync(portFile)) {
+          const parsed = parseInt(fs.readFileSync(portFile, 'utf8').trim(), 10);
+          if (!isNaN(parsed) && parsed > 0) {
+            p = parsed;
+          }
+        }
+      } catch {}
+    }
+    return p && p > 0 ? p : null;
+  }
+
+  public setPort(newPort: number): void {
+    this.portOrGetter = newPort;
+  }
+
+  public isConnected(): boolean {
+    return !this.isDisposed && this.ws !== null && this.ws.readyState === WebSocket.OPEN;
+  }
+
+  private startKeepalive(): void {
+    this.stopKeepalive();
+    this.pingInterval = setInterval(() => {
+      if (this.isConnected() && this.ws) {
+        try {
+          this.ws.ping();
+        } catch {
+          // Socket might have dropped
+        }
+      }
+    }, 25000);
+  }
+
+  private stopKeepalive(): void {
+    if (this.pingInterval) {
+      clearInterval(this.pingInterval);
+      this.pingInterval = null;
+    }
+  }
+
+  public ensureConnected(): Promise<void> {
+    if (this.isConnected()) {
+      return Promise.resolve();
+    }
+    if (this.connectPromise) {
+      return this.connectPromise;
+    }
+    this.connectPromise = this.connect().finally(() => {
+      this.connectPromise = null;
+    });
+    return this.connectPromise;
+  }
 
   public connect(): Promise<void> {
+    if (this.isDisposed) {
+      return Promise.reject(new Error('IpcClient is disposed'));
+    }
+    if (this.isConnected()) {
+      return Promise.resolve();
+    }
+
+    const port = this.getActivePort();
+    if (!port) {
+      return Promise.reject(new Error('Sidecar daemon port is not available'));
+    }
+
+    if (this.ws) {
+      try {
+        this.ws.removeAllListeners();
+        this.ws.close();
+      } catch {}
+      this.ws = null;
+    }
+
     return new Promise((resolve, reject) => {
-      const url = `ws://127.0.0.1:${this.port}/ws`;
+      const url = `ws://127.0.0.1:${port}/ws`;
       this.outputChannel?.appendLine(`[IPC CLIENT] Connecting to ${url}...`);
 
       const headers = {
         Authorization: `Bearer ${this.token}`,
       };
 
-      this.ws = new WebSocket(url, { headers });
+      let wsInstance: WebSocket;
+      try {
+        wsInstance = new WebSocket(url, { headers });
+      } catch (err) {
+        return reject(err);
+      }
+      this.ws = wsInstance;
 
-      let resolved = false;
+      let settled = false;
 
-      this.ws.on('open', () => {
+      const connectionTimeout = setTimeout(() => {
+        if (!settled) {
+          settled = true;
+          try {
+            wsInstance.close();
+          } catch {}
+          if (this.ws === wsInstance) {
+            this.ws = null;
+          }
+          reject(new Error(`Connection to daemon timed out after 10000ms on port ${port}`));
+        }
+      }, 10000);
+
+      wsInstance.on('open', () => {
         this.outputChannel?.appendLine('[IPC CLIENT] Connected successfully.');
-        if (!resolved) {
-          resolved = true;
+        if (!settled) {
+          settled = true;
+          clearTimeout(connectionTimeout);
+          this.startKeepalive();
           resolve();
         }
       });
 
-      this.ws.on('message', (data: WebSocket.RawData) => {
+      wsInstance.on('message', (data: WebSocket.RawData) => {
         const text = data.toString();
         this.handleIncomingMessage(text);
       });
 
-      this.ws.on('error', (err) => {
+      wsInstance.on('error', (err) => {
         this.outputChannel?.appendLine(`[IPC CLIENT ERROR] ${err.message}`);
-        if (!resolved) {
-          resolved = true;
+        if (!settled) {
+          settled = true;
+          clearTimeout(connectionTimeout);
+          if (this.ws === wsInstance) {
+            this.ws = null;
+          }
           reject(err);
         }
       });
 
-      this.ws.on('close', (code, reason) => {
+      wsInstance.on('close', (code, reason) => {
         this.outputChannel?.appendLine(`[IPC CLIENT CLOSED] Code: ${code}, Reason: ${reason}`);
-        this.ws = null;
+        this.stopKeepalive();
+        if (this.ws === wsInstance) {
+          this.ws = null;
+        }
         // Reject all pending requests
         for (const [id, req] of this.pendingRequests.entries()) {
           clearTimeout(req.timer);
@@ -70,9 +190,14 @@ export class IpcClient implements vscode.Disposable {
     });
   }
 
-  public sendRequest<T = any>(method: string, params?: unknown, timeoutMs = 90000): Promise<T> {
-    if (this.isDisposed || !this.ws || this.ws.readyState !== WebSocket.OPEN) {
-      return Promise.reject(new Error('IPC WebSocket is not connected or client is disposed'));
+  public async sendRequest<T = any>(method: string, params?: unknown, timeoutMs = 90000): Promise<T> {
+    if (this.isDisposed) {
+      throw new Error('IPC WebSocket client is disposed');
+    }
+
+    if (!this.isConnected()) {
+      this.outputChannel?.appendLine(`[IPC CLIENT] Socket not connected. Auto-reconnecting before ${method}...`);
+      await this.ensureConnected();
     }
 
     const id = this.requestIdCounter++;
@@ -140,9 +265,11 @@ export class IpcClient implements vscode.Disposable {
     }
     set.add(handler);
 
-    return new vscode.Disposable(() => {
-      set?.delete(handler);
-    });
+    return {
+      dispose: () => {
+        set?.delete(handler);
+      },
+    };
   }
 
   private handleIncomingMessage(text: string): void {
@@ -185,8 +312,11 @@ export class IpcClient implements vscode.Disposable {
 
   public dispose(): void {
     this.isDisposed = true;
+    this.stopKeepalive();
     if (this.ws) {
-      this.ws.close();
+      try {
+        this.ws.close();
+      } catch {}
       this.ws = null;
     }
     for (const req of this.pendingRequests.values()) {

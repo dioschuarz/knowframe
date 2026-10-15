@@ -1,13 +1,42 @@
 ---
-name: "speckit-checklist"
-description: "Generate a custom checklist for the current feature based on user requirements."
-compatibility: "Requires spec-kit project structure with .specify/ directory"
+name: speckit-checklist
+description: Generate a custom checklist for the current feature based on user requirements.
+compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: "github-spec-kit"
-  source: "templates/commands/checklist.md"
+  author: github-spec-kit
+  source: templates/commands/checklist.md
+wiki:
+  content_hash: d6264b53868b9cb4b854fed6902bb5386d32c40c66acbe84c42a1ab5f5e30946
+  fragments:
+    checklist-purpose-unit-tests-for-english:
+      tokens: 387
+      inbound: 0
+      outbound: 0
+    user-input:
+      tokens: 30
+      inbound: 0
+      outbound: 0
+    pre-execution-checks:
+      tokens: 497
+      inbound: 0
+      outbound: 0
+    execution-steps:
+      tokens: 2830
+      inbound: 0
+      outbound: 0
+    example-checklist-types-sample-items:
+      tokens: 419
+      inbound: 0
+      outbound: 0
+    anti-examples-what-not-to-do:
+      tokens: 341
+      inbound: 0
+      outbound: 0
+    post-execution-checks:
+      tokens: 475
+      inbound: 0
+      outbound: 0
 ---
-
-
 ## Checklist Purpose: "Unit Tests for English"
 
 **CRITICAL CONCEPT**: Checklists are **UNIT TESTS FOR REQUIREMENTS WRITING** - they validate the quality, clarity, and completeness of requirements in a given domain.

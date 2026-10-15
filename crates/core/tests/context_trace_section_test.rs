@@ -1,5 +1,4 @@
-use std::fs;
-use tempfile::TempDir;
+use llm_wiki_core::cli::trace_cmd::execute_trace;
 use llm_wiki_core::fragment::FragmentMetadata;
 use llm_wiki_core::graph::builder::GraphTopology;
 use llm_wiki_core::model::{NoteEdge, NoteNode};
@@ -7,7 +6,8 @@ use llm_wiki_core::trace::beam::{
     calculate_context_reduction, compute_candidate_score, refine_section_target,
     trace_context_section,
 };
-use llm_wiki_core::cli::trace_cmd::execute_trace;
+use std::fs;
+use tempfile::TempDir;
 
 #[test]
 fn test_context_reduction_calculation() {
@@ -36,7 +36,11 @@ fn test_context_reduction_calculation() {
 
 #[test]
 fn test_candidate_scoring_and_section_refinement() {
-    let mut node = NoteNode::new("arch.md".to_string(), "arch.md".to_string(), "System Architecture".to_string());
+    let mut node = NoteNode::new(
+        "arch.md".to_string(),
+        "arch.md".to_string(),
+        "System Architecture".to_string(),
+    );
     node.tokens = 25_000;
     node.betweenness = 0.4;
     node.fragments = vec![
@@ -65,7 +69,8 @@ fn test_candidate_scoring_and_section_refinement() {
     assert!(score > 0.4);
     assert!(!reasons.is_empty());
 
-    let (frag_anchor, frag_tokens, reduction, refine_reasons) = refine_section_target(&node, &query_tokens);
+    let (frag_anchor, frag_tokens, reduction, refine_reasons) =
+        refine_section_target(&node, &query_tokens);
     assert_eq!(frag_anchor, Some("oauth-authentication".to_string()));
     assert_eq!(frag_tokens, Some(2_500));
     // Reduction = (25000 - 2500) / 25000 = 22500 / 25000 = 90.0%
@@ -79,13 +84,21 @@ fn test_beam_search_traversal_and_section_routing() {
     let mut topology = GraphTopology::new();
 
     // Node 1: AGENTS.md (Entrypoint)
-    let mut agents = NoteNode::new("AGENTS.md".to_string(), "AGENTS.md".to_string(), "Agents Operating System".to_string());
+    let mut agents = NoteNode::new(
+        "AGENTS.md".to_string(),
+        "AGENTS.md".to_string(),
+        "Agents Operating System".to_string(),
+    );
     agents.tokens = 1_200;
     agents.betweenness = 0.8;
     topology.add_node(agents);
 
     // Node 2: architecture.md (Hop 1) with large doc (30k tokens) and small section (3k tokens)
-    let mut arch = NoteNode::new("architecture.md".to_string(), "architecture.md".to_string(), "Architecture Overview".to_string());
+    let mut arch = NoteNode::new(
+        "architecture.md".to_string(),
+        "architecture.md".to_string(),
+        "Architecture Overview".to_string(),
+    );
     arch.tokens = 30_000;
     arch.betweenness = 0.5;
     arch.fragments = vec![
@@ -142,7 +155,11 @@ fn test_cli_execute_trace_section() {
     let dir = TempDir::new().unwrap();
     let root = dir.path();
 
-    fs::write(root.join("AGENTS.md"), "# AGENTS\n\nEntrypoint to [docs/security.md](docs/security.md).\n").unwrap();
+    fs::write(
+        root.join("AGENTS.md"),
+        "# AGENTS\n\nEntrypoint to [docs/security.md](docs/security.md).\n",
+    )
+    .unwrap();
     fs::create_dir_all(root.join("docs")).unwrap();
     let sec_content = r#"# Security Architecture
 

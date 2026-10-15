@@ -4,9 +4,9 @@ pub mod canonical;
 pub mod fingerprint;
 pub mod scorer;
 
+use serde::{Deserialize, Serialize};
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
-use serde::{Deserialize, Serialize};
 
 pub use canonical::*;
 pub use fingerprint::*;
@@ -74,7 +74,11 @@ pub enum CollisionClassification {
 pub fn detect_collisions_in_candidate(
     overlay: &CandidateOverlay,
     _workspace_root: &Path,
-) -> (Vec<SemanticCollision>, Vec<CollisionSignature>, Vec<WarningItem>) {
+) -> (
+    Vec<SemanticCollision>,
+    Vec<CollisionSignature>,
+    Vec<WarningItem>,
+) {
     let known_nodes = overlay.collect_known_nodes();
     let mut index = InvertedIndex::new();
 
@@ -82,7 +86,10 @@ pub fn detect_collisions_in_candidate(
     for (id, path) in &known_nodes {
         let content = std::fs::read_to_string(path).unwrap_or_default();
         let headings = overlay.get_headings(id).unwrap_or(&[]).to_vec();
-        let tags = overlay.get_node(id).map(|n| n.tags.clone()).unwrap_or_default();
+        let tags = overlay
+            .get_node(id)
+            .map(|n| n.tags.clone())
+            .unwrap_or_default();
 
         let fp = extract_fingerprint(id, &content, &headings, &tags);
         index.insert(fp);
@@ -124,7 +131,10 @@ pub fn detect_collisions_in_candidate(
                             is_entrypoint_referenced: entrypoint_citations.contains(staged_id),
                             degree: staged_node.map(|n| n.in_degree + n.out_degree).unwrap_or(0),
                             betweenness: staged_node.map(|n| n.betweenness as f32).unwrap_or(0.0),
-                            heading_count: overlay.get_headings(staged_id).map(|h| h.len()).unwrap_or(0),
+                            heading_count: overlay
+                                .get_headings(staged_id)
+                                .map(|h| h.len())
+                                .unwrap_or(0),
                             token_count: staged_node.map(|n| n.tokens).unwrap_or(0),
                             commit_timestamp: None,
                         };
@@ -134,7 +144,10 @@ pub fn detect_collisions_in_candidate(
                             is_entrypoint_referenced: entrypoint_citations.contains(&cand_id),
                             degree: cand_node.map(|n| n.in_degree + n.out_degree).unwrap_or(0),
                             betweenness: cand_node.map(|n| n.betweenness as f32).unwrap_or(0.0),
-                            heading_count: overlay.get_headings(&cand_id).map(|h| h.len()).unwrap_or(0),
+                            heading_count: overlay
+                                .get_headings(&cand_id)
+                                .map(|h| h.len())
+                                .unwrap_or(0),
                             token_count: cand_node.map(|n| n.tokens).unwrap_or(0),
                             commit_timestamp: None,
                         };
@@ -173,7 +186,8 @@ pub fn detect_collisions_in_graph(
 ) -> Vec<SemanticCollision> {
     use rayon::prelude::*;
 
-    let nodes: Vec<_> = topology.nodes.values().cloned().collect();
+    let mut nodes: Vec<_> = topology.nodes.values().cloned().collect();
+    nodes.sort_by(|a, b| a.id.cmp(&b.id));
     if nodes.is_empty() {
         return Vec::new();
     }
@@ -216,9 +230,11 @@ pub fn detect_collisions_in_graph(
         .map(|e| e.target.clone())
         .collect();
 
-    let mut collisions: Vec<SemanticCollision> = index
-        .doc_to_fingerprint
-        .par_iter()
+    let mut docs: Vec<(&String, &DocumentFingerprint)> = index.doc_to_fingerprint.iter().collect();
+    docs.sort_by(|a, b| a.0.cmp(b.0));
+
+    let mut collisions: Vec<SemanticCollision> = docs
+        .into_par_iter()
         .flat_map(|(doc_id, fp)| {
             let candidates = index.query_candidates(fp, 30);
             let mut doc_cols = Vec::new();
@@ -265,7 +281,8 @@ pub fn detect_collisions_in_graph(
         b.composite_similarity
             .partial_cmp(&a.composite_similarity)
             .unwrap_or(std::cmp::Ordering::Equal)
+            .then_with(|| a.source_id.cmp(&b.source_id))
+            .then_with(|| a.target_id.cmp(&b.target_id))
     });
     collisions
 }
-

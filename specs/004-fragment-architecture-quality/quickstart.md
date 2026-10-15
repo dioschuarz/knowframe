@@ -1,3 +1,60 @@
+---
+wiki:
+  content_hash: 00d842759298d929cf5ee6cedc3e61de360636f3767df5450ca79d336cee80a4
+  fragments:
+    quickstart-fragment-level-architecture-5-pillar-quality-scenarios:
+      tokens: 1071
+      inbound: 0
+      outbound: 0
+    scenario-1-pre-commit-frontmatter-materialization-automatic-staging:
+      tokens: 325
+      inbound: 0
+      outbound: 0
+    objective:
+      tokens: 57
+      inbound: 0
+      outbound: 0
+    steps:
+      tokens: 251
+      inbound: 0
+      outbound: 0
+    scenario-2-section-fragment-link-resolution-dangling-anchor-detection:
+      tokens: 231
+      inbound: 0
+      outbound: 0
+    objective-1:
+      tokens: 32
+      inbound: 0
+      outbound: 0
+    steps-1:
+      tokens: 184
+      inbound: 0
+      outbound: 0
+    scenario-3-context-trace-section-level-routing-context-reduction:
+      tokens: 205
+      inbound: 0
+      outbound: 0
+    objective-2:
+      tokens: 27
+      inbound: 0
+      outbound: 0
+    steps-2:
+      tokens: 164
+      inbound: 0
+      outbound: 0
+    scenario-4-webview-fragment-inspector-5-pillar-health-inspection:
+      tokens: 264
+      inbound: 0
+      outbound: 0
+    objective-3:
+      tokens: 41
+      inbound: 0
+      outbound: 0
+    steps-3:
+      tokens: 205
+      inbound: 0
+      outbound: 0
+---
 # Quickstart: Fragment-Level Architecture & 5-Pillar Quality Scenarios
 
 **Feature Branch:** `004-fragment-architecture-quality`  

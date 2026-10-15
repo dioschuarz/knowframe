@@ -66,6 +66,18 @@
         "title": "LLM Wiki: Configure Evolution & KOS",
         "category": "LLM Wiki",
         "icon": "$(gear)"
+      },
+      {
+        "command": "llmWiki.openSettings",
+        "title": "LLM Wiki: Open Management & Settings",
+        "category": "LLM Wiki",
+        "icon": "$(gear)"
+      },
+      {
+        "command": "llmWiki.openHarness",
+        "title": "LLM Wiki: Open AI Harness & Tooling",
+        "category": "LLM Wiki",
+        "icon": "$(tools)"
       }
     ],
     "menus": {
@@ -90,6 +102,12 @@
         },
         {
           "command": "llmWiki.reviewEvolution"
+        },
+        {
+          "command": "llmWiki.openSettings"
+        },
+        {
+          "command": "llmWiki.openHarness"
         }
       ],
       "editor/title": [
@@ -101,9 +119,14 @@
       ],
       "view/title": [
         {
-          "command": "llmWiki.showKnowledgeGraph",
+          "command": "llmWiki.rescanVault",
           "when": "view == llmWiki.sidebarView",
-          "group": "navigation"
+          "group": "navigation@1"
+        },
+        {
+          "command": "llmWiki.openSettings",
+          "when": "view == llmWiki.sidebarView",
+          "group": "navigation@2"
         }
       ]
     },
@@ -173,7 +196,9 @@
     "package:verify": "npm run package && node -e \"const fs = require('fs'); const st = fs.statSync('llm-wiki-0.1.0.vsix'); console.log('VSIX size: ' + (st.size / (1024*1024)).toFixed(2) + ' MB'); if(st.size > 25*1024*1024) { console.error('VSIX exceeds 25MB budget'); process.exit(1); }\"",
     "lint": "eslint src --ext ts",
     "test": "node --test --experimental-strip-types test/suite/*.test.ts",
-    "test:e2e": "node --test --experimental-strip-types test/suite/evolution.e2e.test.ts"
+    "test:e2e": "node --test --experimental-strip-types test/suite/evolution.e2e.test.ts",
+    "dev": "code --user-data-dir=/tmp/vscode-dev-profile --extensionDevelopmentPath=${PWD} /home/ds/projects",
+    "launch-dev": "code --user-data-dir=/tmp/vscode-dev-profile --extensionDevelopmentPath=${PWD} /home/ds/projects"
   },
   "dependencies": {
     "@types/d3-force": "^3.0.10",

@@ -35,10 +35,12 @@ pub fn evaluate_canonical_candidate(
     // 1. Entrypoint citation precedence (AGENTS.md, CLAUDE.md, README.md)
     if doc_a.is_entrypoint_referenced && !doc_b.is_entrypoint_referenced {
         score_a += 3.5;
-        evidence_a.push("Referenced by project harness entrypoint (AGENTS.md / README.md)".to_string());
+        evidence_a
+            .push("Referenced by project harness entrypoint (AGENTS.md / README.md)".to_string());
     } else if doc_b.is_entrypoint_referenced && !doc_a.is_entrypoint_referenced {
         score_b += 3.5;
-        evidence_b.push("Referenced by project harness entrypoint (AGENTS.md / README.md)".to_string());
+        evidence_b
+            .push("Referenced by project harness entrypoint (AGENTS.md / README.md)".to_string());
     }
 
     // 2. Graph Centrality (Degree and Betweenness)
@@ -46,38 +48,62 @@ pub fn evaluate_canonical_candidate(
         let diff = doc_a.degree - doc_b.degree;
         let weight = (diff as f32 * 0.5).min(2.5);
         score_a += weight;
-        evidence_a.push(format!("Higher graph connectivity (degree {} vs {})", doc_a.degree, doc_b.degree));
+        evidence_a.push(format!(
+            "Higher graph connectivity (degree {} vs {})",
+            doc_a.degree, doc_b.degree
+        ));
     } else if doc_b.degree > doc_a.degree {
         let diff = doc_b.degree - doc_a.degree;
         let weight = (diff as f32 * 0.5).min(2.5);
         score_b += weight;
-        evidence_b.push(format!("Higher graph connectivity (degree {} vs {})", doc_b.degree, doc_a.degree));
+        evidence_b.push(format!(
+            "Higher graph connectivity (degree {} vs {})",
+            doc_b.degree, doc_a.degree
+        ));
     }
 
     if doc_a.betweenness > doc_b.betweenness + 0.05 {
         score_a += 1.5;
-        evidence_a.push(format!("Higher architectural centrality (betweenness {:.2} vs {:.2})", doc_a.betweenness, doc_b.betweenness));
+        evidence_a.push(format!(
+            "Higher architectural centrality (betweenness {:.2} vs {:.2})",
+            doc_a.betweenness, doc_b.betweenness
+        ));
     } else if doc_b.betweenness > doc_a.betweenness + 0.05 {
         score_b += 1.5;
-        evidence_b.push(format!("Higher architectural centrality (betweenness {:.2} vs {:.2})", doc_b.betweenness, doc_a.betweenness));
+        evidence_b.push(format!(
+            "Higher architectural centrality (betweenness {:.2} vs {:.2})",
+            doc_b.betweenness, doc_a.betweenness
+        ));
     }
 
     // 3. Structural Heading Completeness
     if doc_a.heading_count > doc_b.heading_count + 1 {
         score_a += 1.5;
-        evidence_a.push(format!("More comprehensive section headings ({} vs {})", doc_a.heading_count, doc_b.heading_count));
+        evidence_a.push(format!(
+            "More comprehensive section headings ({} vs {})",
+            doc_a.heading_count, doc_b.heading_count
+        ));
     } else if doc_b.heading_count > doc_a.heading_count + 1 {
         score_b += 1.5;
-        evidence_b.push(format!("More comprehensive section headings ({} vs {})", doc_b.heading_count, doc_a.heading_count));
+        evidence_b.push(format!(
+            "More comprehensive section headings ({} vs {})",
+            doc_b.heading_count, doc_a.heading_count
+        ));
     }
 
     // 4. Content Depth (tokens)
     if doc_a.token_count > (doc_b.token_count as f32 * 1.5) as u32 {
         score_a += 1.0;
-        evidence_a.push(format!("Greater technical depth ({} tokens vs {})", doc_a.token_count, doc_b.token_count));
+        evidence_a.push(format!(
+            "Greater technical depth ({} tokens vs {})",
+            doc_a.token_count, doc_b.token_count
+        ));
     } else if doc_b.token_count > (doc_a.token_count as f32 * 1.5) as u32 {
         score_b += 1.0;
-        evidence_b.push(format!("Greater technical depth ({} tokens vs {})", doc_b.token_count, doc_a.token_count));
+        evidence_b.push(format!(
+            "Greater technical depth ({} tokens vs {})",
+            doc_b.token_count, doc_a.token_count
+        ));
     }
 
     // 5. Chronology (earlier creation timestamp)

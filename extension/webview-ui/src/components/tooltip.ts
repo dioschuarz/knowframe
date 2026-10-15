@@ -90,7 +90,7 @@ export function renderKnobTooltipHtml(knobKey: string): string {
 
   return `
     <div class="knob-tooltip-wrapper knob-tooltip-trigger" data-knob="${knobKey}" tabindex="0" role="tooltip" aria-label="${details.name} Info">
-      <span class="tooltip-icon">ⓘ</span>
+      <span class="tooltip-icon knob-tooltip-icon" aria-hidden="true">i</span>
       <div class="knob-tooltip-popover">
         <div class="tooltip-popover-title">${details.name}</div>
         <p class="tooltip-popover-desc">${details.description}</p>

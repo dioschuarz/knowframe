@@ -1,4 +1,4 @@
-import { WebviewInboundMessage, WebviewOutboundMessage } from '../../../src/types/protocol';
+import type { WebviewInboundMessage, WebviewOutboundMessage, NavigationIntent } from '../../../src/types/protocol.ts';
 
 declare function acquireVsCodeApi(): {
   postMessage: (msg: unknown) => void;
@@ -99,6 +99,26 @@ export class WebviewRpcBridge {
     });
   }
 
+  public removeExclusion(pattern: string, scope: 'scan' | 'graph' = 'graph'): void {
+    this.sendMessage({
+      type: 'removeExclusion',
+      payload: { pattern, scope },
+    });
+  }
+
+  public requestExclusions(): void {
+    this.sendMessage({
+      type: 'requestExclusions',
+    });
+  }
+
+  public navigateToDetail(intent: NavigationIntent): void {
+    this.sendMessage({
+      type: 'navigateToDetail',
+      payload: intent,
+    });
+  }
+
   public updateColorGroups(colorGroups: any[]): void {
     this.sendMessage({
       type: 'updateColorGroups',
@@ -140,10 +160,134 @@ export class WebviewRpcBridge {
     });
   }
 
-  public applyTransformationPlan(planId: string): void {
+  public getStrategySet(opportunityId: string): void {
+    this.sendMessage({
+      type: 'getStrategySet',
+      payload: { opportunityId },
+    });
+  }
+
+  public validateStrategySelection(selectedStrategies: string[]): void {
+    this.sendMessage({
+      type: 'validateStrategySelection',
+      payload: { selectedStrategies },
+    });
+  }
+
+  public calculatePlanValue(opportunityId: string, selectedStrategies: string[]): void {
+    this.sendMessage({
+      type: 'calculatePlanValue',
+      payload: { opportunityId, selectedStrategies },
+    });
+  }
+
+  public generateMultiStrategyPlan(opportunityId: string, selectedStrategies: string[]): void {
+    this.sendMessage({
+      type: 'generateTransformationPlan',
+      payload: { opportunityId, selectedStrategies },
+    });
+  }
+
+  public applyTransformationPlan(plan: { planId?: string; plan_id?: string; [key: string]: unknown } | string): void {
+    const payload = typeof plan === 'string'
+      ? { planId: plan }
+      : { planId: plan.planId || plan.plan_id, plan };
     this.sendMessage({
       type: 'applyTransformationPlan',
-      payload: { planId },
+      payload,
+    });
+  }
+
+  public getHarnessStatus(): void {
+    this.sendMessage({
+      type: 'getHarnessStatus',
+    });
+  }
+
+  public setActiveHarness(harnessFile: string): void {
+    this.sendMessage({
+      type: 'setActiveHarness',
+      payload: { harness_file: harnessFile },
+    });
+  }
+
+  public initializeHarness(targetHarness: string = 'AGENTS.md'): void {
+    this.sendMessage({
+      type: 'initializeHarness',
+      payload: { targetHarness },
+    });
+  }
+
+  public syncHarnesses(): void {
+    this.sendMessage({
+      type: 'syncHarnesses',
+      payload: {},
+    });
+  }
+
+  public configureHarnessBase(options: {
+    active_harness?: string;
+    enabled_harnesses: string[];
+    create_folders?: string[];
+    consolidate_index?: boolean;
+    clean_unused?: boolean;
+  }): void {
+    this.sendMessage({
+      type: 'configureHarnessBase',
+      payload: options,
+    });
+  }
+
+  public getSkillCatalog(): void {
+    this.sendMessage({
+      type: 'getSkillCatalog',
+    });
+  }
+
+  public analyzeDirectoryStructure(): void {
+    this.sendMessage({
+      type: 'analyzeDirectoryStructure',
+    });
+  }
+
+  public generateGovernancePlan(strategyType: string, targetFileOrDir: string): void {
+    this.sendMessage({
+      type: 'generateGovernancePlan',
+      payload: { strategy_type: strategyType, target_file_or_dir: targetFileOrDir },
+    });
+  }
+
+  public applyGovernancePlan(planId: string, approvalToken: string): void {
+    this.sendMessage({
+      type: 'applyGovernancePlan',
+      payload: { plan_id: planId, approval_token: approvalToken },
+    });
+  }
+
+  public resolveDocumentReview(docIds: string[], reason?: string): void {
+    this.sendMessage({
+      type: 'resolveDocumentReview',
+      payload: { doc_ids: docIds, reason },
+    });
+  }
+
+  public getAffectedDocuments(options?: { base_ref?: string; head_ref?: string; staged?: boolean }): void {
+    this.sendMessage({
+      type: 'getAffectedDocuments',
+      payload: options || {},
+    });
+  }
+
+  public requestHarnessTools(): void {
+    this.sendMessage({
+      type: 'requestHarnessTools',
+    });
+  }
+
+  public installHarnessTool(toolId: string): void {
+    this.sendMessage({
+      type: 'installHarnessTool',
+      payload: { toolId },
     });
   }
 

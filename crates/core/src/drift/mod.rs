@@ -4,12 +4,14 @@ pub mod detector;
 pub mod extractor;
 pub mod freshness;
 pub mod index;
+pub mod review;
 
 pub use detector::*;
 pub use freshness::*;
+pub use review::*;
 
-use std::collections::{HashMap, HashSet};
 use serde::{Deserialize, Serialize};
+use std::collections::{HashMap, HashSet};
 
 /// Bidirectional reverse impact index mapping code files and symbols to markdown notes.
 #[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
@@ -20,6 +22,9 @@ pub struct ReverseImpactIndex {
     pub symbol_to_docs: HashMap<String, HashSet<String>>,
     /// Maps doc ID -> set of code paths referenced in the doc
     pub doc_to_code: HashMap<String, HashSet<String>>,
+    /// Maps code file path -> (doc_id -> set of dependency sources)
+    #[serde(default, skip_serializing_if = "HashMap::is_empty")]
+    pub code_to_doc_sources: HashMap<String, HashMap<String, HashSet<crate::model::DependencySource>>>,
 }
 
 /// Technical drift diagnostic identifying stale code citations in markdown.

@@ -17,6 +17,10 @@ import type {
   Tier1Objectives,
   Tier2Parameters,
   OptimizationProfile,
+  StrategySet,
+  ValidateSelectionResponse,
+  CalculatePlanValueResponse,
+  KnowledgeOrganizationStrategy,
 } from '../types/evolution.ts';
 
 export interface EvolutionUiBridge {
@@ -238,6 +242,42 @@ export class EvolutionManager {
   public onDidApplyTransformation(listener: Listener<ApplyPlanResponse>): () => void {
     this.transformationListeners.add(listener);
     return () => this.transformationListeners.delete(listener);
+  }
+
+  // --- Feature 007 / Strategy Selection & Combination ---
+
+  public async getStrategySet(opportunityId: string): Promise<StrategySet> {
+    return this.ipcClient.sendRequest<StrategySet>('evolution/getStrategySet', {
+      opportunity_id: opportunityId,
+    });
+  }
+
+  public async validateStrategySelection(
+    selectedStrategies: KnowledgeOrganizationStrategy[],
+  ): Promise<ValidateSelectionResponse> {
+    return this.ipcClient.sendRequest<ValidateSelectionResponse>('evolution/validateStrategySelection', {
+      selected_strategies: selectedStrategies,
+    });
+  }
+
+  public async calculatePlanValue(
+    opportunityId: string,
+    selectedStrategies: KnowledgeOrganizationStrategy[],
+  ): Promise<CalculatePlanValueResponse> {
+    return this.ipcClient.sendRequest<CalculatePlanValueResponse>('evolution/calculatePlanValue', {
+      opportunity_id: opportunityId,
+      selected_strategies: selectedStrategies,
+    });
+  }
+
+  public async generateMultiStrategyPlan(
+    opportunityId: string,
+    selectedStrategies: KnowledgeOrganizationStrategy[],
+  ): Promise<TransformationPlan> {
+    return this.ipcClient.sendRequest<TransformationPlan>('evolution/generatePlan', {
+      opportunity_id: opportunityId,
+      selected_strategies: selectedStrategies,
+    });
   }
 
   public dispose(): void {

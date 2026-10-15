@@ -1,8 +1,117 @@
 ---
-
-description: "Task list template for feature implementation"
+description: Task list template for feature implementation
+wiki:
+  content_hash: 6554134dd0453f0d88d0401e38e2bc10236c53df21543c454f89d4c867df9bef
+  fragments:
+    description-task-list-template-for-feature-implementation:
+      tokens: 11
+      inbound: 0
+      outbound: 0
+    tasks-feature-name:
+      tokens: 2244
+      inbound: 0
+      outbound: 0
+    format-id-p-story-description:
+      tokens: 65
+      inbound: 0
+      outbound: 0
+    path-conventions:
+      tokens: 201
+      inbound: 0
+      outbound: 0
+    phase-1-setup-shared-infrastructure:
+      tokens: 63
+      inbound: 0
+      outbound: 0
+    phase-2-foundational-blocking-prerequisites:
+      tokens: 154
+      inbound: 0
+      outbound: 0
+    phase-3-user-story-1-title-priority-p1-mvp:
+      tokens: 314
+      inbound: 0
+      outbound: 0
+    tests-for-user-story-1-optional-only-if-tests-requested:
+      tokens: 93
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-1:
+      tokens: 170
+      inbound: 0
+      outbound: 0
+    phase-4-user-story-2-title-priority-p2:
+      tokens: 244
+      inbound: 0
+      outbound: 0
+    tests-for-user-story-2-optional-only-if-tests-requested:
+      tokens: 78
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-2:
+      tokens: 120
+      inbound: 0
+      outbound: 0
+    phase-5-user-story-3-title-priority-p3:
+      tokens: 231
+      inbound: 0
+      outbound: 0
+    tests-for-user-story-3-optional-only-if-tests-requested:
+      tokens: 78
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-3:
+      tokens: 107
+      inbound: 0
+      outbound: 0
+    phase-n-polish-cross-cutting-concerns:
+      tokens: 98
+      inbound: 0
+      outbound: 0
+    dependencies-execution-order:
+      tokens: 366
+      inbound: 0
+      outbound: 0
+    phase-dependencies:
+      tokens: 109
+      inbound: 0
+      outbound: 0
+    user-story-dependencies:
+      tokens: 104
+      inbound: 0
+      outbound: 0
+    within-each-user-story:
+      tokens: 45
+      inbound: 0
+      outbound: 0
+    parallel-opportunities:
+      tokens: 102
+      inbound: 0
+      outbound: 0
+    parallel-example-user-story-1:
+      tokens: 116
+      inbound: 0
+      outbound: 0
+    implementation-strategy:
+      tokens: 215
+      inbound: 0
+      outbound: 0
+    mvp-first-user-story-1-only:
+      tokens: 70
+      inbound: 0
+      outbound: 0
+    incremental-delivery:
+      tokens: 75
+      inbound: 0
+      outbound: 0
+    parallel-team-strategy:
+      tokens: 66
+      inbound: 0
+      outbound: 0
+    notes:
+      tokens: 85
+      inbound: 0
+      outbound: 0
 ---
-
 # Tasks: [FEATURE NAME]
 
 **Input**: Design documents from `/specs/[###-feature-name]/`

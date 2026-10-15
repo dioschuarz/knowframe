@@ -18,7 +18,9 @@ fn test_baseline_save_and_load_lifecycle() {
         line_number: 15,
     });
     baseline.orphan_nodes.insert("notes/orphan.md".to_string());
-    baseline.collisions.push(CollisionSignature::new("notes/y.md", "notes/x.md"));
+    baseline
+        .collisions
+        .push(CollisionSignature::new("notes/y.md", "notes/x.md"));
     baseline.technical_drifts.push(DriftSignature {
         doc_path: "notes/arch.md".to_string(),
         referenced_code_path: "src/auth.ts".to_string(),
@@ -29,7 +31,9 @@ fn test_baseline_save_and_load_lifecycle() {
     save_baseline(root, &baseline).expect("save baseline");
 
     // Load and assert identical
-    let loaded = load_baseline(root).expect("load baseline").expect("baseline exists");
+    let loaded = load_baseline(root)
+        .expect("load baseline")
+        .expect("baseline exists");
     assert_eq!(loaded.baseline_commit, "deadbeef123");
     assert_eq!(loaded.total_debt, 4);
     assert_eq!(loaded.broken_links.len(), 1);
@@ -84,7 +88,9 @@ fn test_differential_evaluation_debt_ratchet_on_resolution() {
         target_ref: "missing.md".to_string(),
         line_number: 20,
     });
-    baseline.orphan_nodes.insert("notes/old_orphan.md".to_string());
+    baseline
+        .orphan_nodes
+        .insert("notes/old_orphan.md".to_string());
     baseline.total_debt = 2;
 
     // Developer fixes notes/legacy.md link and connects notes/old_orphan.md
@@ -134,7 +140,7 @@ fn test_signature_hashing_uniqueness() {
 #[test]
 fn test_initial_baseline_capture_on_brownfield() {
     use llm_wiki_core::graph::builder::GraphTopology;
-    use llm_wiki_core::model::{NoteEdge, NoteNode, NodeStatus, LinkType};
+    use llm_wiki_core::model::{LinkType, NodeStatus, NoteEdge, NoteNode};
 
     let mut topology = GraphTopology::new();
 
@@ -154,6 +160,7 @@ fn test_initial_baseline_capture_on_brownfield() {
         broken_links: 1,
         fragments: vec![],
         freshness: None,
+        code_dependencies: vec![],
     });
 
     // Add orphan node
@@ -172,6 +179,7 @@ fn test_initial_baseline_capture_on_brownfield() {
         broken_links: 0,
         fragments: vec![],
         freshness: None,
+        code_dependencies: vec![],
     });
 
     // Add broken edge originating from hub
@@ -207,7 +215,7 @@ fn test_brownfield_zero_regression_guarantee() {
     use llm_wiki_core::delta::updater::{FileDeltaItem, FileDeltaStatus};
     use llm_wiki_core::delta::GitDelta;
     use llm_wiki_core::graph::builder::GraphTopology;
-    use llm_wiki_core::model::{LinkType, NoteEdge, NoteNode, NodeStatus};
+    use llm_wiki_core::model::{LinkType, NodeStatus, NoteEdge, NoteNode};
 
     let mut topology = GraphTopology::new();
 
@@ -221,7 +229,11 @@ fn test_brownfield_zero_regression_guarantee() {
 
     for i in 0..50 {
         let note_id = format!("note_{:03}.md", i);
-        let mut node = NoteNode::new(&note_id, format!("/vault/{}", note_id), format!("Legacy Note {}", i));
+        let mut node = NoteNode::new(
+            &note_id,
+            format!("/vault/{}", note_id),
+            format!("Legacy Note {}", i),
+        );
         node.status = NodeStatus::Active;
         topology.add_node(node);
 
@@ -264,7 +276,11 @@ fn test_brownfield_zero_regression_guarantee() {
     let root = temp.path();
 
     // Write valid feature.md with reference to hub.md so it is connected
-    std::fs::write(root.join("feature.md"), "# Feature Documentation\n\nReferencing [[hub]].\n").unwrap();
+    std::fs::write(
+        root.join("feature.md"),
+        "# Feature Documentation\n\nReferencing [[hub]].\n",
+    )
+    .unwrap();
 
     let staged_delta = GitDelta {
         commit_sha: Some("new_commit_sha".to_string()),

@@ -34,7 +34,8 @@ PostgreSQL configuration.
     let fragments = extract_fragments_from_document(original, &parsed.edges);
     assert_eq!(fragments.len(), 3);
 
-    let updated = inject_materialized_frontmatter(original, &fragments).expect("inject frontmatter");
+    let updated =
+        inject_materialized_frontmatter(original, &fragments).expect("inject frontmatter");
 
     // Verify user keys are preserved
     assert!(updated.contains("title: System Architecture"));
@@ -89,7 +90,10 @@ fn test_frontmatter_cache_validity_and_invalidation_t014() {
 
     // Invalidate by changing body text
     let mutated_body = "# Section\nMutated content.\n";
-    assert!(!is_frontmatter_cache_valid(&valid_frontmatter, mutated_body));
+    assert!(!is_frontmatter_cache_valid(
+        &valid_frontmatter,
+        mutated_body
+    ));
 }
 
 #[test]
@@ -178,5 +182,8 @@ async fn test_pre_commit_blocks_broken_fragment_anchor_t017b() {
 
     // Execute validate: must BLOCK with exit code 1
     let exit_code = execute_validate(root, true, false, false, 5000).await;
-    assert_eq!(exit_code, 1, "Pre-commit validator must block on broken fragment anchor regression");
+    assert_eq!(
+        exit_code, 1,
+        "Pre-commit validator must block on broken fragment anchor regression"
+    );
 }

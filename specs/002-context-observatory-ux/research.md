@@ -1,3 +1,36 @@
+---
+wiki:
+  content_hash: 3cc041b916980b3edb3efc49f3bce2983f302c441513769e78c7a74c1443b659
+  fragments:
+    phase-0-research-ai-context-observatory-curated-knowledge-ux-002-context-observatory-ux:
+      tokens: 1214
+      inbound: 0
+      outbound: 0
+    technical-context-questions-resolved:
+      tokens: 1123
+      inbound: 0
+      outbound: 0
+    question-1-how-should-the-system-separate-technical-file-parsing-from-knowledge-graph-visualization:
+      tokens: 283
+      inbound: 0
+      outbound: 0
+    question-2-how-to-guarantee-the-target-resolvability-invariant-without-graph-pollution:
+      tokens: 201
+      inbound: 0
+      outbound: 0
+    question-3-how-should-the-contextual-inspector-be-embedded-in-the-webview:
+      tokens: 188
+      inbound: 0
+      outbound: 0
+    question-4-how-should-hop-constrained-focus-modes-be-executed:
+      tokens: 236
+      inbound: 0
+      outbound: 0
+    question-5-how-should-noise-pattern-suggestions-be-discovered:
+      tokens: 207
+      inbound: 0
+      outbound: 0
+---
 # Phase 0 Research: AI Context Observatory & Curated Knowledge UX (`002-context-observatory-ux`)
 
 **Feature Branch**: `002-context-observatory-ux`  

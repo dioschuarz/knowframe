@@ -1,3 +1,36 @@
+---
+wiki:
+  content_hash: a93b1902b586b10aaa40a0b5b7e43da250df02afe70d59e73197490630f34251
+  fragments:
+    research-technical-decisions-knowledge-organization-systems-structural-evidence-trade-offs:
+      tokens: 2206
+      inbound: 0
+      outbound: 0
+    1-research-questions-resolution-matrix:
+      tokens: 2120
+      inbound: 0
+      outbound: 0
+    rq-1-mathematical-formulation-of-the-10-structural-dimensions:
+      tokens: 827
+      inbound: 0
+      outbound: 0
+    rq-2-deterministic-mapping-from-tier-1-objectives-to-tier-2-parameters:
+      tokens: 482
+      inbound: 0
+      outbound: 0
+    rq-3-constraint-conflict-detection-algorithm:
+      tokens: 241
+      inbound: 0
+      outbound: 0
+    rq-4-evidence-based-structural-signatures-vs-size-signals:
+      tokens: 272
+      inbound: 0
+      outbound: 0
+    rq-5-deterministic-transformation-plan-generation-re-measurement:
+      tokens: 288
+      inbound: 0
+      outbound: 0
+---
 # Research & Technical Decisions: Knowledge Organization Systems, Structural Evidence & Trade-Offs
 
 **Feature Branch:** `005-structural-evolution-strategies`  

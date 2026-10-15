@@ -12,7 +12,7 @@
   <div id="token-container"></div>
   <canvas id="graph-canvas"></canvas>
   <div id="graph-loading-overlay" class="graph-loading-overlay">
-    <div class="loading-card">
+    <div id="loading-card" class="loading-card">
       <div class="loading-spinner"></div>
       <div class="loading-title">LLM Wiki Engine</div>
       <div class="loading-percent" id="loading-percent">0%</div>
@@ -20,6 +20,27 @@
       <div class="loading-bar-track">
         <div class="loading-bar-fill" id="loading-bar-fill" style="width: 0%"></div>
       </div>
+      <div id="loading-timeout-actions" class="loading-timeout-actions hidden">
+        <div class="loading-timeout-msg">Scan taking longer than expected.</div>
+        <div class="loading-actions-row">
+          <button id="btn-retry-loading" class="btn btn-secondary">Retry Scan</button>
+          <button id="btn-open-folder-loading" class="btn btn-primary">Open Folder</button>
+        </div>
+      </div>
+    </div>
+    <div id="no-workspace-card" class="no-workspace-card hidden">
+      <div class="no-workspace-icon">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
+        </svg>
+      </div>
+      <h2 class="no-workspace-title">No Workspace Open</h2>
+      <p class="no-workspace-desc">
+        LLM Wiki requires an open workspace folder or Obsidian vault to analyze knowledge graph topology, structural evolution, and token economics.
+      </p>
+      <button id="btn-open-workspace" class="btn btn-primary btn-large">
+        Open Folder or Vault
+      </button>
     </div>
   </div>
   <div id="node-tooltip"></div>

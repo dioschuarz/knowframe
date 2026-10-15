@@ -1,0 +1,1 @@
+../../../extension/skills/llm_wiki_extension/SKILL.md

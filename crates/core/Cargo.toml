@@ -34,6 +34,9 @@ lazy_static = "1.4"
 chrono = { version = "0.4", features = ["serde"] }
 rayon = "1.10"
 sha2 = "0.10"
+blake3 = "1.5"
+aho-corasick = "1.1"
+strsim = "0.11"
 
 [dev-dependencies]
 criterion = { version = "0.5", features = ["async_tokio"] }
@@ -78,4 +81,38 @@ harness = false
 [[bench]]
 name = "transformation_benchmark"
 harness = false
+
+[[bench]]
+name = "manager_summary_benchmark"
+harness = false
+
+[[bench]]
+name = "strategy_selection_benchmark"
+harness = false
+
+[[bench]]
+name = "governance_benchmark"
+harness = false
+
+[[bench]]
+name = "cold_scan_bench"
+harness = false
+
+[[bench]]
+name = "incremental_bench"
+harness = false
+
+[[bench]]
+name = "pre_commit_bench"
+harness = false
+
+[[bench]]
+name = "memory_bench"
+harness = false
+
+[[bench]]
+name = "traceability_benchmark"
+harness = false
+
+
 

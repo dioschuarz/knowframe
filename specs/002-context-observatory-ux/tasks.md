@@ -1,6 +1,95 @@
+---
+wiki:
+  content_hash: 643e87dd303b29942e6cdbeae108026c136e10ec73dfee69a3b478b2b9fb1fb2
+  fragments:
+    tasks-ai-context-observatory-curated-knowledge-ux-002-context-observatory-ux:
+      tokens: 9266
+      inbound: 0
+      outbound: 3
+    phase-1-setup-shared-infrastructure:
+      tokens: 1063
+      inbound: 0
+      outbound: 0
+    phase-2-foundational-blocking-prerequisites:
+      tokens: 273
+      inbound: 0
+      outbound: 0
+    phase-3-user-story-1-p0-calm-status-dashboard-zero-action-duplication-mvp:
+      tokens: 545
+      inbound: 0
+      outbound: 0
+    tests-for-user-story-1:
+      tokens: 52
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-1:
+      tokens: 369
+      inbound: 0
+      outbound: 0
+    phase-4-user-story-2-p1-contextual-selection-inspector-for-nodes-edges-health:
+      tokens: 5138
+      inbound: 0
+      outbound: 0
+    tests-for-user-story-2:
+      tokens: 57
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-2:
+      tokens: 4969
+      inbound: 0
+      outbound: 0
+    phase-5-user-story-3-p1-noise-management-first-class-graph-exclusions:
+      tokens: 518
+      inbound: 0
+      outbound: 0
+    tests-for-user-story-3:
+      tokens: 89
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-3:
+      tokens: 332
+      inbound: 0
+      outbound: 0
+    phase-6-user-story-4-p1-hop-constrained-focus-modes-semantic-visual-sizing:
+      tokens: 581
+      inbound: 0
+      outbound: 0
+    tests-for-user-story-4:
+      tokens: 47
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-4:
+      tokens: 419
+      inbound: 0
+      outbound: 0
+    phase-7-user-story-5-p2-advanced-settings-drawer-progressive-disclosure:
+      tokens: 372
+      inbound: 0
+      outbound: 0
+    implementation-for-user-story-5:
+      tokens: 270
+      inbound: 0
+      outbound: 0
+    phase-8-polish-cross-cutting-concerns:
+      tokens: 171
+      inbound: 0
+      outbound: 0
+    dependencies-execution-order:
+      tokens: 354
+      inbound: 0
+      outbound: 0
+    parallel-opportunities:
+      tokens: 156
+      inbound: 0
+      outbound: 0
+    implementation-strategy-mvp-first:
+      tokens: 176
+      inbound: 0
+      outbound: 0
+---
 # Tasks: AI Context Observatory & Curated Knowledge UX (`002-context-observatory-ux`)
 
-**Input**: [`specs/002-context-observatory-ux/plan.md`](plan.md), [`spec.md`](spec.md), [`data-model.md`](data-model.md), [`contracts/observatory_rpc_protocol.json`](contracts/observatory_rpc_protocol.json)  
+**Input**: [`specs/002-context-observatory-ux/plan.md`](plan.md), [`spec.md`](spec.md), [`data-model.md`](data-model.md), `contracts/observatory_rpc_protocol.json`  
 **Status**: Ready for Execution
 
 ---
@@ -9,9 +98,9 @@
 
 **Purpose**: Scaffolding new modules and schema definitions for v2 Observatory UX.
 
-- [X] T001 Update `.context-vault.yaml` deserializer in `crates/core/src/config/schema.rs` to support two-tier `scan.exclude` and `graph.exclude` arrays with default fallback to v1 schema.
-- [X] T002 [P] Update TypeScript config definitions in `extension/src/types.ts` to mirror the two-tier exclusion, focus mode schemas, and serializations.
-- [X] T003 [P] Add new JSON-RPC message types for exclusion preview, path exclusion, set central hub, and focus mode in `crates/core/src/ipc/protocol.rs`.
+- [X] T001 Update `.context-vault.yaml` deserializer in `crates/core/src/config/mod.rs` to support two-tier `scan.exclude` and `graph.exclude` arrays with default fallback to v1 schema.
+*extension/src/types.ts*-*extension/src/types.ts* *extension/src/types.ts*[*extension/src/types.ts*X*extension/src/types.ts*]*extension/src/types.ts* *extension/src/types.ts*T*extension/src/types.ts*0*extension/src/types.ts*0*extension/src/types.ts*2*extension/src/types.ts* *extension/src/types.ts*[*extension/src/types.ts*P*extension/src/types.ts*]*extension/src/types.ts* *extension/src/types.ts*U*extension/src/types.ts*p*extension/src/types.ts*d*extension/src/types.ts*a*extension/src/types.ts*t*extension/src/types.ts*e*extension/src/types.ts* *extension/src/types.ts*T*extension/src/types.ts*y*extension/src/types.ts*p*extension/src/types.ts*e*extension/src/types.ts*S*extension/src/types.ts*c*extension/src/types.ts*r*extension/src/types.ts*i*extension/src/types.ts*p*extension/src/types.ts*t*extension/src/types.ts* *extension/src/types.ts*c*extension/src/types.ts*o*extension/src/types.ts*n*extension/src/types.ts*f*extension/src/types.ts*i*extension/src/types.ts*g*extension/src/types.ts* *extension/src/types.ts*d*extension/src/types.ts*e*extension/src/types.ts*f*extension/src/types.ts*i*extension/src/types.ts*n*extension/src/types.ts*i*extension/src/types.ts*t*extension/src/types.ts*i*extension/src/types.ts*o*extension/src/types.ts*n*extension/src/types.ts*s*extension/src/types.ts* *extension/src/types.ts*i*extension/src/types.ts*n*extension/src/types.ts* *extension/src/types.ts*`*extension/src/types.ts*e*extension/src/types.ts*x*extension/src/types.ts*t*extension/src/types.ts*e*extension/src/types.ts*n*extension/src/types.ts*s*extension/src/types.ts*i*extension/src/types.ts*o*extension/src/types.ts*n*extension/src/types.ts*/*extension/src/types.ts*s*extension/src/types.ts*r*extension/src/types.ts*c*extension/src/types.ts*/*extension/src/types.ts*t*extension/src/types.ts*y*extension/src/types.ts*p*extension/src/types.ts*e*extension/src/types.ts*s*extension/src/types.ts*.*extension/src/types.ts*t*extension/src/types.ts*s*extension/src/types.ts*`*extension/src/types.ts* *extension/src/types.ts*t*extension/src/types.ts*o*extension/src/types.ts* *extension/src/types.ts*m*extension/src/types.ts*i*extension/src/types.ts*r*extension/src/types.ts*r*extension/src/types.ts*o*extension/src/types.ts*r*extension/src/types.ts* *extension/src/types.ts*t*extension/src/types.ts*h*extension/src/types.ts*e*extension/src/types.ts* *extension/src/types.ts*t*extension/src/types.ts*w*extension/src/types.ts*o*extension/src/types.ts*-*extension/src/types.ts*t*extension/src/types.ts*i*extension/src/types.ts*e*extension/src/types.ts*r*extension/src/types.ts* *extension/src/types.ts*e*extension/src/types.ts*x*extension/src/types.ts*c*extension/src/types.ts*l*extension/src/types.ts*u*extension/src/types.ts*s*extension/src/types.ts*i*extension/src/types.ts*o*extension/src/types.ts*n*extension/src/types.ts*,*extension/src/types.ts* *extension/src/types.ts*f*extension/src/types.ts*o*extension/src/types.ts*c*extension/src/types.ts*u*extension/src/types.ts*s*extension/src/types.ts* *extension/src/types.ts*m*extension/src/types.ts*o*extension/src/types.ts*d*extension/src/types.ts*e*extension/src/types.ts* *extension/src/types.ts*s*extension/src/types.ts*c*extension/src/types.ts*h*extension/src/types.ts*e*extension/src/types.ts*m*extension/src/types.ts*a*extension/src/types.ts*s*extension/src/types.ts*,*extension/src/types.ts* *extension/src/types.ts*a*extension/src/types.ts*n*extension/src/types.ts*d*extension/src/types.ts* *extension/src/types.ts*s*extension/src/types.ts*e*extension/src/types.ts*r*extension/src/types.ts*i*extension/src/types.ts*a*extension/src/types.ts*l*extension/src/types.ts*i*extension/src/types.ts*z*extension/src/types.ts*a*extension/src/types.ts*t*extension/src/types.ts*i*extension/src/types.ts*o*extension/src/types.ts*n*extension/src/types.ts*s*extension/src/types.ts*.*extension/src/types.ts*
+*extension/src/types.ts*- [X] T003 [P] Add new JSON-RPC message types for exclusion preview, path exclusion, set central hub, and focus mode in `crates/core/src/ipc/protocol.rs`.
 
 ---
 
@@ -65,9 +154,9 @@
 - [X] T017 [US2] Implement node inspection view in `extension/webview-ui/src/components/inspectorDrawer.ts`: display note title, path, context hop tier, exact BPE tokens, incoming/outgoing link lists, and primary actions `[Open file]`, `[Set as hub]`.
 - [X] T018 [US2] Implement broken link edge inspection view in `extension/webview-ui/src/components/inspectorDrawer.ts`: display source file, line number, missing destination, error type, and actions `[Open source]` and `[Fix reference]`.
 - [X] T019 [US2] Implement Token Economics breakdown view in `extension/webview-ui/src/components/inspectorDrawer.ts` displaying Active Prompt Load (L0) vs Reachable Context (L1+) with budget health alerts, and wire click events from the toolbar token pill (FR-053).
-- [X] T020 [US2] Wire selection events in `extension/webview-ui/src/graph/canvas.ts` on node click and edge click to dispatch selection payloads to `InspectorDrawer`.
-- [X] T021 [US2] Wire `[Open file]` and `[Open source]` action handlers in `extension/src/webview/rpc.ts` to call `vscode.window.showTextDocument` with `ViewColumn.Beside`, and wire `[Fix reference]` to show `vscode.window.showQuickPick` allowing user to select a replacement note target (FR-052).
-- [X] T022 [US2] Wire `[Set as hub]` action handler in `extension/src/webview/rpc.ts` and `crates/core/src/config/mod.rs` to persist `hub.primary_hub` into `.context-vault.yaml` and recalculate BFS hops (FR-051).
+*extension/webview-ui/src/graph/canvas.ts*-*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*[*extension/webview-ui/src/graph/canvas.ts*X*extension/webview-ui/src/graph/canvas.ts*]*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*T*extension/webview-ui/src/graph/canvas.ts*0*extension/webview-ui/src/graph/canvas.ts*2*extension/webview-ui/src/graph/canvas.ts*0*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*[*extension/webview-ui/src/graph/canvas.ts*U*extension/webview-ui/src/graph/canvas.ts*S*extension/webview-ui/src/graph/canvas.ts*2*extension/webview-ui/src/graph/canvas.ts*]*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*W*extension/webview-ui/src/graph/canvas.ts*i*extension/webview-ui/src/graph/canvas.ts*r*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*s*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*l*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*c*extension/webview-ui/src/graph/canvas.ts*t*extension/webview-ui/src/graph/canvas.ts*i*extension/webview-ui/src/graph/canvas.ts*o*extension/webview-ui/src/graph/canvas.ts*n*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*v*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*n*extension/webview-ui/src/graph/canvas.ts*t*extension/webview-ui/src/graph/canvas.ts*s*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*i*extension/webview-ui/src/graph/canvas.ts*n*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*`*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*x*extension/webview-ui/src/graph/canvas.ts*t*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*n*extension/webview-ui/src/graph/canvas.ts*s*extension/webview-ui/src/graph/canvas.ts*i*extension/webview-ui/src/graph/canvas.ts*o*extension/webview-ui/src/graph/canvas.ts*n*extension/webview-ui/src/graph/canvas.ts*/*extension/webview-ui/src/graph/canvas.ts*w*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*b*extension/webview-ui/src/graph/canvas.ts*v*extension/webview-ui/src/graph/canvas.ts*i*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*w*extension/webview-ui/src/graph/canvas.ts*-*extension/webview-ui/src/graph/canvas.ts*u*extension/webview-ui/src/graph/canvas.ts*i*extension/webview-ui/src/graph/canvas.ts*/*extension/webview-ui/src/graph/canvas.ts*s*extension/webview-ui/src/graph/canvas.ts*r*extension/webview-ui/src/graph/canvas.ts*c*extension/webview-ui/src/graph/canvas.ts*/*extension/webview-ui/src/graph/canvas.ts*g*extension/webview-ui/src/graph/canvas.ts*r*extension/webview-ui/src/graph/canvas.ts*a*extension/webview-ui/src/graph/canvas.ts*p*extension/webview-ui/src/graph/canvas.ts*h*extension/webview-ui/src/graph/canvas.ts*/*extension/webview-ui/src/graph/canvas.ts*c*extension/webview-ui/src/graph/canvas.ts*a*extension/webview-ui/src/graph/canvas.ts*n*extension/webview-ui/src/graph/canvas.ts*v*extension/webview-ui/src/graph/canvas.ts*a*extension/webview-ui/src/graph/canvas.ts*s*extension/webview-ui/src/graph/canvas.ts*.*extension/webview-ui/src/graph/canvas.ts*t*extension/webview-ui/src/graph/canvas.ts*s*extension/webview-ui/src/graph/canvas.ts*`*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*o*extension/webview-ui/src/graph/canvas.ts*n*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*n*extension/webview-ui/src/graph/canvas.ts*o*extension/webview-ui/src/graph/canvas.ts*d*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*c*extension/webview-ui/src/graph/canvas.ts*l*extension/webview-ui/src/graph/canvas.ts*i*extension/webview-ui/src/graph/canvas.ts*c*extension/webview-ui/src/graph/canvas.ts*k*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*a*extension/webview-ui/src/graph/canvas.ts*n*extension/webview-ui/src/graph/canvas.ts*d*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*d*extension/webview-ui/src/graph/canvas.ts*g*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*c*extension/webview-ui/src/graph/canvas.ts*l*extension/webview-ui/src/graph/canvas.ts*i*extension/webview-ui/src/graph/canvas.ts*c*extension/webview-ui/src/graph/canvas.ts*k*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*t*extension/webview-ui/src/graph/canvas.ts*o*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*d*extension/webview-ui/src/graph/canvas.ts*i*extension/webview-ui/src/graph/canvas.ts*s*extension/webview-ui/src/graph/canvas.ts*p*extension/webview-ui/src/graph/canvas.ts*a*extension/webview-ui/src/graph/canvas.ts*t*extension/webview-ui/src/graph/canvas.ts*c*extension/webview-ui/src/graph/canvas.ts*h*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*s*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*l*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*c*extension/webview-ui/src/graph/canvas.ts*t*extension/webview-ui/src/graph/canvas.ts*i*extension/webview-ui/src/graph/canvas.ts*o*extension/webview-ui/src/graph/canvas.ts*n*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*p*extension/webview-ui/src/graph/canvas.ts*a*extension/webview-ui/src/graph/canvas.ts*y*extension/webview-ui/src/graph/canvas.ts*l*extension/webview-ui/src/graph/canvas.ts*o*extension/webview-ui/src/graph/canvas.ts*a*extension/webview-ui/src/graph/canvas.ts*d*extension/webview-ui/src/graph/canvas.ts*s*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*t*extension/webview-ui/src/graph/canvas.ts*o*extension/webview-ui/src/graph/canvas.ts* *extension/webview-ui/src/graph/canvas.ts*`*extension/webview-ui/src/graph/canvas.ts*I*extension/webview-ui/src/graph/canvas.ts*n*extension/webview-ui/src/graph/canvas.ts*s*extension/webview-ui/src/graph/canvas.ts*p*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*c*extension/webview-ui/src/graph/canvas.ts*t*extension/webview-ui/src/graph/canvas.ts*o*extension/webview-ui/src/graph/canvas.ts*r*extension/webview-ui/src/graph/canvas.ts*D*extension/webview-ui/src/graph/canvas.ts*r*extension/webview-ui/src/graph/canvas.ts*a*extension/webview-ui/src/graph/canvas.ts*w*extension/webview-ui/src/graph/canvas.ts*e*extension/webview-ui/src/graph/canvas.ts*r*extension/webview-ui/src/graph/canvas.ts*`*extension/webview-ui/src/graph/canvas.ts*.*extension/webview-ui/src/graph/canvas.ts*
+*extension/webview-ui/src/graph/canvas.ts**extension/src/webview/rpc.ts*-*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*[*extension/src/webview/rpc.ts*X*extension/src/webview/rpc.ts*]*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*T*extension/src/webview/rpc.ts*0*extension/src/webview/rpc.ts*2*extension/src/webview/rpc.ts*1*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*[*extension/src/webview/rpc.ts*U*extension/src/webview/rpc.ts*S*extension/src/webview/rpc.ts*2*extension/src/webview/rpc.ts*]*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*W*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*r*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts*[*extension/src/webview/rpc.ts*O*extension/src/webview/rpc.ts*p*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*f*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*l*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*]*extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*a*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*d*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts*[*extension/src/webview/rpc.ts*O*extension/src/webview/rpc.ts*p*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*u*extension/src/webview/rpc.ts*r*extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*]*extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*a*extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*h*extension/src/webview/rpc.ts*a*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*d*extension/src/webview/rpc.ts*l*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*r*extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*x*extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*/*extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts*r*extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*/*extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*b*extension/src/webview/rpc.ts*v*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts*/*extension/src/webview/rpc.ts*r*extension/src/webview/rpc.ts*p*extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*.*extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*a*extension/src/webview/rpc.ts*l*extension/src/webview/rpc.ts*l*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts*v*extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*d*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*.*extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*d*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts*.*extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts*h*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts*T*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*x*extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts*D*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*u*extension/src/webview/rpc.ts*m*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts*h*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts*V*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts*C*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*l*extension/src/webview/rpc.ts*u*extension/src/webview/rpc.ts*m*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*.*extension/src/webview/rpc.ts*B*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*d*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts*,*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*a*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*d*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*r*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts*[*extension/src/webview/rpc.ts*F*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*x*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*r*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*f*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*r*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*]*extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts*h*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts*v*extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*d*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*.*extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*d*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts*.*extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts*h*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts*Q*extension/src/webview/rpc.ts*u*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*k*extension/src/webview/rpc.ts*P*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*k*extension/src/webview/rpc.ts*`*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*a*extension/src/webview/rpc.ts*l*extension/src/webview/rpc.ts*l*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*w*extension/src/webview/rpc.ts*i*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*g*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*u*extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*r*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*s*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*l*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*a*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*r*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*p*extension/src/webview/rpc.ts*l*extension/src/webview/rpc.ts*a*extension/src/webview/rpc.ts*c*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*m*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*n*extension/src/webview/rpc.ts*o*extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts*a*extension/src/webview/rpc.ts*r*extension/src/webview/rpc.ts*g*extension/src/webview/rpc.ts*e*extension/src/webview/rpc.ts*t*extension/src/webview/rpc.ts* *extension/src/webview/rpc.ts*(*extension/src/webview/rpc.ts*F*extension/src/webview/rpc.ts*R*extension/src/webview/rpc.ts*-*extension/src/webview/rpc.ts*0*extension/src/webview/rpc.ts*5*extension/src/webview/rpc.ts*2*extension/src/webview/rpc.ts*)*extension/src/webview/rpc.ts*.*extension/src/webview/rpc.ts*
+*extension/src/webview/rpc.ts*- [X] T022 [US2] Wire `[Set as hub]` action handler in *extension/src/webview/rpc.ts* and `crates/core/src/config/mod.rs` to persist `hub.primary_hub` into `.context-vault.yaml` and recalculate BFS hops (FR-051).
 - [X] T023 [US2] Add CSS styles and slide animations in `extension/webview-ui/src/theme.css` for `.inspector-drawer`, token breakdown bars, and action button groups.
 
 **Checkpoint**: User Story 2 complete. The UI adapts dynamically to user selection with zero static clutter.
@@ -87,7 +176,7 @@
 ### Implementation for User Story 3
 - [X] T026 [US3] Create `ExclusionModal` component in `extension/webview-ui/src/components/exclusionModal.ts` displaying evaluated glob pattern, affected file count, sample path chips, and `[Cancel]` / `[Apply Exclusion]` buttons.
 - [X] T027 [US3] Add contextual exclusion actions (`Exclude this file`, `Exclude this folder`, `Exclude pattern...`) to `InspectorDrawer` more menu and canvas context menu.
-- [X] T028 [US3] Wire exclusion preview request `graph/previewExclusion` through `extension/src/sidecar/client.ts` to `ExclusionModal`.
+- [X] T028 [US3] Wire exclusion preview request `graph/previewExclusion` through `extension/src/ipc/client.ts` to `ExclusionModal`.
 - [X] T029 [US3] Wire `graph/excludePath` execution in `crates/core/src/config/mod.rs` to persist new rules into `.context-vault.yaml` and trigger incremental graph broadcast.
 - [X] T030 [US3] Implement automated noise detection in `crates/core/src/graph/exclusions.rs` clustering disconnected orphan files by stem (`README.md`) or directory (`vendor/**`).
 - [X] T031 [US3] Add `Suggested Exclusions` notification card in `StatusDashboard` with one-click `[Review suggestions]` batch approval workflow.
@@ -109,9 +198,9 @@
 ### Implementation for User Story 4
 - [X] T034 [US4] Create `FocusEngine` module in `extension/webview-ui/src/graph/focusEngine.ts` filtering node and edge arrays by `focusMode` (`hub`, `1_hop`, `2_hops`, `all`) and `showOrphans` boolean.
 - [X] T035 [US4] Add `Focus Mode` selector dropdown (`🎯 Focus: All ▾`) to the floating toolbar in `extension/webview-ui/src/components/actionsToolbar.ts`.
-- [X] T036 [US4] Update `extension/webview-ui/src/graph/canvas.ts` to calculate semantic node radius based on `node.hopDistance` ($r_0=14\text{px}, r_1=9\text{px}, r_2=6\text{px}, r_{\ge 3}=4\text{px}, r_{\text{orphan}}=4\text{px}$) and enforce the Opacity Decay Law ($\alpha_0=1.0, \alpha_1=0.6, \alpha_2=0.3, \alpha_{\ge 3}=0.15, \alpha_{\text{orphan}}=0.40$) composed with cluster hues (FR-064, Constitution Principle IV).
+- [X] T036 [US4] Update *extension/webview-ui/src/graph/canvas.ts* to calculate semantic node radius based on `node.hopDistance` ($r_0=14\text{px}, r_1=9\text{px}, r_2=6\text{px}, r_{\ge 3}=4\text{px}, r_{\text{orphan}}=4\text{px}$) and enforce the Opacity Decay Law ($\alpha_0=1.0, \alpha_1=0.6, \alpha_2=0.3, \alpha_{\ge 3}=0.15, \alpha_{\text{orphan}}=0.40$) composed with cluster hues (FR-064, Constitution Principle IV).
 - [X] T037 [US4] Update `extension/webview-ui/src/graph/physics.ts` to re-simulate filtered subgraphs with gentle reheat ($\alpha=0.3$) when focus mode changes.
-- [X] T038 [US4] Add `Show orphans` checkbox toggle in Filter popover in `actionsToolbar.ts` to toggle unlinked node visibility.
+- [X] T038 [US4] Add `Show orphans` checkbox toggle in Filter popover in `extension/webview-ui/src/components/actionsToolbar.ts` to toggle unlinked node visibility.
 - [X] T039 [US4] Style focus dropdown and semantic labels in `extension/webview-ui/src/theme.css`.
 
 **Checkpoint**: User Story 4 complete. Graph visualization is calm, focused, and semantically sized.
@@ -129,7 +218,7 @@
 - [X] T041 [US5] Implement `Excluded Paths Manager` in `SettingsDrawer` with rule list, match counts, test preview input, and `[+ Add]` / `[Delete]` buttons.
 - [X] T042 [US5] Move `Git synchronization` controls (prek hook status, latency, reinstall button) from old sidebar into `SettingsDrawer` under `Git Sync`.
 - [X] T043 [US5] Move `Cluster Groups Manager` into `SettingsDrawer` under `Cluster Groups`.
-- [X] T044 [US5] Wire `⋯ More` menu item `Settings` in `actionsToolbar.ts` to open `SettingsDrawer`.
+- [X] T044 [US5] Wire `⋯ More` menu item `Settings` in `extension/webview-ui/src/components/actionsToolbar.ts` to open `SettingsDrawer`.
 - [X] T045 [US5] Add CSS styles for tabbed settings drawer and forms in `extension/webview-ui/src/theme.css`.
 
 **Checkpoint**: User Story 5 complete. Full administrative power is preserved without cluttering daily workflows.
@@ -144,7 +233,7 @@
 - [X] T047 [P] Run `npm run lint` and `npm test` across `extension/`.
 - [X] T048 Benchmark glob exclusion evaluation in Criterion to guarantee $\le 10\text{ ms}$ for 5,000 files.
 - [X] T049 Execute all 4 runnable validation scenarios in `specs/002-context-observatory-ux/quickstart.md`.
-- [X] T050 Re-package extension with `./scripts/package-all.sh` and install verified VSIX in VS Code.
+- [X] T050 Re-package extension with *./scripts/package-all.sh* and install verified VSIX in VS Code.
 
 ---
 
@@ -165,7 +254,7 @@ graph TD
 - **Phase 1**: T002 and T003 can execute in parallel.
 - **Phase 2**: T004, T005, and T007 can execute in parallel.
 - **User Stories (Phase 3-6)**: Once Foundational (Phase 2) is complete, US1, US2, US3, and US4 can proceed in parallel.
-- **Shared File Coordination Note**: When implementing US1, US4, and US5 concurrently, coordinate edits to `actionsToolbar.ts` and `theme.css` to avoid merge conflicts.
+- **Shared File Coordination Note**: When implementing US1, US4, and US5 concurrently, coordinate edits to `extension/webview-ui/src/components/actionsToolbar.ts` and `extension/webview-ui/src/theme.css` to avoid merge conflicts.
 - **Tests**: T008, T015, T024, T025, and T033 can all be written concurrently.
 
 ---

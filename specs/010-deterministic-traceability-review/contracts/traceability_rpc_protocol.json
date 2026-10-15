@@ -1,0 +1,122 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "TraceabilityRpcProtocol",
+  "description": "JSON-RPC 2.0 interface contracts for Deterministic Traceability, Review & Knowledge Consistency",
+  "methods": {
+    "trace/getAffectedDocuments": {
+      "description": "Calculates documentation notes affected by modified code files or Git diff ranges, returning review obligations and findings.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "changed_paths": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Explicit list of relative file paths modified in working tree or PR"
+          },
+          "git_range": {
+            "type": "string",
+            "description": "Optional Git revision range (e.g. 'HEAD~1..HEAD' or 'main...feature')"
+          },
+          "include_unchanged_reviews": {
+            "type": "boolean",
+            "default": true,
+            "description": "Whether to return obligations that have already been resolved as reviewed_unchanged"
+          }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["changed_code_files", "obligations", "findings", "pending_count", "reviewed_count", "blocked_count"],
+        "properties": {
+          "changed_code_files": {
+            "type": "array",
+            "items": { "type": "string" }
+          },
+          "obligations": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["doc_id", "status", "triggering_code_files", "dependency_sources"],
+              "properties": {
+                "doc_id": { "type": "string" },
+                "status": { "type": "string", "enum": ["updated", "reviewed_unchanged", "pending", "blocked"] },
+                "triggering_code_files": { "type": "array", "items": { "type": "string" } },
+                "dependency_sources": {
+                  "type": "array",
+                  "items": { "type": "string", "enum": ["frontmatter", "inline_markdown_link", "inline_symbol_citation"] }
+                },
+                "resolution_receipt": { "type": ["string", "null"] }
+              }
+            }
+          },
+          "findings": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["finding_id", "rule_id", "severity", "subject", "evidence", "required_action"],
+              "properties": {
+                "finding_id": { "type": "string" },
+                "rule_id": { "type": "string" },
+                "severity": { "type": "string", "enum": ["info", "warning", "error"] },
+                "subject": { "type": "string" },
+                "evidence": {
+                  "type": "object",
+                  "required": ["rule_description"],
+                  "properties": {
+                    "changed_paths": { "type": "array", "items": { "type": "string" } },
+                    "dependency_sources": { "type": "array", "items": { "type": "string" } },
+                    "rule_description": { "type": "string" },
+                    "line_number": { "type": ["integer", "null"] },
+                    "anchor": { "type": ["string", "null"] },
+                    "target": { "type": ["string", "null"] }
+                  }
+                },
+                "required_action": { "type": "string" },
+                "epistemic_tier": { "type": ["string", "null"] }
+              }
+            }
+          },
+          "pending_count": { "type": "integer" },
+          "reviewed_count": { "type": "integer" },
+          "blocked_count": { "type": "integer" }
+        }
+      }
+    },
+    "review/resolveDocumentReview": {
+      "description": "Records an explicit review receipt for one or more documents in the active PR or change session without modifying document text.",
+      "params": {
+        "type": "object",
+        "required": ["doc_ids"],
+        "properties": {
+          "doc_ids": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "List of document paths marked as reviewed_unchanged"
+          },
+          "resolved_reviews": {
+            "type": "array",
+            "items": { "type": "string" },
+            "description": "Backward-compatible alias for doc_ids"
+          },
+          "receipt_source": {
+            "type": "string",
+            "enum": ["user_action", "commit_trailer", "ci_check"],
+            "default": "user_action"
+          },
+          "commit_hash": {
+            "type": "string",
+            "description": "Optional Git commit hash or branch ref associated with the receipt"
+          }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["resolved_count", "receipt_id"],
+        "properties": {
+          "resolved_count": { "type": "integer" },
+          "receipt_id": { "type": "string" }
+        }
+      }
+    }
+  }
+}

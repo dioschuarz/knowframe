@@ -1,9 +1,9 @@
 //! Baseline persistence, differential comparison, ratchet logic, and debt accounting.
 
+use serde::{Deserialize, Serialize};
 use std::collections::HashSet;
 use std::fs;
 use std::path::{Path, PathBuf};
-use serde::{Deserialize, Serialize};
 
 use super::{BrokenLinkSignature, CollisionSignature, DriftSignature, KnowledgeDebtBaseline};
 use crate::candidate::DebtAccountingSummary;
@@ -40,6 +40,7 @@ pub fn extract_findings_from_topology(
         orphan_nodes,
         collisions,
         technical_drifts,
+        unreviewed_docs: Vec::new(),
     }
 }
 
@@ -54,7 +55,8 @@ pub fn capture_initial_baseline(
     let total_debt = (findings.broken_links.len()
         + findings.orphan_nodes.len()
         + findings.collisions.len()
-        + findings.technical_drifts.len()) as u32;
+        + findings.technical_drifts.len()
+        + findings.unreviewed_docs.len()) as u32;
 
     KnowledgeDebtBaseline {
         baseline_commit: commit_sha.to_string(),
@@ -63,6 +65,7 @@ pub fn capture_initial_baseline(
         orphan_nodes: findings.orphan_nodes,
         collisions: findings.collisions,
         technical_drifts: findings.technical_drifts,
+        unreviewed_docs: findings.unreviewed_docs,
         total_debt,
     }
 }
@@ -74,6 +77,8 @@ pub struct CandidateFindings {
     pub orphan_nodes: HashSet<String>,
     pub collisions: Vec<CollisionSignature>,
     pub technical_drifts: Vec<DriftSignature>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub unreviewed_docs: Vec<String>,
 }
 
 /// Differential evaluation outcome comparing candidate findings against baseline.
@@ -83,11 +88,13 @@ pub struct DifferentialEvaluation {
     pub new_orphans: HashSet<String>,
     pub new_collisions: Vec<CollisionSignature>,
     pub new_technical_drifts: Vec<DriftSignature>,
+    pub new_unreviewed_docs: Vec<String>,
 
     pub resolved_broken_links: Vec<BrokenLinkSignature>,
     pub resolved_orphans: HashSet<String>,
     pub resolved_collisions: Vec<CollisionSignature>,
     pub resolved_technical_drifts: Vec<DriftSignature>,
+    pub resolved_unreviewed_docs: Vec<String>,
 
     pub summary: DebtAccountingSummary,
 }
@@ -98,6 +105,7 @@ impl DifferentialEvaluation {
             || !self.new_orphans.is_empty()
             || !self.new_collisions.is_empty()
             || !self.new_technical_drifts.is_empty()
+            || !self.new_unreviewed_docs.is_empty()
     }
 }
 
@@ -107,7 +115,9 @@ pub fn get_baseline_path(workspace_root: &Path) -> PathBuf {
 }
 
 /// Loads the debt baseline from `.context-vault/baseline.json`. Returns None if it does not exist.
-pub fn load_baseline(workspace_root: &Path) -> Result<Option<KnowledgeDebtBaseline>, std::io::Error> {
+pub fn load_baseline(
+    workspace_root: &Path,
+) -> Result<Option<KnowledgeDebtBaseline>, std::io::Error> {
     let path = get_baseline_path(workspace_root);
     if !path.is_file() {
         return Ok(None);
@@ -119,7 +129,10 @@ pub fn load_baseline(workspace_root: &Path) -> Result<Option<KnowledgeDebtBaseli
 }
 
 /// Saves the debt baseline to `.context-vault/baseline.json`.
-pub fn save_baseline(workspace_root: &Path, baseline: &KnowledgeDebtBaseline) -> Result<(), std::io::Error> {
+pub fn save_baseline(
+    workspace_root: &Path,
+    baseline: &KnowledgeDebtBaseline,
+) -> Result<(), std::io::Error> {
     let path = get_baseline_path(workspace_root);
     if let Some(parent) = path.parent() {
         fs::create_dir_all(parent)?;
@@ -204,31 +217,53 @@ pub fn diff_against_baseline(
         .cloned()
         .collect();
 
+    let base_unreviewed: HashSet<&String> = baseline.unreviewed_docs.iter().collect();
+    let cand_unreviewed: HashSet<&String> = candidate.unreviewed_docs.iter().collect();
+
+    let new_unreviewed_docs: Vec<String> = candidate
+        .unreviewed_docs
+        .iter()
+        .filter(|doc| !base_unreviewed.contains(doc))
+        .cloned()
+        .collect();
+
+    let resolved_unreviewed_docs: Vec<String> = baseline
+        .unreviewed_docs
+        .iter()
+        .filter(|doc| !cand_unreviewed.contains(doc))
+        .cloned()
+        .collect();
+
     let new_debt = (new_broken_links.len()
         + new_orphans.len()
         + new_collisions.len()
-        + new_technical_drifts.len()) as u32;
+        + new_technical_drifts.len()
+        + new_unreviewed_docs.len()) as u32;
 
     let resolved_debt = (resolved_broken_links.len()
         + resolved_orphans.len()
         + resolved_collisions.len()
-        + resolved_technical_drifts.len()) as u32;
+        + resolved_technical_drifts.len()
+        + resolved_unreviewed_docs.len()) as u32;
 
     let legacy_debt = baseline.total_debt;
     let total_debt = (candidate.broken_links.len()
         + candidate.orphan_nodes.len()
         + candidate.collisions.len()
-        + candidate.technical_drifts.len()) as u32;
+        + candidate.technical_drifts.len()
+        + candidate.unreviewed_docs.len()) as u32;
 
     DifferentialEvaluation {
         new_broken_links,
         new_orphans,
         new_collisions,
         new_technical_drifts,
+        new_unreviewed_docs,
         resolved_broken_links,
         resolved_orphans,
         resolved_collisions,
         resolved_technical_drifts,
+        resolved_unreviewed_docs,
         summary: DebtAccountingSummary {
             total_debt,
             legacy_debt,
@@ -246,8 +281,11 @@ pub fn ratchet_baseline(
     new_commit_sha: &str,
 ) {
     if !diff.resolved_broken_links.is_empty() {
-        let resolved_set: HashSet<&BrokenLinkSignature> = diff.resolved_broken_links.iter().collect();
-        baseline.broken_links.retain(|sig| !resolved_set.contains(sig));
+        let resolved_set: HashSet<&BrokenLinkSignature> =
+            diff.resolved_broken_links.iter().collect();
+        baseline
+            .broken_links
+            .retain(|sig| !resolved_set.contains(sig));
     }
 
     if !diff.resolved_orphans.is_empty() {
@@ -258,12 +296,17 @@ pub fn ratchet_baseline(
 
     if !diff.resolved_collisions.is_empty() {
         let resolved_set: HashSet<&CollisionSignature> = diff.resolved_collisions.iter().collect();
-        baseline.collisions.retain(|sig| !resolved_set.contains(sig));
+        baseline
+            .collisions
+            .retain(|sig| !resolved_set.contains(sig));
     }
 
     if !diff.resolved_technical_drifts.is_empty() {
-        let resolved_set: HashSet<&DriftSignature> = diff.resolved_technical_drifts.iter().collect();
-        baseline.technical_drifts.retain(|sig| !resolved_set.contains(sig));
+        let resolved_set: HashSet<&DriftSignature> =
+            diff.resolved_technical_drifts.iter().collect();
+        baseline
+            .technical_drifts
+            .retain(|sig| !resolved_set.contains(sig));
     }
 
     baseline.baseline_commit = new_commit_sha.to_string();
@@ -293,7 +336,9 @@ mod tests {
         // Candidate fixes notes/a.md broken link, but introduces a new collision
         let mut candidate = CandidateFindings::default();
         candidate.orphan_nodes.insert("notes/orphan.md".to_string());
-        candidate.collisions.push(CollisionSignature::new("notes/c.md", "notes/d.md"));
+        candidate
+            .collisions
+            .push(CollisionSignature::new("notes/c.md", "notes/d.md"));
 
         let diff = diff_against_baseline(&candidate, &baseline);
         assert_eq!(diff.new_collisions.len(), 1);

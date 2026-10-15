@@ -116,7 +116,12 @@ fn test_context_trace_token_accumulation() {
 fn test_context_trace_path_quality_score() {
     let mut topology = GraphTopology::new();
     topology.add_node(make_node("AGENTS.md", "Entrypoint", vec![], 100));
-    topology.add_node(make_node("intermediate.md", "Random Intermediate", vec![], 200));
+    topology.add_node(make_node(
+        "intermediate.md",
+        "Random Intermediate",
+        vec![],
+        200,
+    ));
     topology.add_node(make_node("cache.md", "Redis Cache", vec![], 300));
 
     topology.add_edge(make_edge("AGENTS.md", "intermediate.md", false));
@@ -160,3 +165,126 @@ fn test_cli_trace_command() {
     let json_res = execute_trace(root, "Authentication", Some("AGENTS.md"), true);
     assert!(json_res.is_ok());
 }
+
+#[test]
+fn test_reverse_code_impact_lookups_and_deduplication_t006() {
+    use llm_wiki_core::drift::ReverseImpactIndex;
+    use llm_wiki_core::drift::review::calculate_affected_documents;
+    use llm_wiki_core::model::{CodeDependency, DependencySource, ReviewStatus};
+    use llm_wiki_core::delta::updater::{FileDeltaItem, FileDeltaStatus};
+
+    let mut index = ReverseImpactIndex::new();
+
+    // doc_a depends on auth.rs via frontmatter
+    index.insert_dependency(
+        "notes/auth.md",
+        &CodeDependency {
+            code_path: "src/auth.rs".to_string(),
+            source: DependencySource::Frontmatter,
+            line_number: None,
+        },
+    );
+
+    // doc_b depends on auth.rs and db.rs via inline markdown link
+    index.insert_dependency(
+        "notes/system.md",
+        &CodeDependency {
+            code_path: "src/auth.rs".to_string(),
+            source: DependencySource::InlineMarkdownLink,
+            line_number: Some(15),
+        },
+    );
+    index.insert_dependency(
+        "notes/system.md",
+        &CodeDependency {
+            code_path: "src/db.rs".to_string(),
+            source: DependencySource::InlineMarkdownLink,
+            line_number: Some(25),
+        },
+    );
+
+    // Lookups for auth.rs return both docs
+    let auth_docs = index.get_docs_for_code("src/auth.rs");
+    assert_eq!(auth_docs.len(), 2);
+    assert!(auth_docs.contains("notes/auth.md"));
+    assert!(auth_docs.contains("notes/system.md"));
+
+    // Lookups for db.rs return only system.md
+    let db_docs = index.get_docs_for_code("src/db.rs");
+    assert_eq!(db_docs.len(), 1);
+    assert!(db_docs.contains("notes/system.md"));
+
+    // Test calculate_affected_documents when both auth.rs and db.rs are changed
+    let temp = tempfile::tempdir().unwrap();
+    let root = temp.path();
+
+    let changes = vec![
+        FileDeltaItem {
+            path: "src/auth.rs".to_string(),
+            status: FileDeltaStatus::Modified,
+        },
+        FileDeltaItem {
+            path: "src/db.rs".to_string(),
+            status: FileDeltaStatus::Modified,
+        },
+    ];
+
+    let report = calculate_affected_documents(
+        root,
+        &changes,
+        &index,
+        None,
+        None,
+        None,
+    );
+
+    // Must return 2 changed code files
+    assert_eq!(report.changed_code_files, vec!["src/auth.rs", "src/db.rs"]);
+
+    // Obligations must be deduplicated: exactly 2 obligations (notes/auth.md and notes/system.md)
+    assert_eq!(report.obligations.len(), 2);
+
+    let auth_ob = report.obligations.iter().find(|o| o.doc_id == "notes/auth.md").unwrap();
+    assert_eq!(auth_ob.triggering_code_files, vec!["src/auth.rs"]);
+    assert_eq!(auth_ob.dependency_sources, vec![DependencySource::Frontmatter]);
+    assert_eq!(auth_ob.status, ReviewStatus::Blocked);
+
+    let sys_ob = report.obligations.iter().find(|o| o.doc_id == "notes/system.md").unwrap();
+    // Must contain both triggering files deduplicated and sorted
+    assert_eq!(sys_ob.triggering_code_files, vec!["src/auth.rs", "src/db.rs"]);
+    assert_eq!(sys_ob.dependency_sources, vec![DependencySource::InlineMarkdownLink]);
+    assert_eq!(sys_ob.status, ReviewStatus::Blocked);
+}
+
+#[test]
+fn test_git_diff_name_status_parser_t007() {
+    use llm_wiki_core::delta::updater::{parse_git_diff_name_status, FileDeltaStatus};
+
+    let sample_diff = r#"
+M	crates/core/src/model/mod.rs
+A	crates/core/src/drift/review.rs
+D	crates/core/src/obsolete.rs
+R100	old/path.rs	new/path.rs
+M	../escaped/outside/repo.rs
+"#;
+
+    let items = parse_git_diff_name_status(sample_diff);
+    // Escaped outside repo path should be filtered out by path containment validation!
+    assert_eq!(items.len(), 5); // 1 M + 1 A + 1 D + 2 (from rename: 1 D + 1 A)
+
+    assert_eq!(items[0].path, "crates/core/src/model/mod.rs");
+    assert_eq!(items[0].status, FileDeltaStatus::Modified);
+
+    assert_eq!(items[1].path, "crates/core/src/drift/review.rs");
+    assert_eq!(items[1].status, FileDeltaStatus::Added);
+
+    assert_eq!(items[2].path, "crates/core/src/obsolete.rs");
+    assert_eq!(items[2].status, FileDeltaStatus::Deleted);
+
+    assert_eq!(items[3].path, "old/path.rs");
+    assert_eq!(items[3].status, FileDeltaStatus::Deleted);
+
+    assert_eq!(items[4].path, "new/path.rs");
+    assert_eq!(items[4].status, FileDeltaStatus::Added);
+}
+

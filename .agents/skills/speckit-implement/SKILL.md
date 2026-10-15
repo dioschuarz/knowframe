@@ -1,13 +1,38 @@
 ---
-name: "speckit-implement"
-description: "Execute the implementation plan by processing and executing all tasks defined in tasks.md"
-compatibility: "Requires spec-kit project structure with .specify/ directory"
+name: speckit-implement
+description: Execute the implementation plan by processing and executing all tasks defined in tasks.md
+compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: "github-spec-kit"
-  source: "templates/commands/implement.md"
+  author: github-spec-kit
+  source: templates/commands/implement.md
+wiki:
+  content_hash: 025ff034514d773ddc7ac73c757fde2347dde7bc8fdf0339e57cb8b88a9c3cd1
+  fragments:
+    user-input:
+      tokens: 30
+      inbound: 0
+      outbound: 0
+    pre-execution-checks:
+      tokens: 495
+      inbound: 0
+      outbound: 0
+    outline:
+      tokens: 2064
+      inbound: 0
+      outbound: 0
+    mandatory-post-execution-hooks:
+      tokens: 503
+      inbound: 0
+      outbound: 0
+    completion-report:
+      tokens: 13
+      inbound: 0
+      outbound: 0
+    done-when:
+      tokens: 65
+      inbound: 0
+      outbound: 0
 ---
-
-
 ## User Input
 
 ```text

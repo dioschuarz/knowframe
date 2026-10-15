@@ -1,7 +1,7 @@
 //! Deterministic signature hashing algorithms for knowledge debt findings.
 
-use sha2::{Digest, Sha256};
 use super::{BrokenLinkSignature, CollisionSignature, DriftSignature};
+use sha2::{Digest, Sha256};
 
 /// Produces a deterministic SHA-256 digest for a broken link signature.
 pub fn hash_broken_link(sig: &BrokenLinkSignature) -> String {

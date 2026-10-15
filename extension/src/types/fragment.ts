@@ -38,7 +38,9 @@ export type StructureDebtType =
   | 'missing_fragment_metadata'
   | 'oversized_document'
   | 'high_reference_concentration'
-  | 'unfragmented_central_hub';
+  | 'unfragmented_central_hub'
+  | 'secondary_routing_layer'
+  | 'harness_drift';
 
 export interface StructureDebtFinding {
   readonly debt_type: StructureDebtType;

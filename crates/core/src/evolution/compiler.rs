@@ -1,5 +1,5 @@
-use serde::{Deserialize, Serialize};
 use super::profile::{ConstraintRule, DocumentationOrientation, OptimizationProfile};
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
 #[serde(rename_all = "snake_case")]
@@ -324,7 +324,11 @@ mod tests {
         let compiler = ProfileCompiler::new();
         let relations = compiler.get_parameter_relationships();
         assert_eq!(relations.len(), 6);
-        assert!(relations.iter().any(|r| r.tier1_key == "ai_discoverability"));
-        assert!(relations.iter().any(|r| r.tier1_key == "context_efficiency"));
+        assert!(relations
+            .iter()
+            .any(|r| r.tier1_key == "ai_discoverability"));
+        assert!(relations
+            .iter()
+            .any(|r| r.tier1_key == "context_efficiency"));
     }
 }

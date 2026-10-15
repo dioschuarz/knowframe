@@ -1,0 +1,512 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "LLM Wiki Management Experience & Evolution UI JSON-RPC 2.0 Protocol",
+  "description": "Specification of JSON-RPC methods and schemas for the decision-oriented Manager, Insights vs Settings drawer, and Structural Evolution interaction model adhering strictly to Constitution v1.6.0.",
+  "type": "object",
+  "definitions": {
+    "DocumentationOrientation": {
+      "type": "string",
+      "enum": ["ai_oriented", "human_oriented", "balanced", "custom"]
+    },
+    "SyncStatus": {
+      "type": "string",
+      "enum": ["synced", "syncing", "error", "uninitialized"]
+    },
+    "ProblemSignature": {
+      "type": "string",
+      "enum": [
+        "structurally_overloaded_document",
+        "knowledge_fragmentation",
+        "weak_discovery_path",
+        "isolated_knowledge_silo"
+      ]
+    },
+    "EvolutionStrategy": {
+      "type": "string",
+      "enum": [
+        "section_addressing",
+        "topic_decomposition",
+        "lightweight_index",
+        "faceted_classification",
+        "preserve_document",
+        "hybrid"
+      ]
+    },
+    "Tier1Preferences": {
+      "type": "object",
+      "required": [
+        "ai_discoverability",
+        "context_efficiency",
+        "human_readability",
+        "knowledge_reuse",
+        "narrative_coherence",
+        "maintenance_simplicity"
+      ],
+      "properties": {
+        "ai_discoverability": { "type": "string", "enum": ["low", "medium", "high"] },
+        "context_efficiency": { "type": "string", "enum": ["low", "medium", "high"] },
+        "human_readability": { "type": "string", "enum": ["low", "medium", "high"] },
+        "knowledge_reuse": { "type": "string", "enum": ["low", "medium", "high"] },
+        "narrative_coherence": { "type": "string", "enum": ["low", "medium", "high"] },
+        "maintenance_simplicity": { "type": "string", "enum": ["low", "medium", "high"] }
+      }
+    },
+    "Tier2Parameters": {
+      "type": "object",
+      "required": [
+        "cohesion_threshold",
+        "semantic_diversity_threshold",
+        "reference_concentration_threshold",
+        "max_trace_depth",
+        "max_context_surface_tokens",
+        "split_sensitivity",
+        "canonical_ownership_sensitivity",
+        "fragment_size_target"
+      ],
+      "properties": {
+        "cohesion_threshold": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "semantic_diversity_threshold": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "reference_concentration_threshold": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "max_trace_depth": { "type": "integer", "minimum": 1, "maximum": 10 },
+        "max_context_surface_tokens": { "type": "integer", "minimum": 500, "maximum": 100000 },
+        "split_sensitivity": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "canonical_ownership_sensitivity": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "fragment_size_target": { "type": "integer", "minimum": 500, "maximum": 20000 }
+      }
+    },
+    "OptimizationProfile": {
+      "type": "object",
+      "required": [
+        "orientation",
+        "tier1_preferences",
+        "tier2_parameters",
+        "hard_constraints"
+      ],
+      "properties": {
+        "orientation": { "$ref": "#/definitions/DocumentationOrientation" },
+        "tier1_preferences": { "$ref": "#/definitions/Tier1Preferences" },
+        "tier2_parameters": { "$ref": "#/definitions/Tier2Parameters" },
+        "hard_constraints": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "ManagerSummary": {
+      "type": "object",
+      "required": ["health", "structure", "evolution", "sync"],
+      "properties": {
+        "health": {
+          "type": "object",
+          "required": [
+            "quality_score",
+            "integrity",
+            "structure",
+            "consistency",
+            "discoverability",
+            "freshness",
+            "findings_count",
+            "broken_references",
+            "invalid_anchors",
+            "legacy_debt",
+            "new_regressions"
+          ],
+          "properties": {
+            "quality_score": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "integrity": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "structure": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "consistency": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "discoverability": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "freshness": { "type": "integer", "minimum": 0, "maximum": 100 },
+            "findings_count": { "type": "integer", "minimum": 0 },
+            "broken_references": { "type": "integer", "minimum": 0 },
+            "invalid_anchors": { "type": "integer", "minimum": 0 },
+            "legacy_debt": { "type": "integer", "minimum": 0 },
+            "new_regressions": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "structure": {
+          "type": "object",
+          "required": [
+            "total_documents",
+            "connected_documents",
+            "isolated_documents",
+            "total_references"
+          ],
+          "properties": {
+            "total_documents": { "type": "integer", "minimum": 0 },
+            "connected_documents": { "type": "integer", "minimum": 0 },
+            "isolated_documents": { "type": "integer", "minimum": 0 },
+            "total_references": { "type": "integer", "minimum": 0 }
+          }
+        },
+        "evolution": {
+          "type": "object",
+          "required": [
+            "orientation",
+            "opportunity_count",
+            "primary_objective",
+            "conflicting_constraints"
+          ],
+          "properties": {
+            "orientation": { "$ref": "#/definitions/DocumentationOrientation" },
+            "opportunity_count": { "type": "integer", "minimum": 0 },
+            "primary_objective": { "type": "string", "maxLength": 60 },
+            "conflicting_constraints": { "type": "boolean" }
+          }
+        },
+        "sync": {
+          "type": "object",
+          "required": ["status"],
+          "properties": {
+            "status": { "$ref": "#/definitions/SyncStatus" },
+            "last_commit_sha": { "type": ["string", "null"] },
+            "last_commit_time": { "type": ["string", "null"] }
+          }
+        }
+      }
+    },
+    "OpportunityEvidence": {
+      "type": "object",
+      "required": [
+        "document_size_tokens",
+        "reference_concentration",
+        "cohesion",
+        "coupling",
+        "granularity",
+        "context_efficiency",
+        "discoverability",
+        "knowledge_reuse",
+        "semantic_diversity",
+        "navigational_complexity",
+        "maintenance_coupling"
+      ],
+      "properties": {
+        "document_size_tokens": { "type": "integer", "minimum": 0 },
+        "reference_concentration": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "cohesion": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "coupling": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "granularity": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "context_efficiency": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "discoverability": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "knowledge_reuse": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "semantic_diversity": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "navigational_complexity": { "type": "number", "minimum": 0.0 },
+        "maintenance_coupling": { "type": "number", "minimum": 0.0, "maximum": 1.0 }
+      }
+    },
+    "StrategyRecommendation": {
+      "type": "object",
+      "required": [
+        "strategy",
+        "fit_score",
+        "confidence",
+        "why",
+        "expected_benefits",
+        "countervailing_trade_offs",
+        "effort",
+        "is_hybrid"
+      ],
+      "properties": {
+        "strategy": { "$ref": "#/definitions/EvolutionStrategy" },
+        "fit_score": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "why": { "type": "string" },
+        "expected_benefits": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["metric", "direction", "description"],
+            "properties": {
+              "metric": { "type": "string" },
+              "direction": { "type": "string", "enum": ["increase", "decrease"] },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "countervailing_trade_offs": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["metric", "description"],
+            "properties": {
+              "metric": { "type": "string" },
+              "description": { "type": "string" }
+            }
+          }
+        },
+        "effort": { "type": "string", "enum": ["low", "medium", "high"] },
+        "is_hybrid": { "type": "boolean" },
+        "hybrid_partner": {
+          "type": ["string", "null"],
+          "enum": [
+            "section_addressing",
+            "topic_decomposition",
+            "lightweight_index",
+            "faceted_classification",
+            "preserve_document",
+            null
+          ]
+        }
+      }
+    },
+    "StructuralOpportunity": {
+      "type": "object",
+      "required": [
+        "id",
+        "target_document",
+        "signature",
+        "confidence",
+        "narrative_why",
+        "evidence",
+        "candidate_strategies"
+      ],
+      "properties": {
+        "id": { "type": "string" },
+        "target_document": { "type": "string" },
+        "signature": { "$ref": "#/definitions/ProblemSignature" },
+        "confidence": { "type": "number", "minimum": 0.0, "maximum": 1.0 },
+        "narrative_why": { "type": "string" },
+        "evidence": { "$ref": "#/definitions/OpportunityEvidence" },
+        "candidate_strategies": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/StrategyRecommendation" }
+        }
+      }
+    },
+    "MetricDeltaComparison": {
+      "type": "object",
+      "required": ["metric_name", "before_value", "after_value", "unit"],
+      "properties": {
+        "metric_name": { "type": "string" },
+        "before_value": { "type": "number" },
+        "after_value": { "type": "number" },
+        "unit": { "type": "string" }
+      }
+    },
+    "TransformationPlanPreview": {
+      "type": "object",
+      "required": [
+        "plan_id",
+        "target_document",
+        "strategy",
+        "proposed_actions",
+        "expected_impact",
+        "trade_offs"
+      ],
+      "properties": {
+        "plan_id": { "type": "string" },
+        "target_document": { "type": "string" },
+        "strategy": { "$ref": "#/definitions/EvolutionStrategy" },
+        "hybrid_partner": {
+          "type": ["string", "null"],
+          "enum": [
+            "section_addressing",
+            "topic_decomposition",
+            "lightweight_index",
+            "faceted_classification",
+            "preserve_document",
+            null
+          ]
+        },
+        "proposed_actions": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["action_type", "file_path", "details"],
+            "properties": {
+              "action_type": {
+                "type": "string",
+                "enum": [
+                  "create_document",
+                  "update_document_links",
+                  "inject_frontmatter",
+                  "delete_section"
+                ]
+              },
+              "file_path": { "type": "string" },
+              "details": { "type": "string" }
+            }
+          }
+        },
+        "expected_impact": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/MetricDeltaComparison" }
+        },
+        "trade_offs": {
+          "type": "array",
+          "items": { "type": "string" }
+        }
+      }
+    },
+    "ReMeasurementReport": {
+      "type": "object",
+      "required": [
+        "context_efficiency_delta_pct",
+        "trace_depth_delta_pct",
+        "maintenance_coupling_delta_pct",
+        "document_count_delta",
+        "reference_count_delta",
+        "narrative_summary"
+      ],
+      "properties": {
+        "context_efficiency_delta_pct": { "type": "number" },
+        "trace_depth_delta_pct": { "type": "number" },
+        "maintenance_coupling_delta_pct": { "type": "number" },
+        "document_count_delta": { "type": "integer" },
+        "reference_count_delta": { "type": "integer" },
+        "narrative_summary": { "type": "string" }
+      }
+    }
+  },
+  "methods": {
+    "manager/getSummary": {
+      "description": "Fetches the high-level 4-card persistent summary for the sidebar Manager in <= 50 ms.",
+      "params": {
+        "type": "object",
+        "properties": {}
+      },
+      "result": { "$ref": "#/definitions/ManagerSummary" }
+    },
+    "manager/navigateToDetail": {
+      "description": "Deep-links from a Manager sidebar card or row click to the corresponding detail panel sub-tab in <= 16 ms.",
+      "params": {
+        "type": "object",
+        "required": ["primaryTab", "subTab"],
+        "properties": {
+          "primaryTab": { "type": "string", "enum": ["insights", "settings"] },
+          "subTab": { "type": "string" },
+          "targetSection": { "type": "string" },
+          "targetId": { "type": "string" }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["success", "activeTab"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "activeTab": { "type": "string" }
+        }
+      }
+    },
+    "evolution/setOrientation": {
+      "description": "Switches the Documentation Orientation preset, compiling into a unified OptimizationProfile (Invariant XIV) and re-evaluating opportunities in <= 20 ms.",
+      "params": {
+        "type": "object",
+        "required": ["orientation"],
+        "properties": {
+          "orientation": { "$ref": "#/definitions/DocumentationOrientation" }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["success", "profile"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "profile": { "$ref": "#/definitions/OptimizationProfile" }
+        }
+      }
+    },
+    "evolution/updateCustomProfile": {
+      "description": "Updates Tier 1 preferences and/or Tier 2 engine parameters for Custom orientation, compiling into a unified OptimizationProfile and validating constraints in <= 20 ms.",
+      "params": {
+        "type": "object",
+        "required": ["tier1_preferences"],
+        "properties": {
+          "tier1_preferences": { "$ref": "#/definitions/Tier1Preferences" },
+          "tier2_parameters": { "$ref": "#/definitions/Tier2Parameters" },
+          "hard_constraints": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["success", "profile", "conflicting_constraints"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "profile": { "$ref": "#/definitions/OptimizationProfile" },
+          "conflicting_constraints": { "type": "boolean" },
+          "conflict_reasons": {
+            "type": "array",
+            "items": { "type": "string" }
+          }
+        }
+      }
+    },
+    "evolution/getOpportunities": {
+      "description": "Retrieves problem-first structural opportunities evaluated across the workspace.",
+      "params": {
+        "type": "object",
+        "properties": {
+          "limit": { "type": "integer", "minimum": 1 }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["opportunities"],
+        "properties": {
+          "opportunities": {
+            "type": "array",
+            "items": { "$ref": "#/definitions/StructuralOpportunity" }
+          }
+        }
+      }
+    },
+    "evolution/getOpportunityDetail": {
+      "description": "Retrieves detailed evidence metrics, WHY narrative, and candidate strategies for a specific structural opportunity.",
+      "params": {
+        "type": "object",
+        "required": ["opportunityId"],
+        "properties": {
+          "opportunityId": { "type": "string" }
+        }
+      },
+      "result": { "$ref": "#/definitions/StructuralOpportunity" }
+    },
+    "evolution/previewTransformation": {
+      "description": "Generates an inspectable before-and-after impact comparison and action plan for a selected strategy in <= 500 ms.",
+      "params": {
+        "type": "object",
+        "required": ["opportunityId", "strategy"],
+        "properties": {
+          "opportunityId": { "type": "string" },
+          "strategy": { "$ref": "#/definitions/EvolutionStrategy" },
+          "hybrid_partner": {
+            "type": ["string", "null"],
+            "enum": [
+              "section_addressing",
+              "topic_decomposition",
+              "lightweight_index",
+              "faceted_classification",
+              "preserve_document",
+              null
+            ]
+          }
+        }
+      },
+      "result": { "$ref": "#/definitions/TransformationPlanPreview" }
+    },
+    "evolution/applyTransformation": {
+      "description": "Executes an approved transformation plan: writes files, evaluates re-measurement on an in-memory ephemeral candidate graph (preserving Invariant I until Git commit), and returns an empirical re-measurement report.",
+      "params": {
+        "type": "object",
+        "required": ["plan_id", "requireApproval"],
+        "properties": {
+          "plan_id": { "type": "string" },
+          "planId": { "type": "string" },
+          "requireApproval": { "type": "boolean" }
+        }
+      },
+      "result": {
+        "type": "object",
+        "required": ["success", "reMeasurement"],
+        "properties": {
+          "success": { "type": "boolean" },
+          "reMeasurement": { "$ref": "#/definitions/ReMeasurementReport" }
+        }
+      }
+    }
+  }
+}

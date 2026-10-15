@@ -28,10 +28,14 @@ fn test_candidate_overlay_routing_and_isolation() {
         broken_links: 0,
         fragments: vec![],
         freshness: None,
+        code_dependencies: vec![],
     });
     base_graph.add_node(NoteNode {
         id: "notes/to_delete.md".to_string(),
-        file_path: root.join("notes/to_delete.md").to_string_lossy().to_string(),
+        file_path: root
+            .join("notes/to_delete.md")
+            .to_string_lossy()
+            .to_string(),
         label: "To Delete".to_string(),
         tags: vec![],
         tokens: 50,
@@ -44,6 +48,7 @@ fn test_candidate_overlay_routing_and_isolation() {
         broken_links: 0,
         fragments: vec![],
         freshness: None,
+        code_dependencies: vec![],
     });
 
     // Create staged files on disk
@@ -72,7 +77,9 @@ fn test_candidate_overlay_routing_and_isolation() {
 
     // 1. New staged note is available in overlay
     assert!(overlay.node_exists("notes/new_staged.md"));
-    let new_node = overlay.get_node("notes/new_staged.md").expect("get new node");
+    let new_node = overlay
+        .get_node("notes/new_staged.md")
+        .expect("get new node");
     assert_eq!(new_node.label, "New Staged Note");
 
     // 2. Deleted note is shadowed/hidden in overlay
@@ -114,6 +121,7 @@ fn test_candidate_admission_decision_gate() {
         broken_links: 1,
         fragments: vec![],
         freshness: None,
+        code_dependencies: vec![],
     });
     base_graph.add_edge(NoteEdge {
         id: "edge-1".to_string(),
@@ -228,3 +236,129 @@ fn test_candidate_admission_decision_gate() {
     assert_eq!(report_resolve.resolved_findings.len(), 1);
     assert_eq!(report_resolve.summary.resolved_debt, 1);
 }
+
+#[test]
+fn test_review_status_transitions_t012() {
+    use llm_wiki_core::drift::review::{calculate_affected_documents, resolve_document_review};
+    use llm_wiki_core::drift::ReverseImpactIndex;
+    use llm_wiki_core::model::{CodeDependency, DependencySource, ReviewGatingConfig, ReviewStatus};
+
+    let temp = tempdir().expect("create temp dir");
+    let root = temp.path();
+
+    fs::create_dir_all(root.join("notes")).unwrap();
+    fs::create_dir_all(root.join("src")).unwrap();
+
+    let doc_path = "notes/auth.md";
+    let doc_content = r#"---
+code_dependencies:
+  - src/auth.rs
+---
+# Authentication
+Cites auth module.
+"#;
+    fs::write(root.join(doc_path), doc_content).unwrap();
+    fs::write(root.join("src/auth.rs"), "pub fn auth() {}\n").unwrap();
+
+    let mut reverse_index = ReverseImpactIndex::new();
+    reverse_index.insert_dependency(
+        doc_path,
+        &CodeDependency {
+            code_path: "src/auth.rs".to_string(),
+            source: DependencySource::Frontmatter,
+            line_number: None,
+        },
+    );
+
+    let code_changed_delta = vec![FileDeltaItem {
+        path: "src/auth.rs".to_string(),
+        status: FileDeltaStatus::Modified,
+    }];
+
+    // 1. Transition to BLOCKED: unreviewed code change under enforce_doc_review = true
+    let blocking_config = ReviewGatingConfig {
+        enforce_doc_review: true,
+        block_on_legacy_debt: false,
+    };
+    let rep_blocked = calculate_affected_documents(
+        root,
+        &code_changed_delta,
+        &reverse_index,
+        Some(&blocking_config),
+        None,
+        None,
+    );
+    assert_eq!(rep_blocked.obligations.len(), 1);
+    assert_eq!(rep_blocked.obligations[0].status, ReviewStatus::Blocked);
+    assert_eq!(rep_blocked.blocked_count, 1);
+
+    // 2. Transition to PENDING: unreviewed code change under enforce_doc_review = false
+    let warn_config = ReviewGatingConfig {
+        enforce_doc_review: false,
+        block_on_legacy_debt: false,
+    };
+    let rep_pending = calculate_affected_documents(
+        root,
+        &code_changed_delta,
+        &reverse_index,
+        Some(&warn_config),
+        None,
+        None,
+    );
+    assert_eq!(rep_pending.obligations.len(), 1);
+    assert_eq!(rep_pending.obligations[0].status, ReviewStatus::Pending);
+    assert_eq!(rep_pending.pending_count, 1);
+
+    // 3. Transition to UPDATED: doc is concurrently modified in same delta
+    let doc_updated_delta = vec![
+        FileDeltaItem {
+            path: "src/auth.rs".to_string(),
+            status: FileDeltaStatus::Modified,
+        },
+        FileDeltaItem {
+            path: doc_path.to_string(),
+            status: FileDeltaStatus::Modified,
+        },
+    ];
+    let rep_updated = calculate_affected_documents(
+        root,
+        &doc_updated_delta,
+        &reverse_index,
+        Some(&blocking_config),
+        None,
+        None,
+    );
+    assert_eq!(rep_updated.obligations.len(), 1);
+    assert_eq!(rep_updated.obligations[0].status, ReviewStatus::Updated);
+    assert_eq!(rep_updated.blocked_count, 0);
+
+    // 4. Transition to REVIEWED_UNCHANGED via recorded review receipt
+    resolve_document_review(root, &[doc_path.to_string()], Some("HEAD")).expect("save receipt");
+    let rep_reviewed = calculate_affected_documents(
+        root,
+        &code_changed_delta,
+        &reverse_index,
+        Some(&blocking_config),
+        None,
+        None,
+    );
+    assert_eq!(rep_reviewed.obligations.len(), 1);
+    assert_eq!(rep_reviewed.obligations[0].status, ReviewStatus::ReviewedUnchanged);
+    assert_eq!(rep_reviewed.reviewed_count, 1);
+    assert_eq!(rep_reviewed.blocked_count, 0);
+
+    // 5. Transition to REVIEWED_UNCHANGED via commit trailer
+    let temp_fresh = tempdir().unwrap();
+    let rep_trailer = calculate_affected_documents(
+        temp_fresh.path(),
+        &code_changed_delta,
+        &reverse_index,
+        Some(&blocking_config),
+        None,
+        Some("fix(auth): update login flow\n\nReviewed-Docs: notes/auth.md"),
+    );
+    assert_eq!(rep_trailer.obligations.len(), 1);
+    assert_eq!(rep_trailer.obligations[0].status, ReviewStatus::ReviewedUnchanged);
+    assert_eq!(rep_trailer.reviewed_count, 1);
+}
+

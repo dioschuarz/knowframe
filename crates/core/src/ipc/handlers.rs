@@ -20,18 +20,21 @@ pub struct AppState {
     pub config: ContextVaultConfig,
     pub active_hub: Option<String>,
     pub cached_plans: std::collections::HashMap<String, crate::evolution::TransformationPlan>,
+    pub active_harness: Option<String>,
+    pub governance_store: crate::evolution::transformation::GovernancePlanStore,
 }
 
 impl AppState {
     pub fn new(workspace_root: PathBuf) -> Self {
-        let config_path = workspace_root.join(".context-vault.yaml");
-        let config = ContextVaultConfig::load_from_file(&config_path).unwrap_or_default();
+        let config = ContextVaultConfig::load_from_workspace(&workspace_root);
         Self {
             workspace_root,
             topology: GraphTopology::new(),
             config,
             active_hub: None,
             cached_plans: std::collections::HashMap::new(),
+            active_harness: None,
+            governance_store: crate::evolution::transformation::GovernancePlanStore::default(),
         }
     }
 
@@ -61,7 +64,11 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                     st.active_hub = payload.recommended_hub.clone();
                     st.topology = GraphTopology::new();
                     for node in &payload.nodes {
-                        let mut n = crate::model::NoteNode::new(node.id.clone(), node.file_path.clone(), node.label.clone());
+                        let mut n = crate::model::NoteNode::new(
+                            node.id.clone(),
+                            node.file_path.clone(),
+                            node.label.clone(),
+                        );
                         n.tags = node.tags.clone();
                         n.tokens = node.tokens;
                         n.status = node.status;
@@ -199,7 +206,8 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 None => return JsonRpcResponse::error(req.id, -32602, "Missing params"),
             };
 
-            let glob = match globset::Glob::new(&params.pattern) {
+            let pattern_trimmed = params.pattern.trim().to_string();
+            let glob = match globset::Glob::new(&pattern_trimmed) {
                 Ok(g) => g.compile_matcher(),
                 Err(e) => {
                     return JsonRpcResponse::error(
@@ -211,12 +219,17 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             };
 
             let mut st = state.write().await;
+            let config_path = crate::config::canonical_config_path(&st.workspace_root);
+            if let Ok(fresh_cfg) = ContextVaultConfig::load_from_file(&config_path) {
+                st.config = fresh_cfg;
+            }
+
             let mut affected_count = 0u32;
 
             if params.scope == "scan" {
                 let scan_mut = st.config.scan.get_or_insert_with(Default::default);
-                if !scan_mut.exclude.contains(&params.pattern) {
-                    scan_mut.exclude.push(params.pattern.clone());
+                if !scan_mut.exclude.contains(&pattern_trimmed) {
+                    scan_mut.exclude.push(pattern_trimmed.clone());
                 }
                 let matching_keys: Vec<String> = st
                     .topology
@@ -233,8 +246,8 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 }
             } else {
                 let graph_mut = st.config.graph.get_or_insert_with(Default::default);
-                if !graph_mut.exclude.contains(&params.pattern) {
-                    graph_mut.exclude.push(params.pattern.clone());
+                if !graph_mut.exclude.contains(&pattern_trimmed) {
+                    graph_mut.exclude.push(pattern_trimmed.clone());
                 }
                 for (id, node) in st.topology.nodes.iter_mut() {
                     if glob.is_match(id) {
@@ -249,8 +262,9 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 st.topology.compute_hops(hub);
             }
 
-            let config_path = st.workspace_root.join(".context-vault.yaml");
-            let _ = st.config.save_to_file(&config_path);
+            if let Err(e) = st.config.save_to_file(&config_path) {
+                eprintln!("[ERROR] Failed to save config to {:?}: {}", config_path, e);
+            }
 
             let summary = st.topology.compute_observatory_summary(None);
 
@@ -266,6 +280,100 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             };
 
             JsonRpcResponse::success(req.id, json!(result))
+        }
+        "graph/getExclusions" => {
+            let mut st = state.write().await;
+            let config_path = crate::config::canonical_config_path(&st.workspace_root);
+            if let Ok(cfg) = ContextVaultConfig::load_from_file(&config_path) {
+                st.config = cfg;
+            }
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "scan_exclusions": st.config.get_scan_exclude(),
+                    "graph_exclusions": st.config.get_graph_exclude(),
+                }),
+            )
+        }
+        "graph/removeExclusion" => {
+            let params = match req.params {
+                Some(p) => match serde_json::from_value::<ExcludePathParams>(p) {
+                    Ok(parsed) => parsed,
+                    Err(e) => {
+                        return JsonRpcResponse::error(
+                            req.id,
+                            -32602,
+                            format!("Invalid params: {}", e),
+                        )
+                    }
+                },
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing params"),
+            };
+
+            let mut st = state.write().await;
+            let config_path = crate::config::canonical_config_path(&st.workspace_root);
+            if let Ok(fresh_cfg) = ContextVaultConfig::load_from_file(&config_path) {
+                st.config = fresh_cfg;
+            }
+
+            let pattern_to_remove = params.pattern.trim();
+            let pattern_no_prefix = pattern_to_remove.trim_start_matches("./");
+
+            if params.scope == "scan" {
+                if let Some(ref mut scan) = st.config.scan {
+                    scan.exclude.retain(|p| {
+                        let p_clean = p.trim();
+                        p_clean != pattern_to_remove
+                            && p_clean != pattern_no_prefix
+                            && p_clean.trim_start_matches("./") != pattern_no_prefix
+                    });
+                }
+            } else {
+                if let Some(ref mut graph) = st.config.graph {
+                    graph.exclude.retain(|p| {
+                        let p_clean = p.trim();
+                        p_clean != pattern_to_remove
+                            && p_clean != pattern_no_prefix
+                            && p_clean.trim_start_matches("./") != pattern_no_prefix
+                    });
+                }
+                let remaining_graph_excludes = st.config.get_graph_exclude();
+                let remaining_engine = crate::graph::exclusions::ExclusionEngine::new(
+                    &st.config.get_scan_exclude(),
+                    &remaining_graph_excludes,
+                );
+                if let Ok(engine) = remaining_engine {
+                    for (id, node) in st.topology.nodes.iter_mut() {
+                        if node.status == crate::model::NodeStatus::Excluded
+                            && !engine.is_graph_excluded(id)
+                        {
+                            if node.in_degree == 0 && node.out_degree == 0 {
+                                node.status = crate::model::NodeStatus::Orphan;
+                            } else {
+                                node.status = crate::model::NodeStatus::Active;
+                            }
+                        }
+                    }
+                }
+            }
+
+            st.topology.resolve_links();
+            if let Some(ref hub) = st.active_hub.clone() {
+                st.topology.compute_hops(hub);
+            }
+
+            if let Err(e) = st.config.save_to_file(&config_path) {
+                eprintln!("[ERROR] Failed to save config to {:?}: {}", config_path, e);
+            }
+
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "success": true,
+                    "scan_exclusions": st.config.get_scan_exclude(),
+                    "graph_exclusions": st.config.get_graph_exclude(),
+                }),
+            )
         }
         "graph/suggestExclusions" => {
             let orphans: Vec<String> = {
@@ -295,7 +403,11 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                     pretty: false,
                 }) {
                     for node in scan_res.nodes {
-                        let mut n = crate::model::NoteNode::new(node.id.clone(), node.file_path, node.label);
+                        let mut n = crate::model::NoteNode::new(
+                            node.id.clone(),
+                            node.file_path,
+                            node.label,
+                        );
                         n.tags = node.tags;
                         n.tokens = node.tokens;
                         n.status = node.status;
@@ -330,20 +442,35 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             let baseline = crate::debt::baseline::load_baseline(&root).ok().flatten();
             let collisions = crate::collision::detect_collisions_in_graph(&topology, &root, 0.70);
             let drifts = crate::drift::detect_all_drifts_in_graph(&topology, &root);
-            let quality = crate::quality::calculate_quality_score(&topology, baseline.as_ref(), &collisions, &drifts);
-            JsonRpcResponse::success(req.id, json!({
-                "overall_score": quality.overall_score,
-                "integrity_score": quality.integrity_score,
-                "structure_score": quality.structure_score,
-                "consistency_score": quality.consistency_score,
-                "discoverability_score": quality.discoverability_score,
-                "freshness_score": quality.freshness_score,
-                "legacy_debt_count": quality.legacy_debt_count,
-                "regressions_count": quality.new_regressions_count,
-                "resolved_debt_count": quality.resolved_debt_count,
-                "central_hub_id": quality.central_hub_id,
-                "top_degradation_factors": quality.top_degradation_factors,
-            }))
+            let quality = crate::quality::calculate_quality_score(
+                &topology,
+                baseline.as_ref(),
+                &collisions,
+                &drifts,
+            );
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "overall_score": quality.overall_score,
+                    "integrity_score": quality.integrity_score,
+                    "structure_score": quality.structure_score,
+                    "consistency_score": quality.consistency_score,
+                    "discoverability_score": quality.discoverability_score,
+                    "freshness_score": quality.freshness_score,
+                    "legacy_debt_count": quality.legacy_debt_count,
+                    "regressions_count": quality.new_regressions_count,
+                    "resolved_debt_count": quality.resolved_debt_count,
+                    "central_hub_id": quality.central_hub_id,
+                    "top_degradation_factors": quality.top_degradation_factors,
+                    "total_issues": quality.total_issues,
+                    "findings_count": quality.findings_count,
+                    "broken_references": quality.broken_references,
+                    "invalid_anchors": quality.invalid_anchors,
+                    "raw_score": quality.raw_score,
+                    "is_effective": quality.is_effective,
+                    "active_issues_count": quality.active_issues_count,
+                }),
+            )
         }
         "workspace/getIssues" => {
             let (root, mut topology) = {
@@ -357,7 +484,11 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                     pretty: false,
                 }) {
                     for node in scan_res.nodes {
-                        let mut n = crate::model::NoteNode::new(node.id.clone(), node.file_path, node.label);
+                        let mut n = crate::model::NoteNode::new(
+                            node.id.clone(),
+                            node.file_path,
+                            node.label,
+                        );
                         n.tags = node.tags;
                         n.tokens = node.tokens;
                         n.status = node.status;
@@ -392,35 +523,109 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             let baseline = crate::debt::baseline::load_baseline(&root).ok().flatten();
             let collisions = crate::collision::detect_collisions_in_graph(&topology, &root, 0.70);
             let drifts = crate::drift::detect_all_drifts_in_graph(&topology, &root);
-            let quality = crate::quality::calculate_quality_score(&topology, baseline.as_ref(), &collisions, &drifts);
-            let all_issues = crate::quality::extract_all_issues(&topology, &collisions, &drifts);
+            let quality = crate::quality::calculate_quality_score(
+                &topology,
+                baseline.as_ref(),
+                &collisions,
+                &drifts,
+            );
+            let all_issues = crate::quality::extract_all_issues_with_baseline(
+                &topology,
+                &collisions,
+                &drifts,
+                baseline.as_ref(),
+            );
 
-            let integrity_count = all_issues.iter().filter(|i| i.pillar == "integrity").count();
-            let structure_count = all_issues.iter().filter(|i| i.pillar == "structure").count();
-            let consistency_count = all_issues.iter().filter(|i| i.pillar == "consistency").count();
-            let discoverability_count = all_issues.iter().filter(|i| i.pillar == "discoverability").count();
-            let freshness_count = all_issues.iter().filter(|i| i.pillar == "freshness").count();
+            let include_debt = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("include_debt").or_else(|| p.get("includeDebt")))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let include_excluded = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("include_excluded").or_else(|| p.get("includeExcluded")))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(false);
+
+            let filter_path = req
+                .params
+                .as_ref()
+                .and_then(|p| {
+                    p.get("filter_path")
+                        .or_else(|| p.get("filterPath"))
+                        .or_else(|| p.get("path"))
+                })
+                .and_then(|v| v.as_str())
+                .map(|s| s.trim_start_matches("./").to_string());
+
             let total_issues = all_issues.len();
+            let legacy_debt_count = all_issues.iter().filter(|i| i.is_legacy).count();
+            let active_issues_count = all_issues.iter().filter(|i| !i.is_legacy).count();
 
-            let pillar_filter = req.params.as_ref()
+            let mut filtered_issues = all_issues;
+
+            if !include_debt {
+                filtered_issues.retain(|i| !i.is_legacy);
+            }
+
+            if !include_excluded {
+                filtered_issues.retain(|i| {
+                    if let Some(node) = topology.nodes.get(&i.file_path) {
+                        node.status != crate::model::NodeStatus::Excluded
+                    } else {
+                        true
+                    }
+                });
+            }
+
+            if let Some(ref prefix) = filter_path {
+                filtered_issues.retain(|i| {
+                    i.file_path.starts_with(prefix) || i.file_path.contains(prefix)
+                });
+            }
+
+            let pillar_filter = req
+                .params
+                .as_ref()
                 .and_then(|p| p.get("pillar"))
                 .and_then(|v| v.as_str())
                 .unwrap_or("all")
                 .to_lowercase();
 
-            let limit = req.params.as_ref()
+            if pillar_filter != "all" && !pillar_filter.is_empty() {
+                filtered_issues.retain(|i| i.pillar.to_lowercase() == pillar_filter);
+            }
+
+            let integrity_count = filtered_issues
+                .iter()
+                .filter(|i| i.pillar == "integrity")
+                .count();
+            let structure_count = filtered_issues
+                .iter()
+                .filter(|i| i.pillar == "structure")
+                .count();
+            let consistency_count = filtered_issues
+                .iter()
+                .filter(|i| i.pillar == "consistency")
+                .count();
+            let discoverability_count = filtered_issues
+                .iter()
+                .filter(|i| i.pillar == "discoverability")
+                .count();
+            let freshness_count = filtered_issues
+                .iter()
+                .filter(|i| i.pillar == "freshness")
+                .count();
+
+            let limit = req
+                .params
+                .as_ref()
                 .and_then(|p| p.get("limit"))
                 .and_then(|v| v.as_u64())
                 .map(|v| v as usize);
-
-            let filtered_issues: Vec<_> = if pillar_filter == "all" || pillar_filter.is_empty() {
-                all_issues
-            } else {
-                all_issues
-                    .into_iter()
-                    .filter(|i| i.pillar.to_lowercase() == pillar_filter)
-                    .collect()
-            };
 
             let report_issues = if let Some(lim) = limit {
                 filtered_issues.into_iter().take(lim).collect()
@@ -428,16 +633,24 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 filtered_issues
             };
 
-            JsonRpcResponse::success(req.id, json!({
-                "overall_score": quality.overall_score,
-                "total_issues": total_issues,
-                "integrity_count": integrity_count,
-                "structure_count": structure_count,
-                "consistency_count": consistency_count,
-                "discoverability_count": discoverability_count,
-                "freshness_count": freshness_count,
-                "issues": report_issues,
-            }))
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "overall_score": quality.overall_score,
+                    "total_issues": total_issues,
+                    "active_issues_count": active_issues_count,
+                    "legacy_debt_count": legacy_debt_count,
+                    "is_quiet_default": !include_debt,
+                    "raw_score": quality.raw_score,
+                    "is_effective": quality.is_effective,
+                    "integrity_count": integrity_count,
+                    "structure_count": structure_count,
+                    "consistency_count": consistency_count,
+                    "discoverability_count": discoverability_count,
+                    "freshness_count": freshness_count,
+                    "issues": report_issues,
+                }),
+            )
         }
         "workspace/getBaseline" => {
             let root = {
@@ -445,8 +658,9 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 st.workspace_root.clone()
             };
             match crate::debt::baseline::load_baseline(&root) {
-                Ok(Some(base)) => {
-                    JsonRpcResponse::success(req.id, json!({
+                Ok(Some(base)) => JsonRpcResponse::success(
+                    req.id,
+                    json!({
                         "baseline_commit": base.baseline_commit,
                         "timestamp": base.timestamp,
                         "broken_links_count": base.broken_links.len(),
@@ -454,10 +668,11 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                         "collisions_count": base.collisions.len(),
                         "drifts_count": base.technical_drifts.len(),
                         "total_debt": base.total_debt,
-                    }))
-                }
-                Ok(None) => {
-                    JsonRpcResponse::success(req.id, json!({
+                    }),
+                ),
+                Ok(None) => JsonRpcResponse::success(
+                    req.id,
+                    json!({
                         "baseline_commit": "unbaselined",
                         "timestamp": "",
                         "broken_links_count": 0,
@@ -465,9 +680,13 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                         "collisions_count": 0,
                         "drifts_count": 0,
                         "total_debt": 0,
-                    }))
-                }
-                Err(e) => JsonRpcResponse::error(req.id, -32000, format!("Failed to read baseline: {}", e)),
+                    }),
+                ),
+                Err(e) => JsonRpcResponse::error(
+                    req.id,
+                    -32000,
+                    format!("Failed to read baseline: {}", e),
+                ),
             }
         }
         "workspace/updateBaseline" => {
@@ -483,26 +702,36 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
 
             match crate::cli::baseline_cmd::execute_baseline_reset(&root) {
                 Ok(_) => {
-                    let new_base = crate::debt::baseline::load_baseline(&root)
-                        .ok()
-                        .flatten();
+                    let new_base = crate::debt::baseline::load_baseline(&root).ok().flatten();
                     let (commit, total) = new_base
                         .map(|b| (b.baseline_commit, b.total_debt))
                         .unwrap_or_else(|| ("unknown".to_string(), 0));
-                    JsonRpcResponse::success(req.id, json!({
-                        "baseline_commit": commit,
-                        "total_debt": total,
-                        "previous_total_debt": prev_total,
-                    }))
+                    JsonRpcResponse::success(
+                        req.id,
+                        json!({
+                            "baseline_commit": commit,
+                            "total_debt": total,
+                            "previous_total_debt": prev_total,
+                        }),
+                    )
                 }
-                Err(e) => JsonRpcResponse::error(req.id, -32000, format!("Failed to update baseline: {}", e)),
+                Err(e) => JsonRpcResponse::error(
+                    req.id,
+                    -32000,
+                    format!("Failed to update baseline: {}", e),
+                ),
             }
         }
         "workspace/traceContext" => {
             let (query, entrypoint) = match req.params {
                 Some(ref p) => (
-                    p.get("query").and_then(|q| q.as_str()).unwrap_or("").to_string(),
-                    p.get("entrypoint").and_then(|e| e.as_str()).map(|s| s.to_string()),
+                    p.get("query")
+                        .and_then(|q| q.as_str())
+                        .unwrap_or("")
+                        .to_string(),
+                    p.get("entrypoint")
+                        .and_then(|e| e.as_str())
+                        .map(|s| s.to_string()),
                 ),
                 None => return JsonRpcResponse::error(req.id, -32602, "Missing params"),
             };
@@ -518,7 +747,11 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                     pretty: false,
                 }) {
                     for node in scan_res.nodes {
-                        let mut n = crate::model::NoteNode::new(node.id.clone(), node.file_path, node.label);
+                        let mut n = crate::model::NoteNode::new(
+                            node.id.clone(),
+                            node.file_path,
+                            node.label,
+                        );
                         n.tags = node.tags;
                         n.tokens = node.tokens;
                         n.status = node.status;
@@ -541,7 +774,11 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 }
             }
 
-            let trace_res = crate::trace::traversal::execute_context_trace(&topology, &query, entrypoint.as_deref());
+            let trace_res = crate::trace::traversal::execute_context_trace(
+                &topology,
+                &query,
+                entrypoint.as_deref(),
+            );
             JsonRpcResponse::success(req.id, json!(trace_res))
         }
         "workspace/validateCandidate" => {
@@ -571,7 +808,10 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                             }
                         }
                     }
-                    let commit = p.get("base_commit").and_then(|c| c.as_str()).map(|s| s.to_string());
+                    let commit = p
+                        .get("base_commit")
+                        .and_then(|c| c.as_str())
+                        .map(|s| s.to_string());
                     crate::delta::GitDelta {
                         commit_sha: commit,
                         items,
@@ -585,10 +825,16 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
 
             let baseline = match crate::debt::baseline::load_baseline(&root) {
                 Ok(Some(b)) => b,
-                _ => crate::debt::baseline::capture_initial_baseline(&base_graph, "initial", vec![], vec![]),
+                _ => crate::debt::baseline::capture_initial_baseline(
+                    &base_graph,
+                    "initial",
+                    vec![],
+                    vec![],
+                ),
             };
 
-            let overlay = crate::candidate::overlay::CandidateOverlay::new(&base_graph, &root, &staged_delta);
+            let overlay =
+                crate::candidate::overlay::CandidateOverlay::new(&base_graph, &root, &staged_delta);
             let report = crate::candidate::evaluator::evaluate_candidate(
                 &overlay,
                 &baseline,
@@ -600,55 +846,84 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             JsonRpcResponse::success(req.id, json!(report))
         }
         "graph/getDocumentFragments" => {
-            let path = match req.params.and_then(|p| p.get("path").and_then(|v| v.as_str().map(|s| s.to_string()))) {
+            let path = match req.params.and_then(|p| {
+                p.get("path")
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
+            }) {
                 Some(p) => p,
                 None => return JsonRpcResponse::error(req.id, -32602, "Missing 'path' parameter"),
             };
             let st = state.read().await;
             if let Some(node) = st.topology.get_node(&path) {
-                JsonRpcResponse::success(req.id, json!({
-                    "path": path,
-                    "total_tokens": node.tokens,
-                    "fragments": node.fragments,
-                }))
+                JsonRpcResponse::success(
+                    req.id,
+                    json!({
+                        "path": path,
+                        "total_tokens": node.tokens,
+                        "fragments": node.fragments,
+                    }),
+                )
             } else {
                 let abs_path = st.workspace_root.join(&path);
                 if let Ok(content) = std::fs::read_to_string(&abs_path) {
                     let tokens = crate::tokens::counter::count_bpe_tokens(&content).unwrap_or(0);
                     let parsed = crate::ast::parser::parse_markdown_ast(&path, &content);
-                    let fragments = crate::fragment::extractor::extract_fragments_from_document(&content, &parsed.edges);
-                    JsonRpcResponse::success(req.id, json!({
-                        "path": path,
-                        "total_tokens": tokens,
-                        "fragments": fragments,
-                    }))
+                    let fragments = crate::fragment::extractor::extract_fragments_from_document(
+                        &content,
+                        &parsed.edges,
+                    );
+                    JsonRpcResponse::success(
+                        req.id,
+                        json!({
+                            "path": path,
+                            "total_tokens": tokens,
+                            "fragments": fragments,
+                        }),
+                    )
                 } else {
                     JsonRpcResponse::error(req.id, -32004, format!("Document '{}' not found", path))
                 }
             }
         }
         "graph/materializeFrontmatter" => {
-            let path = match req.params.as_ref().and_then(|p| p.get("path").and_then(|v| v.as_str().map(|s| s.to_string()))) {
+            let path = match req.params.as_ref().and_then(|p| {
+                p.get("path")
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
+            }) {
                 Some(p) => p,
                 None => return JsonRpcResponse::error(req.id, -32602, "Missing 'path' parameter"),
             };
-            let dry_run = req.params.as_ref().and_then(|p| p.get("dry_run").and_then(|v| v.as_bool())).unwrap_or(false);
+            let dry_run = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("dry_run").and_then(|v| v.as_bool()))
+                .unwrap_or(false);
             let st = state.read().await;
             let abs_path = st.workspace_root.join(&path);
             if !abs_path.exists() {
-                return JsonRpcResponse::error(req.id, -32004, format!("Document '{}' not found on disk", path));
+                return JsonRpcResponse::error(
+                    req.id,
+                    -32004,
+                    format!("Document '{}' not found on disk", path),
+                );
             }
             if dry_run {
                 if let Ok(content) = std::fs::read_to_string(&abs_path) {
                     let tokens = crate::tokens::counter::count_bpe_tokens(&content).unwrap_or(0);
                     let parsed = crate::ast::parser::parse_markdown_ast(&path, &content);
-                    let fragments = crate::fragment::extractor::extract_fragments_from_document(&content, &parsed.edges);
-                    JsonRpcResponse::success(req.id, json!({
-                        "path": path,
-                        "updated": false,
-                        "fragment_count": fragments.len(),
-                        "total_tokens": tokens,
-                    }))
+                    let fragments = crate::fragment::extractor::extract_fragments_from_document(
+                        &content,
+                        &parsed.edges,
+                    );
+                    JsonRpcResponse::success(
+                        req.id,
+                        json!({
+                            "path": path,
+                            "updated": false,
+                            "fragment_count": fragments.len(),
+                            "total_tokens": tokens,
+                        }),
+                    )
                 } else {
                     JsonRpcResponse::error(req.id, -32000, "Failed to read file for dry run")
                 }
@@ -656,39 +931,66 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 match crate::cli::materialize_cmd::materialize_file(&abs_path, false) {
                     Ok(updated) => {
                         let content = std::fs::read_to_string(&abs_path).unwrap_or_default();
-                        let tokens = crate::tokens::counter::count_bpe_tokens(&content).unwrap_or(0);
+                        let tokens =
+                            crate::tokens::counter::count_bpe_tokens(&content).unwrap_or(0);
                         let parsed = crate::ast::parser::parse_markdown_ast(&path, &content);
-                        let fragments = crate::fragment::extractor::extract_fragments_from_document(&content, &parsed.edges);
-                        JsonRpcResponse::success(req.id, json!({
-                            "path": path,
-                            "updated": updated,
-                            "fragment_count": fragments.len(),
-                            "total_tokens": tokens,
-                        }))
+                        let fragments = crate::fragment::extractor::extract_fragments_from_document(
+                            &content,
+                            &parsed.edges,
+                        );
+                        JsonRpcResponse::success(
+                            req.id,
+                            json!({
+                                "path": path,
+                                "updated": updated,
+                                "fragment_count": fragments.len(),
+                                "total_tokens": tokens,
+                            }),
+                        )
                     }
-                    Err(e) => JsonRpcResponse::error(req.id, -32000, format!("Materialize failed: {}", e)),
+                    Err(e) => {
+                        JsonRpcResponse::error(req.id, -32000, format!("Materialize failed: {}", e))
+                    }
                 }
             }
         }
         "trace/contextTraceSection" => {
-            let query = match req.params.as_ref().and_then(|p| p.get("query").and_then(|v| v.as_str().map(|s| s.to_string()))) {
+            let query = match req.params.as_ref().and_then(|p| {
+                p.get("query")
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
+            }) {
                 Some(q) => q,
                 None => return JsonRpcResponse::error(req.id, -32602, "Missing 'query' parameter"),
             };
-            let entrypoint = req.params.as_ref().and_then(|p| p.get("entrypoint").and_then(|v| v.as_str().map(|s| s.to_string())));
+            let entrypoint = req.params.as_ref().and_then(|p| {
+                p.get("entrypoint")
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
+            });
             let st = state.read().await;
-            match crate::trace::beam::trace_context_section(&st.topology, &query, entrypoint.as_deref()) {
+            match crate::trace::beam::trace_context_section(
+                &st.topology,
+                &query,
+                entrypoint.as_deref(),
+            ) {
                 Some(res) => JsonRpcResponse::success(req.id, json!(res)),
-                None => JsonRpcResponse::error(req.id, -32004, "No context trace section match found"),
+                None => {
+                    JsonRpcResponse::error(req.id, -32004, "No context trace section match found")
+                }
             }
         }
         "quality/getFivePillarScore" => {
             let st = state.read().await;
             let root = st.workspace_root.clone();
             let base = crate::debt::baseline::load_baseline(&root).ok().flatten();
-            let collisions = crate::collision::detect_collisions_in_graph(&st.topology, &root, 0.70);
+            let collisions =
+                crate::collision::detect_collisions_in_graph(&st.topology, &root, 0.70);
             let drifts = crate::drift::detect_all_drifts_in_graph(&st.topology, &root);
-            let score = crate::quality::scorer::calculate_quality_score(&st.topology, base.as_ref(), &collisions, &drifts);
+            let score = crate::quality::scorer::calculate_quality_score(
+                &st.topology,
+                base.as_ref(),
+                &collisions,
+                &drifts,
+            );
 
             let debt_summary = crate::debt::DebtSummary {
                 total_debt: score.legacy_debt_count + score.new_regressions_count,
@@ -698,16 +1000,22 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 regressions: score.new_regressions_count,
             };
 
-            let mut reasons: std::collections::HashMap<crate::quality::QualityPillar, Vec<String>> = std::collections::HashMap::new();
+            let mut reasons: std::collections::HashMap<crate::quality::QualityPillar, Vec<String>> =
+                std::collections::HashMap::new();
             for f in &score.top_degradation_factors {
                 let pillar = match f.category.as_str() {
                     "broken_link" | "broken_anchor" => crate::quality::QualityPillar::Integrity,
                     "structure_debt" => crate::quality::QualityPillar::Structure,
                     "collision" => crate::quality::QualityPillar::Consistency,
-                    "technical_drift" | "missing_code_citation" | "code_modified_after_doc" => crate::quality::QualityPillar::Freshness,
+                    "technical_drift" | "missing_code_citation" | "code_modified_after_doc" => {
+                        crate::quality::QualityPillar::Freshness
+                    }
                     _ => crate::quality::QualityPillar::Discoverability,
                 };
-                reasons.entry(pillar).or_default().push(format!("{}: {}", f.affected_node, f.description));
+                reasons
+                    .entry(pillar)
+                    .or_default()
+                    .push(format!("{}: {}", f.affected_node, f.description));
             }
 
             let five_pillar = crate::quality::FivePillarQualityScore {
@@ -723,6 +1031,18 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
 
             JsonRpcResponse::success(req.id, json!(five_pillar))
         }
+        "manager/getSummary" => {
+            let st = state.read().await;
+            let orientation = st.config.get_orientation();
+            let constraints = st.get_active_profile().constraints;
+            let summary = crate::evolution::summary::compute_manager_summary(
+                &st.topology,
+                &st.workspace_root,
+                orientation,
+                &constraints,
+            );
+            JsonRpcResponse::success(req.id, json!(summary))
+        }
         "profile/getOrientation" => {
             let st = state.read().await;
             let orientation = st.config.get_orientation();
@@ -735,10 +1055,11 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 }),
             )
         }
-        "profile/setOrientation" => {
+        "profile/setOrientation" | "evolution/setOrientation" => {
             let orientation = match req.params.as_ref().and_then(|p| {
                 p.get("orientation").and_then(|v| {
-                    serde_json::from_value::<crate::evolution::DocumentationOrientation>(v.clone()).ok()
+                    serde_json::from_value::<crate::evolution::DocumentationOrientation>(v.clone())
+                        .ok()
                 })
             }) {
                 Some(o) => o,
@@ -761,6 +1082,66 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                     "success": true,
                     "orientation": orientation,
                     "profile": profile,
+                }),
+            )
+        }
+        "evolution/updateCustomProfile" => {
+            let params = match req.params {
+                Some(p) => p,
+                None => {
+                    return JsonRpcResponse::error(req.id, -32602, "Missing request parameters")
+                }
+            };
+            let tier1 = params
+                .get("tier1_preferences")
+                .or_else(|| params.get("tier1"))
+                .and_then(|v| serde_json::from_value::<crate::evolution::Tier1Objectives>(v.clone()).ok());
+            let tier2 = params
+                .get("tier2_parameters")
+                .or_else(|| params.get("tier2"))
+                .and_then(|v| serde_json::from_value::<crate::evolution::Tier2Parameters>(v.clone()).ok());
+            let constraints: Vec<crate::evolution::ConstraintRule> = if let Some(rules) = params
+                .get("hard_constraints")
+                .and_then(|v| serde_json::from_value::<Vec<String>>(v.clone()).ok())
+            {
+                rules
+                    .into_iter()
+                    .enumerate()
+                    .map(|(i, s)| crate::evolution::ConstraintRule {
+                        id: format!("hc_{}", i),
+                        level: crate::evolution::ConstraintLevel::HardConstraint,
+                        rule_key: s.clone(),
+                        description: s,
+                    })
+                    .collect()
+            } else {
+                params
+                    .get("constraints")
+                    .and_then(|v| serde_json::from_value::<Vec<crate::evolution::ConstraintRule>>(v.clone()).ok())
+                    .unwrap_or_default()
+            };
+
+            let detector = crate::evolution::ConflictDetector::new();
+            let (is_valid, conflicts) = detector.validate(&constraints);
+            let conflict_reasons: Vec<String> = conflicts.into_iter().map(|c| c.reason).collect();
+
+            let mut st = state.write().await;
+            st.config.orientation = Some(crate::evolution::DocumentationOrientation::Custom);
+            st.config.custom_profile = Some(crate::config::CustomProfileConfig {
+                tier1,
+                tier2,
+                constraints,
+            });
+            let config_path = st.workspace_root.join(".context-vault.yaml");
+            let _ = st.config.save_to_file(&config_path);
+            let profile = st.get_active_profile();
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "success": true,
+                    "profile": profile,
+                    "conflicting_constraints": !is_valid,
+                    "conflict_reasons": conflict_reasons,
                 }),
             )
         }
@@ -850,7 +1231,8 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
         }
         "analytics/getStructuralProblems" => {
             let file_path = req.params.as_ref().and_then(|p| {
-                p.get("file_path").and_then(|v| v.as_str().map(|s| s.to_string()))
+                p.get("file_path")
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
             });
             let st = state.read().await;
             let target = st.get_active_profile().fragment_size_target;
@@ -866,12 +1248,27 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 st.topology.nodes.values().cloned().collect()
             };
 
+            let profile = st.get_active_profile();
             let signatures = crate::evolution::detect_all_signatures(&nodes, target);
-            JsonRpcResponse::success(req.id, json!({ "signatures": signatures }))
+            let mut sig_values = Vec::new();
+            for sig in &signatures {
+                let mut v = serde_json::to_value(sig).unwrap_or(json!({}));
+                let strat_set = crate::evolution::strategies::select_strategy_set(
+                    &sig.signature_id,
+                    &sig.document_path,
+                    sig,
+                    &profile,
+                );
+                v["strategy_set"] = json!(strat_set);
+                v["strategySet"] = json!(strat_set);
+                sig_values.push(v);
+            }
+            JsonRpcResponse::success(req.id, json!({ "signatures": sig_values }))
         }
         "recommendation/getRecommendations" => {
             let signature_id = req.params.as_ref().and_then(|p| {
-                p.get("signature_id").and_then(|v| v.as_str().map(|s| s.to_string()))
+                p.get("signature_id")
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
             });
             let st = state.read().await;
             let profile = st.get_active_profile();
@@ -895,7 +1292,8 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
         }
         "transformation/generatePlan" => {
             let recommendation_id = match req.params.as_ref().and_then(|p| {
-                p.get("recommendation_id").and_then(|v| v.as_str().map(|s| s.to_string()))
+                p.get("recommendation_id")
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
             }) {
                 Some(id) => id,
                 None => {
@@ -925,7 +1323,10 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                             .unwrap_or_else(|| {
                                 crate::model::NoteNode::new(
                                     sig.document_path.clone(),
-                                    st.workspace_root.join(&sig.document_path).to_string_lossy().to_string(),
+                                    st.workspace_root
+                                        .join(&sig.document_path)
+                                        .to_string_lossy()
+                                        .to_string(),
                                     "Document",
                                 )
                             });
@@ -939,9 +1340,11 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             }
 
             let plan = match found {
-                Some((rec, node)) => {
-                    crate::evolution::TransformationEngine::build_plan(&rec, &node, &st.workspace_root)
-                }
+                Some((rec, node)) => crate::evolution::TransformationEngine::build_plan(
+                    &rec,
+                    &node,
+                    &st.workspace_root,
+                ),
                 None => {
                     return JsonRpcResponse::error(
                         req.id,
@@ -961,30 +1364,83 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
         }
         "transformation/applyPlan" => {
             let plan_id = match req.params.as_ref().and_then(|p| {
-                p.get("plan_id").and_then(|v| v.as_str().map(|s| s.to_string()))
+                p.get("plan_id")
+                    .or_else(|| p.get("planId"))
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
             }) {
                 Some(id) => id,
-                None => return JsonRpcResponse::error(req.id, -32602, "Missing 'plan_id' parameter"),
+                None => {
+                    return JsonRpcResponse::error(req.id, -32602, "Missing 'plan_id' parameter")
+                }
             };
 
             let st = state.read().await;
             let plan_opt = if let Some(plan_val) = req.params.as_ref().and_then(|p| p.get("plan")) {
-                serde_json::from_value::<crate::evolution::TransformationPlan>(plan_val.clone()).ok()
+                match serde_json::from_value::<crate::evolution::TransformationPlan>(plan_val.clone()) {
+                    Ok(p) => Some(p),
+                    Err(e) => {
+                        eprintln!("[transformation/applyPlan] plan deserialization fallback: {}", e);
+                        st.cached_plans
+                            .get(&plan_id)
+                            .or_else(|| st.cached_plans.get(plan_id.strip_prefix("plan_").unwrap_or(&plan_id)))
+                            .or_else(|| st.cached_plans.get(&format!("plan_{}", plan_id)))
+                            .cloned()
+                    }
+                }
             } else {
-                st.cached_plans.get(&plan_id).cloned()
+                st.cached_plans
+                    .get(&plan_id)
+                    .or_else(|| st.cached_plans.get(plan_id.strip_prefix("plan_").unwrap_or(&plan_id)))
+                    .or_else(|| st.cached_plans.get(&format!("plan_{}", plan_id)))
+                    .cloned()
             };
 
+            let root = st.workspace_root.clone();
             let plan = match plan_opt {
                 Some(p) => p,
                 None => {
-                    return JsonRpcResponse::error(
-                        req.id,
-                        -32004,
-                        format!("Transformation plan '{}' not found", plan_id),
-                    )
+                    // Resilient dynamic on-the-fly reconstruction
+                    let opp_id = plan_id.strip_prefix("plan_").unwrap_or(&plan_id);
+                    let profile = st.get_active_profile();
+                    let nodes: Vec<crate::model::NoteNode> = st.topology.nodes.values().cloned().collect();
+                    if let Some(opp) = crate::evolution::opportunity::build_opportunity_detail(opp_id, &nodes, &profile) {
+                        if let Some(node) = nodes.iter().find(|n| n.file_path == opp.target_document || n.id == opp.target_document) {
+                            let strats: Vec<crate::evolution::strategies::KnowledgeOrganizationStrategy> = if let Some(ref set) = opp.strategy_set {
+                                let mut s = vec![set.primary.strategy];
+                                for sup in &set.supporting {
+                                    s.push(sup.strategy);
+                                }
+                                if s.is_empty() {
+                                    opp.candidate_strategies.iter().map(|cs| cs.strategy.into()).collect()
+                                } else {
+                                    s
+                                }
+                            } else {
+                                opp.candidate_strategies.iter().map(|cs| cs.strategy.into()).collect()
+                            };
+                            crate::evolution::TransformationEngine::build_multi_strategy_plan(
+                                &plan_id,
+                                &format!("rec_{}", opp.id),
+                                &strats,
+                                node,
+                                &root,
+                            )
+                        } else {
+                            return JsonRpcResponse::error(
+                                req.id,
+                                -32004,
+                                format!("Transformation plan '{}' not found", plan_id),
+                            );
+                        }
+                    } else {
+                        return JsonRpcResponse::error(
+                            req.id,
+                            -32004,
+                            format!("Transformation plan '{}' not found", plan_id),
+                        );
+                    }
                 }
             };
-            let root = st.workspace_root.clone();
             drop(st);
 
             // Invariant XVI: Require approval must be satisfied
@@ -1009,6 +1465,1317 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                     -32000,
                     format!("Atomic transformation failed and rolled back: {}", e),
                 ),
+            }
+        }
+        "evolution/getOpportunities" => {
+            let limit = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("limit").and_then(|v| v.as_u64()))
+                .unwrap_or(50) as usize;
+
+            let st = state.read().await;
+            let profile = st.get_active_profile();
+            let nodes: Vec<crate::model::NoteNode> = st.topology.nodes.values().cloned().collect();
+            let mut opportunities =
+                crate::evolution::opportunity::build_structural_opportunities(&nodes, &profile);
+            opportunities.truncate(limit);
+            JsonRpcResponse::success(req.id, json!({ "opportunities": opportunities }))
+        }
+        "evolution/getOpportunityDetail" => {
+            let opp_id = match req.params.as_ref().and_then(|p| {
+                p.get("opportunityId")
+                    .or_else(|| p.get("opportunity_id"))
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
+            }) {
+                Some(id) => id,
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32602,
+                        "Missing 'opportunityId' parameter",
+                    )
+                }
+            };
+            let st = state.read().await;
+            let profile = st.get_active_profile();
+            let nodes: Vec<crate::model::NoteNode> = st.topology.nodes.values().cloned().collect();
+            match crate::evolution::opportunity::build_opportunity_detail(&opp_id, &nodes, &profile) {
+                Some(opp) => JsonRpcResponse::success(req.id, json!(opp)),
+                None => JsonRpcResponse::error(
+                    req.id,
+                    -32004,
+                    format!("Opportunity '{}' not found", opp_id),
+                ),
+            }
+        }
+        "evolution/previewTransformation" => {
+            let params = match req.params.as_ref() {
+                Some(p) => p,
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing request parameters"),
+            };
+            let opp_id = match params
+                .get("opportunityId")
+                .or_else(|| params.get("opportunity_id"))
+                .and_then(|v| v.as_str())
+            {
+                Some(id) => id.to_string(),
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing 'opportunityId' parameter"),
+            };
+            let strategy = match params.get("strategy").and_then(|v| {
+                serde_json::from_value::<crate::evolution::opportunity::EvolutionStrategy>(v.clone()).ok()
+            }) {
+                Some(s) => s,
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing or invalid 'strategy' parameter"),
+            };
+            let hybrid_partner = params.get("hybrid_partner").and_then(|v| {
+                serde_json::from_value::<crate::evolution::opportunity::EvolutionStrategy>(v.clone()).ok()
+            });
+
+            let st = state.read().await;
+            let profile = st.get_active_profile();
+            let nodes: Vec<crate::model::NoteNode> = st.topology.nodes.values().cloned().collect();
+            let root = st.workspace_root.clone();
+            drop(st);
+
+            match crate::evolution::opportunity::build_transformation_preview_and_plan(
+                &opp_id,
+                strategy,
+                hybrid_partner,
+                &nodes,
+                &root,
+                &profile,
+            ) {
+                Some((preview, plan)) => {
+                    let mut st_write = state.write().await;
+                    st_write.cached_plans.insert(plan.plan_id.clone(), plan);
+                    JsonRpcResponse::success(req.id, json!(preview))
+                }
+                None => JsonRpcResponse::error(
+                    req.id,
+                    -32004,
+                    format!("Could not generate preview for opportunity '{}'", opp_id),
+                ),
+            }
+        }
+        "evolution/applyTransformation" => {
+            let params = match req.params.as_ref() {
+                Some(p) => p,
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing request parameters"),
+            };
+            let plan_id = match params
+                .get("plan_id")
+                .or_else(|| params.get("planId"))
+                .and_then(|v| v.as_str())
+            {
+                Some(id) => id.to_string(),
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing 'plan_id' parameter"),
+            };
+            let require_approval = params
+                .get("requireApproval")
+                .or_else(|| params.get("require_approval"))
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
+
+            // Invariant XVI safety gate: require explicit approval
+            if !require_approval {
+                return JsonRpcResponse::error(
+                    req.id,
+                    -32000,
+                    "Invariant XVI violation: User approval is required for transformations",
+                );
+            }
+
+            let st = state.read().await;
+            let plan_opt = if let Some(plan_val) = req.params.as_ref().and_then(|p| p.get("plan")) {
+                match serde_json::from_value::<crate::evolution::TransformationPlan>(plan_val.clone()) {
+                    Ok(p) => Some(p),
+                    Err(e) => {
+                        eprintln!("[evolution/applyTransformation] plan deserialization fallback: {}", e);
+                        st.cached_plans
+                            .get(&plan_id)
+                            .or_else(|| st.cached_plans.get(plan_id.strip_prefix("plan_").unwrap_or(&plan_id)))
+                            .or_else(|| st.cached_plans.get(&format!("plan_{}", plan_id)))
+                            .cloned()
+                    }
+                }
+            } else {
+                st.cached_plans
+                    .get(&plan_id)
+                    .or_else(|| st.cached_plans.get(plan_id.strip_prefix("plan_").unwrap_or(&plan_id)))
+                    .or_else(|| st.cached_plans.get(&format!("plan_{}", plan_id)))
+                    .cloned()
+            };
+            let root = st.workspace_root.clone();
+
+            let plan = match plan_opt {
+                Some(p) => p,
+                None => {
+                    let opp_id = plan_id.strip_prefix("plan_").unwrap_or(&plan_id);
+                    let profile = st.get_active_profile();
+                    let nodes: Vec<crate::model::NoteNode> = st.topology.nodes.values().cloned().collect();
+                    if let Some(opp) = crate::evolution::opportunity::build_opportunity_detail(opp_id, &nodes, &profile) {
+                        if let Some(node) = nodes.iter().find(|n| n.file_path == opp.target_document || n.id == opp.target_document) {
+                            let strats: Vec<crate::evolution::strategies::KnowledgeOrganizationStrategy> = if let Some(ref set) = opp.strategy_set {
+                                let mut s = vec![set.primary.strategy];
+                                for sup in &set.supporting {
+                                    s.push(sup.strategy);
+                                }
+                                if s.is_empty() {
+                                    opp.candidate_strategies.iter().map(|cs| cs.strategy.into()).collect()
+                                } else {
+                                    s
+                                }
+                            } else {
+                                opp.candidate_strategies.iter().map(|cs| cs.strategy.into()).collect()
+                            };
+                            crate::evolution::TransformationEngine::build_multi_strategy_plan(
+                                &plan_id,
+                                &format!("rec_{}", opp.id),
+                                &strats,
+                                node,
+                                &root,
+                            )
+                        } else {
+                            return JsonRpcResponse::error(
+                                req.id,
+                                -32004,
+                                format!("Transformation plan '{}' not found", plan_id),
+                            );
+                        }
+                    } else {
+                        return JsonRpcResponse::error(
+                            req.id,
+                            -32004,
+                            format!("Transformation plan '{}' not found", plan_id),
+                        );
+                    }
+                }
+            };
+            drop(st);
+
+            // Invariant XVI: Require approval must be satisfied
+            if let Err(e) = crate::evolution::TransformationEngine::verify_invariant_xvi(&plan) {
+                return JsonRpcResponse::error(
+                    req.id,
+                    -32000,
+                    format!("Invariant XVI approval gate check failed: {}", e),
+                );
+            }
+
+            match crate::evolution::TransformationEngine::apply_plan_atomic(&plan, &root) {
+                Ok(actual_delta) => {
+                    let re_measurement = crate::evolution::opportunity::ReMeasurementReport {
+                        context_efficiency_delta_pct: (actual_delta.efficiency_delta as f64) * 100.0,
+                        trace_depth_delta_pct: (actual_delta.trace_depth_delta as f64) * 100.0,
+                        maintenance_coupling_delta_pct: (actual_delta.coupling_delta as f64) * 100.0,
+                        document_count_delta: actual_delta.doc_count_delta,
+                        reference_count_delta: 0,
+                        narrative_summary: "The selected objectives improved, with the following structural trade-offs.".to_string(),
+                    };
+                    JsonRpcResponse::success(
+                        req.id,
+                        json!({
+                            "success": true,
+                            "reMeasurement": re_measurement,
+                        }),
+                    )
+                }
+                Err(e) => JsonRpcResponse::error(
+                    req.id,
+                    -32000,
+                    format!("Atomic transformation failed: {}", e),
+                ),
+            }
+        }
+        "evolution/getStrategySet" => {
+            let opp_id = match req.params.as_ref().and_then(|p| {
+                p.get("opportunity_id")
+                    .or_else(|| p.get("opportunityId"))
+                    .and_then(|v| v.as_str().map(|s| s.to_string()))
+            }) {
+                Some(id) => id,
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32602,
+                        "Missing 'opportunity_id' parameter",
+                    );
+                }
+            };
+            let st = state.read().await;
+            let profile = st.get_active_profile();
+            let nodes: Vec<crate::model::NoteNode> = st.topology.nodes.values().cloned().collect();
+            match crate::evolution::opportunity::build_opportunity_strategy_set(&opp_id, &nodes, &profile) {
+                Some(strategy_set) => JsonRpcResponse::success(req.id, json!(strategy_set)),
+                None => JsonRpcResponse::error(
+                    req.id,
+                    -32004,
+                    format!("Opportunity '{}' not found", opp_id),
+                ),
+            }
+        }
+        "evolution/validateStrategySelection" => {
+            let params = match req.params.as_ref() {
+                Some(p) => p,
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing request parameters"),
+            };
+            let selected_strategies = match params
+                .get("selected_strategies")
+                .or_else(|| params.get("selectedStrategies"))
+                .and_then(|v| {
+                    serde_json::from_value::<Vec<crate::evolution::strategies::KnowledgeOrganizationStrategy>>(
+                        v.clone(),
+                    )
+                    .ok()
+                }) {
+                Some(strats) => strats,
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32602,
+                        "Missing or invalid 'selected_strategies' parameter",
+                    );
+                }
+            };
+
+            let mut incompatible_pairs = Vec::new();
+            for i in 0..selected_strategies.len() {
+                for j in (i + 1)..selected_strategies.len() {
+                    let a = selected_strategies[i];
+                    let b = selected_strategies[j];
+                    let rel = crate::evolution::strategies::get_strategy_relationship(a, b);
+                    if rel == crate::evolution::strategies::StrategyRelationshipType::Alternative
+                        || rel == crate::evolution::strategies::StrategyRelationshipType::MutuallyExclusive
+                    {
+                        incompatible_pairs.push(json!({
+                            "strategy_a": a,
+                            "strategy_b": b,
+                            "relationship": rel,
+                            "reason": format!(
+                                "Strategy '{:?}' cannot be combined with '{:?}' (relationship: {:?}).",
+                                a, b, rel
+                            ),
+                        }));
+                    }
+                }
+            }
+
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "is_valid": incompatible_pairs.is_empty(),
+                    "incompatible_pairs": incompatible_pairs,
+                }),
+            )
+        }
+        "evolution/calculatePlanValue" => {
+            let params = match req.params.as_ref() {
+                Some(p) => p,
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing request parameters"),
+            };
+            let opp_id = match params
+                .get("opportunity_id")
+                .or_else(|| params.get("opportunityId"))
+                .and_then(|v| v.as_str())
+            {
+                Some(id) => id.to_string(),
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing 'opportunity_id' parameter"),
+            };
+            let selected_strategies = match params
+                .get("selected_strategies")
+                .or_else(|| params.get("selectedStrategies"))
+                .and_then(|v| {
+                    serde_json::from_value::<Vec<crate::evolution::strategies::KnowledgeOrganizationStrategy>>(
+                        v.clone(),
+                    )
+                    .ok()
+                }) {
+                Some(strats) => strats,
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32602,
+                        "Missing or invalid 'selected_strategies' parameter",
+                    );
+                }
+            };
+
+            let st = state.read().await;
+            let profile = st.get_active_profile();
+            let nodes: Vec<crate::model::NoteNode> = st.topology.nodes.values().cloned().collect();
+
+            let signatures = crate::evolution::signatures::detect_all_signatures(
+                &nodes,
+                profile.fragment_size_target,
+            );
+            let sig = match signatures.iter().find(|s| s.signature_id == opp_id) {
+                Some(s) => s.clone(),
+                None => {
+                    match crate::evolution::opportunity::build_opportunity_detail(&opp_id, &nodes, &profile) {
+                        Some(opp) => crate::evolution::signatures::StructuralProblemSignature {
+                            signature_id: opp.id,
+                            document_path: opp.target_document,
+                            problem_type: match opp.signature {
+                                crate::evolution::opportunity::ProblemSignature::StructurallyOverloadedDocument => {
+                                    crate::evolution::signatures::ProblemSignatureType::GodDocument
+                                }
+                                crate::evolution::opportunity::ProblemSignature::KnowledgeFragmentation => {
+                                    crate::evolution::signatures::ProblemSignatureType::FragmentedConcept
+                                }
+                                crate::evolution::opportunity::ProblemSignature::WeakDiscoveryPath => {
+                                    crate::evolution::signatures::ProblemSignatureType::ImplicitRouter
+                                }
+                                crate::evolution::opportunity::ProblemSignature::IsolatedKnowledgeSilo => {
+                                    crate::evolution::signatures::ProblemSignatureType::IsolatedSilo
+                                }
+                            },
+                            confidence: opp.confidence as f32,
+                            evidence: Default::default(),
+                            rationale: opp.narrative_why,
+                        },
+                        None => {
+                            return JsonRpcResponse::error(
+                                req.id,
+                                -32004,
+                                format!("Opportunity '{}' not found", opp_id),
+                            );
+                        }
+                    }
+                }
+            };
+
+            let fit_lookup: Vec<(crate::evolution::strategies::KnowledgeOrganizationStrategy, u32)> =
+                crate::evolution::strategies::STANDARD_CANDIDATE_STRATEGIES
+                    .iter()
+                    .map(|&strat| {
+                        (
+                            strat,
+                            crate::evolution::strategies::calculate_integer_fit_score(
+                                strat, &sig, &profile,
+                            ),
+                        )
+                    })
+                    .collect();
+
+            let composite_plan_value = crate::evolution::plan_value::calculate_composite_plan_value(
+                &selected_strategies,
+                &fit_lookup,
+            );
+
+            let mut conflict_message = None;
+            let mut is_valid = true;
+            for i in 0..selected_strategies.len() {
+                for j in (i + 1)..selected_strategies.len() {
+                    let a = selected_strategies[i];
+                    let b = selected_strategies[j];
+                    let rel = crate::evolution::strategies::get_strategy_relationship(a, b);
+                    if rel != crate::evolution::strategies::StrategyRelationshipType::Complementary {
+                        is_valid = false;
+                        conflict_message = Some(format!(
+                            "Strategies '{:?}' and '{:?}' are incompatible ({:?}).",
+                            a, b, rel
+                        ));
+                        break;
+                    }
+                }
+                if !is_valid {
+                    break;
+                }
+            }
+
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "composite_plan_value": composite_plan_value,
+                    "is_valid": is_valid,
+                    "conflict_message": conflict_message,
+                }),
+            )
+        }
+        "evolution/generatePlan" => {
+            let params = match req.params.as_ref() {
+                Some(p) => p,
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing request parameters"),
+            };
+            let opp_id = match params
+                .get("opportunity_id")
+                .or_else(|| params.get("opportunityId"))
+                .and_then(|v| v.as_str())
+            {
+                Some(id) => id.to_string(),
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing 'opportunity_id' parameter"),
+            };
+            let selected_strategies = match params
+                .get("selected_strategies")
+                .or_else(|| params.get("selectedStrategies"))
+                .and_then(|v| {
+                    serde_json::from_value::<Vec<crate::evolution::strategies::KnowledgeOrganizationStrategy>>(
+                        v.clone(),
+                    )
+                    .ok()
+                }) {
+                Some(strats) => strats,
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32602,
+                        "Missing or invalid 'selected_strategies' parameter",
+                    );
+                }
+            };
+
+            let st = state.read().await;
+            let profile = st.get_active_profile();
+            let nodes: Vec<crate::model::NoteNode> = st.topology.nodes.values().cloned().collect();
+            let root = st.workspace_root.clone();
+            drop(st);
+
+            match crate::evolution::opportunity::build_multi_strategy_transformation_preview_and_plan(
+                &opp_id,
+                &selected_strategies,
+                &nodes,
+                &root,
+                &profile,
+            ) {
+                Some((_preview, plan)) => {
+                    let mut st_write = state.write().await;
+                    st_write.cached_plans.insert(plan.plan_id.clone(), plan.clone());
+                    JsonRpcResponse::success(
+                        req.id,
+                        json!({
+                            "plan_id": plan.plan_id,
+                            "planId": plan.plan_id,
+                            "opportunity_id": opp_id,
+                            "opportunityId": opp_id,
+                            "recommendation_id": plan.recommendation_id,
+                            "recommendationId": plan.recommendation_id,
+                            "actions": plan.actions,
+                            "diff_preview": plan.diff_preview,
+                            "diffPreview": plan.diff_preview,
+                            "projected_delta": plan.projected_delta,
+                            "projectedDelta": plan.projected_delta,
+                            "requires_approval": plan.requires_approval,
+                            "requiresApproval": plan.requires_approval,
+                        }),
+                    )
+                }
+                None => JsonRpcResponse::error(
+                    req.id,
+                    -32004,
+                    format!("Could not generate plan for opportunity '{}'", opp_id),
+                ),
+            }
+        }
+        "governance/getHarnessStatus" => {
+            let st = state.read().await;
+            let root = st.workspace_root.clone();
+            let mut custom_paths = st.config.get_harness_entry_points();
+            if let Some(ref hub) = st.active_hub {
+                if !custom_paths.contains(hub) {
+                    custom_paths.push(hub.clone());
+                }
+            }
+            for hub in &st.config.vault.hubs {
+                if !custom_paths.contains(hub) {
+                    custom_paths.push(hub.clone());
+                }
+            }
+            let active_override = st.active_harness.clone().or_else(|| st.config.get_active_harness());
+            drop(st);
+
+            let mut harnesses =
+                crate::harness::discovery::HarnessDetector::detect_all_with_active(&root, &custom_paths, active_override.as_deref());
+            let parser = crate::harness::index_parser::IndexParser::new(&root);
+            let sec_detector =
+                crate::harness::secondary_layer::SecondaryLayerDetector::new(&root);
+
+            for h in harnesses.iter_mut() {
+                let full = root.join(&h.file_path);
+                if let Ok(content) = std::fs::read_to_string(&full) {
+                    h.embedded_index = parser.parse_harness_index(&h.file_path, &content);
+                    h.secondary_layers_detected =
+                        sec_detector.detect_secondary_layers(&h.file_path);
+                    h.quality_ratings =
+                        crate::harness::HarnessQualityAuditor::audit_harness(h, &content);
+                }
+            }
+
+            let active_harness = harnesses
+                .iter()
+                .find(|h| h.is_primary)
+                .cloned()
+                .or_else(|| harnesses.first().cloned());
+
+            let skills = crate::harness::skill::SkillAuditor::audit_repository(&root, &[], &[]);
+            let procedure_candidates =
+                crate::harness::procedure::ProcedureExtractor::extract_candidates_from_vault(&root, &[]);
+            let capability_matrix =
+                crate::harness::matrix::AIOrientedCapabilityMatrixEvaluator::evaluate(
+                    active_harness.as_ref(),
+                    &skills,
+                    &procedure_candidates,
+                    &[],
+                );
+
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "harnesses": harnesses,
+                    "active_harness": active_harness,
+                    "capability_matrix": capability_matrix
+                }),
+            )
+        }
+        "governance/setActiveHarness" => {
+            let harness_file = match req.params {
+                Some(p) => match p.get("harness_file").and_then(|v| v.as_str()) {
+                    Some(s) => s.to_string(),
+                    None => {
+                        return JsonRpcResponse::error(
+                            req.id,
+                            -32602,
+                            "Missing required parameter 'harness_file'".to_string(),
+                        );
+                    }
+                },
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32602,
+                        "Missing required parameter 'harness_file'".to_string(),
+                    );
+                }
+            };
+
+            let mut st = state.write().await;
+            let previous = st.active_harness.clone();
+            st.active_harness = Some(harness_file.clone());
+
+            // Persist to .context-vault.yaml
+            let root = st.workspace_root.clone();
+            let mut config = crate::config::ContextVaultConfig::load_from_workspace(&root);
+            let mut harness_cfg = config.harness.unwrap_or_default();
+            harness_cfg.active = Some(harness_file.clone());
+            if !harness_cfg.entry_points.contains(&harness_file) {
+                harness_cfg.entry_points.push(harness_file.clone());
+            }
+            config.harness = Some(harness_cfg);
+            let _ = config.save_to_workspace(&root);
+            st.config = config;
+
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "active_harness": harness_file,
+                    "previous_harness": previous
+                }),
+            )
+        }
+        "governance/initializeHarness" => {
+            let (target_harness, project_name) = match req.params {
+                Some(p) => (
+                    p.get("target_harness").and_then(|v| v.as_str()).unwrap_or("AGENTS.md").to_string(),
+                    p.get("project_name").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                ),
+                None => ("AGENTS.md".to_string(), None),
+            };
+
+            let st = state.read().await;
+            let root = st.workspace_root.clone();
+            drop(st);
+
+            let target_path = root.join(&target_harness);
+            if !target_path.exists() {
+                let mut custom_routes = Vec::new();
+                if root.join("AGENTS.md").exists() {
+                    if let Ok(c) = std::fs::read_to_string(root.join("AGENTS.md")) {
+                        custom_routes = crate::evolution::transformation::extract_routes_from_markdown(&c);
+                    }
+                } else if root.join("index.md").exists() {
+                    if let Ok(c) = std::fs::read_to_string(root.join("index.md")) {
+                        custom_routes = crate::evolution::transformation::extract_routes_from_markdown(&c);
+                    }
+                }
+
+                let harness_type = crate::harness::HarnessType::from_path(&target_harness);
+                let content = crate::harness::discovery::generate_template_harness(
+                    harness_type,
+                    project_name.as_deref(),
+                    if custom_routes.is_empty() { None } else { Some(&custom_routes) },
+                );
+                let _ = std::fs::write(&target_path, content);
+            }
+
+            JsonRpcResponse::success(req.id, json!({ "initialized": target_harness }))
+        }
+        "governance/configureHarnessBase" => {
+            let params = match req.params.as_ref() {
+                Some(p) => p,
+                None => return JsonRpcResponse::error(req.id, -32602, "Missing request parameters"),
+            };
+            let enabled_harnesses: Vec<String> = params
+                .get("enabled_harnesses")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|s| s.as_str().map(|s| s.to_string())).collect())
+                .unwrap_or_else(|| vec!["AGENTS.md".to_string()]);
+            let active_harness = params
+                .get("active_harness")
+                .and_then(|v| v.as_str())
+                .unwrap_or_else(|| enabled_harnesses.first().map(|s| s.as_str()).unwrap_or("AGENTS.md"))
+                .to_string();
+            let create_folders: Vec<String> = params
+                .get("create_folders")
+                .and_then(|v| v.as_array())
+                .map(|arr| arr.iter().filter_map(|s| s.as_str().map(|s| s.to_string())).collect())
+                .unwrap_or_default();
+            let consolidate_index = params
+                .get("consolidate_index")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
+            let clean_unused = params
+                .get("clean_unused")
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
+
+            let mut st = state.write().await;
+            let root = st.workspace_root.clone();
+
+            // 1. Create requested base folders
+            let mut created_dirs = Vec::new();
+            for folder in &create_folders {
+                let dir_path = root.join(folder);
+                if !dir_path.exists() {
+                    let _ = std::fs::create_dir_all(&dir_path);
+                    created_dirs.push(folder.clone());
+                }
+            }
+
+            // 2. Extract best routes from active harness or index.md
+            let mut routes = Vec::new();
+            if root.join(&active_harness).exists() {
+                if let Ok(c) = std::fs::read_to_string(root.join(&active_harness)) {
+                    routes = crate::evolution::transformation::extract_routes_from_markdown(&c);
+                }
+            }
+            if routes.is_empty() && root.join("AGENTS.md").exists() {
+                if let Ok(c) = std::fs::read_to_string(root.join("AGENTS.md")) {
+                    routes = crate::evolution::transformation::extract_routes_from_markdown(&c);
+                }
+            }
+            if routes.is_empty() && root.join("index.md").exists() {
+                if let Ok(c) = std::fs::read_to_string(root.join("index.md")) {
+                    routes = crate::evolution::transformation::extract_routes_from_markdown(&c);
+                }
+            }
+
+            // 3. For enabled harnesses, ensure they exist with index
+            for h in &enabled_harnesses {
+                let h_path = root.join(h);
+                if !h_path.exists() {
+                    let h_type = crate::harness::HarnessType::from_path(h);
+                    let content = crate::harness::discovery::generate_template_harness(
+                        h_type,
+                        None,
+                        if routes.is_empty() { None } else { Some(&routes) },
+                    );
+                    let _ = std::fs::write(&h_path, content);
+                }
+            }
+
+            // 4. For standard harnesses that are NOT enabled, remove them if clean_unused is true
+            let mut removed = Vec::new();
+            if clean_unused {
+                let standard_harnesses = ["AGENTS.md", "CLAUDE.md", "GEMINI.md", ".github/copilot-instructions.md"];
+                for sh in standard_harnesses {
+                    if !enabled_harnesses.iter().any(|eh| eh == sh) {
+                        let sh_path = root.join(sh);
+                        if sh_path.is_file() {
+                            let _ = std::fs::remove_file(&sh_path);
+                            removed.push(sh.to_string());
+                        }
+                    }
+                }
+            }
+
+            // 5. If consolidate_index is true, consolidate and safely remove index.md
+            if consolidate_index {
+                let index_path = root.join("index.md");
+                if index_path.exists() {
+                    for h_rel in &enabled_harnesses {
+                        let h_path = root.join(h_rel);
+                        if !h_path.exists() {
+                            continue;
+                        }
+                        let h_audit = crate::evolution::transformation::audit_secondary_layer_routes(
+                            &root,
+                            "index.md",
+                            h_rel,
+                        );
+                        if !h_audit.missing_from_harness.is_empty() {
+                            let mut h_content = std::fs::read_to_string(&h_path).unwrap_or_default();
+                            let mut routes_to_append = String::new();
+                            for r in &h_audit.missing_from_harness {
+                                routes_to_append.push_str(r);
+                                routes_to_append.push('\n');
+                            }
+                            if h_content.contains("## Knowledge Index") {
+                                if let Some(pos) = h_content.find("## Knowledge Index") {
+                                    let end_of_line = h_content[pos..]
+                                        .find('\n')
+                                        .map(|p| pos + p + 1)
+                                        .unwrap_or(h_content.len());
+                                    h_content.insert_str(
+                                        end_of_line,
+                                        &format!("\n{}", routes_to_append.trim_start()),
+                                    );
+                                } else {
+                                    h_content.push_str(&format!(
+                                        "\n\n## Knowledge Index\n{}",
+                                        routes_to_append.trim_start()
+                                    ));
+                                }
+                            } else {
+                                h_content.push_str(&format!(
+                                    "\n\n## Knowledge Index\n{}",
+                                    routes_to_append.trim_start()
+                                ));
+                            }
+                            let _ = std::fs::write(&h_path, h_content);
+                        }
+                    }
+
+                    // Clean references to index.md in enabled harnesses
+                    for h_rel in &enabled_harnesses {
+                        let h_path = root.join(h_rel);
+                        if let Ok(h_content) = std::fs::read_to_string(&h_path) {
+                            if h_content.contains("(index.md)") || h_content.contains("[[index.md]]") || h_content.contains("[[index]]") {
+                                let cleaned = h_content
+                                    .lines()
+                                    .filter(|l| !l.contains("(index.md)") && !l.contains("[[index.md]]") && !l.contains("[[index]]"))
+                                    .collect::<Vec<_>>()
+                                    .join("\n") + "\n";
+                                let _ = std::fs::write(&h_path, cleaned);
+                            }
+                        }
+                    }
+
+                    // Safely delete index.md
+                    let _ = std::fs::remove_file(&index_path);
+                    removed.push("index.md".to_string());
+                }
+            }
+
+            // 6. Update .context-vault.yaml
+            let mut config = crate::config::ContextVaultConfig::load_from_workspace(&root);
+            let mut harness_cfg = config.harness.unwrap_or_default();
+            harness_cfg.active = Some(active_harness.clone());
+            harness_cfg.entry_points = enabled_harnesses.clone();
+            config.harness = Some(harness_cfg);
+            config.vault.hubs = vec![active_harness.clone()];
+            let _ = config.save_to_workspace(&root);
+            st.config = config;
+            st.active_harness = Some(active_harness.clone());
+
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "active_harness": active_harness,
+                    "enabled_harnesses": enabled_harnesses,
+                    "created_folders": created_dirs,
+                    "removed_files": removed,
+                    "consolidated_index": consolidate_index
+                }),
+            )
+        }
+        "governance/syncHarnesses" => {
+            let st = state.read().await;
+            let root = st.workspace_root.clone();
+            let custom_paths = st.config.get_harness_entry_points();
+            let active_override = st.active_harness.clone().or_else(|| st.config.get_active_harness());
+            let standard_harness_names = [
+                "AGENTS.md",
+                "CLAUDE.md",
+                "GEMINI.md",
+                ".github/copilot-instructions.md",
+            ];
+
+            let mut all_harness_paths: Vec<String> = Vec::new();
+            for std_cand in &standard_harness_names {
+                if root.join(std_cand).is_file() {
+                    all_harness_paths.push(std_cand.to_string());
+                }
+            }
+            for c in &custom_paths {
+                if root.join(c).is_file() && !all_harness_paths.contains(c) {
+                    all_harness_paths.push(c.clone());
+                }
+            }
+            for node_path in st.topology.nodes.keys() {
+                let normalized = node_path.replace('\\', "/");
+                if standard_harness_names
+                    .iter()
+                    .any(|h| normalized == *h || normalized.ends_with(&format!("/{}", h)))
+                    && !all_harness_paths.contains(node_path)
+                {
+                    all_harness_paths.push(node_path.clone());
+                }
+            }
+            drop(st);
+
+            use std::collections::HashMap;
+            let mut scope_groups: HashMap<String, Vec<String>> = HashMap::new();
+            for h_path in all_harness_paths {
+                let scope = crate::quality::structure::get_harness_dir_scope(&h_path);
+                scope_groups.entry(scope).or_default().push(h_path);
+            }
+
+            let parser = crate::harness::index_parser::IndexParser::new(&root);
+            let mut synced_count = 0;
+
+            for (_scope, peer_paths) in scope_groups {
+                if peer_paths.len() <= 1 {
+                    continue; // Single isolated harness in this scope has no peers to sync
+                }
+
+                // Determine primary harness for this scope
+                let preferred_primary = peer_paths
+                    .iter()
+                    .find(|p| active_override.as_deref() == Some(p.as_str()))
+                    .or_else(|| {
+                        peer_paths
+                            .iter()
+                            .find(|p| p.ends_with("AGENTS.md") || p.as_str() == "AGENTS.md")
+                    })
+                    .or_else(|| peer_paths.first());
+
+                let mut effective_primary: Option<(String, String, crate::harness::EmbeddedIndexMetadata)> = None;
+
+                if let Some(pri_rel) = preferred_primary {
+                    let pri_full = root.join(pri_rel);
+                    if let Ok(pri_content) = std::fs::read_to_string(&pri_full) {
+                        if let Some(idx) = parser.parse_harness_index(pri_rel, &pri_content) {
+                            effective_primary = Some((pri_rel.clone(), pri_content, idx));
+                        }
+                    }
+                }
+
+                if effective_primary.is_none() {
+                    for peer_rel in &peer_paths {
+                        let peer_full = root.join(peer_rel);
+                        if let Ok(peer_content) = std::fs::read_to_string(&peer_full) {
+                            if let Some(idx) = parser.parse_harness_index(peer_rel, &peer_content) {
+                                effective_primary = Some((peer_rel.clone(), peer_content, idx));
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                if let Some((pri_rel, pri_content, idx)) = effective_primary {
+                    let lines: Vec<&str> = pri_content.lines().collect();
+                    let start = idx.start_line.saturating_sub(1);
+                    let end = idx.end_line.min(lines.len());
+                    let mut index_block = lines[start..end].join("\n");
+
+                    // Merge routes ONLY from other peer harnesses within THIS directory scope
+                    for other_rel in &peer_paths {
+                        if other_rel != &pri_rel {
+                            let other_full = root.join(other_rel);
+                            if let Ok(other_content) = std::fs::read_to_string(&other_full) {
+                                if let Some(ref oi) = parser.parse_harness_index(other_rel, &other_content) {
+                                    for route in &oi.routes {
+                                        if !index_block.contains(&route.target_file) {
+                                            let route_line = format!("- [{}](%TARGET%)", route.label)
+                                                .replace("%TARGET%", &route.target_file);
+                                            index_block.push_str(&format!("\n{}", route_line));
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Write unified index_block ONLY to harnesses in this directory scope
+                    for h_rel in &peer_paths {
+                        let h_full = root.join(h_rel);
+                        if let Ok(h_content) = std::fs::read_to_string(&h_full) {
+                            let h_idx = parser.parse_harness_index(h_rel, &h_content);
+                            let new_content = if let Some(ref hi) = h_idx {
+                                let h_lines: Vec<&str> = h_content.lines().collect();
+                                let h_start = hi.start_line.saturating_sub(1);
+                                let h_end = hi.end_line.min(h_lines.len());
+                                let mut res = h_lines[..h_start].join("\n");
+                                if !res.is_empty() { res.push('\n'); }
+                                res.push_str(&index_block);
+                                if h_end < h_lines.len() {
+                                    res.push('\n');
+                                    res.push_str(&h_lines[h_end..].join("\n"));
+                                }
+                                if h_content.ends_with('\n') && !res.ends_with('\n') {
+                                    res.push('\n');
+                                }
+                                res
+                            } else {
+                                let mut res = format!("{}\n\n{}", h_content.trim_end(), index_block);
+                                if h_content.ends_with('\n') && !res.ends_with('\n') {
+                                    res.push('\n');
+                                }
+                                res
+                            };
+
+                            if new_content != h_content {
+                                let _ = std::fs::write(&h_full, new_content);
+                                synced_count += 1;
+                            }
+                        }
+                    }
+                }
+            }
+
+            JsonRpcResponse::success(req.id, json!({ "synced_count": synced_count }))
+        }
+        "governance/getSkillCatalog" => {
+            let st = state.read().await;
+            let root = st.workspace_root.clone();
+            let vault_files: Vec<String> = if !st.topology.nodes.is_empty() {
+                st.topology.nodes.keys().cloned().collect()
+            } else {
+                // If topology not yet populated in RAM, discover markdown files in root
+                let mut files = Vec::new();
+                for entry in walkdir::WalkDir::new(&root).into_iter().flatten() {
+                    if entry.file_type().is_file() {
+                        if let Some(ext) = entry.path().extension() {
+                            if ext == "md" {
+                                if let Ok(rel) = entry.path().strip_prefix(&root) {
+                                    files.push(rel.to_string_lossy().replace('\\', "/"));
+                                }
+                            }
+                        }
+                    }
+                }
+                files
+            };
+            drop(st);
+
+            // Fetch any routes from detected harnesses
+            let harnesses = crate::harness::discovery::HarnessDetector::detect_all(&root, &[]);
+            let mut routes = Vec::new();
+            let parser = crate::harness::index_parser::IndexParser::new(&root);
+            for h in &harnesses {
+                let full = root.join(&h.file_path);
+                if let Ok(content) = std::fs::read_to_string(&full) {
+                    if let Some(idx) = parser.parse_harness_index(&h.file_path, &content) {
+                        routes.extend(idx.routes);
+                    }
+                }
+            }
+
+            let skills = crate::harness::skill::SkillAuditor::audit_repository(&root, &routes, &vault_files);
+            let procedure_candidates = crate::harness::procedure::ProcedureExtractor::extract_candidates_from_vault(&root, &vault_files);
+
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "skills": skills,
+                    "procedure_candidates": procedure_candidates
+                }),
+            )
+        }
+        "governance/traceFromHarness" => {
+            let (query, harness_file, max_hops) = match req.params {
+                Some(ref p) => {
+                    let q = p.get("query").and_then(|v| v.as_str()).unwrap_or("").to_string();
+                    let h = p.get("harness_file").and_then(|v| v.as_str()).unwrap_or("AGENTS.md").to_string();
+                    let m = p.get("max_hops").and_then(|v| v.as_u64()).unwrap_or(3) as u32;
+                    (q, h, m)
+                }
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32602,
+                        "Missing required parameter 'query'".to_string(),
+                    );
+                }
+            };
+
+            if query.is_empty() {
+                return JsonRpcResponse::error(
+                    req.id,
+                    -32602,
+                    "Parameter 'query' cannot be empty".to_string(),
+                );
+            }
+
+            let mut st = state.write().await;
+            if st.topology.nodes.is_empty() {
+                let root = st.workspace_root.clone();
+                for entry in walkdir::WalkDir::new(&root).into_iter().flatten() {
+                    if entry.file_type().is_file() {
+                        if let Some(ext) = entry.path().extension() {
+                            if ext == "md" {
+                                if let Ok(rel) = entry.path().strip_prefix(&root) {
+                                    let rel_str = rel.to_string_lossy().replace('\\', "/");
+                                    let content = std::fs::read_to_string(entry.path()).unwrap_or_default();
+                                    let tokens = crate::tokens::counter::count_bpe_tokens(&content).unwrap_or(0) as u32;
+                                    let label = entry.path().file_stem().and_then(|s| s.to_str()).unwrap_or(&rel_str).to_string();
+                                    let mut node = crate::model::NoteNode::new(&rel_str, rel_str.clone(), &label);
+                                    node.tokens = tokens;
+                                    st.topology.add_node(node);
+                                }
+                            }
+                        }
+                    }
+                }
+                st.topology.resolve_links();
+            }
+
+            let trace_res = crate::trace::traversal::trace_from_harness(
+                &st.topology,
+                &query,
+                &harness_file,
+                max_hops,
+            );
+            drop(st);
+
+            JsonRpcResponse::success(
+                req.id,
+                json!({
+                    "harness_file": trace_res.harness_file,
+                    "total_hops": trace_res.total_hops,
+                    "total_tokens_traversed": trace_res.total_tokens_traversed,
+                    "target_fragment": trace_res.target_fragment,
+                    "path": trace_res.path,
+                    "relevance_progression": trace_res.relevance_progression
+                }),
+            )
+        }
+        "governance/generateGovernancePlan" => {
+            let (strat, target) = match req.params {
+                Some(ref p) => {
+                    let s_val = p.get("strategy_type").cloned().unwrap_or(serde_json::Value::Null);
+                    let strat: crate::harness::GovernanceStrategyType = match serde_json::from_value(s_val) {
+                        Ok(s) => s,
+                        Err(e) => {
+                            return JsonRpcResponse::error(
+                                req.id,
+                                -32602,
+                                format!("Invalid strategy_type: {}", e),
+                            );
+                        }
+                    };
+                    let target = p
+                        .get("target_file_or_dir")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    (strat, target)
+                }
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32602,
+                        "Missing params for generateGovernancePlan".to_string(),
+                    );
+                }
+            };
+
+            let root = {
+                let st = state.read().await;
+                st.workspace_root.clone()
+            };
+
+            match crate::evolution::transformation::GovernancePlanGenerator::generate_plan(
+                &root,
+                strat,
+                &target,
+            ) {
+                Ok(plan) => {
+                    let st = state.read().await;
+                    st.governance_store.save_plan(plan.clone());
+                    JsonRpcResponse::success(req.id, json!(plan))
+                }
+                Err(e) => JsonRpcResponse::error(req.id, -32603, e.to_string()),
+            }
+        }
+        "governance/applyGovernancePlan" => {
+            let (plan_id, token) = match req.params {
+                Some(ref p) => {
+                    let pid = p
+                        .get("plan_id")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    let tok = p
+                        .get("approval_token")
+                        .and_then(|v| v.as_str())
+                        .unwrap_or("")
+                        .to_string();
+                    (pid, tok)
+                }
+                None => {
+                    return JsonRpcResponse::error(
+                        req.id,
+                        -32602,
+                        "Missing params for applyGovernancePlan".to_string(),
+                    );
+                }
+            };
+
+            let (root, store) = {
+                let st = state.read().await;
+                (st.workspace_root.clone(), st.governance_store.clone())
+            };
+
+            match store.apply_plan(&root, &plan_id, &token) {
+                Ok(result) => JsonRpcResponse::success(req.id, json!(result)),
+                Err(e) => JsonRpcResponse::error(req.id, -32001, e.to_string()),
+            }
+        }
+        "governance/analyzeDirectoryStructure" => {
+            let (root, topology) = {
+                let st = state.read().await;
+                (st.workspace_root.clone(), st.topology.clone())
+            };
+
+            let metrics = crate::harness::directory_metrics::DirectoryMetricsAnalyzer::analyze(
+                &root,
+                Some(&topology),
+            );
+            JsonRpcResponse::success(req.id, json!(metrics))
+        }
+        "trace/getAffectedDocuments" => {
+            let (root, config, topology) = {
+                let st = state.read().await;
+                (st.workspace_root.clone(), st.config.clone(), st.topology.clone())
+            };
+
+            let params: super::protocol::GetAffectedDocumentsParams = match req.params {
+                Some(p) => match serde_json::from_value(p) {
+                    Ok(parsed) => parsed,
+                    Err(e) => {
+                        return JsonRpcResponse::error(
+                            req.id,
+                            -32602,
+                            format!("Invalid params for trace/getAffectedDocuments: {e}"),
+                        );
+                    }
+                },
+                None => super::protocol::GetAffectedDocumentsParams::default(),
+            };
+
+            // Derive changed files
+            let delta_items = if let Some(paths) = params.changed_paths {
+                let mut items = Vec::new();
+                for p in paths {
+                    let clean = p.trim().replace('\\', "/");
+                    if crate::drift::extractor::validate_path_containment(&clean).is_ok() {
+                        let status = if root.join(&clean).exists() {
+                            crate::delta::updater::FileDeltaStatus::Modified
+                        } else {
+                            crate::delta::updater::FileDeltaStatus::Deleted
+                        };
+                        items.push(crate::delta::updater::FileDeltaItem { path: clean, status });
+                    }
+                }
+                items
+            } else if let Some(ref range) = params.git_range {
+                match crate::delta::updater::parse_git_diff_range(&root, range) {
+                    Ok(items) => items,
+                    Err(e) => {
+                        return JsonRpcResponse::error(
+                            req.id,
+                            -32000,
+                            format!("Failed to parse git diff range: {e}"),
+                        );
+                    }
+                }
+            } else {
+                match crate::cli::validate::get_staged_git_delta(&root) {
+                    Ok(delta) => delta.items,
+                    Err(_) => Vec::new(),
+                }
+            };
+
+            let doc_paths: Vec<String> = if !topology.nodes.is_empty() {
+                topology.nodes.keys().cloned().collect()
+            } else {
+                crate::cli::scan::execute_scan(ScanOptions {
+                    workspace_root: root.clone(),
+                    hub: None,
+                    pretty: false,
+                })
+                .map(|p| p.nodes.into_iter().map(|n| n.id).collect())
+                .unwrap_or_default()
+            };
+
+            let reverse_index = crate::drift::detector::build_reverse_impact_index(&root, &doc_paths);
+            let mut report = crate::drift::review::calculate_affected_documents(
+                &root,
+                &delta_items,
+                &reverse_index,
+                config.review_policy.as_ref(),
+                None,
+                None,
+            );
+
+            if !params.include_unchanged_reviews {
+                report.obligations.retain(|o| o.status != crate::model::ReviewStatus::ReviewedUnchanged);
+            }
+
+            JsonRpcResponse::success(req.id, json!(report))
+        }
+        "review/resolveDocumentReview" => {
+            let root = {
+                let st = state.read().await;
+                st.workspace_root.clone()
+            };
+
+            let params: super::protocol::ResolveDocumentReviewParams = match req.params {
+                Some(p) => match serde_json::from_value(p) {
+                    Ok(parsed) => parsed,
+                    Err(e) => {
+                        return JsonRpcResponse::error(
+                            req.id,
+                            -32602,
+                            format!("Invalid params for review/resolveDocumentReview: {e}"),
+                        );
+                    }
+                },
+                None => {
+                    return JsonRpcResponse::error(req.id, -32602, "Missing params");
+                }
+            };
+
+            let doc_list = params
+                .doc_ids
+                .or(params.resolved_reviews)
+                .unwrap_or_default();
+
+            if doc_list.is_empty() {
+                return JsonRpcResponse::error(req.id, -32602, "Missing doc_ids");
+            }
+
+            match crate::drift::review::resolve_document_review(
+                &root,
+                &doc_list,
+                params.commit_hash.as_deref(),
+            ) {
+                Ok(()) => {
+                    let receipt_id = format!(
+                        "RECEIPT-{}-{}",
+                        params.commit_hash.as_deref().unwrap_or("HEAD"),
+                        doc_list.len()
+                    );
+                    JsonRpcResponse::success(
+                        req.id,
+                        json!(super::protocol::ResolveDocumentReviewResult {
+                            resolved_count: doc_list.len(),
+                            receipt_id,
+                        }),
+                    )
+                }
+                Err(e) => JsonRpcResponse::error(req.id, -32000, format!("Failed to record review receipts: {e}")),
             }
         }
         _ => JsonRpcResponse::error(req.id, -32601, format!("Method not found: {}", req.method)),
@@ -1220,8 +2987,13 @@ mod tests {
         let res = handle_request(&state, req).await;
         assert!(res.error.is_none());
         let result = res.result.unwrap();
-        let signatures = result["signatures"].as_array().expect("signatures is an array");
-        assert!(!signatures.is_empty(), "Should detect the implicit router signature");
+        let signatures = result["signatures"]
+            .as_array()
+            .expect("signatures is an array");
+        assert!(
+            !signatures.is_empty(),
+            "Should detect the implicit router signature"
+        );
         assert_eq!(signatures[0]["problem_type"], "implicit_router");
     }
 
@@ -1269,8 +3041,13 @@ mod tests {
         let res = handle_request(&state, req).await;
         assert!(res.error.is_none());
         let result = res.result.unwrap();
-        let recs = result["recommendations"].as_array().expect("recommendations is an array");
-        assert!(!recs.is_empty(), "Should generate recommendations for God Document");
+        let recs = result["recommendations"]
+            .as_array()
+            .expect("recommendations is an array");
+        assert!(
+            !recs.is_empty(),
+            "Should generate recommendations for God Document"
+        );
         assert!(recs[0].get("strategy").is_some());
         assert!(recs[0].get("confidence").is_some());
         assert!(recs[0].get("expected_benefits").is_some());
@@ -1289,7 +3066,11 @@ mod tests {
         // Add node to state topology
         {
             let mut st = state.write().await;
-            let mut god = crate::model::NoteNode::new("god.md", god_file.to_string_lossy().to_string(), "God Document");
+            let mut god = crate::model::NoteNode::new(
+                "god.md",
+                god_file.to_string_lossy().to_string(),
+                "God Document",
+            );
             god.tokens = 10_000;
             god.in_degree = 8;
             god.out_degree = 8;
@@ -1325,7 +3106,10 @@ mod tests {
         };
         let res_rec = handle_request(&state, req_rec).await;
         assert!(res_rec.error.is_none());
-        let recs = res_rec.result.unwrap()["recommendations"].as_array().unwrap().clone();
+        let recs = res_rec.result.unwrap()["recommendations"]
+            .as_array()
+            .unwrap()
+            .clone();
         assert!(!recs.is_empty());
         let rec_id = recs[0]["recommendation_id"].as_str().unwrap().to_string();
 
@@ -1337,10 +3121,17 @@ mod tests {
             params: Some(json!({ "recommendation_id": rec_id })),
         };
         let res_gen = handle_request(&state, req_gen).await;
-        assert!(res_gen.error.is_none(), "generatePlan error: {:?}", res_gen.error);
+        assert!(
+            res_gen.error.is_none(),
+            "generatePlan error: {:?}",
+            res_gen.error
+        );
         let plan_json = res_gen.result.unwrap();
         let plan_id = plan_json["plan_id"].as_str().unwrap().to_string();
-        assert_eq!(plan_json["requires_approval"], true, "Must require approval by default per Invariant XVI");
+        assert_eq!(
+            plan_json["requires_approval"], true,
+            "Must require approval by default per Invariant XVI"
+        );
         assert!(!plan_json["diff_preview"].as_str().unwrap().is_empty());
         assert!(!plan_json["actions"].as_array().unwrap().is_empty());
 
@@ -1352,7 +3143,11 @@ mod tests {
             params: Some(json!({ "plan_id": plan_id })),
         };
         let res_apply = handle_request(&state, req_apply).await;
-        assert!(res_apply.error.is_none(), "applyPlan error: {:?}", res_apply.error);
+        assert!(
+            res_apply.error.is_none(),
+            "applyPlan error: {:?}",
+            res_apply.error
+        );
         let apply_res = res_apply.result.unwrap();
         assert_eq!(apply_res["success"], true);
         assert!(apply_res.get("actual_delta").is_some());
@@ -1376,7 +3171,96 @@ mod tests {
             })),
         };
         let res_illegal = handle_request(&state, req_illegal).await;
-        assert!(res_illegal.error.is_some(), "Must reject unapproved plan per Invariant XVI");
+        assert!(
+            res_illegal.error.is_some(),
+            "Must reject unapproved plan per Invariant XVI"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_exclusions_disk_persistence_lifecycle() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let config_path = temp_dir.path().join(".context-vault.yaml");
+        let initial_cfg = ContextVaultConfig::default();
+        initial_cfg.save_to_file(&config_path).unwrap();
+
+        let state = Arc::new(RwLock::new(AppState::new(temp_dir.path().to_path_buf())));
+
+        // 1. Exclude path with scope "graph"
+        let req_ex_graph = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(1),
+            method: "graph/excludePath".to_string(),
+            params: Some(json!({
+                "pattern": "tests/**",
+                "scope": "graph"
+            })),
+        };
+        let res_ex_graph = handle_request(&state, req_ex_graph).await;
+        assert!(res_ex_graph.error.is_none());
+
+        // 2. Exclude path with scope "scan"
+        let req_ex_scan = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(2),
+            method: "graph/excludePath".to_string(),
+            params: Some(json!({
+                "pattern": "vendor/**",
+                "scope": "scan"
+            })),
+        };
+        let res_ex_scan = handle_request(&state, req_ex_scan).await;
+        assert!(res_ex_scan.error.is_none());
+
+        // Verify on-disk config updated
+        let on_disk_cfg = ContextVaultConfig::load_from_file(&config_path).unwrap();
+        assert!(on_disk_cfg.get_graph_exclude().contains(&"tests/**".to_string()));
+        assert!(on_disk_cfg.get_scan_exclude().contains(&"vendor/**".to_string()));
+
+        // 3. getExclusions
+        let req_get = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(3),
+            method: "graph/getExclusions".to_string(),
+            params: None,
+        };
+        let res_get = handle_request(&state, req_get).await;
+        assert!(res_get.error.is_none());
+        let get_val = res_get.result.unwrap();
+        let graph_ex = get_val["graph_exclusions"].as_array().unwrap();
+        let scan_ex = get_val["scan_exclusions"].as_array().unwrap();
+        assert!(graph_ex.iter().any(|v| v.as_str() == Some("tests/**")));
+        assert!(scan_ex.iter().any(|v| v.as_str() == Some("vendor/**")));
+
+        // 4. removeExclusion for graph
+        let req_rm_graph = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(4),
+            method: "graph/removeExclusion".to_string(),
+            params: Some(json!({
+                "pattern": "tests/**",
+                "scope": "graph"
+            })),
+        };
+        let res_rm_graph = handle_request(&state, req_rm_graph).await;
+        assert!(res_rm_graph.error.is_none());
+
+        // 5. removeExclusion for scan
+        let req_rm_scan = JsonRpcRequest {
+            jsonrpc: "2.0".to_string(),
+            id: json!(5),
+            method: "graph/removeExclusion".to_string(),
+            params: Some(json!({
+                "pattern": "vendor/**",
+                "scope": "scan"
+            })),
+        };
+        let res_rm_scan = handle_request(&state, req_rm_scan).await;
+        assert!(res_rm_scan.error.is_none());
+
+        // Verify on-disk config updated after removal
+        let final_disk_cfg = ContextVaultConfig::load_from_file(&config_path).unwrap();
+        assert!(!final_disk_cfg.get_graph_exclude().contains(&"tests/**".to_string()));
+        assert!(!final_disk_cfg.get_scan_exclude().contains(&"vendor/**".to_string()));
     }
 }
-

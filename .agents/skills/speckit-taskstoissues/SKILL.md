@@ -1,13 +1,30 @@
 ---
-name: "speckit-taskstoissues"
-description: "Convert existing tasks into actionable, dependency-ordered GitHub issues for the feature based on available design artifacts."
-compatibility: "Requires spec-kit project structure with .specify/ directory"
+name: speckit-taskstoissues
+description: Convert existing tasks into actionable, dependency-ordered GitHub issues for the feature based on available design artifacts.
+compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: "github-spec-kit"
-  source: "templates/commands/taskstoissues.md"
+  author: github-spec-kit
+  source: templates/commands/taskstoissues.md
+wiki:
+  content_hash: b27235c50b7ffae04f6511cde3dbd400c479ad46dff8a36a2a5919b7010eb114
+  fragments:
+    user-input:
+      tokens: 30
+      inbound: 0
+      outbound: 0
+    pre-execution-checks:
+      tokens: 500
+      inbound: 0
+      outbound: 0
+    outline:
+      tokens: 819
+      inbound: 0
+      outbound: 0
+    post-execution-checks:
+      tokens: 479
+      inbound: 0
+      outbound: 0
 ---
-
-
 ## User Input
 
 ```text

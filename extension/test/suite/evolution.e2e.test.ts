@@ -357,6 +357,35 @@ suite('Evolution E2E Integration Test Suite (Quickstart Scenarios 1–4 & NFR-00
       },
     ];
 
+    // Warm up V8 JIT to measure steady-state 60 FPS frame rendering
+    renderEvolutionTabHtml({ signatures, recommendations: recs, isLoading: false });
+    renderOrientationSelectorHtml({ activeOrientation: 'custom' });
+    renderCustomSettingsDrawerHtml({
+      tier1: {
+        aiDiscoverability: 'high',
+        contextEfficiency: 'high',
+        humanReadability: 'medium',
+        knowledgeReuse: 'medium',
+        narrativeCoherence: 'low',
+        maintenanceSimplicity: 'medium',
+      },
+      tier2: {
+        cohesionThreshold: 0.7,
+        semanticDiversityThreshold: 0.75,
+        referenceConcentrationThreshold: 0.7,
+        fragmentSizeTarget: 3000,
+        maxTraceDepth: 3,
+        candidateExpansionFactor: 3,
+        maxContextSurfaceTokens: 12000,
+        splitSensitivity: 0.7,
+        canonicalOwnershipSensitivity: 0.8,
+        duplicateTolerance: 0.1,
+        fragmentationTolerance: 0.2,
+      },
+      constraints: [],
+      conflicts: [],
+    });
+
     // Measure Webview DOM render time across components
     const t0 = performance.now();
     const html1 = renderEvolutionTabHtml({

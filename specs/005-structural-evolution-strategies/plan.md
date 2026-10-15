@@ -1,3 +1,44 @@
+---
+wiki:
+  content_hash: e30d68e7bc228b4dabf7a198d061090ca098c2b772c2a2894137700ec193d654
+  fragments:
+    implementation-plan-knowledge-organization-systems-structural-evidence-trade-offs:
+      tokens: 2648
+      inbound: 0
+      outbound: 0
+    1-architectural-overview-component-topology:
+      tokens: 454
+      inbound: 0
+      outbound: 0
+    2-directory-module-layout:
+      tokens: 550
+      inbound: 0
+      outbound: 0
+    rust-core-cratescoresrcevolution:
+      tokens: 303
+      inbound: 0
+      outbound: 0
+    rust-ipc-integration-cratescoresrcipchandlersrs:
+      tokens: 82
+      inbound: 0
+      outbound: 0
+    typescript-extension-host-extensionsrc:
+      tokens: 53
+      inbound: 0
+      outbound: 0
+    webview-ui-extensionwebview-uisrc:
+      tokens: 103
+      inbound: 0
+      outbound: 0
+    3-integration-with-git-boundary-critical-invariants:
+      tokens: 203
+      inbound: 0
+      outbound: 0
+    4-latency-budget-verification-strategy:
+      tokens: 1340
+      inbound: 0
+      outbound: 0
+---
 # Implementation Plan: Knowledge Organization Systems, Structural Evidence & Trade-Offs
 
 **Feature Branch:** `005-structural-evolution-strategies`  
@@ -103,8 +144,9 @@ graph TD
 
 | Operation | Target Budget | Verification Tool |
 | :--- | :--- | :--- |
-| Profile Recompilation | $\le 20\text{ ms}$ | Criterion microbenchmark (`benches/profile_benchmark.rs`) |
-| 10-D Structural Analytics | $\le 150\text{ ms}$ / 1,000 files | Criterion microbenchmark (`benches/metrics_benchmark.rs`) |
-| Strategy Evaluation | $\le 50\text{ ms}$ / 50 signatures | Criterion microbenchmark (`benches/strategy_benchmark.rs`) |
-| Plan Generation & Diff | $\le 100\text{ ms}$ | Criterion microbenchmark (`benches/transformation_benchmark.rs`) |
-| Incremental Re-Measurement | $\le 100\text{ ms}$ | Criterion microbenchmark (`benches/remeasure_benchmark.rs`) |
+| Profile Recompilation | $\le 20\text{ ms}$ | Criterion microbenchmark (`crates/core/benches/profile_benchmark.rs`) |
+| 10-D Structural Analytics | $\le 150\text{ ms}$ / 1,000 files | Criterion microbenchmark (`crates/core/benches/metrics_benchmark.rs`) |
+| Strategy Evaluation | $\le 50\text{ ms}$ / 50 signatures | Criterion microbenchmark (`crates/core/benches/strategy_benchmark.rs`) |
+| Plan Generation & Diff | $\le 100\text{ ms}$ | Criterion microbenchmark (`crates/core/benches/transformation_benchmark.rs`) |
+*benches/remeasure_benchmark.rs*|*benches/remeasure_benchmark.rs* *benches/remeasure_benchmark.rs*I*benches/remeasure_benchmark.rs*n*benches/remeasure_benchmark.rs*c*benches/remeasure_benchmark.rs*r*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*m*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*n*benches/remeasure_benchmark.rs*t*benches/remeasure_benchmark.rs*a*benches/remeasure_benchmark.rs*l*benches/remeasure_benchmark.rs* *benches/remeasure_benchmark.rs*R*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*-*benches/remeasure_benchmark.rs*M*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*a*benches/remeasure_benchmark.rs*s*benches/remeasure_benchmark.rs*u*benches/remeasure_benchmark.rs*r*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*m*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*n*benches/remeasure_benchmark.rs*t*benches/remeasure_benchmark.rs* *benches/remeasure_benchmark.rs*|*benches/remeasure_benchmark.rs* *benches/remeasure_benchmark.rs*$*benches/remeasure_benchmark.rs*\*benches/remeasure_benchmark.rs*l*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs* *benches/remeasure_benchmark.rs*1*benches/remeasure_benchmark.rs*0*benches/remeasure_benchmark.rs*0*benches/remeasure_benchmark.rs*\*benches/remeasure_benchmark.rs*t*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*x*benches/remeasure_benchmark.rs*t*benches/remeasure_benchmark.rs*{*benches/remeasure_benchmark.rs* *benches/remeasure_benchmark.rs*m*benches/remeasure_benchmark.rs*s*benches/remeasure_benchmark.rs*}*benches/remeasure_benchmark.rs*$*benches/remeasure_benchmark.rs* *benches/remeasure_benchmark.rs*|*benches/remeasure_benchmark.rs* *benches/remeasure_benchmark.rs*C*benches/remeasure_benchmark.rs*r*benches/remeasure_benchmark.rs*i*benches/remeasure_benchmark.rs*t*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*r*benches/remeasure_benchmark.rs*i*benches/remeasure_benchmark.rs*o*benches/remeasure_benchmark.rs*n*benches/remeasure_benchmark.rs* *benches/remeasure_benchmark.rs*m*benches/remeasure_benchmark.rs*i*benches/remeasure_benchmark.rs*c*benches/remeasure_benchmark.rs*r*benches/remeasure_benchmark.rs*o*benches/remeasure_benchmark.rs*b*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*n*benches/remeasure_benchmark.rs*c*benches/remeasure_benchmark.rs*h*benches/remeasure_benchmark.rs*m*benches/remeasure_benchmark.rs*a*benches/remeasure_benchmark.rs*r*benches/remeasure_benchmark.rs*k*benches/remeasure_benchmark.rs* *benches/remeasure_benchmark.rs*(*benches/remeasure_benchmark.rs*`*benches/remeasure_benchmark.rs*b*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*n*benches/remeasure_benchmark.rs*c*benches/remeasure_benchmark.rs*h*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*s*benches/remeasure_benchmark.rs*/*benches/remeasure_benchmark.rs*r*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*m*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*a*benches/remeasure_benchmark.rs*s*benches/remeasure_benchmark.rs*u*benches/remeasure_benchmark.rs*r*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*_*benches/remeasure_benchmark.rs*b*benches/remeasure_benchmark.rs*e*benches/remeasure_benchmark.rs*n*benches/remeasure_benchmark.rs*c*benches/remeasure_benchmark.rs*h*benches/remeasure_benchmark.rs*m*benches/remeasure_benchmark.rs*a*benches/remeasure_benchmark.rs*r*benches/remeasure_benchmark.rs*k*benches/remeasure_benchmark.rs*.*benches/remeasure_benchmark.rs*r*benches/remeasure_benchmark.rs*s*benches/remeasure_benchmark.rs*`*benches/remeasure_benchmark.rs*)*benches/remeasure_benchmark.rs* *benches/remeasure_benchmark.rs*|*benches/remeasure_benchmark.rs*
+*benches/remeasure_benchmark.rs*

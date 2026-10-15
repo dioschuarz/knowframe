@@ -35,6 +35,56 @@ pub struct ContextVaultConfig {
     /// V3 Two-tier Custom profile configuration
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub custom_profile: Option<CustomProfileConfig>,
+    /// V4 AI Harness configuration (active harness and entry points)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub harness: Option<HarnessConfig>,
+    /// V4 AI Harness Entry Point paths (backward compatibility)
+    #[serde(default)]
+    pub harness_paths: Vec<String>,
+    /// Feature 010: Review gating policy (.context-vault.yaml)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub review_policy: Option<crate::model::ReviewGatingConfig>,
+    /// Feature 010: Architectural rules configuration
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub architecture: Option<ArchitectureConfig>,
+}
+
+/// Architectural rules configuration schema in `.context-vault.yaml`
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct ArchitectureConfig {
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub rules: Vec<ArchitecturalRule>,
+}
+
+/// Configured architectural rule from `.context-vault.yaml`.
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+pub struct ArchitecturalRule {
+    pub id: String,
+    pub rule_type: ArchitecturalRuleType,
+    #[serde(alias = "code_pattern")]
+    pub source_pattern: Option<String>,
+    #[serde(alias = "forbidden_target")]
+    pub target_pattern: Option<String>,
+    pub required_doc: Option<String>,
+    pub severity: crate::model::DeterministicFindingSeverity,
+    pub explanation: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum ArchitecturalRuleType {
+    ProhibitedDependency,
+    MandatoryDocumentation,
+    PathExists,
+}
+
+/// AI Harness configuration schema for multi-agent repositories (FR-001, FR-003)
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct HarnessConfig {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub active: Option<String>,
+    #[serde(default, skip_serializing_if = "Vec::is_empty")]
+    pub entry_points: Vec<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
@@ -121,6 +171,10 @@ impl Default for ContextVaultConfig {
             color_groups: Vec::new(),
             orientation: None,
             custom_profile: None,
+            harness: None,
+            harness_paths: Vec::new(),
+            review_policy: None,
+            architecture: None,
         }
     }
 }
@@ -183,6 +237,42 @@ impl ContextVaultConfig {
         self.orientation.unwrap_or_default()
     }
 
+    pub fn find_config_path(workspace_root: &Path) -> Option<std::path::PathBuf> {
+        let yml = workspace_root.join(".context-vault.yml");
+        if yml.exists() {
+            return Some(yml);
+        }
+        let yaml = workspace_root.join(".context-vault.yaml");
+        if yaml.exists() {
+            return Some(yaml);
+        }
+        None
+    }
+
+    pub fn canonical_config_path(workspace_root: &Path) -> std::path::PathBuf {
+        Self::find_config_path(workspace_root)
+            .unwrap_or_else(|| workspace_root.join(".context-vault.yaml"))
+    }
+}
+
+pub fn find_config_path(workspace_root: &Path) -> Option<std::path::PathBuf> {
+    ContextVaultConfig::find_config_path(workspace_root)
+}
+
+pub fn canonical_config_path(workspace_root: &Path) -> std::path::PathBuf {
+    ContextVaultConfig::canonical_config_path(workspace_root)
+}
+
+impl ContextVaultConfig {
+
+    pub fn load_from_workspace(workspace_root: &Path) -> Self {
+        if let Some(path) = Self::find_config_path(workspace_root) {
+            Self::load_from_file(&path).unwrap_or_default()
+        } else {
+            Self::default()
+        }
+    }
+
     pub fn load_from_file(path: &Path) -> Result<Self, Box<dyn std::error::Error + Send + Sync>> {
         let content = std::fs::read_to_string(path)?;
         let config: Self = serde_yaml::from_str(&content)?;
@@ -194,6 +284,37 @@ impl ContextVaultConfig {
         let yaml = serde_yaml::to_string(self).map_err(|e| std::io::Error::other(e.to_string()))?;
         std::fs::write(path, yaml)?;
         Ok(())
+    }
+
+    pub fn save_to_workspace(&self, workspace_root: &Path) -> Result<(), std::io::Error> {
+        let path = Self::canonical_config_path(workspace_root);
+        self.save_to_file(&path)
+    }
+
+    pub fn get_active_harness(&self) -> Option<String> {
+        if let Some(ref h) = self.harness {
+            if let Some(ref act) = h.active {
+                return Some(act.clone());
+            }
+        }
+        None
+    }
+
+    pub fn get_harness_entry_points(&self) -> Vec<String> {
+        if let Some(ref h) = self.harness {
+            if !h.entry_points.is_empty() {
+                return h.entry_points.clone();
+            }
+        }
+        if !self.harness_paths.is_empty() {
+            return self.harness_paths.clone();
+        }
+        vec![
+            "AGENTS.md".to_string(),
+            "CLAUDE.md".to_string(),
+            "GEMINI.md".to_string(),
+            ".github/copilot-instructions.md".to_string(),
+        ]
     }
 
     pub fn validate(&self) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
@@ -394,9 +515,15 @@ custom_profile:
             config.get_orientation(),
             crate::evolution::DocumentationOrientation::HumanOriented
         );
-        let custom = config.custom_profile.as_ref().expect("custom_profile exists");
+        let custom = config
+            .custom_profile
+            .as_ref()
+            .expect("custom_profile exists");
         let tier1 = custom.tier1.as_ref().expect("tier1 exists");
-        assert_eq!(tier1.human_readability, crate::evolution::ObjectiveLevel::High);
+        assert_eq!(
+            tier1.human_readability,
+            crate::evolution::ObjectiveLevel::High
+        );
 
         // Serialize back
         let serialized = serde_yaml::to_string(&config).unwrap();

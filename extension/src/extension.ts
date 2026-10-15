@@ -12,7 +12,9 @@ import { registerInstallHooksCommand } from './commands/installHooks';
 import { SidebarViewProvider } from './webview/sidebarViewProvider';
 import { AdmissionManager } from './services/admissionManager';
 import { EvolutionManager } from './evolution/evolutionManager';
-import { KnowledgeQualityScore } from './types/admission';
+import { KnowledgeQualityScore, KnowledgeIssuesReport } from './types/admission';
+import { GovernanceManager } from './governance/governanceManager';
+import { AIOrientedCapabilityMatrix } from './types/governance';
 
 let processManager: ProcessManager | null = null;
 let ipcClient: IpcClient | null = null;
@@ -21,7 +23,10 @@ let latestScanResult: ScanResultPayload | null = null;
 let sidebarProvider: SidebarViewProvider | null = null;
 let admissionManager: AdmissionManager | null = null;
 let evolutionManager: EvolutionManager | null = null;
+let governanceManager: GovernanceManager | null = null;
 let latestQualityScore: KnowledgeQualityScore | null = null;
+let latestIssuesReport: KnowledgeIssuesReport | null = null;
+let latestGovernanceMatrix: AIOrientedCapabilityMatrix | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
   const outputChannel = vscode.window.createOutputChannel('LLM Wiki');
@@ -34,13 +39,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // Status Bar Item
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.command = 'llmWiki.showKnowledgeGraph';
-  statusBarItem.text = '$(llm-wiki-graph) LLM Wiki: Initializing';
+  statusBarItem.text = '$(llm-wiki-graph) Initializing';
   statusBarItem.tooltip = 'Click to open LLM Wiki - Graph';
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
   // Register Sidebar Webview View Provider (Activity Bar)
-  sidebarProvider = new SidebarViewProvider(context.extensionUri, () => latestScanResult, () => latestQualityScore);
+  sidebarProvider = new SidebarViewProvider(
+    context.extensionUri,
+    () => latestScanResult,
+    () => latestQualityScore,
+    undefined,
+    () => latestIssuesReport
+  );
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(SidebarViewProvider.viewType, sidebarProvider)
   );
@@ -50,8 +61,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     try {
       latestQualityScore = await admissionManager.getQualityScore();
       outputChannel.appendLine(`[EXTENSION] Quality score updated: ${latestQualityScore.overall_score.toFixed(1)}/100`);
+      if (governanceManager) {
+        try {
+          const harnessStatus = await governanceManager.getHarnessStatus();
+          latestGovernanceMatrix = harnessStatus.capability_matrix || null;
+        } catch {
+          // ignore
+        }
+      }
       sidebarProvider?.updateQuality(latestQualityScore);
-      updateStatusBarWithBudget(latestScanResult, latestQualityScore);
+      updateStatusBarWithBudget(latestScanResult, latestQualityScore, latestGovernanceMatrix);
+      if (ipcClient) {
+        latestIssuesReport = await ipcClient.sendRequest<KnowledgeIssuesReport>('workspace/getIssues', {});
+        GraphPanelManager.setCachedIssuesReport(latestIssuesReport);
+        GraphPanelManager.currentPanel?.sendIssuesReport(latestIssuesReport);
+        sidebarProvider?.updateIssues(latestIssuesReport);
+      }
     } catch (err: any) {
       outputChannel.appendLine(`[EXTENSION] Failed to compute quality score: ${err.message}`);
     }
@@ -59,7 +84,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   const onScanResultUpdated = (newResult: ScanResultPayload) => {
     latestScanResult = newResult;
-    updateStatusBarWithBudget(newResult, latestQualityScore);
+    updateStatusBarWithBudget(newResult, latestQualityScore, latestGovernanceMatrix);
     if (GraphPanelManager.currentPanel) {
       GraphPanelManager.currentPanel.updateData(newResult);
     }
@@ -67,29 +92,83 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     refreshQualityScore();
   };
 
+  const ensureIpcClient = async (): Promise<IpcClient | null> => {
+    const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!rootPath) {
+      return null;
+    }
+    if (!processManager || !processManager.isRunning()) {
+      outputChannel.appendLine('[EXTENSION] Daemon not running, starting via ProcessManager...');
+      try {
+        const port = await processManager!.ensureRunning(rootPath);
+        if (!ipcClient) {
+          const token = secretManager.getToken() || '';
+          ipcClient = new IpcClient(() => processManager?.port || port, token, outputChannel, rootPath);
+          context.subscriptions.push(ipcClient);
+        } else {
+          ipcClient.setPort(port);
+        }
+      } catch (err: any) {
+        outputChannel.appendLine(`[EXTENSION ERROR] Failed to start daemon: ${err.message}`);
+        return null;
+      }
+    }
+
+    if (ipcClient) {
+      try {
+        await ipcClient.ensureConnected();
+      } catch (err: any) {
+        outputChannel.appendLine(`[EXTENSION ERROR] Failed to ensure IPC client connected: ${err.message}`);
+      }
+    }
+    return ipcClient;
+  };
+
+  processManager.onDidRestart(async (newPort) => {
+    outputChannel.appendLine(`[EXTENSION] Daemon restarted on port ${newPort}. Updating IPC connection...`);
+    if (ipcClient) {
+      ipcClient.setPort(newPort);
+      try {
+        await ipcClient.ensureConnected();
+        const scan = await ipcClient.sendRequest<ScanResultPayload>('workspace/scan');
+        onScanResultUpdated(scan);
+      } catch (err: any) {
+        outputChannel.appendLine(`[EXTENSION] Background recovery after daemon restart warning: ${err.message}`);
+      }
+    }
+  });
+
   // Register Webview Panel Serializer
   context.subscriptions.push(
     vscode.window.registerWebviewPanelSerializer(
       GraphPanelManager.viewType,
-      new GraphPanelSerializer(context.extensionUri, () => ipcClient)
+      new GraphPanelSerializer(context.extensionUri, () => ipcClient, () => latestScanResult)
     )
   );
 
   // Register modular commands
   context.subscriptions.push(
-    registerShowGraphCommand(context, () => ipcClient, () => latestScanResult, () => evolutionManager),
+    registerShowGraphCommand(context, () => ipcClient, () => latestScanResult, () => evolutionManager, () => governanceManager),
     registerSetHubCommand(() => ipcClient, () => latestScanResult, onScanResultUpdated),
-    registerRescanVaultCommand(() => ipcClient, onScanResultUpdated),
+    registerRescanVaultCommand(ensureIpcClient, onScanResultUpdated),
     registerFixBrokenLinksCommand(() => latestScanResult),
     registerInstallHooksCommand(outputChannel),
-    vscode.commands.registerCommand('llmWiki.refreshQualityScore', async () => {
-      await refreshQualityScore();
-      if (latestQualityScore) {
-        const q = latestQualityScore;
-        vscode.window.showInformationMessage(
-          `LLM Wiki Knowledge Quality: ${q.overall_score.toFixed(0)}/100 (Integrity: ${q.integrity_score.toFixed(0)}%, Consistency: ${q.consistency_score.toFixed(0)}%, Discoverability: ${q.discoverability_score.toFixed(0)}%, Freshness: ${q.freshness_score.toFixed(0)}%)`
-        );
+    vscode.commands.registerCommand('llmWiki.openFolder', () => {
+      vscode.commands.executeCommand('vscode.openFolder');
+    }),
+    vscode.commands.registerCommand('llmWiki.initializeHarness', async () => {
+      const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (rootPath && governanceManager) {
+        const created = await governanceManager.initializeHarness(rootPath);
+        if (created) {
+          vscode.window.showInformationMessage('Successfully initialized AGENTS.md template with embedded Knowledge Index.');
+        } else {
+          vscode.window.showInformationMessage('AGENTS.md already exists in workspace.');
+        }
       }
+    }),
+    vscode.commands.registerCommand('llmWiki.refreshQualityScore', async () => {
+      await vscode.commands.executeCommand('llmWiki.rescanVault');
     }),
     vscode.commands.registerCommand('llmWiki.reviewIssues', async () => {
       const panel = GraphPanelManager.createOrShow(context.extensionUri, ipcClient, latestScanResult);
@@ -104,19 +183,56 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         panel.setEvolutionManager(evolutionManager);
       }
       await panel.openEvolutionTab();
+    }),
+    vscode.commands.registerCommand('llmWiki.navigateToDetail', async (intent?: any) => {
+      const panel = GraphPanelManager.createOrShow(context.extensionUri, ipcClient, latestScanResult);
+      if (evolutionManager) {
+        panel.setEvolutionManager(evolutionManager);
+      }
+      if (intent) {
+        await panel.navigateToDetail(intent);
+      }
+    }),
+    vscode.commands.registerCommand('llmWiki.openSettings', async (tab?: string) => {
+      const panel = GraphPanelManager.createOrShow(context.extensionUri, ipcClient, latestScanResult);
+      if (evolutionManager) {
+        panel.setEvolutionManager(evolutionManager);
+      }
+      if (governanceManager) {
+        panel.setGovernanceManager(governanceManager);
+      }
+      await panel.openSettingsDrawer(typeof tab === 'string' ? tab : 'knowledge');
+    }),
+    vscode.commands.registerCommand('llmWiki.openHarness', async () => {
+      await vscode.commands.executeCommand('llmWiki.openSettings', 'harness');
+    }),
+    vscode.commands.registerCommand('llmWiki.resolveDocumentReview', async (payload?: any) => {
+      if (ipcClient && payload) {
+        try {
+          const docIds = payload.doc_ids || (payload.doc_id ? [payload.doc_id] : (payload.file_path ? [payload.file_path] : []));
+          if (docIds.length > 0) {
+            await ipcClient.sendRequest('review/resolveDocumentReview', { doc_ids: docIds });
+            vscode.window.showInformationMessage(`Document review resolved for ${docIds.join(', ')}.`);
+            await vscode.commands.executeCommand('llmWiki.rescanVault');
+          }
+        } catch (err: any) {
+          vscode.window.showErrorMessage(`Failed to resolve document review: ${err.message}`);
+        }
+      }
     })
   );
 
-  const workspaceFolders = vscode.workspace.workspaceFolders;
-  if (workspaceFolders && workspaceFolders.length > 0) {
-    const rootPath = workspaceFolders[0].uri.fsPath;
-
+  async function initWorkspace(rootPath: string): Promise<void> {
     try {
-      statusBarItem.text = '$(sync~spin) Wiki: 10% Starting Daemon';
-      const port = await processManager.start(rootPath);
+      if (statusBarItem) {
+        statusBarItem.text = '$(sync~spin) 10% Starting Daemon';
+        statusBarItem.command = 'llmWiki.showKnowledgeGraph';
+        statusBarItem.tooltip = 'Click to open LLM Wiki - Graph';
+      }
+      const port = await processManager!.start(rootPath);
       const token = secretManager.getToken() || '';
 
-      ipcClient = new IpcClient(port, token, outputChannel);
+      ipcClient = new IpcClient(() => processManager?.port || port, token, outputChannel, rootPath);
       await ipcClient.connect();
       context.subscriptions.push(ipcClient);
 
@@ -149,9 +265,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       };
       evolutionManager = new EvolutionManager(ipcClient, uiBridge);
       context.subscriptions.push({ dispose: () => evolutionManager?.dispose() });
+      governanceManager = new GovernanceManager(ipcClient);
 
       if (GraphPanelManager.currentPanel) {
         GraphPanelManager.currentPanel.setEvolutionManager(evolutionManager);
+        GraphPanelManager.currentPanel.setGovernanceManager(governanceManager);
       }
       evolutionManager.onDidChangeOrientation((orient) => {
         sidebarProvider?.updateOrientation(orient);
@@ -161,7 +279,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }).catch(() => {});
 
       // Phase 1: Fast Graph Topology Scan (PRIORITY 1 - Render Graph First and Quickly!)
-      statusBarItem.text = '$(sync~spin) Wiki: 30% Scanning Graph...';
+      if (statusBarItem) {
+        statusBarItem.text = '$(sync~spin) 30% Scanning Graph...';
+      }
       GraphPanelManager.currentPanel?.sendLoadingProgress('graph', 30, 'Scanning graph topology...');
       outputChannel.appendLine(`[EXTENSION] Sidecar connected on port ${port}. Requesting fast workspace/scan...`);
 
@@ -179,7 +299,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       // Phase 2 & 3: Background Staged Quality Evaluation & Issues Auditing
       (async () => {
         try {
-          statusBarItem.text = '$(sync~spin) Wiki: 60% Checking Quality...';
+          if (statusBarItem) {
+            statusBarItem.text = '$(sync~spin) 60% Checking Quality...';
+          }
           GraphPanelManager.currentPanel?.sendLoadingProgress('quality', 60, 'Evaluating 5-pillar health score...');
 
           latestQualityScore = await admissionManager!.getQualityScore();
@@ -187,16 +309,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           sidebarProvider?.updateQuality(latestQualityScore);
           updateStatusBarWithBudget(latestScanResult, latestQualityScore);
 
-          statusBarItem.text = '$(sync~spin) Wiki: 85% Auditing Issues...';
+          if (statusBarItem) {
+            statusBarItem.text = '$(sync~spin) 85% Auditing Issues...';
+          }
           GraphPanelManager.currentPanel?.sendLoadingProgress('issues', 85, 'Gathering diagnostic issues...');
 
           if (ipcClient) {
             try {
-              const issuesReport = await ipcClient.sendRequest('workspace/getIssues', {});
-              GraphPanelManager.setCachedIssuesReport(issuesReport);
+              latestIssuesReport = await ipcClient.sendRequest<KnowledgeIssuesReport>('workspace/getIssues', {});
+              GraphPanelManager.setCachedIssuesReport(latestIssuesReport);
               if (GraphPanelManager.currentPanel) {
-                GraphPanelManager.currentPanel.sendIssuesReport(issuesReport);
+                GraphPanelManager.currentPanel.sendIssuesReport(latestIssuesReport);
               }
+              sidebarProvider?.updateIssues(latestIssuesReport);
             } catch (err: any) {
               outputChannel.appendLine(`[EXTENSION] Non-fatal issues fetch warning: ${err.message}`);
             }
@@ -212,19 +337,58 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       })();
     } catch (err: any) {
       outputChannel.appendLine(`[EXTENSION ERROR] Sidecar initialization failed: ${err.message}`);
-      statusBarItem.text = '$(error) LLM Wiki: Offline';
-      statusBarItem.tooltip = `Sidecar error: ${err.message}`;
+      if (statusBarItem) {
+        statusBarItem.text = '$(error) Offline';
+        statusBarItem.tooltip = `Sidecar error: ${err.message}`;
+      }
+      GraphPanelManager.currentPanel?.sendEngineOffline(err.message);
     }
+  }
+
+  const workspaceFolders = vscode.workspace.workspaceFolders;
+  if (workspaceFolders && workspaceFolders.length > 0) {
+    await initWorkspace(workspaceFolders[0].uri.fsPath);
   } else {
     outputChannel.appendLine('[EXTENSION] No open workspace folder detected.');
-    statusBarItem.text = '$(llm-wiki-graph) LLM Wiki: No Workspace';
+    if (statusBarItem) {
+      statusBarItem.text = '$(folder-opened) LLM Wiki: Open Folder';
+      statusBarItem.tooltip = 'Click to open a workspace folder or Obsidian vault';
+      statusBarItem.command = 'llmWiki.openFolder';
+    }
+    GraphPanelManager.currentPanel?.sendNoWorkspace();
   }
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
+      if (event.added.length > 0) {
+        const rootPath = event.added[0].uri.fsPath;
+        outputChannel.appendLine(`[EXTENSION] Workspace folder opened: ${rootPath}`);
+        await initWorkspace(rootPath);
+      } else if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
+        outputChannel.appendLine('[EXTENSION] All workspace folders closed.');
+        latestScanResult = null;
+        latestQualityScore = null;
+        latestIssuesReport = null;
+        if (statusBarItem) {
+          statusBarItem.text = '$(folder-opened) LLM Wiki: Open Folder';
+          statusBarItem.tooltip = 'Click to open a workspace folder or Obsidian vault';
+          statusBarItem.command = 'llmWiki.openFolder';
+        }
+        GraphPanelManager.currentPanel?.sendNoWorkspace();
+        sidebarProvider?.updateData(null as any, null);
+      }
+    })
+  );
 }
 
-function updateStatusBarWithBudget(scan: ScanResultPayload | null, quality: KnowledgeQualityScore | null): void {
+function updateStatusBarWithBudget(
+  scan: ScanResultPayload | null,
+  quality: KnowledgeQualityScore | null,
+  governance?: AIOrientedCapabilityMatrix | null
+): void {
   if (!statusBarItem) {return;}
   if (!scan) {
-    statusBarItem.text = '$(llm-wiki-graph) LLM Wiki';
+    statusBarItem.text = '$(llm-wiki-graph)';
     return;
   }
   const activeTokens = scan.token_summary.active_harness_tokens.toLocaleString();
@@ -241,11 +405,14 @@ function updateStatusBarWithBudget(scan: ScanResultPayload | null, quality: Know
     qualitySuffix = ` | Q: ${qScore}/100`;
   }
 
-  statusBarItem.text = `${icon} Wiki: ${activeTokens} tok${qualitySuffix}`;
+  statusBarItem.text = `${icon} ${activeTokens} tok${qualitySuffix}`;
   let tooltipText = `Active Prompt Load: ${activeTokens} tokens\nAccessible Subcall: ${subcallTokens} tokens\nStatus: ${status.toUpperCase()}`;
   if (quality) {
     const regrCount = quality.regressions_count ?? (quality as any).new_regressions_count ?? 0;
-    tooltipText += `\n\nKnowledge Quality: ${quality.overall_score.toFixed(0)}/100\n- Integrity: ${quality.integrity_score.toFixed(0)}%\n- Consistency: ${quality.consistency_score.toFixed(0)}%\n- Discoverability: ${quality.discoverability_score.toFixed(0)}%\n- Freshness: ${quality.freshness_score.toFixed(0)}%\n- Debt: ${quality.legacy_debt_count} legacy, ${regrCount} regressions`;
+    tooltipText += `\n\nKnowledge Quality: ${quality.overall_score.toFixed(0)}/100\n- Integrity: ${quality.integrity_score.toFixed(0)}%\n- Consistency: ${quality.consistency_score.toFixed(0)}%\n- Discoverability: ${quality.discoverability_score.toFixed(0)}%\n- Freshness: ${quality.freshness_score.toFixed(0)}%\n- Issues: ${regrCount} active regressions, ${quality.legacy_debt_count} baselined`;
+  }
+  if (governance) {
+    tooltipText += `\n\nAI Governance: ${governance.overall_governance_score.toFixed(0)}/100\n- Entry: ${governance.entry_score.toFixed(0)}%\n- Discovery: ${governance.discovery_score.toFixed(0)}%\n- Retrieval: ${governance.retrieval_score.toFixed(0)}%\n- Reuse: ${governance.reuse_score.toFixed(0)}%`;
   }
   statusBarItem.tooltip = tooltipText;
 }

@@ -4,11 +4,11 @@
 //! FR-032: Section-level refinement routing to doc.md#fragment.
 //! FR-033: Context reduction % = (T_doc - T_frag) / T_doc * 100%.
 
-use std::collections::{HashMap, HashSet};
+use super::ContextTraceSectionResult;
 use crate::collision::fingerprint::tokenize;
 use crate::graph::builder::GraphTopology;
 use crate::model::NoteNode;
-use super::ContextTraceSectionResult;
+use std::collections::{HashMap, HashSet};
 
 /// Calculates quantitative context reduction percentage:
 /// (T_doc - T_fragment) / T_doc * 100%
@@ -46,7 +46,10 @@ pub fn compute_candidate_score(
         0.0
     };
     if !title_matches.is_empty() {
-        reasons.push(format!("Document title matches query terms: {:?}", title_matches));
+        reasons.push(format!(
+            "Document title matches query terms: {:?}",
+            title_matches
+        ));
     }
 
     // 2. FragmentMatch (0.4 weight): best fragment heading match
@@ -85,10 +88,8 @@ pub fn compute_candidate_score(
     // 4. Centrality (0.1 weight): Brandes betweenness bounded in [0.0, 1.0]
     let centrality_score = node.betweenness.clamp(0.0, 1.0);
 
-    let composite_score = 0.4 * best_frag_score
-        + 0.3 * title_score
-        + 0.2 * proximity_score
-        + 0.1 * centrality_score;
+    let composite_score =
+        0.4 * best_frag_score + 0.3 * title_score + 0.2 * proximity_score + 0.1 * centrality_score;
 
     (composite_score, reasons)
 }
@@ -130,7 +131,12 @@ pub fn refine_section_target(
                 "Section '#{}' matched query terms: {:?} (context reduced by {:.1}%)",
                 frag.anchor, matching_terms, reduction
             )];
-            return (Some(frag.anchor.clone()), Some(frag.tokens), reduction, reasons);
+            return (
+                Some(frag.anchor.clone()),
+                Some(frag.tokens),
+                reduction,
+                reasons,
+            );
         }
     }
 

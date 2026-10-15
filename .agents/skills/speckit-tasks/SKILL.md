@@ -1,13 +1,54 @@
 ---
-name: "speckit-tasks"
-description: "Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts."
-compatibility: "Requires spec-kit project structure with .specify/ directory"
+name: speckit-tasks
+description: Generate an actionable, dependency-ordered tasks.md for the feature based on available design artifacts.
+compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: "github-spec-kit"
-  source: "templates/commands/tasks.md"
+  author: github-spec-kit
+  source: templates/commands/tasks.md
+wiki:
+  content_hash: 7b01a2b2e7ac25b529e2663a93425fc86b666408cf62fc80f1fc581435173be9
+  fragments:
+    user-input:
+      tokens: 30
+      inbound: 0
+      outbound: 0
+    pre-execution-checks:
+      tokens: 495
+      inbound: 0
+      outbound: 0
+    outline:
+      tokens: 574
+      inbound: 0
+      outbound: 0
+    mandatory-post-execution-hooks:
+      tokens: 501
+      inbound: 0
+      outbound: 0
+    completion-report:
+      tokens: 107
+      inbound: 0
+      outbound: 0
+    task-generation-rules:
+      tokens: 816
+      inbound: 0
+      outbound: 0
+    checklist-format-required:
+      tokens: 377
+      inbound: 0
+      outbound: 0
+    task-organization:
+      tokens: 289
+      inbound: 0
+      outbound: 0
+    phase-structure:
+      tokens: 103
+      inbound: 0
+      outbound: 0
+    done-when:
+      tokens: 58
+      inbound: 0
+      outbound: 0
 ---
-
-
 ## User Input
 
 ```text

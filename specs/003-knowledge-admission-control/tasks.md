@@ -1,3 +1,56 @@
+---
+wiki:
+  content_hash: dd1161d96103e861138d17f9d6285c1242dcc2a09c63b2e24b00501bd47e7ad8
+  fragments:
+    tasks-knowledge-quality-admission-control-continuous-enforcement:
+      tokens: 8212
+      inbound: 0
+      outbound: 3
+    task-matrix-dependencies:
+      tokens: 233
+      inbound: 0
+      outbound: 0
+    phase-1-core-data-models-contract-types-tasks-t001t005:
+      tokens: 443
+      inbound: 0
+      outbound: 0
+    phase-2-knowledge-debt-baseline-engine-tasks-t006t011:
+      tokens: 495
+      inbound: 0
+      outbound: 0
+    phase-3-ephemeral-candidate-graph-overlay-tasks-t012t017:
+      tokens: 488
+      inbound: 0
+      outbound: 0
+    phase-4-pre-commit-admission-control-cli-dual-hooks-tasks-t018t023:
+      tokens: 3478
+      inbound: 0
+      outbound: 0
+    phase-5-deterministic-semantic-collision-engine-tasks-t024t030:
+      tokens: 584
+      inbound: 0
+      outbound: 0
+    phase-6-reverse-impact-index-technical-drift-engine-tasks-t031t036:
+      tokens: 433
+      inbound: 0
+      outbound: 0
+    phase-7-context-trace-engine-bpe-token-pathfinding-tasks-t037t042:
+      tokens: 439
+      inbound: 0
+      outbound: 0
+    phase-8-network-aware-knowledge-quality-score-engine-tasks-t043t048:
+      tokens: 430
+      inbound: 0
+      outbound: 0
+    phase-9-extension-host-webview-4th-pillar-integration-tasks-t049t055:
+      tokens: 619
+      inbound: 0
+      outbound: 0
+    phase-10-criterion-benchmarking-cross-platform-e2e-verification-tasks-t056t060:
+      tokens: 470
+      inbound: 0
+      outbound: 0
+---
 # Tasks: Knowledge Quality Admission Control & Continuous Enforcement
 
 **Feature Branch:** `003-knowledge-admission-control`  
@@ -30,7 +83,7 @@ graph TD
 
 ## Phase 1: Core Data Models & Contract Types (Tasks T001–T005)
 
-- [X] **T001**: Define Rust domain models in `crates/core/src/model.rs` and `crates/core/src/debt/mod.rs` matching `data-model.md`: `KnowledgeDebtBaseline`, `BrokenLinkSignature`, `CollisionSignature`, and `DriftSignature`.
+- [X] **T001**: Define Rust domain models in `crates/core/src/model/mod.rs` and `crates/core/src/debt/mod.rs` matching `data-model.md`: `KnowledgeDebtBaseline`, `BrokenLinkSignature`, `CollisionSignature`, and `DriftSignature`.
   - **Mapped Requirements**: FR-009, FR-016
   - **Verification**: `cargo test test_debt_model_serialization`
 
@@ -56,17 +109,17 @@ graph TD
 
 - [X] **T006**: Implement signature hashing algorithms in `crates/core/src/debt/signatures.rs`: deterministic SHA-256/FNV-1a digests for broken links, orphans, collisions, and technical drifts.
   - **Mapped Requirements**: FR-009
-  - **Verification**: Unit tests in `tests/debt_test.rs` validating signature stability across file path case folding.
+  - **Verification**: Unit tests in `crates/core/tests/debt_test.rs` validating signature stability across file path case folding.
 
-- [X] **T007**: Implement baseline persistence engine in `crates/core/src/debt/baseline.rs`: creating, loading, and validating `.context-vault/baseline.json`.
+- [X] **T007**: Implement baseline persistence engine in `crates/core/src/debt/baseline.rs`: creating, loading, and validating *.context-vault/baseline.json*.
   - **Mapped Requirements**: FR-009, FR-010
   - **Verification**: `cargo test test_baseline_save_and_load`
 
-- [X] **T008**: Implement initial vault debt snapshot capture in `crates/core/src/debt/evaluator.rs`: scanning an unbaselined repository, extracting all existing findings, and producing initial baseline.
+- [X] **T008**: Implement initial vault debt snapshot capture in `crates/core/src/candidate/evaluator.rs`: scanning an unbaselined repository, extracting all existing findings, and producing initial baseline.
   - **Mapped Requirements**: FR-010, SC-001
   - **Verification**: `cargo test test_initial_baseline_capture_on_brownfield`
 
-- [X] **T009**: Implement baseline differential comparison in `crates/core/src/debt/evaluator.rs`: computing $\text{New Regressions} = \text{Candidate Findings} \setminus \text{Baseline Findings}$.
+- [X] **T009**: Implement baseline differential comparison in `crates/core/src/candidate/evaluator.rs`: computing $\text{New Regressions} = \text{Candidate Findings} \setminus \text{Baseline Findings}$.
   - **Mapped Requirements**: FR-011, FR-012, FR-013, SC-002
   - **Verification**: Unit test proving legacy issues do not appear in $\text{New Regressions}$.
 
@@ -74,7 +127,7 @@ graph TD
   - **Mapped Requirements**: FR-015, SC-005
   - **Verification**: `cargo test test_baseline_ratchet_on_resolution`
 
-- [X] **T011**: Implement 5-dimension debt counter accounting in `crates/core/src/debt/evaluator.rs`: calculating Total Debt, Legacy Debt, New Debt, Resolved Debt, and Regressions.
+- [X] **T011**: Implement 5-dimension debt counter accounting in `crates/core/src/candidate/evaluator.rs`: calculating Total Debt, Legacy Debt, New Debt, Resolved Debt, and Regressions.
   - **Mapped Requirements**: FR-016
   - **Verification**: `cargo test test_debt_accounting_dimensions`
 
@@ -84,25 +137,25 @@ graph TD
 
 - [X] **T012**: Implement `OverlayDelta` in `crates/core/src/candidate/overlay.rs`: capturing in-memory additions, modifications, and deletions from staged Git files.
   - **Mapped Requirements**: FR-002
-  - **Verification**: Unit test in `tests/candidate_test.rs` overlaying 5 staged notes without cloning base topology.
+  - **Verification**: Unit test in `crates/core/tests/candidate_test.rs` overlaying 5 staged notes without cloning base topology.
 
 - [X] **T013**: Implement candidate AST parser in `crates/core/src/candidate/overlay.rs`: parsing Markdown ASTs for staged file blobs directly from Git index.
   - **Mapped Requirements**: FR-002
   - **Verification**: `cargo test test_candidate_staged_ast_parsing`
 
-- [X] **T014**: Implement candidate link and anchor resolver in `crates/core/src/candidate/validator.rs`: validating internal wikilinks and heading anchors in candidate state.
+- [X] **T014**: Implement candidate link and anchor resolver in `crates/core/src/candidate/evaluator.rs`: validating internal wikilinks and heading anchors in candidate state.
   - **Mapped Requirements**: FR-002, FR-013
   - **Verification**: `cargo test test_candidate_broken_link_detection`
 
-- [X] **T015**: Implement Candidate Validation Pipeline runner in `crates/core/src/candidate/validator.rs`: running integrity checks, diffing against debt baseline, and populating `CandidateValidationReport`.
+- [X] **T015**: Implement Candidate Validation Pipeline runner in `crates/core/src/candidate/evaluator.rs`: running integrity checks, diffing against debt baseline, and populating `CandidateValidationReport`.
   - **Mapped Requirements**: FR-002, FR-003, FR-011
   - **Verification**: `cargo test test_candidate_pipeline_evaluation`
 
-- [X] **T016**: Implement Decision Engine rules in `crates/core/src/candidate/validator.rs`: returning `BLOCK` (exit code 1) on new broken links or collisions, `WARN` (exit code 0) on moderate findings, and `PASS` (exit code 0) on clean changes.
+- [X] **T016**: Implement Decision Engine rules in `crates/core/src/candidate/evaluator.rs`: returning `BLOCK` (exit code 1) on new broken links or collisions, `WARN` (exit code 0) on moderate findings, and `PASS` (exit code 0) on clean changes.
   - **Mapped Requirements**: FR-012, FR-013, FR-014
   - **Verification**: `cargo test test_decision_engine_block_warn_pass`
 
-- [X] **T017**: Implement memory disposal verification test in `tests/candidate_test.rs`: asserting candidate graph is completely dropped from RAM and persistent graph remains 100% byte-identical after aborted evaluation.
+- [X] **T017**: Implement memory disposal verification test in `crates/core/tests/candidate_test.rs`: asserting candidate graph is completely dropped from RAM and persistent graph remains 100% byte-identical after aborted evaluation.
   - **Mapped Requirements**: FR-001, FR-003, SC-003
   - **Verification**: `cargo test test_candidate_zero_persistence_leak`
 
@@ -114,7 +167,7 @@ graph TD
   - **Mapped Requirements**: FR-005, FR-008
   - **Verification**: `cargo test test_cli_validate_command`
 
-- [X] **T019**: Add `--json` and `--quiet` flags to `llm-wiki-core validate` in `crates/core/src/cli/validate.rs` matching `git_hooks_contract.json`.
+- [X] **T019**: Add `--json` and `--quiet` flags to `llm-wiki-core validate` in `crates/core/src/cli/validate.rs` matching `specs/003-knowledge-admission-control/contracts/git_hooks_contract.json`.
   - **Mapped Requirements**: FR-008
   - **Verification**: `cargo test test_cli_validate_json_output`
 
@@ -130,12 +183,12 @@ graph TD
   - **Mapped Requirements**: FR-009, FR-010
   - **Verification**: `cargo test test_cli_baseline_init_command`
 
-- [X] **T023**: Update declarative `.pre-commit-config.yaml` template and hook generator in `crates/core/src/config/generator.rs` for Tier 1 (`prek`) configuring dual hooks: `llm-wiki-validate` (stage: `pre-commit`) and `llm-wiki-sync` (stage: `post-commit`).
-  - **Mapped Requirements**: FR-005, FR-006
+*.pre-commit-config.yaml*-*.pre-commit-config.yaml* *.pre-commit-config.yaml*[*.pre-commit-config.yaml*X*.pre-commit-config.yaml*]*.pre-commit-config.yaml* *.pre-commit-config.yaml***.pre-commit-config.yaml***.pre-commit-config.yaml*T*.pre-commit-config.yaml*0*.pre-commit-config.yaml*2*.pre-commit-config.yaml*3*.pre-commit-config.yaml***.pre-commit-config.yaml***.pre-commit-config.yaml*:*.pre-commit-config.yaml* *.pre-commit-config.yaml*U*.pre-commit-config.yaml*p*.pre-commit-config.yaml*d*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*d*.pre-commit-config.yaml*e*.pre-commit-config.yaml*c*.pre-commit-config.yaml*l*.pre-commit-config.yaml*a*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*v*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*.*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*m*.pre-commit-config.yaml*m*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*g*.pre-commit-config.yaml*.*.pre-commit-config.yaml*y*.pre-commit-config.yaml*a*.pre-commit-config.yaml*m*.pre-commit-config.yaml*l*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml*m*.pre-commit-config.yaml*p*.pre-commit-config.yaml*l*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*a*.pre-commit-config.yaml*n*.pre-commit-config.yaml*d*.pre-commit-config.yaml* *.pre-commit-config.yaml*h*.pre-commit-config.yaml*o*.pre-commit-config.yaml*o*.pre-commit-config.yaml*k*.pre-commit-config.yaml* *.pre-commit-config.yaml*g*.pre-commit-config.yaml*e*.pre-commit-config.yaml*n*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*o*.pre-commit-config.yaml*r*.pre-commit-config.yaml* *.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*c*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml*s*.pre-commit-config.yaml*/*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*/*.pre-commit-config.yaml*s*.pre-commit-config.yaml*r*.pre-commit-config.yaml*c*.pre-commit-config.yaml*/*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*g*.pre-commit-config.yaml*/*.pre-commit-config.yaml*g*.pre-commit-config.yaml*e*.pre-commit-config.yaml*n*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*o*.pre-commit-config.yaml*r*.pre-commit-config.yaml*.*.pre-commit-config.yaml*r*.pre-commit-config.yaml*s*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*f*.pre-commit-config.yaml*o*.pre-commit-config.yaml*r*.pre-commit-config.yaml* *.pre-commit-config.yaml*T*.pre-commit-config.yaml*i*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml* *.pre-commit-config.yaml*1*.pre-commit-config.yaml* *.pre-commit-config.yaml*(*.pre-commit-config.yaml*`*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*k*.pre-commit-config.yaml*`*.pre-commit-config.yaml*)*.pre-commit-config.yaml* *.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*g*.pre-commit-config.yaml*u*.pre-commit-config.yaml*r*.pre-commit-config.yaml*i*.pre-commit-config.yaml*n*.pre-commit-config.yaml*g*.pre-commit-config.yaml* *.pre-commit-config.yaml*d*.pre-commit-config.yaml*u*.pre-commit-config.yaml*a*.pre-commit-config.yaml*l*.pre-commit-config.yaml* *.pre-commit-config.yaml*h*.pre-commit-config.yaml*o*.pre-commit-config.yaml*o*.pre-commit-config.yaml*k*.pre-commit-config.yaml*s*.pre-commit-config.yaml*:*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*l*.pre-commit-config.yaml*l*.pre-commit-config.yaml*m*.pre-commit-config.yaml*-*.pre-commit-config.yaml*w*.pre-commit-config.yaml*i*.pre-commit-config.yaml*k*.pre-commit-config.yaml*i*.pre-commit-config.yaml*-*.pre-commit-config.yaml*v*.pre-commit-config.yaml*a*.pre-commit-config.yaml*l*.pre-commit-config.yaml*i*.pre-commit-config.yaml*d*.pre-commit-config.yaml*a*.pre-commit-config.yaml*t*.pre-commit-config.yaml*e*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*(*.pre-commit-config.yaml*s*.pre-commit-config.yaml*t*.pre-commit-config.yaml*a*.pre-commit-config.yaml*g*.pre-commit-config.yaml*e*.pre-commit-config.yaml*:*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*m*.pre-commit-config.yaml*m*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*`*.pre-commit-config.yaml*)*.pre-commit-config.yaml* *.pre-commit-config.yaml*a*.pre-commit-config.yaml*n*.pre-commit-config.yaml*d*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*l*.pre-commit-config.yaml*l*.pre-commit-config.yaml*m*.pre-commit-config.yaml*-*.pre-commit-config.yaml*w*.pre-commit-config.yaml*i*.pre-commit-config.yaml*k*.pre-commit-config.yaml*i*.pre-commit-config.yaml*-*.pre-commit-config.yaml*s*.pre-commit-config.yaml*y*.pre-commit-config.yaml*n*.pre-commit-config.yaml*c*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*(*.pre-commit-config.yaml*s*.pre-commit-config.yaml*t*.pre-commit-config.yaml*a*.pre-commit-config.yaml*g*.pre-commit-config.yaml*e*.pre-commit-config.yaml*:*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*p*.pre-commit-config.yaml*o*.pre-commit-config.yaml*s*.pre-commit-config.yaml*t*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*m*.pre-commit-config.yaml*m*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*`*.pre-commit-config.yaml*)*.pre-commit-config.yaml*.*.pre-commit-config.yaml*
+*.pre-commit-config.yaml*  - **Mapped Requirements**: FR-005, FR-006
   - **Verification**: `cargo test test_dual_hook_config_generation`
 
-- [X] **T023a**: Implement Tier 2 ecosystem hook detection in `crates/core/src/config/generator.rs`: detecting existing Python `pre-commit` or `lefthook.yml` and configuring stage bindings without config collisions.
-  - **Mapped Requirements**: FR-006
+*lefthook.yml*-*lefthook.yml* *lefthook.yml*[*lefthook.yml*X*lefthook.yml*]*lefthook.yml* *lefthook.yml***lefthook.yml***lefthook.yml*T*lefthook.yml*0*lefthook.yml*2*lefthook.yml*3*lefthook.yml*a*lefthook.yml***lefthook.yml***lefthook.yml*:*lefthook.yml* *lefthook.yml*I*lefthook.yml*m*lefthook.yml*p*lefthook.yml*l*lefthook.yml*e*lefthook.yml*m*lefthook.yml*e*lefthook.yml*n*lefthook.yml*t*lefthook.yml* *lefthook.yml*T*lefthook.yml*i*lefthook.yml*e*lefthook.yml*r*lefthook.yml* *lefthook.yml*2*lefthook.yml* *lefthook.yml*e*lefthook.yml*c*lefthook.yml*o*lefthook.yml*s*lefthook.yml*y*lefthook.yml*s*lefthook.yml*t*lefthook.yml*e*lefthook.yml*m*lefthook.yml* *lefthook.yml*h*lefthook.yml*o*lefthook.yml*o*lefthook.yml*k*lefthook.yml* *lefthook.yml*d*lefthook.yml*e*lefthook.yml*t*lefthook.yml*e*lefthook.yml*c*lefthook.yml*t*lefthook.yml*i*lefthook.yml*o*lefthook.yml*n*lefthook.yml* *lefthook.yml*i*lefthook.yml*n*lefthook.yml* *lefthook.yml*`*lefthook.yml*c*lefthook.yml*r*lefthook.yml*a*lefthook.yml*t*lefthook.yml*e*lefthook.yml*s*lefthook.yml*/*lefthook.yml*c*lefthook.yml*o*lefthook.yml*r*lefthook.yml*e*lefthook.yml*/*lefthook.yml*s*lefthook.yml*r*lefthook.yml*c*lefthook.yml*/*lefthook.yml*c*lefthook.yml*o*lefthook.yml*n*lefthook.yml*f*lefthook.yml*i*lefthook.yml*g*lefthook.yml*/*lefthook.yml*g*lefthook.yml*e*lefthook.yml*n*lefthook.yml*e*lefthook.yml*r*lefthook.yml*a*lefthook.yml*t*lefthook.yml*o*lefthook.yml*r*lefthook.yml*.*lefthook.yml*r*lefthook.yml*s*lefthook.yml*`*lefthook.yml*:*lefthook.yml* *lefthook.yml*d*lefthook.yml*e*lefthook.yml*t*lefthook.yml*e*lefthook.yml*c*lefthook.yml*t*lefthook.yml*i*lefthook.yml*n*lefthook.yml*g*lefthook.yml* *lefthook.yml*e*lefthook.yml*x*lefthook.yml*i*lefthook.yml*s*lefthook.yml*t*lefthook.yml*i*lefthook.yml*n*lefthook.yml*g*lefthook.yml* *lefthook.yml*P*lefthook.yml*y*lefthook.yml*t*lefthook.yml*h*lefthook.yml*o*lefthook.yml*n*lefthook.yml* *lefthook.yml*`*lefthook.yml*p*lefthook.yml*r*lefthook.yml*e*lefthook.yml*-*lefthook.yml*c*lefthook.yml*o*lefthook.yml*m*lefthook.yml*m*lefthook.yml*i*lefthook.yml*t*lefthook.yml*`*lefthook.yml* *lefthook.yml*o*lefthook.yml*r*lefthook.yml* *lefthook.yml*`*lefthook.yml*l*lefthook.yml*e*lefthook.yml*f*lefthook.yml*t*lefthook.yml*h*lefthook.yml*o*lefthook.yml*o*lefthook.yml*k*lefthook.yml*.*lefthook.yml*y*lefthook.yml*m*lefthook.yml*l*lefthook.yml*`*lefthook.yml* *lefthook.yml*a*lefthook.yml*n*lefthook.yml*d*lefthook.yml* *lefthook.yml*c*lefthook.yml*o*lefthook.yml*n*lefthook.yml*f*lefthook.yml*i*lefthook.yml*g*lefthook.yml*u*lefthook.yml*r*lefthook.yml*i*lefthook.yml*n*lefthook.yml*g*lefthook.yml* *lefthook.yml*s*lefthook.yml*t*lefthook.yml*a*lefthook.yml*g*lefthook.yml*e*lefthook.yml* *lefthook.yml*b*lefthook.yml*i*lefthook.yml*n*lefthook.yml*d*lefthook.yml*i*lefthook.yml*n*lefthook.yml*g*lefthook.yml*s*lefthook.yml* *lefthook.yml*w*lefthook.yml*i*lefthook.yml*t*lefthook.yml*h*lefthook.yml*o*lefthook.yml*u*lefthook.yml*t*lefthook.yml* *lefthook.yml*c*lefthook.yml*o*lefthook.yml*n*lefthook.yml*f*lefthook.yml*i*lefthook.yml*g*lefthook.yml* *lefthook.yml*c*lefthook.yml*o*lefthook.yml*l*lefthook.yml*l*lefthook.yml*i*lefthook.yml*s*lefthook.yml*i*lefthook.yml*o*lefthook.yml*n*lefthook.yml*s*lefthook.yml*.*lefthook.yml*
+*lefthook.yml*  - **Mapped Requirements**: FR-006
   - **Verification**: `cargo test test_tier2_ecosystem_hook_detection`
 
 - [X] **T023b**: Implement Tier 3 zero-dependency fallback shell scripts in `crates/core/src/config/generator.rs`: generating `.git/hooks/pre-commit` and `.git/hooks/post-commit` shell dispatchers with non-blocking fail-open traps.
@@ -170,7 +223,7 @@ graph TD
   - **Mapped Requirements**: FR-021, FR-022
   - **Verification**: `cargo test test_canonical_candidate_proposal`
 
-- [X] **T030**: Integrate collision detection into candidate evaluation pipeline in `crates/core/src/candidate/validator.rs`: emitting `BLOCK` on new high-confidence duplicate ($\ge 85\%$) and `WARN` on moderate overlap ($75\%\le \text{sim} < 85\%$).
+- [X] **T030**: Integrate collision detection into candidate evaluation pipeline in `crates/core/src/candidate/evaluator.rs`: emitting `BLOCK` on new high-confidence duplicate ($\ge 85\%$) and `WARN` on moderate overlap ($75\%\le \text{sim} < 85\%$).
   - **Mapped Requirements**: FR-013, FR-014, SC-002
   - **Verification**: `cargo test test_candidate_collision_blocking`
 
@@ -178,11 +231,11 @@ graph TD
 
 ## Phase 6: Reverse Impact Index & Technical Drift Engine (Tasks T031–T036)
 
-- [X] **T031**: Implement code symbol and path citation extractor in `crates/core/src/drift/indexer.rs`: extracting code file paths and symbol names from Markdown link targets and code blocks.
+- [X] **T031**: Implement code symbol and path citation extractor in `crates/core/src/drift/index.rs`: extracting code file paths and symbol names from Markdown link targets and code blocks.
   - **Mapped Requirements**: FR-023
   - **Verification**: `cargo test test_code_citation_extraction_from_ast`
 
-- [X] **T032**: Implement `ReverseImpactIndex` storage and lookup in `crates/core/src/drift/indexer.rs`: bidirectional mapping of `code_to_docs` and `doc_to_code`.
+- [X] **T032**: Implement `ReverseImpactIndex` storage and lookup in `crates/core/src/drift/index.rs`: bidirectional mapping of `code_to_docs` and `doc_to_code`.
   - **Mapped Requirements**: FR-024
   - **Verification**: `cargo test test_reverse_impact_index_lookups`
 
@@ -198,7 +251,7 @@ graph TD
   - **Mapped Requirements**: FR-026
   - **Verification**: `cargo test test_drift_provenance_diagnostics`
 
-- [X] **T036**: Integrate technical drift checks into candidate pre-commit pipeline in `crates/core/src/candidate/validator.rs`.
+- [X] **T036**: Integrate technical drift checks into candidate pre-commit pipeline in `crates/core/src/candidate/evaluator.rs`.
   - **Mapped Requirements**: FR-014, FR-026
   - **Verification**: `cargo test test_candidate_technical_drift_warning`
 
@@ -226,7 +279,7 @@ graph TD
   - **Mapped Requirements**: FR-028, SC-006
   - **Verification**: `cargo test test_cli_trace_command`
 
-- [X] **T042**: Benchmark Context Trace latency in `benches/trace_benchmark.rs`: asserting $\le 100\text{ ms}$ for 1,000 notes.
+- [X] **T042**: Benchmark Context Trace latency in `crates/core/benches/trace_benchmark.rs`: asserting $\le 100\text{ ms}$ for 1,000 notes.
   - **Mapped Requirements**: SC-006
   - **Verification**: `cargo bench --bench trace_benchmark`
 
@@ -262,7 +315,7 @@ graph TD
 
 ## Phase 9: Extension Host & Webview 4th Pillar Integration (Tasks T049–T055)
 
-- [X] **T049**: Define TypeScript types in `extension/src/types/admission.ts` matching `admission_control_protocol.json`.
+- [X] **T049**: Define TypeScript types in `extension/src/types/admission.ts` matching `specs/003-knowledge-admission-control/contracts/admission_control_protocol.json`.
   - **Mapped Requirements**: FR-005, FR-009, FR-027, FR-029
   - **Verification**: `npm test` compiling without type errors.
 

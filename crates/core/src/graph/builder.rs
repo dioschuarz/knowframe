@@ -70,6 +70,10 @@ impl GraphTopology {
             }
         }
 
+        for neighbors in adj.values_mut() {
+            neighbors.sort();
+        }
+
         adj
     }
 
@@ -114,7 +118,8 @@ impl GraphTopology {
 
     /// Computes Brandes betweenness centrality for all nodes.
     pub fn compute_betweenness(&mut self) {
-        let node_ids: Vec<String> = self.nodes.keys().cloned().collect();
+        let mut node_ids: Vec<String> = self.nodes.keys().cloned().collect();
+        node_ids.sort();
         let adj = self.build_adjacency();
         let centrality_map = compute_brandes_betweenness(&node_ids, &adj);
 
@@ -127,13 +132,26 @@ impl GraphTopology {
 
     /// Suggests the highest betweenness centrality node as the default Level 0 Hub.
     pub fn suggest_hub(&self) -> Option<String> {
-        self.nodes
-            .values()
+        let mut nodes: Vec<&NoteNode> = self.nodes.values().collect();
+        nodes.sort_by(|a, b| a.id.cmp(&b.id));
+        nodes
+            .into_iter()
             .max_by(|a, b| {
                 a.betweenness
                     .partial_cmp(&b.betweenness)
                     .unwrap_or(std::cmp::Ordering::Equal)
                     .then_with(|| (a.in_degree + a.out_degree).cmp(&(b.in_degree + b.out_degree)))
+                    .then_with(|| {
+                        let a_is_agents = a.id.eq_ignore_ascii_case("AGENTS.md") || a.id.ends_with("/AGENTS.md");
+                        let b_is_agents = b.id.eq_ignore_ascii_case("AGENTS.md") || b.id.ends_with("/AGENTS.md");
+                        if a_is_agents && !b_is_agents {
+                            std::cmp::Ordering::Greater
+                        } else if !a_is_agents && b_is_agents {
+                            std::cmp::Ordering::Less
+                        } else {
+                            b.id.cmp(&a.id)
+                        }
+                    })
             })
             .map(|n| n.id.clone())
     }

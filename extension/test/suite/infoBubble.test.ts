@@ -46,7 +46,8 @@ suite('Informational Bubble (ⓘ) Component Test Suite (T035)', () => {
     const html = renderInfoBubbleHtml('cohesion');
 
     assert.ok(html.includes('info-bubble-wrapper'), 'Must have wrapper');
-    assert.ok(html.includes('ⓘ'), 'Must render info icon');
+    assert.ok(html.includes('<span class="info-bubble-icon" aria-hidden="true">i</span>'), 'Must render clean info letter i');
+    assert.ok(!html.includes('ⓘ'), 'Must not render circled unicode i');
     assert.ok(html.includes('Cohesion'), 'Must render title');
     assert.ok(html.includes('Meaning:'), 'Must label Meaning');
     assert.ok(html.includes('Implications:'), 'Must label Implications');

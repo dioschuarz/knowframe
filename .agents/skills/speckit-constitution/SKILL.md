@@ -1,13 +1,34 @@
 ---
-name: "speckit-constitution"
-description: "Create or update the project constitution from interactive or provided principle inputs."
-compatibility: "Requires spec-kit project structure with .specify/ directory"
+name: speckit-constitution
+description: Create or update the project constitution from interactive or provided principle inputs.
+compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: "github-spec-kit"
-  source: "templates/commands/constitution.md"
+  author: github-spec-kit
+  source: templates/commands/constitution.md
+wiki:
+  content_hash: 623b2a5b8da384cee95b250029df56fb6829675d7e1ab40208ae3c9e4372e618
+  fragments:
+    user-input:
+      tokens: 30
+      inbound: 0
+      outbound: 0
+    scope-guard:
+      tokens: 226
+      inbound: 0
+      outbound: 0
+    pre-execution-checks:
+      tokens: 496
+      inbound: 0
+      outbound: 0
+    outline:
+      tokens: 944
+      inbound: 0
+      outbound: 0
+    post-execution-checks:
+      tokens: 475
+      inbound: 0
+      outbound: 0
 ---
-
-
 ## User Input
 
 ```text

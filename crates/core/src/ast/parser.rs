@@ -56,7 +56,10 @@ pub fn parse_markdown_ast(file_id: &str, content: &str) -> ParsedDocument {
             Event::End(TagEnd::CodeBlock) => {
                 in_code_block = false;
             }
-            Event::Code(_) => {
+            Event::Code(code) => {
+                if in_heading {
+                    heading_text.push_str(&code);
+                }
                 // Inline code span: mask with spaces
                 let end = range.end.min(masked_bytes.len());
                 for b in &mut masked_bytes[range.start..end] {
@@ -109,7 +112,9 @@ pub fn parse_markdown_ast(file_id: &str, content: &str) -> ParsedDocument {
                             current_link_text.trim().to_string()
                         };
 
-                        let target_frag = anchor.clone().map(|a| a.trim_start_matches('#').to_string());
+                        let target_frag = anchor
+                            .clone()
+                            .map(|a| a.trim_start_matches('#').to_string());
                         edges.push(NoteEdge {
                             id: format!("{}->{}", file_id, path_part),
                             source: file_id.to_string(),

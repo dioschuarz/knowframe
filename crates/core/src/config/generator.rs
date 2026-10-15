@@ -20,10 +20,10 @@ pub fn write_config_if_missing(
     workspace_root: &Path,
     discovered_hub: Option<&str>,
 ) -> Result<bool, std::io::Error> {
-    let config_path = workspace_root.join(".context-vault.yaml");
-    if config_path.exists() {
+    if ContextVaultConfig::find_config_path(workspace_root).is_some() {
         return Ok(false);
     }
+    let config_path = ContextVaultConfig::canonical_config_path(workspace_root);
     let config = generate_default_config(discovered_hub);
     let yaml = serde_yaml::to_string(&config).map_err(|e| std::io::Error::other(e.to_string()))?;
     std::fs::write(&config_path, yaml)?;
@@ -124,7 +124,8 @@ pub fn detect_and_configure_tier2_hooks(
 
     if let Some(path) = target_left {
         let content = fs::read_to_string(&path)?;
-        if content.contains("llm-wiki-core validate") || content.contains("llm-wiki-core git-delta") {
+        if content.contains("llm-wiki-core validate") || content.contains("llm-wiki-core git-delta")
+        {
             return Ok(Tier2DetectionResult::LefthookAlreadyConfigured);
         }
 

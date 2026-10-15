@@ -1,7 +1,11 @@
 use llm_wiki_core::drift::{FreshnessEvidence, FreshnessTier};
-use llm_wiki_core::fragment::{FragmentMetadata, MaterializedFragmentEntry, MaterializedWikiFrontmatter};
+use llm_wiki_core::fragment::{
+    FragmentMetadata, MaterializedFragmentEntry, MaterializedWikiFrontmatter,
+};
 use llm_wiki_core::model::{LinkResolutionStatus, LinkType, NoteEdge, NoteNode};
-use llm_wiki_core::quality::{FivePillarQualityScore, QualityPillar, StructureDebtFinding, StructureDebtType};
+use llm_wiki_core::quality::{
+    FivePillarQualityScore, QualityPillar, StructureDebtFinding, StructureDebtType,
+};
 use llm_wiki_core::trace::ContextTraceSectionResult;
 
 #[test]
@@ -93,7 +97,8 @@ fn test_structure_debt_models_t004() {
         fragment_anchor: None,
         raw_metric_value: 52000,
         penalty: 25.0,
-        guidance: "Document exceeds 50k tokens and lacks materialized fragment metadata.".to_string(),
+        guidance: "Document exceeds 50k tokens and lacks materialized fragment metadata."
+            .to_string(),
     };
 
     let json = serde_json::to_string(&finding).unwrap();
@@ -136,7 +141,10 @@ fn test_five_pillar_score_and_trace_section_models_t006() {
         entrypoint: "AGENTS.md".to_string(),
         target_document: "docs/arch.md".to_string(),
         target_fragment: Some("authentication".to_string()),
-        path: vec!["AGENTS.md".to_string(), "docs/arch.md#authentication".to_string()],
+        path: vec![
+            "AGENTS.md".to_string(),
+            "docs/arch.md#authentication".to_string(),
+        ],
         depth: 1,
         document_raw_tokens: 50231,
         fragment_raw_tokens: Some(5132),

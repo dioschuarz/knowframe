@@ -27,13 +27,7 @@ pub fn build_globset(patterns: &[String]) -> Result<GlobSet> {
 
 pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
     let root = &options.workspace_root;
-    let config_path = root.join(".context-vault.yaml");
-    let config = if config_path.exists() {
-        ContextVaultConfig::load_from_file(&config_path)
-            .unwrap_or_else(|_| ContextVaultConfig::default())
-    } else {
-        ContextVaultConfig::default()
-    };
+    let config = ContextVaultConfig::load_from_workspace(root);
 
     let include_set = build_globset(&config.get_scan_include())?;
     let exclude_set = build_globset(&config.get_scan_exclude())?;
@@ -76,7 +70,7 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
     use rayon::prelude::*;
     use std::path::Path;
 
-    let matching_files: Vec<(PathBuf, String)> = walker
+    let mut matching_files: Vec<(PathBuf, String)> = walker
         .filter_map(|e| e.ok())
         .filter(|e| e.file_type().is_file())
         .filter_map(|e| {
@@ -90,7 +84,9 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
         })
         .collect();
 
-    let parsed_items: Vec<_> = matching_files
+    matching_files.sort_by(|a, b| a.1.cmp(&b.1));
+
+    let mut parsed_items: Vec<_> = matching_files
         .into_par_iter()
         .filter_map(|(abs_path, rel_str)| {
             let content = std::fs::read_to_string(&abs_path).ok()?;
@@ -104,7 +100,10 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
                     .unwrap_or_else(|| rel_str.clone())
             });
 
-            let fragments = crate::fragment::extractor::extract_fragments_from_document(&content, &parsed.edges);
+            let fragments = crate::fragment::extractor::extract_fragments_from_document(
+                &content,
+                &parsed.edges,
+            );
 
             let mut node = NoteNode::new(&rel_str, abs_path.to_string_lossy().to_string(), label);
             node.tokens = tokens;
@@ -119,9 +118,12 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
         })
         .collect();
 
-    for (node, rel_str, headings, edges) in parsed_items {
+    parsed_items.sort_by(|a, b| a.1.cmp(&b.1));
+
+    for (node, rel_str, headings, mut edges) in parsed_items {
         topology.add_node(node);
         topology.set_headings(rel_str, headings);
+        edges.sort_by(|a, b| a.id.cmp(&b.id));
         for edge in edges {
             topology.add_edge(edge);
         }
@@ -189,7 +191,8 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
     }
 
     // 7. Calculate Token Summary
-    let node_vec: Vec<NoteNode> = topology.nodes.values().cloned().collect();
+    let mut node_vec: Vec<NoteNode> = topology.nodes.values().cloned().collect();
+    node_vec.sort_by(|a, b| a.id.cmp(&b.id));
     let token_summary = compute_token_summary(
         &node_vec,
         config.token_budget.warning_threshold,

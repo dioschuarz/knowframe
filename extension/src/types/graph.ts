@@ -33,6 +33,8 @@ export interface NoteNode {
   brokenLinks: number;
   fragments?: FragmentMetadata[];
   freshness?: FreshnessEvidence;
+  reviewStatus?: 'updated' | 'reviewed_unchanged' | 'pending' | 'blocked';
+  codeDependencies?: Array<{ path: string; source: string; line_start?: number; line_end?: number }>;
 
   // d3-force visual coordinates
   x?: number;

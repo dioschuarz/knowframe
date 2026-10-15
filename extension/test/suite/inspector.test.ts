@@ -157,7 +157,7 @@ describe('InspectorDrawer Test Suite', () => {
       isHub: false,
     });
 
-    assert.ok(html.includes('FRAGMENTS (2)'), 'Should display fragments header with count');
+    assert.ok(html.includes('Fragments (2)'), 'Should display fragments header with count');
     assert.ok(html.includes('insp-fragments-table'), 'Should render fragment table');
     assert.ok(html.includes('Authentication Flow'), 'Should render fragment heading');
     assert.ok(html.includes('#auth-flow'), 'Should render fragment anchor');

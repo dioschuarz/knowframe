@@ -1,3 +1,68 @@
+---
+wiki:
+  content_hash: e0bec0c39ab8c06fbaf6ce387501e51b801becc0f7154120fef4cbd568885114
+  fragments:
+    technical-research-admission-control-deterministic-drift-debt-baseline:
+      tokens: 2938
+      inbound: 0
+      outbound: 0
+    1-ephemeral-candidate-graph-overlay:
+      tokens: 247
+      inbound: 0
+      outbound: 0
+    the-problem:
+      tokens: 74
+      inbound: 0
+      outbound: 0
+    the-solution-overlay-architecture:
+      tokens: 162
+      inbound: 0
+      outbound: 0
+    2-brownfield-debt-baseline-differential-engine:
+      tokens: 269
+      inbound: 0
+      outbound: 0
+    the-problem-1:
+      tokens: 33
+      inbound: 0
+      outbound: 0
+    the-solution-stable-finding-signatures:
+      tokens: 224
+      inbound: 0
+      outbound: 0
+    3-deterministic-semantic-collision-without-external-ai:
+      tokens: 340
+      inbound: 0
+      outbound: 0
+    the-problem-2:
+      tokens: 54
+      inbound: 0
+      outbound: 0
+    the-solution-two-stage-filter-deterministic-fingerprints:
+      tokens: 274
+      inbound: 0
+      outbound: 0
+    4-code-to-doc-reverse-impact-index:
+      tokens: 1796
+      inbound: 0
+      outbound: 0
+    the-problem-3:
+      tokens: 1052
+      inbound: 0
+      outbound: 0
+    the-solution-symbol-path-citation-extraction:
+      tokens: 732
+      inbound: 0
+      outbound: 0
+    5-context-trace-algorithm:
+      tokens: 217
+      inbound: 0
+      outbound: 0
+    the-formulation:
+      tokens: 209
+      inbound: 0
+      outbound: 0
+---
 # Technical Research: Admission Control, Deterministic Drift & Debt Baseline
 
 **Feature Branch:** `003-knowledge-admission-control`  
@@ -36,7 +101,7 @@ Every finding is serialized into a stable deterministic signature:
 - **Collision**: `hash(min(doc_a, doc_b), max(doc_a, doc_b))`.
 - **Technical Drift**: `hash(doc_path, code_path, symbol)`.
 
-On first scan, the set of signatures is serialized to `.context-vault/baseline.json`.  
+On first scan, the set of signatures is serialized to *.context-vault/baseline.json*.  
 During pre-commit:
 $$\text{New Regressions} = \text{Candidate Findings} \setminus \text{Baseline Findings}$$
 Only signatures present in $\text{New Regressions}$ trigger `BLOCK` or `WARN`.  
@@ -72,14 +137,14 @@ Comparing $N$ documents against each other requires $O(N^2)$ comparisons. For 5,
 ## 4. Code-to-Doc Reverse Impact Index
 
 ### The Problem
-When a developer refactors code (e.g. renames `AuthService` to `IdentityService` or deletes `src/auth/token.ts`), technical documentation becomes stale (Technical Drift).
-
+*src/auth/token.ts*W*src/auth/token.ts*h*src/auth/token.ts*e*src/auth/token.ts*n*src/auth/token.ts* *src/auth/token.ts*a*src/auth/token.ts* *src/auth/token.ts*d*src/auth/token.ts*e*src/auth/token.ts*v*src/auth/token.ts*e*src/auth/token.ts*l*src/auth/token.ts*o*src/auth/token.ts*p*src/auth/token.ts*e*src/auth/token.ts*r*src/auth/token.ts* *src/auth/token.ts*r*src/auth/token.ts*e*src/auth/token.ts*f*src/auth/token.ts*a*src/auth/token.ts*c*src/auth/token.ts*t*src/auth/token.ts*o*src/auth/token.ts*r*src/auth/token.ts*s*src/auth/token.ts* *src/auth/token.ts*c*src/auth/token.ts*o*src/auth/token.ts*d*src/auth/token.ts*e*src/auth/token.ts* *src/auth/token.ts*(*src/auth/token.ts*e*src/auth/token.ts*.*src/auth/token.ts*g*src/auth/token.ts*.*src/auth/token.ts* *src/auth/token.ts*r*src/auth/token.ts*e*src/auth/token.ts*n*src/auth/token.ts*a*src/auth/token.ts*m*src/auth/token.ts*e*src/auth/token.ts*s*src/auth/token.ts* *src/auth/token.ts*`*src/auth/token.ts*A*src/auth/token.ts*u*src/auth/token.ts*t*src/auth/token.ts*h*src/auth/token.ts*S*src/auth/token.ts*e*src/auth/token.ts*r*src/auth/token.ts*v*src/auth/token.ts*i*src/auth/token.ts*c*src/auth/token.ts*e*src/auth/token.ts*`*src/auth/token.ts* *src/auth/token.ts*t*src/auth/token.ts*o*src/auth/token.ts* *src/auth/token.ts*`*src/auth/token.ts*I*src/auth/token.ts*d*src/auth/token.ts*e*src/auth/token.ts*n*src/auth/token.ts*t*src/auth/token.ts*i*src/auth/token.ts*t*src/auth/token.ts*y*src/auth/token.ts*S*src/auth/token.ts*e*src/auth/token.ts*r*src/auth/token.ts*v*src/auth/token.ts*i*src/auth/token.ts*c*src/auth/token.ts*e*src/auth/token.ts*`*src/auth/token.ts* *src/auth/token.ts*o*src/auth/token.ts*r*src/auth/token.ts* *src/auth/token.ts*d*src/auth/token.ts*e*src/auth/token.ts*l*src/auth/token.ts*e*src/auth/token.ts*t*src/auth/token.ts*e*src/auth/token.ts*s*src/auth/token.ts* *src/auth/token.ts*`*src/auth/token.ts*s*src/auth/token.ts*r*src/auth/token.ts*c*src/auth/token.ts*/*src/auth/token.ts*a*src/auth/token.ts*u*src/auth/token.ts*t*src/auth/token.ts*h*src/auth/token.ts*/*src/auth/token.ts*t*src/auth/token.ts*o*src/auth/token.ts*k*src/auth/token.ts*e*src/auth/token.ts*n*src/auth/token.ts*.*src/auth/token.ts*t*src/auth/token.ts*s*src/auth/token.ts*`*src/auth/token.ts*)*src/auth/token.ts*,*src/auth/token.ts* *src/auth/token.ts*t*src/auth/token.ts*e*src/auth/token.ts*c*src/auth/token.ts*h*src/auth/token.ts*n*src/auth/token.ts*i*src/auth/token.ts*c*src/auth/token.ts*a*src/auth/token.ts*l*src/auth/token.ts* *src/auth/token.ts*d*src/auth/token.ts*o*src/auth/token.ts*c*src/auth/token.ts*u*src/auth/token.ts*m*src/auth/token.ts*e*src/auth/token.ts*n*src/auth/token.ts*t*src/auth/token.ts*a*src/auth/token.ts*t*src/auth/token.ts*i*src/auth/token.ts*o*src/auth/token.ts*n*src/auth/token.ts* *src/auth/token.ts*b*src/auth/token.ts*e*src/auth/token.ts*c*src/auth/token.ts*o*src/auth/token.ts*m*src/auth/token.ts*e*src/auth/token.ts*s*src/auth/token.ts* *src/auth/token.ts*s*src/auth/token.ts*t*src/auth/token.ts*a*src/auth/token.ts*l*src/auth/token.ts*e*src/auth/token.ts* *src/auth/token.ts*(*src/auth/token.ts*T*src/auth/token.ts*e*src/auth/token.ts*c*src/auth/token.ts*h*src/auth/token.ts*n*src/auth/token.ts*i*src/auth/token.ts*c*src/auth/token.ts*a*src/auth/token.ts*l*src/auth/token.ts* *src/auth/token.ts*D*src/auth/token.ts*r*src/auth/token.ts*i*src/auth/token.ts*f*src/auth/token.ts*t*src/auth/token.ts*)*src/auth/token.ts*.*src/auth/token.ts*
+*src/auth/token.ts*
 ### The Solution: Symbol & Path Citation Extraction
 1. **Indexing Pass**: When indexing Markdown documents, the AST parser extracts:
-   - File path citations: e.g. ``[`src/auth/service.ts`]`` or markdown links to code files.
-   - Code symbol citations: e.g. `` `AuthService.login()` ``.
+*src/auth/service.ts* *src/auth/service.ts* *src/auth/service.ts* *src/auth/service.ts*-*src/auth/service.ts* *src/auth/service.ts*F*src/auth/service.ts*i*src/auth/service.ts*l*src/auth/service.ts*e*src/auth/service.ts* *src/auth/service.ts*p*src/auth/service.ts*a*src/auth/service.ts*t*src/auth/service.ts*h*src/auth/service.ts* *src/auth/service.ts*c*src/auth/service.ts*i*src/auth/service.ts*t*src/auth/service.ts*a*src/auth/service.ts*t*src/auth/service.ts*i*src/auth/service.ts*o*src/auth/service.ts*n*src/auth/service.ts*s*src/auth/service.ts*:*src/auth/service.ts* *src/auth/service.ts*e*src/auth/service.ts*.*src/auth/service.ts*g*src/auth/service.ts*.*src/auth/service.ts* *src/auth/service.ts*`*src/auth/service.ts*`*src/auth/service.ts*[*src/auth/service.ts*`*src/auth/service.ts*s*src/auth/service.ts*r*src/auth/service.ts*c*src/auth/service.ts*/*src/auth/service.ts*a*src/auth/service.ts*u*src/auth/service.ts*t*src/auth/service.ts*h*src/auth/service.ts*/*src/auth/service.ts*s*src/auth/service.ts*e*src/auth/service.ts*r*src/auth/service.ts*v*src/auth/service.ts*i*src/auth/service.ts*c*src/auth/service.ts*e*src/auth/service.ts*.*src/auth/service.ts*t*src/auth/service.ts*s*src/auth/service.ts*`*src/auth/service.ts*]*src/auth/service.ts*`*src/auth/service.ts*`*src/auth/service.ts* *src/auth/service.ts*o*src/auth/service.ts*r*src/auth/service.ts* *src/auth/service.ts*m*src/auth/service.ts*a*src/auth/service.ts*r*src/auth/service.ts*k*src/auth/service.ts*d*src/auth/service.ts*o*src/auth/service.ts*w*src/auth/service.ts*n*src/auth/service.ts* *src/auth/service.ts*l*src/auth/service.ts*i*src/auth/service.ts*n*src/auth/service.ts*k*src/auth/service.ts*s*src/auth/service.ts* *src/auth/service.ts*t*src/auth/service.ts*o*src/auth/service.ts* *src/auth/service.ts*c*src/auth/service.ts*o*src/auth/service.ts*d*src/auth/service.ts*e*src/auth/service.ts* *src/auth/service.ts*f*src/auth/service.ts*i*src/auth/service.ts*l*src/auth/service.ts*e*src/auth/service.ts*s*src/auth/service.ts*.*src/auth/service.ts*
+*src/auth/service.ts*   - Code symbol citations: e.g. `` `AuthService.login()` ``.
 2. **Reverse Map**: Maintained as `HashMap<String, HashSet<String>>`:
-   - `code_to_docs`: `src/auth/service.ts` $\to$ `[docs/architecture/auth.md, docs/security.md]`.
+   - `code_to_docs`: *src/auth/service.ts* $\to$ `[docs/architecture/auth.md, docs/security.md]`.
    - `symbol_to_docs`: `AuthService` $\to$ `[docs/architecture/auth.md]`.
 3. **Pre-Commit Trigger**:
    - Staged files include code paths. If a code path is marked `deleted` or `renamed`, any citing documentation that is NOT also modified in staged changes triggers a `TechnicalDriftFinding`.

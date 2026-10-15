@@ -44,7 +44,9 @@ let currentPreviewPattern = '';
 let currentTransformationPlan: any = null;
 let isTransformationModalOpen = false;
 let isApplyingTransformationPlan = false;
+let isTransformationPlanApplied = false;
 let actualTransformationDelta: any = null;
+let applyTransformationPlanError: string | null = null;
 
 function renderTransformationModal(): void {
   if (!transformationModalContainer) return;
@@ -52,26 +54,53 @@ function renderTransformationModal(): void {
     plan: currentTransformationPlan,
     isOpen: isTransformationModalOpen,
     isApplying: isApplyingTransformationPlan,
+    isApplied: isTransformationPlanApplied,
     actualDelta: actualTransformationDelta,
+    applyError: applyTransformationPlanError,
   });
 
   if (isTransformationModalOpen) {
-    transformationModalContainer.querySelector('#btn-close-plan-modal')?.addEventListener('click', (e) => {
-      e.stopPropagation();
+    const closeTransformationModal = (e?: Event) => {
+      e?.stopPropagation();
       isTransformationModalOpen = false;
       renderTransformationModal();
+    };
+
+    transformationModalContainer.querySelector('#btn-close-plan-modal')?.addEventListener('click', closeTransformationModal);
+    transformationModalContainer.querySelector('#btn-cancel-plan')?.addEventListener('click', closeTransformationModal);
+
+    const overlay = transformationModalContainer.querySelector('#transformation-modal');
+    overlay?.addEventListener('click', (e) => {
+      if (e.target === overlay) {
+        closeTransformationModal(e);
+      }
     });
 
-    transformationModalContainer.querySelector('#btn-apply-plan')?.addEventListener('click', (e) => {
+    transformationModalContainer.querySelector('#btn-apply-plan-changes')?.addEventListener('click', (e) => {
       e.stopPropagation();
-      if (currentTransformationPlan && !isApplyingTransformationPlan) {
+      if (currentTransformationPlan && !isApplyingTransformationPlan && !isTransformationPlanApplied) {
         isApplyingTransformationPlan = true;
+        applyTransformationPlanError = null;
         renderTransformationModal();
-        rpc.applyTransformationPlan(currentTransformationPlan.planId);
+        const plan = currentTransformationPlan;
+        const approvalToken = plan.approval_token || plan.approvalToken;
+        const planId = plan.planId || plan.plan_id;
+        if (approvalToken && planId) {
+          rpc.applyGovernancePlan(planId, approvalToken);
+        } else {
+          rpc.applyTransformationPlan(currentTransformationPlan);
+        }
       }
     });
   }
 }
+
+window.addEventListener('keydown', (e: KeyboardEvent) => {
+  if (e.key === 'Escape' && isTransformationModalOpen) {
+    isTransformationModalOpen = false;
+    renderTransformationModal();
+  }
+});
 
 const savedState = rpc.getState<any>();
 let currentFocusMode: FocusMode = (savedState?.focusMode as FocusMode) || 'all';
@@ -94,11 +123,14 @@ const settingsDrawer = renderSettingsDrawer(
     colorGroups: colorGroups,
     nodes: rawNodes,
     gitHooksInstalled: true,
+    llmWikiSkillAvailable: false,
     gitCommitLatencyMs: 15,
   },
   {
     onChangeHub: () => {
-      rpc.sendMessage({ type: 'setHub', payload: {} });
+      // An empty setHub payload is ignored by the panel bridge. Use the
+      // dedicated message that opens the extension-host Quick Pick instead.
+      rpc.sendMessage({ type: 'triggerSetHubQuickPick' });
     },
     onFixBrokenLinks: () => {
       rpc.fixBrokenLinks();
@@ -108,6 +140,12 @@ const settingsDrawer = renderSettingsDrawer(
     },
     onAddExclusion: (pattern, scope) => {
       rpc.excludePath(pattern, scope);
+    },
+    onDeleteExclusion: (pattern, scope) => {
+      rpc.removeExclusion(pattern, scope);
+    },
+    onRequestExclusions: () => {
+      rpc.requestExclusions();
     },
     onSaveColorGroups: (newGroups) => {
       colorGroups = newGroups;
@@ -119,8 +157,26 @@ const settingsDrawer = renderSettingsDrawer(
     onInstallGitHooks: () => {
       rpc.sendMessage({ type: 'installHooks' });
     },
+    onInstallLLMWikiSkill: () => {
+      rpc.sendMessage({ type: 'installLLMWikiSkill' });
+    },
     onOpenFile: (filePath, line) => {
       rpc.openFile(filePath, line);
+    },
+    onSelectActiveHarness: (harnessFile) => {
+      rpc.setActiveHarness(harnessFile);
+    },
+    onInitializeHarness: (targetHarness) => {
+      rpc.initializeHarness(targetHarness);
+    },
+    onConfigureHarnessBase: (options) => {
+      rpc.configureHarnessBase(options);
+    },
+    onSyncHarnesses: () => {
+      rpc.syncHarnesses();
+    },
+    onRequestSkillCatalog: () => {
+      rpc.getSkillCatalog();
     },
     onFixBrokenLink: (source, target, line) => {
       rpc.fixBrokenLink(source, line, target);
@@ -128,12 +184,32 @@ const settingsDrawer = renderSettingsDrawer(
     onRequestIssues: (pillar) => {
       rpc.sendMessage({ type: 'requestIssues', payload: { pillar } });
     },
+    onRequestIssuesWithOptions: (options) => {
+      rpc.sendMessage({ type: 'requestIssues', payload: options });
+    },
     onRequestEvolution: () => {
       rpc.getEvolutionState();
+    },
+    onInstallHarnessTool: (toolId) => {
+      rpc.installHarnessTool(toolId);
+    },
+    onRequestHarnessTools: () => {
+      rpc.requestHarnessTools();
+    },
+    onRequestHarnessStatus: () => {
+      rpc.getHarnessStatus();
     },
     onChangeTab: (tab) => {
       if (tab === 'evolution') {
         rpc.getEvolutionState();
+      }
+      if (tab === 'exclusions') {
+        rpc.requestExclusions();
+      }
+      if (tab === 'git_harness' || tab === 'git_sync' || tab === 'harness' || tab === 'git') {
+        rpc.getHarnessStatus();
+        rpc.getSkillCatalog();
+        rpc.requestHarnessTools();
       }
     },
     onSelectOrientation: (orientation) => {
@@ -156,14 +232,40 @@ const settingsDrawer = renderSettingsDrawer(
       });
       rpc.generateTransformationPlan(recId);
     },
+    onGeneratePlanWithStrategies: (opportunityId, selectedStrategies) => {
+      settingsDrawer.updateProps({
+        generatingPlanRecId: opportunityId,
+        planGenerationError: null,
+      });
+      rpc.generateMultiStrategyPlan(opportunityId, selectedStrategies);
+    },
+    onGenerateGovernancePlan: (strategyType, targetFileOrDir) => {
+      rpc.generateGovernancePlan(strategyType, targetFileOrDir);
+    },
     onReviewPlan: (planId) => {
-      if (currentTransformationPlan && currentTransformationPlan.planId === planId) {
+      if (
+        currentTransformationPlan &&
+        (currentTransformationPlan.planId === planId || currentTransformationPlan.plan_id === planId)
+      ) {
         isTransformationModalOpen = true;
         renderTransformationModal();
       }
     },
     onApplyPlan: (planId) => {
-      rpc.applyTransformationPlan(planId);
+      const planToApply =
+        currentTransformationPlan &&
+        (currentTransformationPlan.planId === planId || currentTransformationPlan.plan_id === planId)
+          ? currentTransformationPlan
+          : planId;
+      rpc.applyTransformationPlan(planToApply);
+    },
+    onMarkReviewed: (docId) => {
+      rpc.resolveDocumentReview([docId]);
+    },
+    onOpen: () => {
+      if (typeof inspectorDrawer !== 'undefined' && inspectorDrawer) {
+        inspectorDrawer.close();
+      }
     },
   },
 );
@@ -216,8 +318,16 @@ const inspectorDrawer = renderInspectorDrawer(inspectorContainer, {
       rpc.openFile(target);
     }
   },
+  onMarkReviewed: (docId) => {
+    rpc.resolveDocumentReview([docId]);
+  },
   onClose: () => {
     selectedNode = null;
+  },
+  onOpen: () => {
+    if (typeof settingsDrawer !== 'undefined' && settingsDrawer) {
+      settingsDrawer.close();
+    }
   },
 });
 
@@ -392,6 +502,9 @@ function applySearchFilter(): void {
 
 // Render Actions Toolbar with Icon Popovers and Physics Controls
 const toolbarController = renderActionsToolbar(toolbarContainer, {
+  onRescanVault: () => {
+    rpc.rescanVault();
+  },
   onResetZoom: () => {
     renderer.resetZoom();
   },
@@ -432,20 +545,22 @@ const toolbarController = renderActionsToolbar(toolbarContainer, {
     persistState();
   },
   onOpenSettings: (tab) => {
+    inspectorDrawer.close();
     settingsDrawer.updateProps({
       nodes: rawNodes,
       colorGroups,
+      tokenSummary: lastTokenSummary,
     });
     settingsDrawer.open((tab as SettingsTab) || 'knowledge');
   },
   onOpenTokenBreakdown: () => {
-    if (lastTokenSummary) {
-      const topNodes = [...rawNodes]
-        .sort((a, b) => b.tokens - a.tokens)
-        .slice(0, 10)
-        .map((n) => ({ label: n.label, filePath: n.filePath, tokens: n.tokens }));
-      inspectorDrawer.inspectTokenEconomics(lastTokenSummary, topNodes);
-    }
+    inspectorDrawer.close();
+    settingsDrawer.updateProps({
+      nodes: rawNodes,
+      colorGroups,
+      tokenSummary: lastTokenSummary,
+    });
+    settingsDrawer.open('load');
   },
   onToggleColorManager: () => {
     renderColorManager(
@@ -477,9 +592,30 @@ if (toolbarController.setShowExcluded && savedState?.showExcluded !== undefined)
 }
 
 const loadingOverlay = document.getElementById('graph-loading-overlay') as HTMLElement | null;
+const loadingCard = document.getElementById('loading-card') as HTMLElement | null;
+const noWorkspaceCard = document.getElementById('no-workspace-card') as HTMLElement | null;
+const loadingTimeoutActions = document.getElementById('loading-timeout-actions') as HTMLElement | null;
 const loadingPercent = document.getElementById('loading-percent') as HTMLElement | null;
 const loadingStage = document.getElementById('loading-stage') as HTMLElement | null;
 const loadingBarFill = document.getElementById('loading-bar-fill') as HTMLElement | null;
+
+let loadingTimeoutTimer: any = null;
+
+function startLoadingTimeoutGuard(): void {
+  clearLoadingTimeoutGuard();
+  loadingTimeoutTimer = setTimeout(() => {
+    if (loadingOverlay && !loadingOverlay.classList.contains('hidden') && loadingTimeoutActions) {
+      loadingTimeoutActions.classList.remove('hidden');
+    }
+  }, 8000);
+}
+
+function clearLoadingTimeoutGuard(): void {
+  if (loadingTimeoutTimer) {
+    clearTimeout(loadingTimeoutTimer);
+    loadingTimeoutTimer = null;
+  }
+}
 
 function updateLoadingProgress(percent: number, stage: string): void {
   if (loadingPercent) loadingPercent.textContent = `${Math.round(percent)}%`;
@@ -488,10 +624,35 @@ function updateLoadingProgress(percent: number, stage: string): void {
 }
 
 function hideLoadingOverlay(): void {
+  clearLoadingTimeoutGuard();
   if (loadingOverlay) {
     loadingOverlay.classList.add('hidden');
   }
 }
+
+function showNoWorkspace(): void {
+  clearLoadingTimeoutGuard();
+  if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+  if (loadingCard) loadingCard.classList.add('hidden');
+  if (noWorkspaceCard) noWorkspaceCard.classList.remove('hidden');
+}
+
+// Wire no-workspace and timeout actions
+document.getElementById('btn-open-workspace')?.addEventListener('click', () => {
+  rpc.sendMessage({ type: 'openFolder' });
+});
+document.getElementById('btn-open-folder-loading')?.addEventListener('click', () => {
+  rpc.sendMessage({ type: 'openFolder' });
+});
+document.getElementById('btn-retry-loading')?.addEventListener('click', () => {
+  if (loadingTimeoutActions) loadingTimeoutActions.classList.add('hidden');
+  updateLoadingProgress(15, 'Retrying vault scan...');
+  startLoadingTimeoutGuard();
+  rpc.sendMessage({ type: 'rescanVault' });
+});
+
+startLoadingTimeoutGuard();
+
 
 // Listen for updates from VS Code Extension Host
 rpc.on('graphDataUpdate', (data: any) => {
@@ -542,6 +703,7 @@ rpc.on('graphDataUpdate', (data: any) => {
     excludedNotes: excludedCount,
     colorGroups,
     nodes: rawNodes,
+    tokenSummary: data.tokenSummary || lastTokenSummary,
   });
 
   if (data.tokenSummary) {
@@ -557,21 +719,38 @@ rpc.on('graphDataUpdate', (data: any) => {
 if (savedState && savedState.tokenSummary) {
   lastTokenSummary = savedState.tokenSummary;
   toolbarController.updateTokenSummary(savedState.tokenSummary);
+  settingsDrawer.updateProps({ tokenSummary: savedState.tokenSummary });
 }
 if (savedState?.showExcluded !== undefined) {
   renderer.setShowExcluded(savedState.showExcluded);
 }
 
+rpc.on('noWorkspaceOpen', () => {
+  showNoWorkspace();
+});
+
+rpc.on('engineOffline', (data: any) => {
+  clearLoadingTimeoutGuard();
+  if (loadingStage) loadingStage.textContent = data?.message || 'Engine daemon is offline.';
+  if (loadingTimeoutActions) loadingTimeoutActions.classList.remove('hidden');
+});
+
 rpc.on('loadingProgress', (data: any) => {
   if (data) {
+    if (loadingCard) loadingCard.classList.remove('hidden');
+    if (noWorkspaceCard) noWorkspaceCard.classList.add('hidden');
     const p = typeof data.percent === 'number' ? data.percent : 0;
     const msg = data.message || 'Loading...';
     updateLoadingProgress(p, msg);
     if (data.stage === 'complete' || p >= 100) {
+      clearLoadingTimeoutGuard();
       setTimeout(hideLoadingOverlay, 300);
+    } else {
+      startLoadingTimeoutGuard();
     }
   }
 });
+
 
 rpc.on('exclusionPreviewResult', (data: any) => {
   const matchingCount = data?.matching_count ?? data?.matchingCount ?? 0;
@@ -585,13 +764,51 @@ rpc.on('exclusionPreviewResult', (data: any) => {
 });
 
 rpc.on('openSettingsDrawer', (data: any) => {
-  settingsDrawer.open(data?.tab || 'diagnostics');
+  inspectorDrawer.close();
+  settingsDrawer.updateProps({
+    nodes: rawNodes,
+    colorGroups,
+    tokenSummary: lastTokenSummary,
+  });
+  const tab = data?.tab || 'knowledge';
+  if (tab === 'harness' || tab === 'git_harness' || tab === 'git') {
+    rpc.getHarnessStatus();
+    rpc.requestHarnessTools();
+    rpc.getSkillCatalog();
+  }
+  settingsDrawer.open(tab);
+});
+
+rpc.on('navigateToDetail', (data: any) => {
+  inspectorDrawer.close();
+  const subTab = data?.subTab || 'health';
+  const targetSection = data?.targetSection;
+  if (targetSection) {
+    settingsDrawer.updateProps({
+      selectedPillarFilter: targetSection,
+      tokenSummary: lastTokenSummary,
+    });
+  } else {
+    settingsDrawer.updateProps({
+      tokenSummary: lastTokenSummary,
+    });
+  }
+  settingsDrawer.open(subTab);
 });
 
 rpc.on('issuesReportUpdate', (data: any) => {
   settingsDrawer.updateProps({
     issuesReport: data,
   });
+});
+
+rpc.on('exclusionsUpdate', (data: any) => {
+  if (data) {
+    settingsDrawer.updateProps({
+      scanExclusions: data.scanExclusions || [],
+      graphExclusions: data.graphExclusions || [],
+    });
+  }
 });
 
 rpc.on('evolutionStateUpdate', (data: any) => {
@@ -609,6 +826,53 @@ rpc.on('evolutionStateUpdate', (data: any) => {
   }
 });
 
+rpc.on('harnessStatus', (data: any) => {
+  const propsToUpdate: any = {
+    llmWikiSkillAvailable: Boolean(data?.llmWikiSkillAvailable),
+    harnessStatus: data,
+  };
+  if (data?.harnessTools || data?.tools) {
+    propsToUpdate.harnessTools = data.harnessTools || data.tools;
+  }
+  settingsDrawer.updateProps(propsToUpdate);
+});
+
+rpc.on('harnessToolsUpdate', (data: any) => {
+  settingsDrawer.updateProps({
+    harnessTools: data?.tools || [],
+  });
+});
+
+rpc.on('configureHarnessBaseResult', (res: any) => {
+  const feedback = document.querySelector('#prep-base-feedback') as HTMLElement | null;
+  if (feedback) {
+    feedback.style.display = 'block';
+    feedback.style.background = 'rgba(34, 197, 94, 0.15)';
+    feedback.style.color = '#22c55e';
+    feedback.style.border = '1px solid rgba(34, 197, 94, 0.3)';
+    feedback.textContent = `✓ Base configured: ${res?.enabled_harnesses?.join(', ') || 'Ready'}.`;
+  }
+});
+
+rpc.on('skillCatalogUpdate', (data: any) => {
+  settingsDrawer.updateProps({
+    skills: data?.skills || [],
+    procedureCandidates: data?.procedure_candidates || [],
+  });
+});
+
+rpc.on('directoryMetricsUpdate', (data: any) => {
+  settingsDrawer.updateProps({
+    directoryMetrics: data,
+  });
+});
+
+rpc.on('directoryStructureMetrics', (data: any) => {
+  settingsDrawer.updateProps({
+    directoryMetrics: data,
+  });
+});
+
 rpc.on('transformationPlanReady', (plan: any) => {
   if (plan) {
     settingsDrawer.updateProps({
@@ -618,6 +882,8 @@ rpc.on('transformationPlanReady', (plan: any) => {
     currentTransformationPlan = plan;
     isTransformationModalOpen = true;
     isApplyingTransformationPlan = false;
+    isTransformationPlanApplied = false;
+    applyTransformationPlanError = null;
     actualTransformationDelta = null;
     renderTransformationModal();
   }
@@ -636,9 +902,32 @@ rpc.on('transformationPlanError', (data: any) => {
 rpc.on('transformationPlanApplied', (data: any) => {
   if (data) {
     isApplyingTransformationPlan = false;
-    actualTransformationDelta = data.actualDelta;
+    isTransformationPlanApplied = true;
+    applyTransformationPlanError = null;
+    actualTransformationDelta = data.actualDelta || data.actual_delta;
     renderTransformationModal();
   }
+});
+
+rpc.on('governancePlanApplied', (data: any) => {
+  if (data) {
+    isApplyingTransformationPlan = false;
+    isTransformationPlanApplied = true;
+    applyTransformationPlanError = null;
+    actualTransformationDelta = data.actualDelta || data.actual_delta || data.re_measurement;
+    renderTransformationModal();
+    rpc.send('requestHarnessStatus');
+    rpc.getSkillCatalog();
+    rpc.analyzeDirectoryStructure();
+  }
+});
+
+rpc.on('transformationPlanApplyError', (data: any) => {
+  isApplyingTransformationPlan = false;
+  isTransformationPlanApplied = false;
+  applyTransformationPlanError = data?.error || 'Failed to apply transformation plan';
+  console.error('[TransformationPlan] Apply failed:', applyTransformationPlanError);
+  renderTransformationModal();
 });
 
 rpc.on('constraintValidationResult', (data: any) => {
@@ -649,7 +938,11 @@ rpc.on('constraintValidationResult', (data: any) => {
   }
 });
 
-// Request initial or refreshed graph data and evolution state from Extension Host
+// Request initial or refreshed graph data, harness, skills, and directory metrics from Extension Host
 rpc.send('requestGraphData');
+rpc.send('requestHarnessStatus');
+rpc.getSkillCatalog();
+rpc.analyzeDirectoryStructure();
+rpc.requestExclusions();
 rpc.getEvolutionState();
-
+rpc.requestHarnessTools();

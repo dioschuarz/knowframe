@@ -87,3 +87,88 @@ async fn test_ipc_server_authentication_and_scan() {
     .await
     .expect("Test timed out after 5 seconds");
 }
+
+#[tokio::test]
+async fn test_traceability_rpc_handlers_t028_t029() {
+    use llm_wiki_core::ipc::handlers::{handle_request, AppState};
+    use std::sync::Arc;
+    use tokio::sync::RwLock;
+
+    let temp_dir = tempfile::tempdir().unwrap();
+    let root = temp_dir.path();
+
+    // 1. Setup doc citing code
+    std::fs::create_dir_all(root.join("docs")).unwrap();
+    std::fs::create_dir_all(root.join("src")).unwrap();
+
+    std::fs::write(
+        root.join("docs/api.md"),
+        r#"---
+title: API Docs
+code_dependencies:
+  - src/service.rs
+---
+# API Docs
+Documentation for API service.
+"#,
+    )
+    .unwrap();
+    std::fs::write(root.join("src/service.rs"), "pub fn serve() {}\n").unwrap();
+
+    let state = Arc::new(RwLock::new(AppState::new(root.to_path_buf())));
+
+    // 2. Call trace/getAffectedDocuments
+    let trace_req = JsonRpcRequest {
+        jsonrpc: "2.0".to_string(),
+        id: json!(10),
+        method: "trace/getAffectedDocuments".to_string(),
+        params: Some(json!({
+            "changed_paths": ["src/service.rs"]
+        })),
+    };
+
+    let trace_res = handle_request(&state, trace_req).await;
+    assert_eq!(trace_res.id, json!(10));
+    assert!(trace_res.error.is_none());
+
+    let trace_val = trace_res.result.expect("result exists");
+    let obligations = trace_val["obligations"].as_array().expect("obligations array");
+    assert_eq!(obligations.len(), 1);
+    assert_eq!(obligations[0]["doc_id"], "docs/api.md");
+
+    // 3. Call review/resolveDocumentReview
+    let resolve_req = JsonRpcRequest {
+        jsonrpc: "2.0".to_string(),
+        id: json!(11),
+        method: "review/resolveDocumentReview".to_string(),
+        params: Some(json!({
+            "doc_ids": ["docs/api.md"]
+        })),
+    };
+
+    let resolve_res = handle_request(&state, resolve_req).await;
+    assert_eq!(resolve_res.id, json!(11));
+    assert!(resolve_res.error.is_none());
+
+    let resolve_val = resolve_res.result.expect("result exists");
+    assert_eq!(resolve_val["resolved_count"], 1);
+    assert!(resolve_val["receipt_id"].as_str().unwrap().starts_with("RECEIPT-"));
+
+    // 4. Re-query trace/getAffectedDocuments to verify receipt was applied
+    let trace_req2 = JsonRpcRequest {
+        jsonrpc: "2.0".to_string(),
+        id: json!(12),
+        method: "trace/getAffectedDocuments".to_string(),
+        params: Some(json!({
+            "changed_paths": ["src/service.rs"],
+            "include_unchanged_reviews": true
+        })),
+    };
+
+    let trace_res2 = handle_request(&state, trace_req2).await;
+    let trace_val2 = trace_res2.result.unwrap();
+    let obligations2 = trace_val2["obligations"].as_array().unwrap();
+    assert_eq!(obligations2.len(), 1);
+    assert_eq!(obligations2[0]["doc_id"], "docs/api.md");
+    assert_eq!(obligations2[0]["status"], "reviewed_unchanged");
+}

@@ -13,7 +13,8 @@ suite('OrientationSelector Unit Test Suite (T049)', () => {
     assert.ok(html.includes('AI-Oriented'));
     assert.ok(html.includes('Human-Oriented'));
     assert.ok(html.includes('Balanced'));
-    assert.ok(html.includes('Custom (Advanced)'));
+    assert.ok(html.includes('Custom'));
+    assert.ok(!html.includes('Custom (Advanced)'));
 
     assert.ok(html.includes('3k tokens'));
     assert.ok(html.includes('8k tokens'));

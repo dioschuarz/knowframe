@@ -1,13 +1,54 @@
 ---
-name: "speckit-specify"
-description: "Create or update the feature specification from a natural language feature description."
-compatibility: "Requires spec-kit project structure with .specify/ directory"
+name: speckit-specify
+description: Create or update the feature specification from a natural language feature description.
+compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: "github-spec-kit"
-  source: "templates/commands/specify.md"
+  author: github-spec-kit
+  source: templates/commands/specify.md
+wiki:
+  content_hash: 8f2e03eba9bd1da9b094a104a6245d5eba74da8857f1dc7c45b9bdfc60503f2c
+  fragments:
+    user-input:
+      tokens: 30
+      inbound: 0
+      outbound: 0
+    pre-execution-checks:
+      tokens: 495
+      inbound: 0
+      outbound: 0
+    outline:
+      tokens: 2221
+      inbound: 0
+      outbound: 0
+    mandatory-post-execution-hooks:
+      tokens: 503
+      inbound: 0
+      outbound: 0
+    completion-report:
+      tokens: 96
+      inbound: 0
+      outbound: 0
+    quick-guidelines:
+      tokens: 618
+      inbound: 0
+      outbound: 0
+    section-requirements:
+      tokens: 50
+      inbound: 0
+      outbound: 0
+    for-ai-generation:
+      tokens: 297
+      inbound: 0
+      outbound: 0
+    success-criteria-guidelines:
+      tokens: 208
+      inbound: 0
+      outbound: 0
+    done-when:
+      tokens: 58
+      inbound: 0
+      outbound: 0
 ---
-
-
 ## User Input
 
 ```text

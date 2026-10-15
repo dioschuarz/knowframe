@@ -1,3 +1,56 @@
+---
+wiki:
+  content_hash: 3945437fc35cd30a5b2bf7beea680337c3516826d3efa5a6b92c4a7eca1ba28e
+  fragments:
+    feature-specification-feature-name:
+      tokens: 1055
+      inbound: 0
+      outbound: 0
+    user-scenarios-testing-mandatory:
+      tokens: 499
+      inbound: 0
+      outbound: 0
+    user-story-1-brief-title-priority-p1:
+      tokens: 128
+      inbound: 0
+      outbound: 0
+    user-story-2-brief-title-priority-p2:
+      tokens: 86
+      inbound: 0
+      outbound: 0
+    user-story-3-brief-title-priority-p3:
+      tokens: 100
+      inbound: 0
+      outbound: 0
+    edge-cases:
+      tokens: 47
+      inbound: 0
+      outbound: 0
+    requirements-mandatory:
+      tokens: 252
+      inbound: 0
+      outbound: 0
+    functional-requirements:
+      tokens: 175
+      inbound: 0
+      outbound: 0
+    key-entities-include-if-feature-involves-data:
+      tokens: 47
+      inbound: 0
+      outbound: 0
+    success-criteria-mandatory:
+      tokens: 139
+      inbound: 0
+      outbound: 0
+    measurable-outcomes:
+      tokens: 111
+      inbound: 0
+      outbound: 0
+    assumptions:
+      tokens: 124
+      inbound: 0
+      outbound: 0
+---
 # Feature Specification: [FEATURE NAME]
 
 **Feature Branch**: `[###-feature-name]`

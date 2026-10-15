@@ -1,3 +1,84 @@
+---
+wiki:
+  content_hash: 47bbe6f0b878bb4110637f474eddea6f558fabe6119afaa99329c5e54c270781
+  fragments:
+    ? feature-specification-knowledge-organization-systems-structural-evidence-trade-offs-documentation-orientations-user-controlled-evolution
+    : tokens: 4823
+      inbound: 0
+      outbound: 0
+    1-executive-summary-vision:
+      tokens: 692
+      inbound: 0
+      outbound: 0
+    foundational-principles:
+      tokens: 607
+      inbound: 0
+      outbound: 0
+    2-user-stories-priority-matrix:
+      tokens: 1232
+      inbound: 0
+      outbound: 0
+    user-story-1-documentation-orientations-unified-optimization-profiles-priority-p1:
+      tokens: 188
+      inbound: 0
+      outbound: 0
+    user-story-2-two-tier-custom-configuration-informational-tooltips-priority-p1:
+      tokens: 295
+      inbound: 0
+      outbound: 0
+    user-story-3-constraint-hierarchy-conflict-detection-engine-priority-p1:
+      tokens: 167
+      inbound: 0
+      outbound: 0
+    user-story-4-10-dimensional-structural-analytics-evidence-based-signatures-priority-p1:
+      tokens: 241
+      inbound: 0
+      outbound: 0
+    user-story-5-candidate-kos-strategy-evaluation-trade-off-matrix-priority-p2:
+      tokens: 153
+      inbound: 0
+      outbound: 0
+    user-story-6-user-controlled-downstream-automation-re-measurement-priority-p2:
+      tokens: 178
+      inbound: 0
+      outbound: 0
+    3-functional-requirements-fr-001-fr-040:
+      tokens: 2177
+      inbound: 0
+      outbound: 0
+    31-documentation-orientations-profiles-fr-001-fr-008:
+      tokens: 325
+      inbound: 0
+      outbound: 0
+    32-two-tier-custom-configuration-parameter-mapping-fr-009-fr-016:
+      tokens: 371
+      inbound: 0
+      outbound: 0
+    33-constraint-hierarchy-conflict-detection-fr-017-fr-022:
+      tokens: 266
+      inbound: 0
+      outbound: 0
+    34-10-dimensional-structural-analytics-signatures-fr-023-fr-029:
+      tokens: 675
+      inbound: 0
+      outbound: 0
+    35-candidate-kos-strategy-evaluator-trade-offs-fr-030-fr-035:
+      tokens: 300
+      inbound: 0
+      outbound: 0
+    36-user-controlled-automation-re-measurement-fr-036-fr-040:
+      tokens: 225
+      inbound: 0
+      outbound: 0
+    4-non-functional-requirements-nfr-001-nfr-009:
+      tokens: 370
+      inbound: 0
+      outbound: 0
+    5-success-criteria-sc-001-sc-007:
+      tokens: 219
+      inbound: 0
+      outbound: 0
+---
 # Feature Specification: Knowledge Organization Systems, Structural Evidence & Trade-Offs, Documentation Orientations & User-Controlled Evolution
 
 **Feature Branch:** `005-structural-evolution-strategies`  

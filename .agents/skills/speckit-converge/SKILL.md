@@ -1,13 +1,74 @@
 ---
-name: "speckit-converge"
-description: "Assess the current codebase against the feature's spec, plan, and tasks, then append any remaining unbuilt work as new tasks to tasks.md so implement can complete it."
-compatibility: "Requires spec-kit project structure with .specify/ directory"
+name: speckit-converge
+description: Assess the current codebase against the feature's spec, plan, and tasks, then append any remaining unbuilt work as new tasks to tasks.md so implement can complete it.
+compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: "github-spec-kit"
-  source: "templates/commands/converge.md"
+  author: github-spec-kit
+  source: templates/commands/converge.md
+wiki:
+  content_hash: 6747a0627c4e59ab2fb8bc2798985d1a5eb4df2e3f173e87568955fea01b0ecb
+  fragments:
+    user-input:
+      tokens: 30
+      inbound: 0
+      outbound: 0
+    pre-execution-checks:
+      tokens: 501
+      inbound: 0
+      outbound: 0
+    goal:
+      tokens: 217
+      inbound: 0
+      outbound: 0
+    operating-constraints:
+      tokens: 212
+      inbound: 0
+      outbound: 0
+    execution-steps:
+      tokens: 944
+      inbound: 0
+      outbound: 0
+    1-initialize-convergence-context:
+      tokens: 209
+      inbound: 0
+      outbound: 0
+    2-load-artifacts-progressive-disclosure:
+      tokens: 182
+      inbound: 0
+      outbound: 0
+    3-build-the-intent-inventory:
+      tokens: 140
+      inbound: 0
+      outbound: 0
+    4-assess-the-codebase-and-classify-findings:
+      tokens: 264
+      inbound: 0
+      outbound: 0
+    5-assign-severity:
+      tokens: 114
+      inbound: 0
+      outbound: 0
+    6-present-the-in-session-findings-summary:
+      tokens: 31
+      inbound: 0
+      outbound: 0
+    convergence-findings:
+      tokens: 1086
+      inbound: 0
+      outbound: 0
+    7-append-convergence-tasks-or-report-converged:
+      tokens: 357
+      inbound: 0
+      outbound: 0
+    8-provide-next-actions-handoff:
+      tokens: 92
+      inbound: 0
+      outbound: 0
+    9-check-for-extension-hooks:
+      tokens: 515
+      inbound: 0
+      outbound: 0
 ---
-
-
 ## User Input
 
 ```text

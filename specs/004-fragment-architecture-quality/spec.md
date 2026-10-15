@@ -1,3 +1,84 @@
+---
+wiki:
+  content_hash: cf6f4bc8d805acfabcdc1a4adfa2cf9d61d134a6e63cb214ddcb91d575522c8b
+  fragments:
+    ? feature-specification-fragment-level-knowledge-architecture-materialized-frontmatter-layer-5-pillar-quality-model-evidence-based-freshness
+    : tokens: 5396
+      inbound: 0
+      outbound: 0
+    1-executive-summary-vision:
+      tokens: 566
+      inbound: 0
+      outbound: 0
+    2-user-stories-priority-matrix:
+      tokens: 1363
+      inbound: 0
+      outbound: 0
+    user-story-1-document-centric-graph-fragment-addressing-priority-p1:
+      tokens: 195
+      inbound: 0
+      outbound: 0
+    user-story-2-pre-commit-materialized-frontmatter-layer-priority-p1:
+      tokens: 253
+      inbound: 0
+      outbound: 0
+    user-story-3-raw-numeric-integrity-compact-presentation-separation-priority-p1:
+      tokens: 190
+      inbound: 0
+      outbound: 0
+    user-story-4-fragment-inspector-reference-concentration-analytics-priority-p2:
+      tokens: 245
+      inbound: 0
+      outbound: 0
+    user-story-5-context-trace-section-level-routing-context-optimization-priority-p2:
+      tokens: 215
+      inbound: 0
+      outbound: 0
+    user-story-6-5-pillar-health-model-evidence-based-freshness-priority-p2:
+      tokens: 255
+      inbound: 0
+      outbound: 0
+    3-functional-requirements-fr-001-fr-042:
+      tokens: 2656
+      inbound: 0
+      outbound: 0
+    31-section-level-fragment-knowledge-modeling:
+      tokens: 418
+      inbound: 0
+      outbound: 0
+    32-materialized-frontmatter-layer-pre-commit-synchronization:
+      tokens: 362
+      inbound: 0
+      outbound: 0
+    33-raw-numeric-integrity-presentation-separation:
+      tokens: 236
+      inbound: 0
+      outbound: 0
+    34-fragment-inspector-webview-selection-ux:
+      tokens: 296
+      inbound: 0
+      outbound: 0
+    35-reference-concentration-structure-debt-analytics:
+      tokens: 270
+      inbound: 0
+      outbound: 0
+    36-context-trace-section-level-routing-beam-search:
+      tokens: 365
+      inbound: 0
+      outbound: 0
+    37-5-pillar-health-model-evidence-based-freshness:
+      tokens: 694
+      inbound: 0
+      outbound: 0
+    4-non-functional-requirements-nfr-001-nfr-009:
+      tokens: 381
+      inbound: 0
+      outbound: 0
+    5-success-criteria-verification-matrix:
+      tokens: 295
+      inbound: 0
+      outbound: 0
+---
 # Feature Specification: Fragment-Level Knowledge Architecture, Materialized Frontmatter Layer, 5-Pillar Quality Model & Evidence-Based Freshness
 
 **Feature Branch:** `004-fragment-architecture-quality`  
@@ -194,8 +275,8 @@ The `004-fragment-architecture-quality` specification establishes the **Consolid
 
 | Metric | Threshold | Verification Method |
 | :--- | :--- | :--- |
-| **NFR-001: AST Fragment Parsing** | $\le 50\text{ ms}$ for 100 Markdown files | Criterion microbenchmarks (`benches/fragment_benchmark.rs`) |
-| **NFR-002: Incremental Graph & Fragment Patch** | $\le 50\text{ ms}$ for single-document delta | Criterion microbenchmarks (`benches/sync_benchmark.rs`) |
+| **NFR-001: AST Fragment Parsing** | $\le 50\text{ ms}$ for 100 Markdown files | Criterion microbenchmarks (`crates/core/benches/fragment_benchmark.rs`) |
+| **NFR-002: Incremental Graph & Fragment Patch** | $\le 50\text{ ms}$ for single-document delta | Criterion microbenchmarks (`crates/core/benches/sync_benchmark.rs`) |
 | **NFR-003: Normal Git Delta Processing** | $< 150\text{ ms}$ for typical staged commit | Integration tests with Git fixture |
 | **NFR-004: Hook Fail-Open Ceiling** | Strict $\le 500\text{ ms}$ timeout exit code 0 | Unit test with hanging daemon socket |
 | **NFR-005: Context Trace Traversal** | $\le 100\text{ ms}$ for query beam search | Criterion benchmark on 1,000-note graph |

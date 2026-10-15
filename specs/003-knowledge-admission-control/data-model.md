@@ -1,3 +1,48 @@
+---
+wiki:
+  content_hash: 7d813fc3d74814523e4a05400a0e070383feb07b6dc89f97840223a8c7a084a1
+  fragments:
+    data-model-knowledge-quality-admission-control-continuous-enforcement:
+      tokens: 2305
+      inbound: 0
+      outbound: 0
+    1-domain-entities-memory-architecture:
+      tokens: 402
+      inbound: 0
+      outbound: 0
+    2-core-structures:
+      tokens: 1838
+      inbound: 0
+      outbound: 0
+    21-knowledge-debt-baseline-knowledgedebtbaseline:
+      tokens: 304
+      inbound: 0
+      outbound: 0
+    22-ephemeral-candidate-graph-candidategraph:
+      tokens: 135
+      inbound: 0
+      outbound: 0
+    23-candidate-validation-report-candidatevalidationreport:
+      tokens: 465
+      inbound: 0
+      outbound: 0
+    24-semantic-fingerprint-collision-model:
+      tokens: 273
+      inbound: 0
+      outbound: 0
+    25-reverse-impact-index-technical-drift-model:
+      tokens: 289
+      inbound: 0
+      outbound: 0
+    26-context-trace-model:
+      tokens: 124
+      inbound: 0
+      outbound: 0
+    27-knowledge-quality-score-model:
+      tokens: 241
+      inbound: 0
+      outbound: 0
+---
 # Data Model: Knowledge Quality Admission Control & Continuous Enforcement
 
 **Feature Branch:** `003-knowledge-admission-control`  

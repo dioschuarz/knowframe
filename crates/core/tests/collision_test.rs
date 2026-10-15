@@ -244,6 +244,7 @@ fn test_candidate_collision_blocking() {
         broken_links: 0,
         fragments: Vec::new(),
         freshness: None,
+        code_dependencies: vec![],
     });
     base_graph.set_headings(
         "auth.md".to_string(),
@@ -281,11 +282,9 @@ fn test_candidate_collision_blocking() {
     // High similarity (100% duplicate) MUST trigger BLOCK (exit code 1)
     assert_eq!(report.decision, AdmissionDecision::Block);
     assert_eq!(report.exit_code, 1);
-    assert!(
-        report
-            .regressions
-            .iter()
-            .any(|r| r.category == RegressionCategory::SemanticCollision
-                && r.severity == RegressionSeverity::Blocker)
-    );
+    assert!(report
+        .regressions
+        .iter()
+        .any(|r| r.category == RegressionCategory::SemanticCollision
+            && r.severity == RegressionSeverity::Blocker));
 }

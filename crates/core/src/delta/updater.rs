@@ -99,3 +99,98 @@ pub fn apply_file_delta(
         topology.compute_hops(&suggested);
     }
 }
+
+/// Parses the output of `git diff --name-status` into a list of FileDeltaItem.
+pub fn parse_git_diff_name_status(stdout: &str) -> Vec<FileDeltaItem> {
+    let mut items = Vec::new();
+    for line in stdout.lines() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() {
+            continue;
+        }
+        let parts: Vec<&str> = trimmed.split_whitespace().collect();
+        if parts.len() < 2 {
+            continue;
+        }
+        let status_code = parts[0];
+        if status_code.starts_with('A') {
+            let path = parts[1].replace('\\', "/");
+            if crate::drift::extractor::validate_path_containment(&path).is_ok() {
+                items.push(FileDeltaItem {
+                    path,
+                    status: FileDeltaStatus::Added,
+                });
+            }
+        } else if status_code.starts_with('D') {
+            let path = parts[1].replace('\\', "/");
+            if crate::drift::extractor::validate_path_containment(&path).is_ok() {
+                items.push(FileDeltaItem {
+                    path,
+                    status: FileDeltaStatus::Deleted,
+                });
+            }
+        } else if status_code.starts_with('R') {
+            let old_path = parts[1].replace('\\', "/");
+            let new_path = if parts.len() >= 3 {
+                parts[2].replace('\\', "/")
+            } else {
+                old_path.clone()
+            };
+            if crate::drift::extractor::validate_path_containment(&old_path).is_ok() {
+                items.push(FileDeltaItem {
+                    path: old_path,
+                    status: FileDeltaStatus::Deleted,
+                });
+            }
+            if crate::drift::extractor::validate_path_containment(&new_path).is_ok() {
+                items.push(FileDeltaItem {
+                    path: new_path,
+                    status: FileDeltaStatus::Added,
+                });
+            }
+        } else {
+            let path = parts[1].replace('\\', "/");
+            if crate::drift::extractor::validate_path_containment(&path).is_ok() {
+                items.push(FileDeltaItem {
+                    path,
+                    status: FileDeltaStatus::Modified,
+                });
+            }
+        }
+    }
+    items
+}
+
+/// Executes `git diff --name-status <range>` (e.g. `base...head` or `A..B`) and parses changed files.
+pub fn parse_git_diff_range(workspace_root: &Path, range: &str) -> Result<Vec<FileDeltaItem>, String> {
+    let output = std::process::Command::new("git")
+        .args(["diff", "--name-status", range])
+        .current_dir(workspace_root)
+        .output()
+        .map_err(|e| format!("Failed to execute git diff: {e}"))?;
+
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("git diff error: {err}"));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(parse_git_diff_name_status(&stdout))
+}
+
+/// Executes `git diff --cached --name-status` and parses staged changes.
+pub fn parse_git_diff_staged(workspace_root: &Path) -> Result<Vec<FileDeltaItem>, String> {
+    let output = std::process::Command::new("git")
+        .args(["diff", "--cached", "--name-status"])
+        .current_dir(workspace_root)
+        .output()
+        .map_err(|e| format!("Failed to execute git diff --cached: {e}"))?;
+
+    if !output.status.success() {
+        let err = String::from_utf8_lossy(&output.stderr);
+        return Err(format!("git diff error: {err}"));
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    Ok(parse_git_diff_name_status(&stdout))
+}

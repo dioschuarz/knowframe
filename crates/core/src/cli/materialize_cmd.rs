@@ -10,7 +10,10 @@ use walkdir::WalkDir;
 
 /// Materializes fragment metadata into a single markdown file on disk.
 /// Returns true if the file was modified/updated.
-pub fn materialize_file(file_path: &Path, stage: bool) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
+pub fn materialize_file(
+    file_path: &Path,
+    stage: bool,
+) -> Result<bool, Box<dyn std::error::Error + Send + Sync>> {
     let content = fs::read_to_string(file_path)?;
     let rel_str = file_path.to_string_lossy().to_string();
     let parsed = parse_markdown_ast(&rel_str, &content);
@@ -43,7 +46,10 @@ pub fn execute_materialize(
     if target_path.is_file() {
         if target_path.extension().is_some_and(|ext| ext == "md") {
             if materialize_file(target_path, stage)? {
-                println!("[materialize] Materialized fragment metadata for '{}'", target_path.display());
+                println!(
+                    "[materialize] Materialized fragment metadata for '{}'",
+                    target_path.display()
+                );
                 updated_count += 1;
             } else {
                 println!("[materialize] Up to date: '{}'", target_path.display());
@@ -62,12 +68,18 @@ pub fn execute_materialize(
                     continue;
                 }
                 if materialize_file(path, stage)? {
-                    println!("[materialize] Materialized fragment metadata for '{}'", path.display());
+                    println!(
+                        "[materialize] Materialized fragment metadata for '{}'",
+                        path.display()
+                    );
                     updated_count += 1;
                 }
             }
         }
-        println!("[materialize] Completed: {} document(s) materialized.", updated_count);
+        println!(
+            "[materialize] Completed: {} document(s) materialized.",
+            updated_count
+        );
     } else {
         return Err(format!("Target path '{}' does not exist", target_path.display()).into());
     }

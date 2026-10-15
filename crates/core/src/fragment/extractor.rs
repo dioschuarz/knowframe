@@ -29,7 +29,8 @@ pub fn slugify_heading(heading: &str) -> String {
         if c.is_ascii_alphanumeric() {
             slug.push(c.to_ascii_lowercase());
             prev_is_hyphen = false;
-        } else if (c.is_whitespace() || c == '-' || c == '_') && !prev_is_hyphen && !slug.is_empty() {
+        } else if (c.is_whitespace() || c == '-' || c == '_') && !prev_is_hyphen && !slug.is_empty()
+        {
             slug.push('-');
             prev_is_hyphen = true;
         }
@@ -149,10 +150,7 @@ fn extract_raw_headings_with_ranges(content: &str) -> Vec<(RawHeading, usize)> {
 
 /// Extracts all section fragments from Markdown content, calculating line ranges,
 /// BPE tokens, and outbound link references originating within each fragment.
-pub fn extract_fragments_from_document(
-    content: &str,
-    edges: &[NoteEdge],
-) -> Vec<FragmentMetadata> {
+pub fn extract_fragments_from_document(content: &str, edges: &[NoteEdge]) -> Vec<FragmentMetadata> {
     let raw_ranges = extract_raw_headings_with_ranges(content);
     let mut disambiguator = AnchorDisambiguator::new();
     let content_lines: Vec<&str> = content.lines().collect();

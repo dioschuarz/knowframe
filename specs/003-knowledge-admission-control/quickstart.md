@@ -1,3 +1,40 @@
+---
+wiki:
+  content_hash: 54c738984d870c39bbf2b2c8860b529a975fe7495275abdae82621274e6acfb4
+  fragments:
+    quickstart-knowledge-quality-admission-control-git-lifecycles:
+      tokens: 926
+      inbound: 0
+      outbound: 0
+    1-establishing-the-initial-debt-baseline:
+      tokens: 139
+      inbound: 0
+      outbound: 0
+    2-pre-commit-validation-in-action-llm-wiki-validate:
+      tokens: 310
+      inbound: 0
+      outbound: 0
+    scenario-a-clean-commit-or-legacy-fix:
+      tokens: 91
+      inbound: 0
+      outbound: 0
+    scenario-b-regression-introduced-commit-blocked:
+      tokens: 189
+      inbound: 0
+      outbound: 0
+    3-running-context-trace-via-cli:
+      tokens: 216
+      inbound: 0
+      outbound: 0
+    4-viewing-knowledge-quality-score-debt-breakdown:
+      tokens: 161
+      inbound: 0
+      outbound: 0
+    5-testing-verification:
+      tokens: 57
+      inbound: 0
+      outbound: 0
+---
 # Quickstart: Knowledge Quality Admission Control & Git Lifecycles
 
 **Feature Branch:** `003-knowledge-admission-control`  
@@ -23,7 +60,7 @@ llm-wiki-core baseline init
 # Pre-commit will not block on these 72 items.
 ```
 
-The baseline is saved to `.context-vault/baseline.json`.
+The baseline is saved to *.context-vault/baseline.json*.
 
 ---
 

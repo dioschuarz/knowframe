@@ -40,10 +40,14 @@ pub fn execute_trace(
             broken_links: node.broken_links,
             fragments: node.fragments,
             freshness: None,
+            code_dependencies: Vec::new(),
         });
     }
     for edge in scan_res.edges {
-        let target_fragment = edge.anchor.as_ref().map(|a| a.trim_start_matches('#').to_string());
+        let target_fragment = edge
+            .anchor
+            .as_ref()
+            .map(|a| a.trim_start_matches('#').to_string());
         topology.add_edge(crate::model::NoteEdge {
             id: edge.id,
             source: edge.source,
@@ -94,7 +98,13 @@ pub fn execute_trace(
                     println!("  {} (Entrypoint)", step);
                 } else if idx == sec.path.len() - 1 && sec.target_fragment.is_some() {
                     let indent = "      ".repeat(idx - 1);
-                    println!("  {}└─► {}#{} (Hop {})", indent, step, sec.target_fragment.as_ref().unwrap(), idx);
+                    println!(
+                        "  {}└─► {}#{} (Hop {})",
+                        indent,
+                        step,
+                        sec.target_fragment.as_ref().unwrap(),
+                        idx
+                    );
                 } else {
                     let indent = "      ".repeat(idx - 1);
                     println!("  {}└─► {} (Hop {})", indent, step, idx);
@@ -102,10 +112,16 @@ pub fn execute_trace(
             }
             println!();
             println!("Traversal Depth:      {} hop(s)", sec.depth);
-            println!("Document Raw Tokens:  {} tokens (cl100k_base)", sec.document_raw_tokens);
+            println!(
+                "Document Raw Tokens:  {} tokens (cl100k_base)",
+                sec.document_raw_tokens
+            );
             if let Some(frag_toks) = sec.fragment_raw_tokens {
                 println!("Fragment Raw Tokens:  {} tokens (cl100k_base)", frag_toks);
-                println!("Context Reduction:    {:.1}%", sec.context_reduction_percent);
+                println!(
+                    "Context Reduction:    {:.1}%",
+                    sec.context_reduction_percent
+                );
             } else {
                 println!("Context Reduction:    0.0% (document node targeted)");
             }

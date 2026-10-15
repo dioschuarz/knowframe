@@ -1,3 +1,40 @@
+---
+wiki:
+  content_hash: 74b92c8d46ae18a423b48303a9bc41fdbccb3a97742b39f91d7c9442424dc538
+  fragments:
+    data-model-knowledge-organization-systems-structural-evidence-trade-offs:
+      tokens: 3021
+      inbound: 0
+      outbound: 0
+    1-domain-entities-class-diagram:
+      tokens: 687
+      inbound: 0
+      outbound: 0
+    2-rust-core-data-models-cratescoresrcevolution:
+      tokens: 1248
+      inbound: 0
+      outbound: 0
+    21-documentation-orientations-optimization-profile:
+      tokens: 604
+      inbound: 0
+      outbound: 0
+    22-10-dimensional-structural-analytics-signatures:
+      tokens: 237
+      inbound: 0
+      outbound: 0
+    23-kos-strategy-evaluator-transformations:
+      tokens: 388
+      inbound: 0
+      outbound: 0
+    3-typescript-extension-webview-interfaces-extensionsrctypesevolutionts:
+      tokens: 825
+      inbound: 0
+      outbound: 0
+    4-presentation-layer-invariants-raw-data-vs-formatting:
+      tokens: 159
+      inbound: 0
+      outbound: 0
+---
 # Data Model: Knowledge Organization Systems, Structural Evidence & Trade-Offs
 
 **Feature Branch:** `005-structural-evolution-strategies`  

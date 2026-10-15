@@ -1,26 +1,123 @@
+---
+wiki:
+  content_hash: a8c6dc7175aec269c21fef724f667ea47b1ad87bfc7c0b074ae17ed92b2a5ea1
+  fragments:
+    llm-wiki-extension-for-vs-code-llm-wiki-ext4vsc-constitution:
+      tokens: 8313
+      inbound: 0
+      outbound: 3
+    the-17-critical-invariants-non-negotiable:
+      tokens: 1273
+      inbound: 0
+      outbound: 0
+    core-principles:
+      tokens: 5699
+      inbound: 0
+      outbound: 0
+    i-dual-process-separation-local-determinism-zero-external-ai-non-negotiable:
+      tokens: 319
+      inbound: 0
+      outbound: 0
+    ii-git-knowledge-state-boundary-ephemeral-candidate-graph-dual-hook-lifecycle-non-negotiable:
+      tokens: 700
+      inbound: 0
+      outbound: 0
+    iii-organic-discovery-curated-representation-noise-exclusion:
+      tokens: 457
+      inbound: 0
+      outbound: 0
+    iv-document-centric-graph-section-addressability-materialized-frontmatter-layer-non-negotiable:
+      tokens: 654
+      inbound: 0
+      outbound: 0
+    v-multi-tier-context-hierarchy-semantic-sizing-focus-mode-token-budgeting:
+      tokens: 670
+      inbound: 0
+      outbound: 0
+    vi-strict-link-integrity-cross-submodule-vault-traversal:
+      tokens: 155
+      inbound: 0
+      outbound: 0
+    vii-brownfield-debt-baseline-continuous-regression-based-admission-control-non-negotiable:
+      tokens: 391
+      inbound: 0
+      outbound: 0
+    viii-deterministic-knowledge-drift-reverse-index-impact-semantic-collision-engine:
+      tokens: 443
+      inbound: 0
+      outbound: 0
+    ix-context-trace-5-pillar-network-aware-knowledge-health-model:
+      tokens: 589
+      inbound: 0
+      outbound: 0
+    x-sandboxed-webview-progressive-disclosure-zero-action-duplication:
+      tokens: 388
+      inbound: 0
+      outbound: 0
+    xi-test-driven-development-tdd-multi-platform-binary-verification-performance-budgets:
+      tokens: 248
+      inbound: 0
+      outbound: 0
+    xii-documentation-orientation-strategy-trade-offs-user-controlled-structural-evolution:
+      tokens: 681
+      inbound: 0
+      outbound: 0
+    technology-stack-performance-standards:
+      tokens: 526
+      inbound: 0
+      outbound: 0
+    1-technology-matrix:
+      tokens: 226
+      inbound: 0
+      outbound: 0
+    2-non-functional-performance-budgets:
+      tokens: 293
+      inbound: 0
+      outbound: 0
+    development-workflow-review-process-quality-gates:
+      tokens: 266
+      inbound: 0
+      outbound: 0
+    1-code-quality-gates:
+      tokens: 135
+      inbound: 0
+      outbound: 0
+    2-review-protocol:
+      tokens: 121
+      inbound: 0
+      outbound: 0
+    governance:
+      tokens: 163
+      inbound: 0
+      outbound: 0
+---
 # LLM Wiki Extension for VS Code (`llm_wiki_ext4vsc`) Constitution
 
-> Canonical Source of Truth: [`.specify/memory/constitution.md`](.specify/memory/constitution.md)
+> Canonical Source of Truth: [`.specify/memory/constitution.md`](.specify/memory/constitution.md)  
+> AI Agent Entry Points: [`AGENTS.md`](AGENTS.md) | [`GEMINI.md`](GEMINI.md)
 
 ---
 
 <!--
 === SYNC IMPACT REPORT ===
-Version Change: 1.5.0 -> 1.6.0 (Knowledge Organization Systems, Structural Evidence & Trade-Offs, Documentation Orientations, Custom Two-Tier Configuration, User-Controlled Downstream Automation & Invariants XIII–XVI)
+Version Change: 1.6.0 -> 1.7.0 (Autonomous Product Core, Elimination of Decision Fatigue & Invariant XVII / P1–P7)
 Modified Principles:
-  - Expanded Section: "The 16 Critical Invariants" establishing the non-negotiable architectural bedrock:
-      - Added Invariant XIII (Non-Prescriptive Knowledge Organization: size is signal, not verdict; no methodology dogma).
-      - Added Invariant XIV (Unified Optimization Profile: AI/Human/Balanced/Custom compile to single internal profile).
-      - Added Invariant XV (Transparent Trade-Off & Evidence-Based Recommendation: multi-dimensional metrics, explicit countervailing trade-offs).
-      - Added Invariant XVI (User-Controlled Downstream Automation & Re-Measurement: approval gate, Before/After validation).
-  - Added Principle XII: Documentation Orientation, Strategy Trade-Offs & User-Controlled Structural Evolution.
+  - Expanded Section: "The 17 Critical Invariants" establishing the non-negotiable architectural bedrock:
+      - Added Invariant XVII (Autonomous Product Core & Non-Interfering Complementarity / P1–P7):
+          * P1 (Autonomy): LLM Wiki operates 100% standalone with zero mandatory external tool prerequisites.
+          * P2 (Exclusive Responsibility): Bounded, non-overlapping component roles (LLM Wiki = documented knowledge; AI Memory = cross-session agent working memory; Graphify = optional code AST diagnostic; Understand Anything = eliminated).
+          * P3 (Non-Interference): Complementary tools are passive and MUST NEVER auto-mutate Markdown files, canonical graph, or product decisions.
+          * P4 (Centralized Governance): LLM Wiki is the sole active governor of documented knowledge.
+          * P5 (Optional Complementarity): External tools enhance specific workflows optionally; their absence never impairs core functionality.
+          * P6 (Proportional Complexity): No integrations without concrete gaps justifying maintenance and UX costs.
+          * P7 (Zero Unnecessary Decisions): The user never faces configuration hurdles, tool selection, or decision fatigue to begin using LLM Wiki.
 Follow-up TODOs: None deferred.
 ==========================
 -->
 
-## The 16 Critical Invariants (NON-NEGOTIABLE)
+## The 17 Critical Invariants (NON-NEGOTIABLE)
 
-The following sixteen invariants constitute the immutable architectural foundation of LLM Wiki. Every component, data model, RPC interface, and user workflow MUST strictly obey these invariants without exception:
+The following seventeen invariants constitute the immutable architectural foundation of LLM Wiki. Every component, data model, RPC interface, and user workflow MUST strictly obey these invariants without exception:
 
 1. **Invariant I — Committed Truth**: The persistent Knowledge Graph MUST represent committed repository state only. Working-tree changes or file-save events MUST NOT mutate the persistent graph (`file saved ≠ knowledge graph update`).
 2. **Invariant II — Candidate Isolation**: Pre-commit analysis MUST evaluate staged changes exclusively in an in-memory ephemeral candidate graph, which is completely discarded after validation and MUST NOT contaminate persistent state.
@@ -38,6 +135,18 @@ The following sixteen invariants constitute the immutable architectural foundati
 14. **Invariant XIV — Unified Optimization Profile**: All Documentation Orientations (`AI-Oriented` [default], `Human-Oriented`, `Balanced`, `Custom`) MUST compile into a single, inspectable internal `OptimizationProfile` struct. The engine MUST NOT run separate, divergent heuristic engines per mode.
 15. **Invariant XV — Transparent Trade-Off & Evidence-Based Recommendation**: Every structural problem detection MUST be derived from observable multi-dimensional metrics (cohesion, coupling, concentration, semantic diversity, context efficiency), and every recommendation MUST explicitly articulate both expected benefits and countervailing trade-offs (e.g., increased fragmentation, metadata complexity, or index maintenance).
 16. **Invariant XVI — User-Controlled Downstream Automation & Re-Measurement**: Automated structural transformations (e.g., generating index routers, section-level refactoring, frontmatter injection) MUST be strictly downstream of explicit user orientation choice and approval (`Auto-Apply: OFF`, `Require Approval: ON` by default) and MUST respect Hard Constraints. Every applied transformation MUST be verified through deterministic Before-vs-After comparative re-measurement.
+17. **Invariant XVII — Autonomous Product Core & Non-Interfering Complementarity (P1–P7)**:
+    - **P1 (Autonomy)**: LLM Wiki MUST deliver its complete core value proposition standalone. Complementary tools are never prerequisites.
+    - **P2 (Exclusive Responsibility)**: Each component has a strictly bounded, non-overlapping responsibility:
+      - **LLM Wiki**: Governs Markdown files, organizes knowledge, maintains the canonical graph, detects inconsistencies, and manages documentation evolution.
+      - **AI Memory**: Maintains local cross-session working memory for agent and dev tooling contexts; does NOT govern documentation or replace the canonical graph.
+      - **Graphify**: Analyzes observed code architecture; does NOT govern LLM Wiki, alter Markdown, or auto-update the canonical graph.
+      - **Understand Anything**: Overlaps with Graphify; strictly eliminated from product recommendations, catalogs, and UI.
+    - **P3 (Non-Interference)**: Complementary tools are passive relative to LLM Wiki and MUST NEVER mutate Markdown files, the canonical graph, or product decisions.
+    - **P4 (Centralized Governance)**: LLM Wiki is the sole active authority over documented knowledge.
+    - **P5 (Optional Complementarity)**: External tools provide optional diagnostic analyses without hindering core functionality when absent.
+    - **P6 (Proportional Complexity)**: Integrations are only introduced when solving a concrete, verified need that justifies their maintenance and UX cost.
+    - **P7 (Zero Unnecessary Decisions)**: The user NEVER has to choose tools, select strategies, or perform configuration setups to begin using LLM Wiki. No configuration hurdle or decision fatigue.
 
 ---
 
@@ -66,7 +175,7 @@ The system MUST NOT continuously monitor file saves or keystrokes. The boundary 
   1. *Hook 1 (`llm-wiki-validate`, stage: `pre-commit`)*: Analyzes staged files (Markdown and code), performs reverse impact analysis, checks for regressions against the debt baseline, materializes structural frontmatter, and returns `PASS`, `WARN`, or `BLOCK`.
   2. *Hook 2 (`llm-wiki-sync`, stage: `post-commit`)*: Applies the committed Git delta to the persistent Rust Knowledge Graph via incremental patching ($\le 50\text{ ms}$).
 - **Hook Discovery & Execution Fallbacks**:
-  1. *Tier 1 (Rust-Native / Primary)*: `prek` executing declarative `.pre-commit-config.yaml` with parallel hook execution.
+  1. *Tier 1 (Rust-Native / Primary)*: `prek` executing declarative *.pre-commit-config.yaml* with parallel hook execution.
   2. *Tier 2 (Ecosystem Compatibility)*: Python `pre-commit` or `lefthook` if already present in repository.
   3. *Tier 3 (Zero-Dependency Script)*: Standalone `.git/hooks/` shell dispatchers executing `llm-wiki-core validate` and `llm-wiki-core git-delta`.
 - **Strict Non-Blocking Fail-Open**: All hook invocations MUST enforce a hard non-blocking timeout of $\le 500\text{ ms}$. If the socket is unresponsive, the sidecar is offline, or the daemon encounters an internal error, the hook MUST immediately exit with code 0 (silent fail-open), never obstructing or delaying developer Git commits.
@@ -136,7 +245,7 @@ The engine MUST enforce 100% internal link validation across both standard Markd
 A repository adopted by LLM Wiki may start with legacy broken links, orphans, collisions, and stale documents. The product MUST NOT make adoption impossible by immediately blocking existing problems.
 - **Regression-Based Enforcement Invariant**:
   > *Pre-commit validation MUST prevent the introduction of new high-confidence knowledge-quality regressions while preserving and exposing pre-existing brownfield debt.*
-- **Knowledge Debt Baseline (`baseline.json`)**:
+- **Knowledge Debt Baseline (*baseline.json*)**:
   - The Rust Core establishes a baseline of known findings upon initialization or initial scan (`baseline_commit = <sha>`), recording counts of legacy broken links, orphans, collisions, structural flaws, and drift findings.
   - Existing debt is reported, tracked, and prioritized for remediation, but NEVER blocks developer commits.
 - **Continuous Enforcement Lifecycle**:
@@ -285,4 +394,4 @@ This Constitution represents the supreme architectural and technical policy for 
   - **MINOR**: Addition of new principles, sections, or materially expanded guidelines.
   - **PATCH**: Clarifications, wording adjustments, or typo fixes.
 
-**Version**: 1.6.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-09-14
+**Version**: 1.7.0 | **Ratified**: 2026-09-11 | **Last Amended**: 2026-10-14

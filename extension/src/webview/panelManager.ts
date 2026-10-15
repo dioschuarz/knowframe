@@ -3,8 +3,11 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { generateNonce, buildCspPolicy } from './cspHelper';
 import { IpcClient } from '../ipc/client';
-import { ScanResultPayload, WebviewInboundMessage } from '../types/protocol';
+import { ScanResultPayload, WebviewInboundMessage, NavigationIntent } from '../types/protocol';
 import type { EvolutionManager } from '../evolution/evolutionManager';
+import type { GovernanceManager } from '../governance/governanceManager';
+import { installLLMWikiSkill, isLLMWikiSkillAvailable } from '../commands/installSkill';
+import { HarnessToolService } from '../governance/harnessToolService';
 
 export class GraphPanelManager implements vscode.Disposable {
   public static currentPanel: GraphPanelManager | undefined;
@@ -15,11 +18,15 @@ export class GraphPanelManager implements vscode.Disposable {
   private disposables: vscode.Disposable[] = [];
   private ipcClient: IpcClient | null = null;
   private evolutionManager: EvolutionManager | null = null;
+  private governanceManager: GovernanceManager | null = null;
+  private harnessToolService: HarnessToolService = new HarnessToolService();
   private currentScanResult: ScanResultPayload | null = null;
   private static cachedIssuesReport: unknown | null = null;
   private isFetchingIssues: boolean = false;
   private isSendingEvolutionState: boolean = false;
   private pendingOpenTab: string | null = null;
+  private lastToolInstallTime: number = 0;
+  private lastInstalledToolId: string | null = null;
 
   public static setCachedIssuesReport(report: unknown): void {
     GraphPanelManager.cachedIssuesReport = report;
@@ -67,12 +74,20 @@ export class GraphPanelManager implements vscode.Disposable {
   public static revive(
     panel: vscode.WebviewPanel,
     extensionUri: vscode.Uri,
-    ipcClient: IpcClient | null
+    ipcClient: IpcClient | null,
+    scanResult: ScanResultPayload | null = null
   ): GraphPanelManager {
     panel.title = 'LLM Wiki - Graph';
-    GraphPanelManager.currentPanel = new GraphPanelManager(panel, extensionUri, ipcClient, null);
+    GraphPanelManager.currentPanel = new GraphPanelManager(panel, extensionUri, ipcClient, scanResult);
+    const hasWorkspace = !!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0);
+    if (!hasWorkspace) {
+      setTimeout(() => GraphPanelManager.currentPanel?.sendNoWorkspace(), 300);
+    } else if (scanResult) {
+      setTimeout(() => GraphPanelManager.currentPanel?.updateData(scanResult), 300);
+    }
     return GraphPanelManager.currentPanel;
   }
+
 
   private constructor(
     panel: vscode.WebviewPanel,
@@ -145,6 +160,20 @@ export class GraphPanelManager implements vscode.Disposable {
     });
   }
 
+  public sendNoWorkspace(): void {
+    this.panel.webview.postMessage({
+      type: 'noWorkspaceOpen',
+      payload: {},
+    });
+  }
+
+  public sendEngineOffline(message?: string): void {
+    this.panel.webview.postMessage({
+      type: 'engineOffline',
+      payload: { message: message || 'Engine daemon is offline.' },
+    });
+  }
+
   public updateData(scanResult: ScanResultPayload): void {
     this.currentScanResult = scanResult;
     this.currentLoadingProgress = { stage: 'complete', percent: 100, message: 'Ready' };
@@ -178,6 +207,74 @@ export class GraphPanelManager implements vscode.Disposable {
       type: 'loadingProgress',
       payload: { stage: 'complete', percent: 100, message: 'Ready' },
     });
+
+    if (this.ipcClient) {
+      this.ipcClient.sendRequest('graph/getExclusions', {}).then((res: any) => {
+        this.panel.webview.postMessage({
+          type: 'exclusionsUpdate',
+          payload: {
+            scanExclusions: res?.scan_exclusions || [],
+            graphExclusions: res?.graph_exclusions || [],
+          },
+        });
+      }).catch(() => {});
+    }
+  }
+
+  public async openSettingsDrawer(tab: string = 'knowledge'): Promise<void> {
+    this.panel.reveal();
+    this.pendingOpenTab = tab;
+    this.panel.webview.postMessage({
+      type: 'openSettingsDrawer',
+      payload: { tab },
+    });
+
+    if (GraphPanelManager.cachedIssuesReport) {
+      this.panel.webview.postMessage({
+        type: 'issuesReportUpdate',
+        payload: GraphPanelManager.cachedIssuesReport,
+      });
+    }
+
+    if (this.ipcClient && !GraphPanelManager.cachedIssuesReport && !this.isFetchingIssues) {
+      try {
+        this.isFetchingIssues = true;
+        const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', {});
+        GraphPanelManager.cachedIssuesReport = issuesReport;
+        this.panel.webview.postMessage({
+          type: 'issuesReportUpdate',
+          payload: issuesReport,
+        });
+      } catch (err: any) {
+        console.error('Failed to fetch issues report:', err);
+      } finally {
+        this.isFetchingIssues = false;
+      }
+    }
+
+    if (tab === 'harness' || tab === 'git_harness' || tab === 'git') {
+      if (this.governanceManager) {
+        this.governanceManager.getHarnessStatus().then((status) => {
+          this.panel.webview.postMessage({
+            type: 'harnessStatus',
+            payload: status,
+          });
+        }).catch((err) => console.error('Failed to get harness status:', err));
+      } else if (this.ipcClient) {
+        this.ipcClient.sendRequest('governance/getHarnessStatus', {}).then((status) => {
+          this.panel.webview.postMessage({
+            type: 'harnessStatus',
+            payload: status,
+          });
+        }).catch((err) => console.error('Failed to get harness status via IPC:', err));
+      }
+      this.harnessToolService.detectAllTools().then((tools) => {
+        this.panel.webview.postMessage({
+          type: 'harnessToolsUpdate',
+          payload: { tools },
+        });
+      }).catch((err) => console.error('Failed to detect tools:', err));
+    }
   }
 
   public async openDiagnosticsTab(): Promise<void> {
@@ -231,6 +328,26 @@ export class GraphPanelManager implements vscode.Disposable {
     }
   }
 
+  public setGovernanceManager(manager: GovernanceManager | null): void {
+    this.governanceManager = manager;
+    if (manager) {
+      manager.subscribeStatus((status) => {
+        this.panel.webview.postMessage({
+          type: 'harnessStatus',
+          payload: status,
+        });
+      });
+      manager.getHarnessStatus().then((status) => {
+        this.panel.webview.postMessage({
+          type: 'harnessStatus',
+          payload: status,
+        });
+      }).catch((err) => {
+        console.error('Failed to fetch initial harness status on setGovernanceManager:', err);
+      });
+    }
+  }
+
   public async sendEvolutionState(): Promise<void> {
     if (!this.evolutionManager || this.isSendingEvolutionState) {
       return;
@@ -274,6 +391,8 @@ export class GraphPanelManager implements vscode.Disposable {
           maintenanceCoupling: s.evidence?.maintenance_coupling ?? s.evidence?.maintenanceCoupling ?? 0,
           maintenance_coupling: s.evidence?.maintenance_coupling ?? s.evidence?.maintenanceCoupling ?? 0,
         },
+        strategySet: s.strategy_set || s.strategySet,
+        strategy_set: s.strategy_set || s.strategySet,
       }));
 
       // Normalize recommendations for webview
@@ -387,10 +506,55 @@ export class GraphPanelManager implements vscode.Disposable {
     await this.sendEvolutionState();
   }
 
+  public async navigateToDetail(intent: NavigationIntent): Promise<void> {
+    this.panel.reveal();
+    const subTab = intent.subTab || 'health';
+    this.pendingOpenTab = subTab;
+
+    this.panel.webview.postMessage({
+      type: 'navigateToDetail',
+      payload: intent,
+    });
+
+    if (subTab === 'health' || subTab === 'diagnostics') {
+      if (GraphPanelManager.cachedIssuesReport) {
+        this.panel.webview.postMessage({
+          type: 'issuesReportUpdate',
+          payload: GraphPanelManager.cachedIssuesReport,
+        });
+      }
+      if (this.ipcClient) {
+        try {
+          const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', {});
+          GraphPanelManager.cachedIssuesReport = issuesReport;
+          this.panel.webview.postMessage({
+            type: 'issuesReportUpdate',
+            payload: issuesReport,
+          });
+        } catch {
+          // ignore
+        }
+      }
+    } else if (subTab === 'evolution') {
+      await this.sendEvolutionState();
+    }
+  }
+
   private async handleWebviewMessage(message: WebviewInboundMessage): Promise<void> {
     if (!message || !message.type) {return;}
 
     switch (message.type) {
+      case 'navigateToDetail': {
+        const payload = message.payload as NavigationIntent;
+        if (payload) {
+          await this.navigateToDetail(payload);
+        }
+        break;
+      }
+      case 'openFolder': {
+        vscode.commands.executeCommand('vscode.openFolder');
+        break;
+      }
       case 'openFile': {
         const payload = message.payload as { file_path: string; line?: number };
         if (payload?.file_path) {
@@ -450,9 +614,57 @@ export class GraphPanelManager implements vscode.Disposable {
               scope: payload.scope || 'graph',
             });
             vscode.window.showInformationMessage(`Excluded pattern: ${payload.pattern}`);
+            const exRes: any = await this.ipcClient.sendRequest('graph/getExclusions', {});
+            this.panel.webview.postMessage({
+              type: 'exclusionsUpdate',
+              payload: {
+                scanExclusions: exRes?.scan_exclusions || [],
+                graphExclusions: exRes?.graph_exclusions || [],
+              },
+            });
             vscode.commands.executeCommand('llmWiki.rescanVault');
           } catch (err: any) {
             vscode.window.showErrorMessage(`Exclusion failed: ${err.message}`);
+          }
+        }
+        break;
+      }
+      case 'removeExclusion': {
+        const payload = message.payload as { pattern: string; scope: 'scan' | 'graph' };
+        if (payload?.pattern && this.ipcClient) {
+          try {
+            const res: any = await this.ipcClient.sendRequest('graph/removeExclusion', {
+              pattern: payload.pattern,
+              scope: payload.scope || 'graph',
+            });
+            vscode.window.showInformationMessage(`Removed exclusion rule: ${payload.pattern}`);
+            this.panel.webview.postMessage({
+              type: 'exclusionsUpdate',
+              payload: {
+                scanExclusions: res?.scan_exclusions || [],
+                graphExclusions: res?.graph_exclusions || [],
+              },
+            });
+            vscode.commands.executeCommand('llmWiki.rescanVault');
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to remove exclusion: ${err.message}`);
+          }
+        }
+        break;
+      }
+      case 'requestExclusions': {
+        if (this.ipcClient) {
+          try {
+            const res: any = await this.ipcClient.sendRequest('graph/getExclusions', {});
+            this.panel.webview.postMessage({
+              type: 'exclusionsUpdate',
+              payload: {
+                scanExclusions: res?.scan_exclusions || [],
+                graphExclusions: res?.graph_exclusions || [],
+              },
+            });
+          } catch (err: any) {
+            console.error('Failed to get exclusions:', err);
           }
         }
         break;
@@ -477,6 +689,28 @@ export class GraphPanelManager implements vscode.Disposable {
       }
       case 'fixBrokenLinks': {
         vscode.commands.executeCommand('llmWiki.fixBrokenLinks');
+        break;
+      }
+      case 'installHooks': {
+        await vscode.commands.executeCommand('llmWiki.installGitHooks');
+        break;
+      }
+      case 'installLLMWikiSkill': {
+        const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+        if (!workspaceRoot) {
+          vscode.window.showErrorMessage('LLM Wiki: No open workspace folder found.');
+          break;
+        }
+        try {
+          installLLMWikiSkill(workspaceRoot, this.extensionUri.fsPath, vscode.window.createOutputChannel('LLM Wiki'));
+          vscode.window.showInformationMessage('LLM Wiki: Skill installed successfully.');
+          this.panel.webview.postMessage({
+            type: 'harnessStatus',
+            payload: { llmWikiSkillAvailable: true },
+          });
+        } catch (err: any) {
+          vscode.window.showErrorMessage(`LLM Wiki: Failed to install skill: ${err.message}`);
+        }
         break;
       }
       case 'updateColorGroups': {
@@ -519,7 +753,17 @@ export class GraphPanelManager implements vscode.Disposable {
         break;
       }
       case 'requestIssues': {
-        if (GraphPanelManager.cachedIssuesReport) {
+        const payload = (message.payload || {}) as {
+          pillar?: string;
+          limit?: number;
+          include_debt?: boolean;
+          include_excluded?: boolean;
+          filter_path?: string;
+        };
+        const isCustomQuery = Boolean(
+          payload.pillar || payload.limit || payload.include_debt !== undefined || payload.include_excluded || payload.filter_path
+        );
+        if (!isCustomQuery && GraphPanelManager.cachedIssuesReport) {
           this.panel.webview.postMessage({
             type: 'issuesReportUpdate',
             payload: GraphPanelManager.cachedIssuesReport,
@@ -531,9 +775,10 @@ export class GraphPanelManager implements vscode.Disposable {
         if (this.ipcClient) {
           try {
             this.isFetchingIssues = true;
-            const payload = (message.payload || {}) as { pillar?: string; limit?: number };
             const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', payload);
-            GraphPanelManager.cachedIssuesReport = issuesReport;
+            if (!isCustomQuery) {
+              GraphPanelManager.cachedIssuesReport = issuesReport;
+            }
             this.panel.webview.postMessage({
               type: 'issuesReportUpdate',
               payload: issuesReport,
@@ -598,18 +843,47 @@ export class GraphPanelManager implements vscode.Disposable {
         break;
       }
       case 'generateTransformationPlan': {
-        const payload = message.payload as { recommendationId: string };
-        if (this.evolutionManager && payload?.recommendationId) {
+        const payload = message.payload as {
+          recommendationId?: string;
+          opportunityId?: string;
+          selectedStrategies?: any[];
+        };
+        if (this.evolutionManager) {
           try {
-            const plan = await this.evolutionManager.generatePlan(payload.recommendationId);
-            this.panel.webview.postMessage({
-              type: 'transformationPlanReady',
-              payload: plan,
-            });
+            let plan;
+            if (payload.opportunityId && payload.selectedStrategies && payload.selectedStrategies.length > 0) {
+              plan = await this.evolutionManager.generateMultiStrategyPlan(
+                payload.opportunityId,
+                payload.selectedStrategies,
+              );
+            } else if (payload.opportunityId) {
+              plan = await this.evolutionManager.generateMultiStrategyPlan(
+                payload.opportunityId,
+                ['preserve_document'],
+              );
+            } else if (payload.recommendationId) {
+              try {
+                plan = await this.evolutionManager.generatePlan(payload.recommendationId);
+              } catch {
+                // If recommendationId was actually an opportunity ID or failed in single-plan
+                plan = await this.evolutionManager.generateMultiStrategyPlan(
+                  payload.recommendationId,
+                  ['preserve_document'],
+                );
+              }
+            }
+            if (plan) {
+              this.panel.webview.postMessage({
+                type: 'transformationPlanReady',
+                requestId: message.requestId,
+                payload: plan,
+              });
+            }
           } catch (err: any) {
             vscode.window.showErrorMessage(`Failed to generate transformation plan: ${err.message}`);
             this.panel.webview.postMessage({
               type: 'transformationPlanError',
+              requestId: message.requestId,
               payload: {
                 recommendationId: payload.recommendationId,
                 error: err.message || 'Failed to generate transformation plan',
@@ -619,24 +893,380 @@ export class GraphPanelManager implements vscode.Disposable {
         }
         break;
       }
+      case 'getStrategySet': {
+        const payload = message.payload as { opportunityId: string };
+        if (this.evolutionManager && payload?.opportunityId) {
+          try {
+            const set = await this.evolutionManager.getStrategySet(payload.opportunityId);
+            this.panel.webview.postMessage({
+              type: 'strategySetResult',
+              requestId: message.requestId,
+              payload: set,
+            });
+          } catch (err: any) {
+            console.error('Failed to get strategy set:', err);
+          }
+        }
+        break;
+      }
+      case 'validateStrategySelection': {
+        const payload = message.payload as { selectedStrategies: any[] };
+        if (this.evolutionManager && payload?.selectedStrategies) {
+          try {
+            const val = await this.evolutionManager.validateStrategySelection(payload.selectedStrategies);
+            this.panel.webview.postMessage({
+              type: 'strategyValidationResult',
+              requestId: message.requestId,
+              payload: val,
+            });
+          } catch (err: any) {
+            console.error('Failed to validate strategy selection:', err);
+          }
+        }
+        break;
+      }
+      case 'calculatePlanValue': {
+        const payload = message.payload as { opportunityId: string; selectedStrategies: any[] };
+        if (this.evolutionManager && payload?.opportunityId && payload?.selectedStrategies) {
+          try {
+            const val = await this.evolutionManager.calculatePlanValue(
+              payload.opportunityId,
+              payload.selectedStrategies,
+            );
+            this.panel.webview.postMessage({
+              type: 'planValueResult',
+              requestId: message.requestId,
+              payload: val,
+            });
+          } catch (err: any) {
+            console.error('Failed to calculate plan value:', err);
+          }
+        }
+        break;
+      }
       case 'applyTransformationPlan': {
-        const payload = message.payload as { planId: string };
+        const payload = message.payload as { planId: string; plan?: unknown };
         if (this.evolutionManager && payload?.planId) {
           try {
             const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
-            const res = await this.evolutionManager.applyPlan(payload.planId, { rootPath });
+            const approvalToken = (payload.plan as any)?.approval_token || (payload.plan as any)?.approvalToken;
+            if (approvalToken && this.governanceManager) {
+              const res = await this.governanceManager.applyGovernancePlan(
+                payload.planId,
+                approvalToken
+              );
+              vscode.window.showInformationMessage(`Governance transformation applied successfully.`);
+              this.panel.webview.postMessage({
+                type: 'governancePlanApplied' as any,
+                payload: res,
+              });
+              this.panel.webview.postMessage({
+                type: 'transformationPlanApplied' as any,
+                payload: { ...res, actualDelta: (res as any).re_measurement },
+              });
+              vscode.commands.executeCommand('llmWiki.rescanVault');
+              await this.sendEvolutionState();
+              break;
+            }
+
+            // The webview Apply button is already the explicit user approval.
+            // Pass the complete plan to avoid a second modal confirmation and
+            // let the sidecar apply the exact reviewed plan immediately.
+            const reviewedPlan = payload.plan
+              ? {
+                ...(payload.plan as any),
+                planId: (payload.plan as any).planId || (payload.plan as any).plan_id || payload.planId,
+              }
+              : payload.planId;
+            const res = await this.evolutionManager.applyPlan(reviewedPlan as any, {
+              rootPath,
+              skipDialog: true,
+            });
+            const rawResult = res as any;
+            const actualDelta = rawResult.actualDelta || rawResult.actual_delta || {};
+            const efficiencyDelta = actualDelta.efficiencyDelta ?? actualDelta.efficiency_delta ?? 0;
             vscode.window.showInformationMessage(
-              `Transformation plan applied: efficiency delta ${res.actualDelta.efficiencyDelta >= 0 ? '+' : ''}${res.actualDelta.efficiencyDelta.toFixed(1)}%`
+              `Transformation plan applied: efficiency delta ${efficiencyDelta >= 0 ? '+' : ''}${Number(efficiencyDelta).toFixed(1)}%`
             );
             this.panel.webview.postMessage({
               type: 'transformationPlanApplied',
-              payload: res,
+              payload: { ...rawResult, actualDelta },
             });
             vscode.commands.executeCommand('llmWiki.rescanVault');
             await this.sendEvolutionState();
           } catch (err: any) {
             vscode.window.showErrorMessage(`Failed to apply transformation plan: ${err.message}`);
+            this.panel.webview.postMessage({
+              type: 'transformationPlanApplyError',
+              payload: { error: err.message || 'Failed to apply transformation plan' },
+            });
           }
+        }
+        break;
+      }
+      case 'getHarnessStatus':
+      case 'requestHarnessStatus': {
+        if (this.governanceManager) {
+          try {
+            const status = await this.governanceManager.getHarnessStatus();
+            this.panel.webview.postMessage({
+              type: 'harnessStatus',
+              payload: status,
+            });
+          } catch (err: any) {
+            console.error('Failed to get harness status:', err);
+          }
+        } else if (this.ipcClient) {
+          try {
+            const status = await this.ipcClient.sendRequest('governance/getHarnessStatus', {});
+            this.panel.webview.postMessage({
+              type: 'harnessStatus',
+              payload: status,
+            });
+          } catch (err: any) {
+            console.error('Failed to get harness status directly via IPC:', err);
+          }
+        }
+        try {
+          const tools = await this.harnessToolService.detectAllTools();
+          this.panel.webview.postMessage({
+            type: 'harnessToolsUpdate',
+            payload: { tools },
+          });
+        } catch (err: any) {
+          console.error('Failed to detect harness tools:', err);
+        }
+        break;
+      }
+      case 'setActiveHarness': {
+        const payload = message.payload as { harness_file: string };
+        if (this.governanceManager && payload?.harness_file) {
+          try {
+            await this.governanceManager.setActiveHarness(payload.harness_file);
+            vscode.window.showInformationMessage(`Active AI harness set to: ${payload.harness_file}`);
+            const status = await this.governanceManager.getHarnessStatus();
+            this.panel.webview.postMessage({
+              type: 'harnessStatus',
+              payload: status,
+            });
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to set active harness: ${err.message}`);
+          }
+        }
+        break;
+      }
+      case 'initializeHarness': {
+        if (this.governanceManager) {
+          try {
+            const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (rootPath) {
+              const targetHarness = (message.payload as any)?.targetHarness || 'AGENTS.md';
+              const created = await this.governanceManager.initializeHarness(rootPath, targetHarness);
+              if (created) {
+                vscode.window.showInformationMessage(`Initialized ${targetHarness} with embedded Knowledge Index.`);
+              }
+              const status = await this.governanceManager.getHarnessStatus();
+              this.panel.webview.postMessage({
+                type: 'harnessStatus',
+                payload: status,
+              });
+            }
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to initialize harness: ${err.message}`);
+          }
+        }
+        break;
+      }
+      case 'syncHarnesses': {
+        if (this.governanceManager) {
+          try {
+            const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+            if (rootPath) {
+              const count = await this.governanceManager.syncHarnesses(rootPath);
+              vscode.window.showInformationMessage(`Synchronized Knowledge Index across ${count} AI harness(es).`);
+              const status = await this.governanceManager.getHarnessStatus();
+              this.panel.webview.postMessage({
+                type: 'harnessStatus',
+                payload: status,
+              });
+              await vscode.commands.executeCommand('llmWiki.rescanVault');
+              await vscode.commands.executeCommand('llmWiki.refreshQualityScore');
+            }
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to sync harnesses: ${err.message}`);
+          }
+        }
+        break;
+      }
+      case 'configureHarnessBase': {
+        if (this.governanceManager) {
+          try {
+            const payload = message.payload as any;
+            const res = await this.governanceManager.configureHarnessBase(payload || { enabled_harnesses: ['AGENTS.md'] });
+            vscode.window.showInformationMessage(`AI Harness Base configured: ${res.enabled_harnesses?.join(', ')} active.`);
+            const status = await this.governanceManager.getHarnessStatus();
+            this.panel.webview.postMessage({
+              type: 'harnessStatus',
+              payload: status,
+            });
+            this.panel.webview.postMessage({
+              type: 'configureHarnessBaseResult' as any,
+              payload: res,
+            });
+            await vscode.commands.executeCommand('llmWiki.rescanVault');
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to configure harness base: ${err.message}`);
+          }
+        }
+        break;
+      }
+      case 'getSkillCatalog': {
+        if (this.governanceManager) {
+          try {
+            const catalog = await this.governanceManager.getSkillCatalog();
+            this.panel.webview.postMessage({
+              type: 'skillCatalogUpdate' as any,
+              payload: catalog,
+            });
+          } catch (err: any) {
+            console.error('Failed to get skill catalog:', err);
+          }
+        }
+        break;
+      }
+      case 'analyzeDirectoryStructure': {
+        if (this.governanceManager) {
+          try {
+            const metrics = await this.governanceManager.analyzeDirectoryStructure();
+            this.panel.webview.postMessage({
+              type: 'directoryMetricsUpdate' as any,
+              payload: metrics,
+            });
+          } catch (err: any) {
+            console.error('Failed to analyze directory structure:', err);
+          }
+        }
+        break;
+      }
+      case 'generateGovernancePlan': {
+        const payload = message.payload as { strategy_type: string; target_file_or_dir: string };
+        if (this.governanceManager && payload?.strategy_type && payload?.target_file_or_dir) {
+          try {
+            const plan = await this.governanceManager.generateGovernancePlan(
+              payload.strategy_type,
+              payload.target_file_or_dir
+            );
+            this.panel.webview.postMessage({
+              type: 'transformationPlanReady' as any,
+              requestId: message.requestId,
+              payload: plan,
+            });
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to generate governance plan: ${err.message}`);
+            this.panel.webview.postMessage({
+              type: 'transformationPlanError' as any,
+              requestId: message.requestId,
+              payload: {
+                error: err.message || 'Failed to generate governance plan',
+              },
+            });
+          }
+        }
+        break;
+      }
+      case 'applyGovernancePlan': {
+        const payload = message.payload as { plan_id: string; approval_token: string };
+        if (this.governanceManager && payload?.plan_id && payload?.approval_token) {
+          try {
+            const res = await this.governanceManager.applyGovernancePlan(
+              payload.plan_id,
+              payload.approval_token
+            );
+            vscode.window.showInformationMessage(`Governance transformation applied successfully.`);
+            this.panel.webview.postMessage({
+              type: 'governancePlanApplied' as any,
+              payload: res,
+            });
+            this.panel.webview.postMessage({
+              type: 'transformationPlanApplied' as any,
+              payload: { ...res, actualDelta: (res as any).re_measurement },
+            });
+            vscode.commands.executeCommand('llmWiki.rescanVault');
+            await this.sendEvolutionState();
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to apply governance plan: ${err.message}`);
+            this.panel.webview.postMessage({
+              type: 'transformationPlanApplyError' as any,
+              payload: { error: err.message || 'Failed to apply governance plan' },
+            });
+          }
+        }
+        break;
+      }
+      case 'resolveDocumentReview': {
+        const payload = (message.payload || {}) as any;
+        if (this.ipcClient) {
+          try {
+            const res = await this.ipcClient.sendRequest('review/resolveDocumentReview', payload);
+            vscode.window.showInformationMessage(`Document review marked resolved.`);
+            this.panel.webview.postMessage({
+              type: 'documentReviewResolved',
+              requestId: message.requestId,
+              payload: res,
+            });
+            vscode.commands.executeCommand('llmWiki.rescanVault');
+          } catch (err: any) {
+            vscode.window.showErrorMessage(`Failed to resolve document review: ${err.message}`);
+          }
+        }
+        break;
+      }
+      case 'getAffectedDocuments': {
+        const payload = (message.payload || {}) as any;
+        if (this.ipcClient) {
+          try {
+            const report = await this.ipcClient.sendRequest('trace/getAffectedDocuments', payload);
+            this.panel.webview.postMessage({
+              type: 'affectedDocumentsReport',
+              requestId: message.requestId,
+              payload: report,
+            });
+          } catch (err: any) {
+            console.error('Failed to get affected documents:', err);
+          }
+        }
+        break;
+      }
+      case 'requestHarnessTools': {
+        try {
+          const tools = await this.harnessToolService.detectAllTools();
+          this.panel.webview.postMessage({
+            type: 'harnessToolsUpdate',
+            payload: { tools },
+          });
+        } catch (err: any) {
+          console.error('Failed to detect harness tools:', err);
+        }
+        break;
+      }
+      case 'installHarnessTool': {
+        const toolId = (message.payload as any)?.toolId;
+        const now = Date.now();
+        if (toolId && (now - this.lastToolInstallTime > 600 || this.lastInstalledToolId !== toolId)) {
+          this.lastToolInstallTime = now;
+          this.lastInstalledToolId = toolId;
+          await this.harnessToolService.installTool(toolId);
+          setTimeout(async () => {
+            try {
+              const tools = await this.harnessToolService.detectAllTools();
+              this.panel.webview.postMessage({
+                type: 'harnessToolsUpdate',
+                payload: { tools },
+              });
+            } catch (err: any) {
+              console.error('Failed to refresh harness tools after install:', err);
+            }
+          }, 1500);
         }
         break;
       }
@@ -802,14 +1432,20 @@ export class GraphPanelManager implements vscode.Disposable {
 export class GraphPanelSerializer implements vscode.WebviewPanelSerializer {
   constructor(
     private readonly extensionUri: vscode.Uri,
-    private readonly getIpcClient: () => IpcClient | null
+    private readonly getIpcClient: () => IpcClient | null,
+    private readonly getScanResult?: () => ScanResultPayload | null
   ) {}
 
   async deserializeWebviewPanel(webviewPanel: vscode.WebviewPanel, _state: unknown): Promise<void> {
     webviewPanel.webview.options = {
       enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, 'dist')],
+      localResourceRoots: [
+        vscode.Uri.joinPath(this.extensionUri, 'dist'),
+        vscode.Uri.joinPath(this.extensionUri, 'media'),
+      ],
     };
-    GraphPanelManager.revive(webviewPanel, this.extensionUri, this.getIpcClient());
+    const scan = this.getScanResult ? this.getScanResult() : null;
+    GraphPanelManager.revive(webviewPanel, this.extensionUri, this.getIpcClient(), scan);
   }
 }
+

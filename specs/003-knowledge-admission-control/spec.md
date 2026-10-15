@@ -1,3 +1,84 @@
+---
+wiki:
+  content_hash: e97bf91d0ded01a40fefc60166b3ec0b823fc9db07869027a607300f0fb595ac
+  fragments:
+    feature-specification-knowledge-quality-admission-control-continuous-enforcement:
+      tokens: 5641
+      inbound: 0
+      outbound: 0
+    1-executive-summary-vision:
+      tokens: 319
+      inbound: 0
+      outbound: 0
+    2-user-stories-priority-matrix:
+      tokens: 1085
+      inbound: 0
+      outbound: 0
+    user-story-1-brownfield-debt-baseline-non-blocking-adoption-priority-p1:
+      tokens: 213
+      inbound: 0
+      outbound: 0
+    user-story-2-in-memory-candidate-graph-dual-git-hooks-priority-p1:
+      tokens: 231
+      inbound: 0
+      outbound: 0
+    user-story-3-deterministic-semantic-drift-collision-detection-priority-p2:
+      tokens: 228
+      inbound: 0
+      outbound: 0
+    user-story-4-code-doc-impact-analysis-technical-drift-detection-priority-p2:
+      tokens: 158
+      inbound: 0
+      outbound: 0
+    user-story-5-context-trace-network-aware-quality-score-priority-p3:
+      tokens: 245
+      inbound: 0
+      outbound: 0
+    3-functional-requirements-fr-001-fr-033:
+      tokens: 3327
+      inbound: 0
+      outbound: 0
+    31-knowledge-state-boundary-candidate-graph-lifecycle:
+      tokens: 152
+      inbound: 0
+      outbound: 0
+    32-dual-hook-orchestration-fail-open-resilience:
+      tokens: 1431
+      inbound: 0
+      outbound: 0
+    33-brownfield-debt-baseline-regression-decision-engine:
+      tokens: 422
+      inbound: 0
+      outbound: 0
+    34-deterministic-semantic-drift-collision-engine-zero-external-ai:
+      tokens: 476
+      inbound: 0
+      outbound: 0
+    35-reverse-impact-index-technical-drift-engine:
+      tokens: 222
+      inbound: 0
+      outbound: 0
+    36-context-trace-network-aware-quality-score:
+      tokens: 335
+      inbound: 0
+      outbound: 0
+    37-webview-quality-admission-center-fourth-pillar:
+      tokens: 274
+      inbound: 0
+      outbound: 0
+    4-non-functional-requirements-performance-budgets:
+      tokens: 302
+      inbound: 0
+      outbound: 0
+    5-success-criteria-sc-001-sc-007:
+      tokens: 349
+      inbound: 0
+      outbound: 0
+    6-out-of-scope-explicit-boundaries:
+      tokens: 135
+      inbound: 0
+      outbound: 0
+---
 # Feature Specification: Knowledge Quality Admission Control & Continuous Enforcement
 
 **Feature Branch:** `003-knowledge-admission-control`  
@@ -26,7 +107,7 @@ Knowledge mutations occur exclusively at Git commits. File saves in the editor d
 > *As a software engineer adopting LLM Wiki on an existing codebase with legacy documentation debt (broken links, orphans, stale files), I want the system to record a baseline of existing problems and never block my commits due to pre-existing debt, so that adopting LLM Wiki does not disrupt my immediate delivery.*
 
 - **Acceptance Criteria**:
-  1. On initial scan or `baseline.json` generation, the Rust core records `baseline_commit = <sha>` and counts of legacy broken links, orphan nodes, collisions, and drift findings.
+  1. On initial scan or *.context-vault/baseline.json* generation, the Rust core records `baseline_commit = <sha>` and counts of legacy broken links, orphan nodes, collisions, and drift findings.
   2. Commits that touch files unrelated to existing debt proceed without hindrance (`PASS`).
   3. Pre-commit validation compares candidate findings against baseline counts: only **New Regressions** ($\Delta > 0$) can trigger `BLOCK`.
   4. Resolving legacy issues decrements the baseline counter, permanently locking in debt reductions.
@@ -80,12 +161,12 @@ Knowledge mutations occur exclusively at Git commits. File saves in the editor d
 - **FR-005**: The system MUST provide two distinct Git hooks:
   1. `llm-wiki-validate` (stage: `pre-commit`): Evaluates candidate knowledge quality and regressions.
   2. `llm-wiki-sync` (stage: `post-commit`): Applies committed delta to persistent graph.
-- **FR-006**: Both hooks MUST support the 3-tier discovery hierarchy: Tier 1 (`prek` / `.pre-commit-config.yaml`), Tier 2 (Python `pre-commit` / `lefthook`), Tier 3 (standalone `.git/hooks/` scripts).
-- **FR-007**: Both hooks MUST enforce a hard non-blocking timeout of $\le 500\text{ ms}$. If the daemon is offline, socket hangs, or execution times out, the hook MUST immediately exit with code 0 (`fail-open`).
+*.pre-commit-config.yaml*-*.pre-commit-config.yaml* *.pre-commit-config.yaml***.pre-commit-config.yaml***.pre-commit-config.yaml*F*.pre-commit-config.yaml*R*.pre-commit-config.yaml*-*.pre-commit-config.yaml*0*.pre-commit-config.yaml*0*.pre-commit-config.yaml*6*.pre-commit-config.yaml***.pre-commit-config.yaml***.pre-commit-config.yaml*:*.pre-commit-config.yaml* *.pre-commit-config.yaml*B*.pre-commit-config.yaml*o*.pre-commit-config.yaml*t*.pre-commit-config.yaml*h*.pre-commit-config.yaml* *.pre-commit-config.yaml*h*.pre-commit-config.yaml*o*.pre-commit-config.yaml*o*.pre-commit-config.yaml*k*.pre-commit-config.yaml*s*.pre-commit-config.yaml* *.pre-commit-config.yaml*M*.pre-commit-config.yaml*U*.pre-commit-config.yaml*S*.pre-commit-config.yaml*T*.pre-commit-config.yaml* *.pre-commit-config.yaml*s*.pre-commit-config.yaml*u*.pre-commit-config.yaml*p*.pre-commit-config.yaml*p*.pre-commit-config.yaml*o*.pre-commit-config.yaml*r*.pre-commit-config.yaml*t*.pre-commit-config.yaml* *.pre-commit-config.yaml*t*.pre-commit-config.yaml*h*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*3*.pre-commit-config.yaml*-*.pre-commit-config.yaml*t*.pre-commit-config.yaml*i*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml* *.pre-commit-config.yaml*d*.pre-commit-config.yaml*i*.pre-commit-config.yaml*s*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*v*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml*y*.pre-commit-config.yaml* *.pre-commit-config.yaml*h*.pre-commit-config.yaml*i*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml*a*.pre-commit-config.yaml*r*.pre-commit-config.yaml*c*.pre-commit-config.yaml*h*.pre-commit-config.yaml*y*.pre-commit-config.yaml*:*.pre-commit-config.yaml* *.pre-commit-config.yaml*T*.pre-commit-config.yaml*i*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml* *.pre-commit-config.yaml*1*.pre-commit-config.yaml* *.pre-commit-config.yaml*(*.pre-commit-config.yaml*`*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*k*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*/*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*.*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*m*.pre-commit-config.yaml*m*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*f*.pre-commit-config.yaml*i*.pre-commit-config.yaml*g*.pre-commit-config.yaml*.*.pre-commit-config.yaml*y*.pre-commit-config.yaml*a*.pre-commit-config.yaml*m*.pre-commit-config.yaml*l*.pre-commit-config.yaml*`*.pre-commit-config.yaml*)*.pre-commit-config.yaml*,*.pre-commit-config.yaml* *.pre-commit-config.yaml*T*.pre-commit-config.yaml*i*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml* *.pre-commit-config.yaml*2*.pre-commit-config.yaml* *.pre-commit-config.yaml*(*.pre-commit-config.yaml*P*.pre-commit-config.yaml*y*.pre-commit-config.yaml*t*.pre-commit-config.yaml*h*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*p*.pre-commit-config.yaml*r*.pre-commit-config.yaml*e*.pre-commit-config.yaml*-*.pre-commit-config.yaml*c*.pre-commit-config.yaml*o*.pre-commit-config.yaml*m*.pre-commit-config.yaml*m*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*/*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*l*.pre-commit-config.yaml*e*.pre-commit-config.yaml*f*.pre-commit-config.yaml*t*.pre-commit-config.yaml*h*.pre-commit-config.yaml*o*.pre-commit-config.yaml*o*.pre-commit-config.yaml*k*.pre-commit-config.yaml*`*.pre-commit-config.yaml*)*.pre-commit-config.yaml*,*.pre-commit-config.yaml* *.pre-commit-config.yaml*T*.pre-commit-config.yaml*i*.pre-commit-config.yaml*e*.pre-commit-config.yaml*r*.pre-commit-config.yaml* *.pre-commit-config.yaml*3*.pre-commit-config.yaml* *.pre-commit-config.yaml*(*.pre-commit-config.yaml*s*.pre-commit-config.yaml*t*.pre-commit-config.yaml*a*.pre-commit-config.yaml*n*.pre-commit-config.yaml*d*.pre-commit-config.yaml*a*.pre-commit-config.yaml*l*.pre-commit-config.yaml*o*.pre-commit-config.yaml*n*.pre-commit-config.yaml*e*.pre-commit-config.yaml* *.pre-commit-config.yaml*`*.pre-commit-config.yaml*.*.pre-commit-config.yaml*g*.pre-commit-config.yaml*i*.pre-commit-config.yaml*t*.pre-commit-config.yaml*/*.pre-commit-config.yaml*h*.pre-commit-config.yaml*o*.pre-commit-config.yaml*o*.pre-commit-config.yaml*k*.pre-commit-config.yaml*s*.pre-commit-config.yaml*/*.pre-commit-config.yaml*`*.pre-commit-config.yaml* *.pre-commit-config.yaml*s*.pre-commit-config.yaml*c*.pre-commit-config.yaml*r*.pre-commit-config.yaml*i*.pre-commit-config.yaml*p*.pre-commit-config.yaml*t*.pre-commit-config.yaml*s*.pre-commit-config.yaml*)*.pre-commit-config.yaml*.*.pre-commit-config.yaml*
+*.pre-commit-config.yaml*- **FR-007**: Both hooks MUST enforce a hard non-blocking timeout of $\le 500\text{ ms}$. If the daemon is offline, socket hangs, or execution times out, the hook MUST immediately exit with code 0 (`fail-open`).
 - **FR-008**: Pre-commit hook CLI output MUST present human-readable diagnostics with clear file paths, line numbers, and actionable remediation steps without requiring the user to open VS Code.
 
 ### 3.3 Brownfield Debt Baseline & Regression Decision Engine
-- **FR-009**: The Rust core MUST generate and maintain a `KnowledgeDebtBaseline` structure stored at `.context-vault/baseline.json`, recording:
+- **FR-009**: The Rust core MUST generate and maintain a `KnowledgeDebtBaseline` structure stored at *.context-vault/baseline.json*, recording:
   - `baseline_commit`: Git commit hash where baseline was established.
   - `timestamp`: RFC 3339 timestamp.
   - `broken_links`: Array of existing broken link signatures (`source`, `target`, `raw_text`).
@@ -163,7 +244,7 @@ Knowledge mutations occur exclusively at Git commits. File saves in the editor d
 
 | Requirement ID | Metric / Invariant | Threshold Ceiling | Verification Method |
 | :--- | :--- | :--- | :--- |
-| **NFR-001** | Pre-Commit Candidate Evaluation | $\le 150\text{ ms}$ for staged changes up to 20 files | Criterion benchmark `benches/candidate_benchmark.rs` |
+| **NFR-001** | Pre-Commit Candidate Evaluation | $\le 150\text{ ms}$ for staged changes up to 20 files | Criterion benchmark `crates/core/benches/candidate_benchmark.rs` |
 | **NFR-002** | Hook Execution Timeout (Fail-Open) | Strict $\le 500\text{ ms}$ | Hanging socket mock test |
 | **NFR-003** | Post-Commit Incremental Patch | $\le 50\text{ ms}$ for 1–5 changed notes | Criterion benchmark |
 | **NFR-004** | Candidate Fingerprint Search | $\le 80\text{ ms}$ across 5,000 indexed notes | Inverted index candidate retrieval test |

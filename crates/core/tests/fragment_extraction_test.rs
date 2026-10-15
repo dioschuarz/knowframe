@@ -97,17 +97,15 @@ No links here.
 
     // Test inbound population
     let mut node_b = NoteNode::new("beta.md", "/path/beta.md", "Beta");
-    node_b.fragments = vec![
-        llm_wiki_core::fragment::FragmentMetadata {
-            anchor: "target-section".to_string(),
-            heading: "Target Section".to_string(),
-            start_line: 1,
-            end_line: 10,
-            tokens: 50,
-            inbound: 0,
-            outbound: 0,
-        },
-    ];
+    node_b.fragments = vec![llm_wiki_core::fragment::FragmentMetadata {
+        anchor: "target-section".to_string(),
+        heading: "Target Section".to_string(),
+        start_line: 1,
+        end_line: 10,
+        tokens: 50,
+        inbound: 0,
+        outbound: 0,
+    }];
 
     let mut nodes = HashMap::new();
     nodes.insert("beta.md".to_string(), node_b);
@@ -134,17 +132,15 @@ fn test_fragment_link_resolution_and_dead_anchor_reporting() {
     let mut topology = GraphTopology::new();
 
     let mut target_node = NoteNode::new("target.md", "/workspace/target.md", "Target Doc");
-    target_node.fragments = vec![
-        llm_wiki_core::fragment::FragmentMetadata {
-            anchor: "auth-flow".to_string(),
-            heading: "Auth Flow".to_string(),
-            start_line: 5,
-            end_line: 15,
-            tokens: 120,
-            inbound: 0,
-            outbound: 0,
-        },
-    ];
+    target_node.fragments = vec![llm_wiki_core::fragment::FragmentMetadata {
+        anchor: "auth-flow".to_string(),
+        heading: "Auth Flow".to_string(),
+        start_line: 5,
+        end_line: 15,
+        tokens: 120,
+        inbound: 0,
+        outbound: 0,
+    }];
     topology.add_node(target_node);
     topology.set_headings("target.md".to_string(), vec!["Auth Flow".to_string()]);
 
@@ -183,12 +179,26 @@ fn test_fragment_link_resolution_and_dead_anchor_reporting() {
 
     topology.resolve_links();
 
-    let valid = topology.edges.iter().find(|e| e.id == "source.md->target.md" && !e.is_broken).unwrap();
-    assert_eq!(valid.resolution_status, Some(LinkResolutionStatus::Resolved));
+    let valid = topology
+        .edges
+        .iter()
+        .find(|e| e.id == "source.md->target.md" && !e.is_broken)
+        .unwrap();
+    assert_eq!(
+        valid.resolution_status,
+        Some(LinkResolutionStatus::Resolved)
+    );
     assert_eq!(valid.target_fragment, Some("auth-flow".to_string()));
 
-    let broken = topology.edges.iter().find(|e| e.id == "source.md->target.md" && e.is_broken).unwrap();
-    assert_eq!(broken.resolution_status, Some(LinkResolutionStatus::BrokenFragmentAnchor));
+    let broken = topology
+        .edges
+        .iter()
+        .find(|e| e.id == "source.md->target.md" && e.is_broken)
+        .unwrap();
+    assert_eq!(
+        broken.resolution_status,
+        Some(LinkResolutionStatus::BrokenFragmentAnchor)
+    );
 
     // Verify inbound count on target fragment was incremented for the valid link
     let target = topology.get_node("target.md").unwrap();

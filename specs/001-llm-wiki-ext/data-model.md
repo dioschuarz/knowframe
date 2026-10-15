@@ -1,3 +1,60 @@
+---
+wiki:
+  content_hash: 8e25086f4b36acb8bdea40f1f8a7d310e94ccfd3a81d5cd3bd85a9a1b8962fe2
+  fragments:
+    phase-1-data-model-domain-entities-schema-specifications:
+      tokens: 2591
+      inbound: 0
+      outbound: 0
+    1-entity-overview-relationship-diagram:
+      tokens: 388
+      inbound: 0
+      outbound: 0
+    2-entity-definitions-fields:
+      tokens: 2139
+      inbound: 0
+      outbound: 0
+    21-notenode:
+      tokens: 495
+      inbound: 0
+      outbound: 0
+    node-status-transitions:
+      tokens: 107
+      inbound: 0
+      outbound: 0
+    22-noteedge:
+      tokens: 293
+      inbound: 0
+      outbound: 0
+    23-clustercolorgroup:
+      tokens: 487
+      inbound: 0
+      outbound: 0
+    color-rule-matching-algorithm:
+      tokens: 293
+      inbound: 0
+      outbound: 0
+    24-tokensummary:
+      tokens: 209
+      inbound: 0
+      outbound: 0
+    25-gitcommitdelta:
+      tokens: 185
+      inbound: 0
+      outbound: 0
+    26-contextvaultconfig:
+      tokens: 461
+      inbound: 0
+      outbound: 0
+    vaultsettings:
+      tokens: 141
+      inbound: 0
+      outbound: 0
+    tokenbudgetsettings:
+      tokens: 92
+      inbound: 0
+      outbound: 0
+---
 # Phase 1 Data Model: Domain Entities & Schema Specifications
 
 **Feature**: LLM Wiki Extension for VS Code (`llm_wiki_ext4vsc`)  

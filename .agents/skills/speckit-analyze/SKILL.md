@@ -1,13 +1,114 @@
 ---
-name: "speckit-analyze"
-description: "Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, plan.md, and tasks.md after task generation."
-compatibility: "Requires spec-kit project structure with .specify/ directory"
+name: speckit-analyze
+description: Perform a non-destructive cross-artifact consistency and quality analysis across spec.md, plan.md, and tasks.md after task generation.
+compatibility: Requires spec-kit project structure with .specify/ directory
 metadata:
-  author: "github-spec-kit"
-  source: "templates/commands/analyze.md"
+  author: github-spec-kit
+  source: templates/commands/analyze.md
+wiki:
+  content_hash: 7ca1ce40082d29a7f3b8a14161650c9d5c95c5414ba70138dd2187efb446895c
+  fragments:
+    user-input:
+      tokens: 30
+      inbound: 0
+      outbound: 0
+    pre-execution-checks:
+      tokens: 495
+      inbound: 0
+      outbound: 0
+    goal:
+      tokens: 59
+      inbound: 0
+      outbound: 0
+    operating-constraints:
+      tokens: 134
+      inbound: 0
+      outbound: 0
+    execution-steps:
+      tokens: 891
+      inbound: 0
+      outbound: 0
+    1-initialize-analysis-context:
+      tokens: 139
+      inbound: 0
+      outbound: 0
+    2-load-artifacts-progressive-disclosure:
+      tokens: 145
+      inbound: 0
+      outbound: 0
+    3-build-semantic-models:
+      tokens: 202
+      inbound: 0
+      outbound: 0
+    4-detection-passes-token-efficient-analysis:
+      tokens: 281
+      inbound: 0
+      outbound: 0
+    a-duplication-detection:
+      tokens: 23
+      inbound: 0
+      outbound: 0
+    b-ambiguity-detection:
+      tokens: 46
+      inbound: 0
+      outbound: 0
+    c-underspecification:
+      tokens: 40
+      inbound: 0
+      outbound: 0
+    d-constitution-alignment:
+      tokens: 28
+      inbound: 0
+      outbound: 0
+    e-coverage-gaps:
+      tokens: 41
+      inbound: 0
+      outbound: 0
+    f-inconsistency:
+      tokens: 69
+      inbound: 0
+      outbound: 0
+    5-severity-assignment:
+      tokens: 97
+      inbound: 0
+      outbound: 0
+    6-produce-compact-analysis-report:
+      tokens: 23
+      inbound: 0
+      outbound: 0
+    specification-analysis-report:
+      tokens: 770
+      inbound: 0
+      outbound: 0
+    7-provide-next-actions:
+      tokens: 99
+      inbound: 0
+      outbound: 0
+    8-offer-remediation:
+      tokens: 36
+      inbound: 0
+      outbound: 0
+    9-check-for-extension-hooks:
+      tokens: 471
+      inbound: 0
+      outbound: 0
+    operating-principles:
+      tokens: 160
+      inbound: 0
+      outbound: 0
+    context-efficiency:
+      tokens: 75
+      inbound: 0
+      outbound: 0
+    analysis-guidelines:
+      tokens: 81
+      inbound: 0
+      outbound: 0
+    context:
+      tokens: 7
+      inbound: 0
+      outbound: 0
 ---
-
-
 ## User Input
 
 ```text

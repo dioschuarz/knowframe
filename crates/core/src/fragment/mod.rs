@@ -21,14 +21,19 @@ pub struct FragmentMetadata {
     /// Heading plain text as written in Markdown (e.g. "## Authentication").
     pub heading: String,
     /// 1-indexed start line in source document.
+    #[serde(alias = "startLine")]
     pub start_line: usize,
     /// 1-indexed end line (up to next heading of equal/higher rank or EOF).
+    #[serde(alias = "endLine")]
     pub end_line: usize,
     /// Raw BPE token count (cl100k_base).
+    #[serde(default)]
     pub tokens: u32,
     /// Inbound reference count targeting this fragment.
+    #[serde(default)]
     pub inbound: u32,
     /// Outbound reference count originating within this fragment.
+    #[serde(default)]
     pub outbound: u32,
 }
 
