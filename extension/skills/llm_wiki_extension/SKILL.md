@@ -247,7 +247,7 @@ Every issue reported by `llm-wiki-core issues` belongs to one of five architectu
 | Pillar | Defect Types Audited | Root Cause | Agent Remediation Protocol |
 | :--- | :--- | :--- | :--- |
 | **`integrity`** | Broken wikilinks `[[target]]`, broken Markdown links `[text](./missing.md)`, dangling section anchors `doc.md#non-existent-heading` | Target file moved/renamed/deleted, or heading text altered without updating anchor | 1. Resolve correct relative path or updated note name.<br>2. Run `materialize` on target to verify valid `#slug` anchors.<br>3. Update referencing link target or restore missing section. |
-| **`structure`** | Oversized documents (>50k tokens), missing fragment metadata on large files, reference concentration ($\ge 70\%$), unfragmented central hubs | Monolithic notes accumulating disparate responsibilities; agent prompts forced to load full docs | 1. Run `llm-wiki-core materialize <path> --stage` to cache frontmatter anchors.<br>2. Adopt `section_addressing` to direct agent queries to `#specific-anchor`.<br>3. Use `method-evolution` to generate topic decomposition or lightweight index routers. |
+| **`structure`** | Oversized documents (>50k tokens), missing fragment metadata on large files, reference concentration ($\ge 70\%$), unfragmented central hubs, unanchored section references (`StructureDebtType::UnanchoredReference`) targeting multi-fragment documents | Monolithic notes accumulating disparate responsibilities; agent prompts forced to load full docs; inter-document links lacking specific `#section-slug` anchors | 1. Run `knowframe materialize <path> --stage` to cache frontmatter anchors.<br>2. Add explicit `#slug` anchors to links targeting sectioned documents.<br>3. Baseline legacy unanchored links via `knowframe baseline init --force` to prevent blocking on pre-existing debt. |
 | **`consistency`** | Duplicate conceptual authority, collision duplicates (high lexical/term overlap $\ge 75\%$), title divergence, canonical conflict | Multiple notes authored on the same topic without cross-referencing | 1. Identify canonical candidate via Git chronology and inbound hub centrality.<br>2. Consolidate secondary content into canonical doc or reframe as specialized extension.<br>3. Replace redundant duplicate with a link or router pointer. |
 | **`discoverability`** | Orphan notes (0 in-degree, 0 out-degree), isolated silos, excessive Context Trace depth (>4 hops), unlinked hubs | Notes created in leaf folders without integration into index or harness files | 1. Add bidirectional wikilinks from Level 0 hubs (`AGENTS.md`, `wiki_index.md`) or domain indexes.<br>2. Introduce a `lightweight_index` router note in the silo directory. |
 | **`freshness`** | Code citations pointing to deleted/renamed symbols or files, code modified in Git after documentation commit | Documentation drifting away from underlying codebase implementation | 1. Inspect Git delta and reverse code-doc impact map.<br>2. Re-verify cited code symbols and line numbers against current disk state.<br>3. Update documentation text, API signatures, and file references to match code. |
@@ -444,6 +444,9 @@ llm-wiki-core git-delta --root . --quiet <changed-file>...
 ### Knowledge Debt Baseline (*.context-vault/baseline.json*)
 Allows legacy codebases to adopt KnowFrame without being blocked by pre-existing defects:
 
+> [!IMPORTANT]
+> **Git Clean Status Prerequisite**: Before initiating defect remediation, running structural transformations, or establishing/resetting the debt baseline, always verify that all repositories across the workspace are clean (`git status` is clear) and current changes are committed. This ensures baseline captures and defect fixes are cleanly isolated and tracked.
+
 ```bash
 # Capture current workspace issues into baseline
 llm-wiki-core baseline init --root .
@@ -571,4 +574,33 @@ if jq -e '.decision == "block"' /tmp/validation.json > /dev/null; then
   jq '.regressions' /tmp/validation.json
   exit 1
 fi
+```
+
+### Recipe D: Achieving 100% Quality Score & 0 Active Findings (Triage, Fixes & Baseline Convergence)
+When targeting 0 active findings and a 100/100 effective quality score in a brownfield workspace:
+
+```bash
+# 1. Ensure all repositories have clean working trees and all current work is committed
+git status
+
+# 2. Run quality audit to observe initial pillar scores and total active issues
+llm-wiki-core quality --root .
+
+# 3. Triage and fix immediate hard defects (e.g. broken links, invalid file paths)
+llm-wiki-core issues --root . --pillar integrity --limit 20
+# Manually fix broken markdown links or syntax errors in identified notes
+
+# 4. For legacy brownfield structural debt (e.g. thousands of unanchored links across multi-fragment notes),
+# initialize or refresh the baseline to capture legacy findings:
+llm-wiki-core baseline init --root . --force
+
+# 5. Verify that active findings drop to 0 and effective quality score reaches 100/100:
+llm-wiki-core quality --root .
+# Expected output:
+# Active Issues: 0
+# Effective Score: 100.0 / 100
+
+# 6. Commit the updated .context-vault/baseline.json
+git add .context-vault/baseline.json
+git commit -m "chore(knowframe): establish clean knowledge baseline (100% health score, 0 active issues)"
 ```
