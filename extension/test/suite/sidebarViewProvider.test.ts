@@ -23,6 +23,7 @@ suite('SidebarViewProvider 4-Card Redesign Test Suite', () => {
       connected_documents: 4,
       isolated_documents: 47,
       total_references: 72,
+      hub_path: 'AGENTS.md',
     },
     evolution: {
       orientation: 'ai_oriented',
@@ -90,20 +91,33 @@ suite('SidebarViewProvider 4-Card Redesign Test Suite', () => {
     assert.ok(!html.includes('>Links<'), 'Must use References instead of generic Links label in pills');
   });
 
-  test('T014: Explore graph button with LLM Wiki graph icon', () => {
+  test('T014: Explore graph button moved into Health card header with no duplicate blue refresh/settings buttons', () => {
     const html = renderSidebarHtml({
       cspPolicy: "default-src 'none'",
       nonce: 'test-nonce',
       initialSummary: sampleSummary,
     });
 
-    assert.ok(html.includes('dash-btn-explore-graph'), 'Must have Explore graph button');
+    assert.ok(html.includes('<title>KnowFrame - Manager</title>'), 'Title must be KnowFrame - Manager');
+    assert.ok(html.includes('id="dash-btn-explore-graph"'), 'Must have Explore graph button');
     assert.ok(html.includes('Explore graph'), 'Button text must be Explore graph');
     // SVG icon matching sidebar-icon.svg
     assert.ok(html.includes('viewBox="0 0 24 24"'), 'Must contain 24x24 SVG graph icon matching sidebar-icon.svg');
+
+    // Verify duplicate top buttons are removed from cards
+    assert.ok(!html.includes('id="dash-btn-open-settings"'), 'Duplicate settings button in Health header must be removed');
+    assert.ok(!html.includes('id="dash-btn-refresh-quality"'), 'Duplicate refresh button in Health header must be removed');
+    assert.ok(!html.includes('id="dash-btn-rescan-vault"'), 'Duplicate rescan button in Structure header must be removed');
+
+    // Verify Explore graph is inside the Health card (appears before Structure card)
+    const healthIdx = html.indexOf('id="pillar-health"');
+    const exploreIdx = html.indexOf('id="dash-btn-explore-graph"');
+    const structureIdx = html.indexOf('id="pillar-structure"');
+    assert.ok(healthIdx !== -1 && exploreIdx !== -1 && structureIdx !== -1, 'Health, Explore graph, and Structure must exist');
+    assert.ok(healthIdx < exploreIdx && exploreIdx < structureIdx, 'Explore graph button must be inside the Health card header');
   });
 
-  test('T015 & T016: Evolution card and Sync card invariants', () => {
+  test('T015 & T016: Evolution card (no objective sentence) and Sync card invariants with gear icon-only buttons & hover tooltips', () => {
     const html = renderSidebarHtml({
       cspPolicy: "default-src 'none'",
       nonce: 'test-nonce',
@@ -111,42 +125,29 @@ suite('SidebarViewProvider 4-Card Redesign Test Suite', () => {
     });
 
     // Evolution
-    assert.ok(html.includes('evolution-mode-badge'), 'Must contain orientation badge');
-    assert.ok(html.includes('dash-btn-configure-evolution'), 'Must contain evolution configure/change button');
-    assert.ok(html.includes('structural opportunities detected') || html.includes('structural opportunity detected'), 'Must contain opportunities text');
+    const bodyHtml = html.split('<script')[0];
+    assert.ok(bodyHtml.includes('evolution-mode-badge'), 'Must contain orientation badge');
+    assert.ok(bodyHtml.includes('dash-btn-configure-evolution'), 'Must contain evolution configure gear button');
+    assert.ok(bodyHtml.includes('structural opportunities detected') || bodyHtml.includes('structural opportunity detected'), 'Must contain opportunities text');
+    assert.ok(!bodyHtml.includes('id="evolution-objective-text"'), 'Must NOT render evolution objective sentence');
+    assert.ok(!bodyHtml.includes('Optimizing AI discovery, context efficiency & reuse'), 'Must NOT include mode description sentence in Evolution card');
+
+    // Gear icon-only buttons with tooltip bubbles
+    assert.ok(html.includes('class="dash-action-btn icon-only-btn gear-action-btn" id="dash-btn-change-hub"'), 'Change hub must be a gear icon-only button');
+    assert.ok(html.includes('data-tooltip="Change central hub note"'), 'Change hub gear button must have hover tooltip bubble');
+    const structureHeaderIdx = html.indexOf('<div class="pillar-title">STRUCTURE</div>');
+    const changeHubIdx = html.indexOf('id="dash-btn-change-hub"');
+    const statsPillsIdx = html.indexOf('class="stats-pills-row"');
+    assert.ok(structureHeaderIdx < changeHubIdx && changeHubIdx < statsPillsIdx, 'Change hub gear button must be in the upper right header of the STRUCTURE box');
+    assert.ok(html.includes('class="dash-action-btn icon-only-btn gear-action-btn" id="dash-btn-configure-evolution"'), 'Configure evolution must be a gear icon-only button');
+    assert.ok(html.includes('data-tooltip="Configure evolution mode & strategies"'), 'Configure evolution gear button must have hover tooltip bubble');
+    assert.ok(html.includes('class="dash-action-btn icon-only-btn gear-action-btn" id="dash-btn-open-harness"'), 'Harness tools button must be a gear icon-only button');
+    assert.ok(html.includes('data-tooltip="Configure AI harness & agent tools"'), 'Harness tools gear button must have hover tooltip bubble');
+    assert.ok(!html.includes('>Change</button>'), 'Must not render text "Change" inside buttons');
+    assert.ok(!html.includes('Harness Tools</button>'), 'Must not render text "Harness Tools" inside button');
 
     // Sync
     assert.ok(html.includes('sync-indicator-dot'), 'Must contain sync status dot');
     assert.ok(html.includes('Synced ≠ Healthy'), 'Must contain Invariant I reminder (Synced != Healthy)');
-  });
-
-  test('Renders Management & Settings gear button in Health card header left of refresh button', () => {
-    const html = renderSidebarHtml({
-      cspPolicy: "default-src 'none'",
-      nonce: 'test-nonce',
-      initialSummary: sampleSummary,
-    });
-
-    assert.ok(html.includes('id="dash-btn-open-settings"'), 'Must contain Management & Settings button');
-    assert.ok(html.includes('title="Management & Settings"'), 'Must have title Management & Settings');
-    assert.ok(html.includes('id="dash-btn-refresh-quality"'), 'Must contain Refresh Quality button');
-
-    // Verify ordering: gear button appears before refresh button in HTML
-    const settingsIdx = html.indexOf('dash-btn-open-settings');
-    const refreshIdx = html.indexOf('dash-btn-refresh-quality');
-    assert.ok(settingsIdx !== -1, 'Gear button must exist');
-    assert.ok(refreshIdx !== -1, 'Refresh button must exist');
-    assert.ok(settingsIdx < refreshIdx, 'Gear button must be positioned to the left of the refresh button');
-  });
-
-  test('Renders Rescan Vault button in Structure card header alongside Explore graph', () => {
-    const html = renderSidebarHtml({
-      cspPolicy: "default-src 'none'",
-      nonce: 'test-nonce',
-      initialSummary: sampleSummary,
-    });
-
-    assert.ok(html.includes('id="dash-btn-rescan-vault"'), 'Must contain Rescan Vault button in Structure card');
-    assert.ok(html.includes('title="Rescan Vault & Rebuild Graph"'), 'Must have title Rescan Vault & Rebuild Graph');
   });
 });

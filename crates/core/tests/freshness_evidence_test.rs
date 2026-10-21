@@ -227,6 +227,7 @@ The authentication service handles tokens.
     let non_blocking_config = llm_wiki_core::model::ReviewGatingConfig {
         enforce_doc_review: false,
         block_on_legacy_debt: false,
+        block_on_missing_fragments: false,
     };
     let affected_pending = calculate_affected_documents(
         root,
@@ -244,6 +245,7 @@ The authentication service handles tokens.
     let blocking_config = llm_wiki_core::model::ReviewGatingConfig {
         enforce_doc_review: true,
         block_on_legacy_debt: false,
+        block_on_missing_fragments: true,
     };
     let affected_blocked = calculate_affected_documents(
         root,

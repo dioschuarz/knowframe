@@ -32,19 +32,19 @@ pub fn write_config_if_missing(
 
 /// Generates Tier 1 (.pre-commit-config.yaml for `prek`) dual hook content.
 pub fn generate_tier1_prek_yaml() -> String {
-    r#"# LLM Wiki Admission Control & Sync Hooks (Tier 1: prek / pre-commit)
+    r#"# KnowFrame Admission Control & Sync Hooks (Tier 1: prek / pre-commit)
 repos:
   - repo: local
     hooks:
       - id: llm-wiki-validate
-        name: LLM Wiki Pre-Commit Knowledge Admission Validator
-        entry: llm-wiki-core validate --staged-only --timeout-ms 500
+        name: KnowFrame Pre-Commit Knowledge Admission Validator
+        entry: knowframe-core validate --staged-only --timeout-ms 500
         language: system
         stages: [pre-commit]
         pass_filenames: false
       - id: llm-wiki-sync
-        name: LLM Wiki Post-Commit Knowledge Graph Synchronizer
-        entry: llm-wiki-core git-delta --timeout-ms 500
+        name: KnowFrame Post-Commit Knowledge Graph Synchronizer
+        entry: knowframe-core git-delta --timeout-ms 500
         language: system
         stages: [post-commit]
         always_run: true
@@ -89,14 +89,14 @@ pub fn detect_and_configure_tier2_hooks(
   - repo: local
     hooks:
       - id: llm-wiki-validate
-        name: LLM Wiki Pre-Commit Knowledge Admission Validator
-        entry: llm-wiki-core validate --staged-only --timeout-ms 500
+        name: KnowFrame Pre-Commit Knowledge Admission Validator
+        entry: knowframe-core validate --staged-only --timeout-ms 500
         language: system
         stages: [pre-commit]
         pass_filenames: false
       - id: llm-wiki-sync
-        name: LLM Wiki Post-Commit Knowledge Graph Synchronizer
-        entry: llm-wiki-core git-delta --timeout-ms 500
+        name: KnowFrame Post-Commit Knowledge Graph Synchronizer
+        entry: knowframe-core git-delta --timeout-ms 500
         language: system
         stages: [post-commit]
         always_run: true
@@ -124,7 +124,10 @@ pub fn detect_and_configure_tier2_hooks(
 
     if let Some(path) = target_left {
         let content = fs::read_to_string(&path)?;
-        if content.contains("llm-wiki-core validate") || content.contains("llm-wiki-core git-delta")
+        if content.contains("knowframe-core validate")
+            || content.contains("knowframe-core git-delta")
+            || content.contains("llm-wiki-core validate")
+            || content.contains("llm-wiki-core git-delta")
         {
             return Ok(Tier2DetectionResult::LefthookAlreadyConfigured);
         }
@@ -133,13 +136,13 @@ pub fn detect_and_configure_tier2_hooks(
 pre-commit:
   commands:
     llm-wiki-validate:
-      run: llm-wiki-core validate --staged-only --timeout-ms 500
-      fail_text: "Knowledge admission validation failed. Run 'llm-wiki-core validate' for details."
+      run: knowframe-core validate --staged-only --timeout-ms 500
+      fail_text: "Knowledge admission validation failed. Run 'knowframe-core validate' for details."
 
 post-commit:
   commands:
     llm-wiki-sync:
-      run: llm-wiki-core git-delta --timeout-ms 500
+      run: knowframe-core git-delta --timeout-ms 500
 "#;
         let mut new_content = content;
         new_content.push_str(snippet);
@@ -158,19 +161,19 @@ pub fn install_tier3_shell_hooks(workspace_root: &Path) -> Result<(), std::io::E
     }
 
     let pre_commit_script = r#"#!/bin/sh
-# LLM Wiki Pre-Commit Knowledge Admission Control Hook
+# KnowFrame Pre-Commit Knowledge Admission Control Hook
 # Strict <= 500ms non-blocking fail-open ceiling
-if command -v llm-wiki-core >/dev/null 2>&1; then
-  llm-wiki-core validate --staged-only --timeout-ms 500 || exit $?
+if command -v knowframe-core >/dev/null 2>&1; then
+  knowframe-core validate --staged-only --timeout-ms 500 || exit $?
 fi
 exit 0
 "#;
 
     let post_commit_script = r#"#!/bin/sh
-# LLM Wiki Post-Commit Knowledge Graph Synchronizer Hook
+# KnowFrame Post-Commit Knowledge Graph Synchronizer Hook
 # Non-blocking fail-open
-if command -v llm-wiki-core >/dev/null 2>&1; then
-  llm-wiki-core git-delta --timeout-ms 500 >/dev/null 2>&1 || true
+if command -v knowframe-core >/dev/null 2>&1; then
+  knowframe-core git-delta --timeout-ms 500 >/dev/null 2>&1 || true
 fi
 exit 0
 "#;

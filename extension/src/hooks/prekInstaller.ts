@@ -7,14 +7,14 @@ import type * as vscode from 'vscode';
 const execAsync = promisify(exec);
 
 export function generatePreCommitConfigContent(): string {
-  return `# LLM Wiki - Event-driven Git Hook Orchestration
+  return `# KnowFrame - Event-driven Git Hook Orchestration
 # Leverages prek (Rust-native) or pre-commit with regex file filtering
 repos:
   - repo: local
     hooks:
       - id: llm-wiki-sync
-        name: LLM Wiki Knowledge Graph Sync
-        entry: llm-wiki-core git-delta
+        name: KnowFrame Knowledge Graph Sync
+        entry: knowframe-core git-delta
         language: system
         stages: [post-commit]
         always_run: false
@@ -25,11 +25,11 @@ repos:
 
 export function generateFallbackPostCommitScript(): string {
   return `#!/bin/sh
-# LLM Wiki - Zero-dependency fail-open post-commit hook fallback
+# KnowFrame - Zero-dependency fail-open post-commit hook fallback
 # Enforces <= 500ms timeout with silent fail-open exit 0
 changed_files=$(git diff-tree -r --name-only --no-commit-id HEAD 2>/dev/null | grep -i '\\.md$')
 if [ -n "$changed_files" ]; then
-  llm-wiki-core git-delta $changed_files >/dev/null 2>&1 || true
+  knowframe-core git-delta $changed_files >/dev/null 2>&1 || true
 fi
 exit 0
 `;
@@ -56,8 +56,8 @@ export async function installPrek(
   - repo: local
     hooks:
       - id: llm-wiki-sync
-        name: LLM Wiki Knowledge Graph Sync
-        entry: llm-wiki-core git-delta
+        name: KnowFrame Knowledge Graph Sync
+        entry: knowframe-core git-delta
         language: system
         stages: [post-commit]
         always_run: false

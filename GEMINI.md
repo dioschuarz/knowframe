@@ -1,9 +1,9 @@
 ---
 wiki:
-  content_hash: 88058249590962a1c3789adc95ce647cddae0cfef2068205ba93258a25163c44
+  content_hash: 5cea88c262855213d0965eb788e57f347526e4c496392d2a7168ff47cfd30f6d
   fragments:
     geminimd-gemini-cli-system-instructions-knowledge-index:
-      tokens: 1487
+      tokens: 1489
       inbound: 0
       outbound: 67
     1-operating-conventions-guidelines:
@@ -11,11 +11,11 @@ wiki:
       inbound: 0
       outbound: 0
     knowledge-index:
-      tokens: 1376
+      tokens: 1375
       inbound: 0
       outbound: 67
     governance-invariants:
-      tokens: 23
+      tokens: 22
       inbound: 0
       outbound: 1
     feature-specifications-architecture:
@@ -69,7 +69,7 @@ wiki:
 ---
 # GEMINI.md — Gemini CLI System Instructions & Knowledge Index
 
-Welcome to `llm_wiki_ext4vsc`. This file serves as the deterministic knowledge and instructions entry point for Gemini CLI and Antigravity.
+Welcome to `knowframe` (**KnowFrame** — Knowledge Management Framework). This file serves as the deterministic knowledge and instructions entry point for Gemini CLI and Antigravity.
 
 ## 1. Operating Conventions & Guidelines
 - **Files & Notes**: Use `snake_case` for markdown notes and documentation.
@@ -79,7 +79,7 @@ Welcome to `llm_wiki_ext4vsc`. This file serves as the deterministic knowledge a
 ## Knowledge Index
 
 ### Governance & Invariants
-- [LLM Wiki Constitution & 16 Invariants](CONSTITUTION.md)
+- [KnowFrame Constitution & 17 Invariants](CONSTITUTION.md)
 
 ### Feature Specifications & Architecture
 

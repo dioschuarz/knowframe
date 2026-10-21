@@ -1,9 +1,9 @@
 ---
 wiki:
-  content_hash: dd1161d96103e861138d17f9d6285c1242dcc2a09c63b2e24b00501bd47e7ad8
+  content_hash: 3318cbcf7a5f8d51edac629a6aef31fed0f02d46c3ac7cdceee4c89a05489285
   fragments:
     tasks-knowledge-quality-admission-control-continuous-enforcement:
-      tokens: 8212
+      tokens: 8213
       inbound: 0
       outbound: 3
     task-matrix-dependencies:
@@ -15,7 +15,7 @@ wiki:
       inbound: 0
       outbound: 0
     phase-2-knowledge-debt-baseline-engine-tasks-t006t011:
-      tokens: 495
+      tokens: 496
       inbound: 0
       outbound: 0
     phase-3-ephemeral-candidate-graph-overlay-tasks-t012t017:

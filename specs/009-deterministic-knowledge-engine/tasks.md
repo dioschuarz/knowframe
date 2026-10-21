@@ -1,9 +1,9 @@
 ---
 wiki:
-  content_hash: 03b36b415e76415595afbf85115e9812a116cb65ba4301952cac6193df61d1f7
+  content_hash: 1e98256c935727b277e84d9121099a58beae55aa9226531297dca76140405ca9
   fragments:
     tasks-deterministic-knowledge-engineering-engine-009-deterministic-knowledge-engine:
-      tokens: 5198
+      tokens: 5197
       inbound: 0
       outbound: 2
     phase-1-setup-shared-infrastructure:
@@ -27,11 +27,11 @@ wiki:
       inbound: 0
       outbound: 0
     phase-4-user-story-2-profile-relative-health-assessment-across-4-evolution-modes-priority-p2:
-      tokens: 655
+      tokens: 654
       inbound: 0
       outbound: 0
     tests-for-user-story-2:
-      tokens: 221
+      tokens: 220
       inbound: 0
       outbound: 0
     implementation-for-user-story-2:

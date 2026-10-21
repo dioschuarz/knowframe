@@ -90,6 +90,7 @@ pub enum RegressionCategory {
     SemanticCollision,
     TechnicalDriftContradiction,
     UnreviewedDocumentationObligation,
+    UnanchoredReference,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]

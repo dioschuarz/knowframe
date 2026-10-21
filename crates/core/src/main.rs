@@ -1,4 +1,4 @@
-//! Main entrypoint for llm-wiki-core CLI.
+//! Main entrypoint for knowframe-core CLI.
 
 use clap::{Parser, Subcommand};
 use llm_wiki_core::cli::baseline_cmd::{execute_baseline_init, execute_baseline_reset};
@@ -15,9 +15,9 @@ use llm_wiki_core::ipc::server::start_ipc_server;
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "llm-wiki-core")]
+#[command(name = "knowframe-core")]
 #[command(
-    about = "Rust core engine for LLM Wiki knowledge graph, admission control and context budgeting",
+    about = "Rust core engine for KnowFrame knowledge graph, admission control and context budgeting",
     long_about = None
 )]
 struct Cli {

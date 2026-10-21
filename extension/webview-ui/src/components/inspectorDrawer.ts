@@ -207,16 +207,28 @@ export function renderEdgeInspectionHtml(props: EdgeInspectionProps): string {
   const { edge, sourceLabel } = props;
   const sourceName = sourceLabel || edge.source;
   const lineCoord = edge.line ? `Line ${edge.line}` : 'Unspecified line';
-  const errorType = edge.resolutionStatus || (edge.isBroken ? 'broken_link' : 'resolved');
+  const isUnanchored = !edge.isBroken && !edge.anchor && !edge.target_fragment;
+  const errorType = isUnanchored
+    ? 'unanchored_reference'
+    : edge.resolutionStatus || (edge.isBroken ? 'broken_link' : 'resolved');
+
+  const titleText = isUnanchored ? 'Unanchored Reference' : 'Broken Reference';
+  const iconSvg = isUnanchored
+    ? `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#f59e0b" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8.5"/><circle cx="8" cy="11" r="0.75" fill="#f59e0b"/></svg>`
+    : `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#ef4444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5L14.5 13.5H1.5L8 1.5Z"/><line x1="8" y1="6" x2="8" y2="9.5"/><circle cx="8" cy="11.5" r="0.75" fill="#ef4444"/></svg>`;
+
+  const adviceHtml = isUnanchored
+    ? `The link in <code>${edge.source}</code> on line ${edge.line || 1} points to <code>${edge.target}</code> without specifying a section heading anchor (<code>#fragment</code>). Add an anchor to make agent and reader context loading directed and protect context budgeting.`
+    : `The link in <code>${edge.source}</code> on line ${edge.line || 1} points to <code>${edge.target}</code> which does not resolve to an existing note in this workspace. Click <strong>Fix reference</strong> to re-point the link to an existing file, or create the missing note.`;
 
   return `
     <div class="insp-header">
       <div class="insp-title-box">
         <span class="insp-icon">
-          <svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#ef4444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M8 1.5L14.5 13.5H1.5L8 1.5Z"/><line x1="8" y1="6" x2="8" y2="9.5"/><circle cx="8" cy="11.5" r="0.75" fill="#ef4444"/></svg>
+          ${iconSvg}
         </span>
         <div class="insp-header-titles">
-          <div class="insp-title">Broken Reference</div>
+          <div class="insp-title">${titleText}</div>
           <div class="insp-path">${sourceName} : ${lineCoord}</div>
         </div>
       </div>
@@ -236,8 +248,8 @@ export function renderEdgeInspectionHtml(props: EdgeInspectionProps): string {
             <span class="insp-d-val highlight-line">${lineCoord}</span>
           </div>
           <div class="insp-detail-row">
-            <span class="insp-d-lbl">Missing Target:</span>
-            <span class="insp-d-val target-missing" title="${edge.target}">${edge.target}</span>
+            <span class="insp-d-lbl">${isUnanchored ? 'Target Document:' : 'Missing Target:'}</span>
+            <span class="insp-d-val ${isUnanchored ? '' : 'target-missing'}" title="${edge.target}">${edge.target}</span>
           </div>
           ${edge.anchor ? `
           <div class="insp-detail-row">
@@ -245,8 +257,8 @@ export function renderEdgeInspectionHtml(props: EdgeInspectionProps): string {
             <span class="insp-d-val">#${edge.anchor}</span>
           </div>` : ''}
           <div class="insp-detail-row">
-            <span class="insp-d-lbl">Error Type:</span>
-            <span class="insp-error-badge">${errorType}</span>
+            <span class="insp-d-lbl">${isUnanchored ? 'Finding Type:' : 'Error Type:'}</span>
+            <span class="insp-error-badge ${isUnanchored ? 'badge-warn' : ''}">${errorType}</span>
           </div>
         </div>
       </div>
@@ -254,7 +266,7 @@ export function renderEdgeInspectionHtml(props: EdgeInspectionProps): string {
       <div class="insp-section">
         <div class="insp-section-header">Resolution Advice</div>
         <div class="insp-advice-text">
-          The link in <code>${edge.source}</code> on line ${edge.line || 1} points to <code>${edge.target}</code> which does not resolve to an existing note in this workspace. Click <strong>Fix reference</strong> to re-point the link to an existing file, or create the missing note.
+          ${adviceHtml}
         </div>
       </div>
     </div>
@@ -266,7 +278,7 @@ export function renderEdgeInspectionHtml(props: EdgeInspectionProps): string {
       </button>
       <button class="btn-secondary insp-action-btn" id="insp-btn-fix-reference">
         <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><path d="M12.5 1.5a3 3 0 0 0-3.8 3.8L2 12l2 2 6.7-6.7a3 3 0 0 0 3.8-3.8l-2 2-2-2 2-2Z"/></svg>
-        <span>Fix reference</span>
+        <span>${isUnanchored ? 'Edit link' : 'Fix reference'}</span>
       </button>
     </div>
   `;

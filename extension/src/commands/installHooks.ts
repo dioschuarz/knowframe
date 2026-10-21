@@ -7,7 +7,7 @@ export function registerInstallHooksCommand(
   return vscode.commands.registerCommand('llmWiki.installGitHooks', async () => {
     const folders = vscode.workspace.workspaceFolders;
     if (!folders || folders.length === 0) {
-      vscode.window.showErrorMessage('LLM Wiki: No open workspace folder found.');
+      vscode.window.showErrorMessage('KnowFrame: No open workspace folder found.');
       return;
     }
 
@@ -20,9 +20,9 @@ export function registerInstallHooksCommand(
     const result = await installGitHooksWithFallback(workspaceRoot, preferredEngine, outputChannel);
 
     if (result.success) {
-      vscode.window.showInformationMessage(`LLM Wiki: ${result.message}`);
+      vscode.window.showInformationMessage(`KnowFrame: ${result.message}`);
     } else {
-      vscode.window.showWarningMessage(`LLM Wiki: Hook installation incomplete: ${result.message}`);
+      vscode.window.showWarningMessage(`KnowFrame: Hook installation incomplete: ${result.message}`);
     }
   });
 }

@@ -1,6 +1,6 @@
 ---
 wiki:
-  content_hash: 990aea03941472c4e9c6199eb2ec46cbeab1a96e653fdc3856f24ad4bf834ebe
+  content_hash: 68533f5661e4384f15be4c246c3e9c9169b4f4a1d9121eea0ef5f422e1eadab5
   fragments:
     implementation-plan-knowledge-quality-admission-control-continuous-enforcement:
       tokens: 4242
@@ -11,11 +11,11 @@ wiki:
       inbound: 0
       outbound: 0
     2-directory-module-layout:
-      tokens: 944
+      tokens: 943
       inbound: 0
       outbound: 0
     rust-core-cratescoresrc:
-      tokens: 806
+      tokens: 805
       inbound: 0
       outbound: 0
     typescript-extension-extensionsrc-webview-ui:
@@ -23,11 +23,11 @@ wiki:
       inbound: 0
       outbound: 0
     3-phased-implementation-roadmap:
-      tokens: 2909
+      tokens: 2910
       inbound: 0
       outbound: 0
     phase-1-knowledge-debt-baseline-engine-rust:
-      tokens: 115
+      tokens: 116
       inbound: 0
       outbound: 0
     phase-2-in-memory-candidate-graph-validation-pipeline-rust:

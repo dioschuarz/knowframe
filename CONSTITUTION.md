@@ -1,17 +1,17 @@
 ---
 wiki:
-  content_hash: a8c6dc7175aec269c21fef724f667ea47b1ad87bfc7c0b074ae17ed92b2a5ea1
+  content_hash: 82125b2efc7fc3fb1048e70f08338e28d66b06379584c05d6d3710d7cb6f56e0
   fragments:
-    llm-wiki-extension-for-vs-code-llm-wiki-ext4vsc-constitution:
-      tokens: 8313
+    knowframe-extension-for-vs-code-knowframe-constitution:
+      tokens: 8288
       inbound: 0
       outbound: 3
     the-17-critical-invariants-non-negotiable:
-      tokens: 1273
+      tokens: 1266
       inbound: 0
       outbound: 0
     core-principles:
-      tokens: 5699
+      tokens: 5698
       inbound: 0
       outbound: 0
     i-dual-process-separation-local-determinism-zero-external-ai-non-negotiable:
@@ -39,7 +39,7 @@ wiki:
       inbound: 0
       outbound: 0
     vii-brownfield-debt-baseline-continuous-regression-based-admission-control-non-negotiable:
-      tokens: 391
+      tokens: 390
       inbound: 0
       outbound: 0
     viii-deterministic-knowledge-drift-reverse-index-impact-semantic-collision-engine:
@@ -87,11 +87,11 @@ wiki:
       inbound: 0
       outbound: 0
     governance:
-      tokens: 163
+      tokens: 157
       inbound: 0
       outbound: 0
 ---
-# LLM Wiki Extension for VS Code (`llm_wiki_ext4vsc`) Constitution
+# KnowFrame Extension for VS Code (`knowframe`) Constitution
 
 > Canonical Source of Truth: [`.specify/memory/constitution.md`](.specify/memory/constitution.md)  
 > AI Agent Entry Points: [`AGENTS.md`](AGENTS.md) | [`GEMINI.md`](GEMINI.md)
@@ -104,20 +104,20 @@ Version Change: 1.6.0 -> 1.7.0 (Autonomous Product Core, Elimination of Decision
 Modified Principles:
   - Expanded Section: "The 17 Critical Invariants" establishing the non-negotiable architectural bedrock:
       - Added Invariant XVII (Autonomous Product Core & Non-Interfering Complementarity / P1–P7):
-          * P1 (Autonomy): LLM Wiki operates 100% standalone with zero mandatory external tool prerequisites.
-          * P2 (Exclusive Responsibility): Bounded, non-overlapping component roles (LLM Wiki = documented knowledge; AI Memory = cross-session agent working memory; Graphify = optional code AST diagnostic; Understand Anything = eliminated).
+          * P1 (Autonomy): KnowFrame operates 100% standalone with zero mandatory external tool prerequisites.
+          * P2 (Exclusive Responsibility): Bounded, non-overlapping component roles (KnowFrame = documented knowledge; AI Memory = cross-session agent working memory; Graphify = optional code AST diagnostic; Understand Anything = eliminated).
           * P3 (Non-Interference): Complementary tools are passive and MUST NEVER auto-mutate Markdown files, canonical graph, or product decisions.
-          * P4 (Centralized Governance): LLM Wiki is the sole active governor of documented knowledge.
+          * P4 (Centralized Governance): KnowFrame is the sole active governor of documented knowledge.
           * P5 (Optional Complementarity): External tools enhance specific workflows optionally; their absence never impairs core functionality.
           * P6 (Proportional Complexity): No integrations without concrete gaps justifying maintenance and UX costs.
-          * P7 (Zero Unnecessary Decisions): The user never faces configuration hurdles, tool selection, or decision fatigue to begin using LLM Wiki.
+          * P7 (Zero Unnecessary Decisions): The user never faces configuration hurdles, tool selection, or decision fatigue to begin using KnowFrame.
 Follow-up TODOs: None deferred.
 ==========================
 -->
 
 ## The 17 Critical Invariants (NON-NEGOTIABLE)
 
-The following seventeen invariants constitute the immutable architectural foundation of LLM Wiki. Every component, data model, RPC interface, and user workflow MUST strictly obey these invariants without exception:
+The following seventeen invariants constitute the immutable architectural foundation of KnowFrame. Every component, data model, RPC interface, and user workflow MUST strictly obey these invariants without exception:
 
 1. **Invariant I — Committed Truth**: The persistent Knowledge Graph MUST represent committed repository state only. Working-tree changes or file-save events MUST NOT mutate the persistent graph (`file saved ≠ knowledge graph update`).
 2. **Invariant II — Candidate Isolation**: Pre-commit analysis MUST evaluate staged changes exclusively in an in-memory ephemeral candidate graph, which is completely discarded after validation and MUST NOT contaminate persistent state.
@@ -136,17 +136,17 @@ The following seventeen invariants constitute the immutable architectural founda
 15. **Invariant XV — Transparent Trade-Off & Evidence-Based Recommendation**: Every structural problem detection MUST be derived from observable multi-dimensional metrics (cohesion, coupling, concentration, semantic diversity, context efficiency), and every recommendation MUST explicitly articulate both expected benefits and countervailing trade-offs (e.g., increased fragmentation, metadata complexity, or index maintenance).
 16. **Invariant XVI — User-Controlled Downstream Automation & Re-Measurement**: Automated structural transformations (e.g., generating index routers, section-level refactoring, frontmatter injection) MUST be strictly downstream of explicit user orientation choice and approval (`Auto-Apply: OFF`, `Require Approval: ON` by default) and MUST respect Hard Constraints. Every applied transformation MUST be verified through deterministic Before-vs-After comparative re-measurement.
 17. **Invariant XVII — Autonomous Product Core & Non-Interfering Complementarity (P1–P7)**:
-    - **P1 (Autonomy)**: LLM Wiki MUST deliver its complete core value proposition standalone. Complementary tools are never prerequisites.
+    - **P1 (Autonomy)**: KnowFrame MUST deliver its complete core value proposition standalone. Complementary tools are never prerequisites.
     - **P2 (Exclusive Responsibility)**: Each component has a strictly bounded, non-overlapping responsibility:
-      - **LLM Wiki**: Governs Markdown files, organizes knowledge, maintains the canonical graph, detects inconsistencies, and manages documentation evolution.
+      - **KnowFrame**: Governs Markdown files, organizes knowledge, maintains the canonical graph, detects inconsistencies, and manages documentation evolution.
       - **AI Memory**: Maintains local cross-session working memory for agent and dev tooling contexts; does NOT govern documentation or replace the canonical graph.
-      - **Graphify**: Analyzes observed code architecture; does NOT govern LLM Wiki, alter Markdown, or auto-update the canonical graph.
+      - **Graphify**: Analyzes observed code architecture; does NOT govern KnowFrame, alter Markdown, or auto-update the canonical graph.
       - **Understand Anything**: Overlaps with Graphify; strictly eliminated from product recommendations, catalogs, and UI.
-    - **P3 (Non-Interference)**: Complementary tools are passive relative to LLM Wiki and MUST NEVER mutate Markdown files, the canonical graph, or product decisions.
-    - **P4 (Centralized Governance)**: LLM Wiki is the sole active authority over documented knowledge.
+    - **P3 (Non-Interference)**: Complementary tools are passive relative to KnowFrame and MUST NEVER mutate Markdown files, the canonical graph, or product decisions.
+    - **P4 (Centralized Governance)**: KnowFrame is the sole active authority over documented knowledge.
     - **P5 (Optional Complementarity)**: External tools provide optional diagnostic analyses without hindering core functionality when absent.
     - **P6 (Proportional Complexity)**: Integrations are only introduced when solving a concrete, verified need that justifies their maintenance and UX cost.
-    - **P7 (Zero Unnecessary Decisions)**: The user NEVER has to choose tools, select strategies, or perform configuration setups to begin using LLM Wiki. No configuration hurdle or decision fatigue.
+    - **P7 (Zero Unnecessary Decisions)**: The user NEVER has to choose tools, select strategies, or perform configuration setups to begin using KnowFrame. No configuration hurdle or decision fatigue.
 
 ---
 
@@ -242,7 +242,7 @@ The engine MUST enforce 100% internal link validation across both standard Markd
 - **Multi-Repo & Submodule Boundary Resolution**: In multi-repo and unified vault configurations, relative links crossing Git submodule boundaries MUST be resolved transparently without fragmenting the graph topology.
 
 ### VII. Brownfield Debt Baseline & Continuous Regression-Based Admission Control (NON-NEGOTIABLE)
-A repository adopted by LLM Wiki may start with legacy broken links, orphans, collisions, and stale documents. The product MUST NOT make adoption impossible by immediately blocking existing problems.
+A repository adopted by KnowFrame may start with legacy broken links, orphans, collisions, and stale documents. The product MUST NOT make adoption impossible by immediately blocking existing problems.
 - **Regression-Based Enforcement Invariant**:
   > *Pre-commit validation MUST prevent the introduction of new high-confidence knowledge-quality regressions while preserving and exposing pre-existing brownfield debt.*
 - **Knowledge Debt Baseline (*baseline.json*)**:
@@ -386,7 +386,7 @@ The engine bridges structural observation with intentional evolution:
 
 ## Governance
 
-This Constitution represents the supreme architectural and technical policy for the `llm_wiki_ext4vsc` project.
+This Constitution represents the supreme architectural and technical policy for the `knowframe` project.
 - **Supremacy**: In any conflict between feature requests, quick fixes, and these principles, this Constitution governs.
 - **Amendments**: Amendments require documented rationale, impact assessment on existing performance budgets, and consensus approval.
 - **Versioning Policy**:

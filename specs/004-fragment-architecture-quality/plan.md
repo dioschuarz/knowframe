@@ -1,6 +1,6 @@
 ---
 wiki:
-  content_hash: 8e7dcb02b914ac57c2216a7285dbb72aa71729d55e289b68119d8164628a16d7
+  content_hash: 6b69cbc60cfbc6e8e8f3867d393c0f3e6d48c08223b2f9a849fc37e93d600ec1
   fragments:
     implementation-plan-fragment-level-architecture-5-pillar-quality-model:
       tokens: 4563

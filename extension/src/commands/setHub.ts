@@ -11,7 +11,7 @@ export function registerSetHubCommand(
   return vscode.commands.registerCommand('llmWiki.setHub', async (targetHubId?: string) => {
     const ipc = getIpcClient();
     if (!ipc) {
-      vscode.window.showWarningMessage('LLM Wiki: Daemon is not running.');
+      vscode.window.showWarningMessage('KnowFrame: Daemon is not running.');
       return;
     }
 
@@ -20,7 +20,7 @@ export function registerSetHubCommand(
     if (!hubId) {
       const scan = getScanResult();
       if (!scan || scan.nodes.length === 0) {
-        vscode.window.showInformationMessage('LLM Wiki: No notes available to select as Hub.');
+        vscode.window.showInformationMessage('KnowFrame: No notes available to select as Hub.');
         return;
       }
 
@@ -63,9 +63,9 @@ export function registerSetHubCommand(
       await ipc.sendRequest('graph/setHub', { hub_id: hubId });
       const newScan = await ipc.sendRequest<ScanResultPayload>('workspace/scan');
       onScanResultUpdated(newScan);
-      vscode.window.showInformationMessage(`LLM Wiki: Designated Hub set to ${hubId}`);
+      vscode.window.showInformationMessage(`KnowFrame: Designated Hub set to ${hubId}`);
     } catch (err: any) {
-      vscode.window.showErrorMessage(`LLM Wiki: Failed to set Hub: ${err.message}`);
+      vscode.window.showErrorMessage(`KnowFrame: Failed to set Hub: ${err.message}`);
     }
   });
 }

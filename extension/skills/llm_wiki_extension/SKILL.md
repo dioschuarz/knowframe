@@ -1,12 +1,12 @@
 ---
 name: llm-wiki-extension
-description: Operate the LLM Wiki extension, its Rust core engine (llm-wiki-core), and JSON-RPC daemon from the terminal or AI agent workflows. Covers workspace scanning, 5-pillar quality diagnostics and remediation, context trace & section budgeting, frontmatter materialization, dual Git hooks & candidate validation, knowledge debt baselining, and multi-strategy method evolution (KOS strategy selection, combination, composite plan valuation, and atomic transformation application).
+description: Operate the KnowFrame extension, its Rust core engine (llm-wiki-core), and JSON-RPC daemon from the terminal or AI agent workflows. Covers workspace scanning, 5-pillar quality diagnostics and remediation, context trace & section budgeting, frontmatter materialization, dual Git hooks & candidate validation, knowledge debt baselining, and multi-strategy method evolution (KOS strategy selection, combination, composite plan valuation, and atomic transformation application).
 compatibility: Requires the llm-wiki-core binary and a workspace containing Markdown documentation.
 wiki:
-  content_hash: 060bcb1b4a0e5d901c713cc255d5a330d8d78c5a98b27ca5f602553476b529ac
+  content_hash: a654378be46c211052af1fc73cf509519a21b9f568663188fadc9348e5845018
   fragments:
-    llm-wiki-extension-cli-automation-skill:
-      tokens: 4843
+    knowframe-extension-cli-automation-skill:
+      tokens: 4838
       inbound: 0
       outbound: 0
     1-locating-the-binary-execution-syntax:
@@ -110,7 +110,7 @@ wiki:
       inbound: 0
       outbound: 0
     8-git-admission-control-hooks-debt-baseline:
-      tokens: 392
+      tokens: 390
       inbound: 0
       outbound: 0
     dual-hook-architecture-prek:
@@ -126,7 +126,7 @@ wiki:
       inbound: 0
       outbound: 0
     knowledge-debt-baseline-context-vaultbaselinejson:
-      tokens: 138
+      tokens: 136
       inbound: 0
       outbound: 0
     9-background-websocket-json-rpc-20-daemon:
@@ -142,7 +142,7 @@ wiki:
       inbound: 0
       outbound: 0
     11-autonomous-agent-workflow-recipes:
-      tokens: 404
+      tokens: 403
       inbound: 0
       outbound: 0
     recipe-a-full-workspace-health-audit-triage:
@@ -154,13 +154,13 @@ wiki:
       inbound: 0
       outbound: 0
     recipe-c-pre-commit-cicd-gate:
-      tokens: 106
+      tokens: 105
       inbound: 0
       outbound: 0
 ---
-# LLM Wiki Extension CLI & Automation Skill
+# KnowFrame Extension CLI & Automation Skill
 
-Operate the LLM Wiki extension directly from a terminal or within an autonomous AI agent workflow as the full headless equivalent of its VS Code user interface. All knowledge graph operations, quality audits, admission validations, and structural transformations are executed by the standalone Rust core engine (`llm-wiki-core`).
+Operate the KnowFrame extension directly from a terminal or within an autonomous AI agent workflow as the full headless equivalent of its VS Code user interface. All knowledge graph operations, quality audits, admission validations, and structural transformations are executed by the standalone Rust core engine (`llm-wiki-core`).
 
 ---
 
@@ -442,7 +442,7 @@ llm-wiki-core git-delta --root . --quiet <changed-file>...
 ```
 
 ### Knowledge Debt Baseline (*.context-vault/baseline.json*)
-Allows legacy codebases to adopt LLM Wiki without being blocked by pre-existing defects:
+Allows legacy codebases to adopt KnowFrame without being blocked by pre-existing defects:
 
 ```bash
 # Capture current workspace issues into baseline
@@ -567,7 +567,7 @@ llm-wiki-core validate --root . --staged-only --json > /tmp/validation.json
 
 # Exit non-zero only if validation blocked
 if jq -e '.decision == "block"' /tmp/validation.json > /dev/null; then
-  echo "Commit blocked by LLM Wiki quality gate:"
+  echo "Commit blocked by KnowFrame quality gate:"
   jq '.regressions' /tmp/validation.json
   exit 1
 fi

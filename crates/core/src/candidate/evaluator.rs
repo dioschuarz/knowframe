@@ -20,6 +20,7 @@ pub struct AdmissionConfig {
     pub block_on_technical_drift: bool,
     pub block_on_unreviewed_docs: bool,
     pub block_on_legacy_debt: bool,
+    pub block_on_missing_fragments: bool,
 }
 
 impl Default for AdmissionConfig {
@@ -30,6 +31,7 @@ impl Default for AdmissionConfig {
             block_on_technical_drift: false, // default WARN
             block_on_unreviewed_docs: true,  // default BLOCK per FR-007
             block_on_legacy_debt: false,     // default FALSE per Invariant XI and FR-009
+            block_on_missing_fragments: true, // default BLOCK per Structure Pillar
         }
     }
 }
@@ -180,6 +182,7 @@ pub fn evaluate_candidate(
         let gating_config = crate::model::ReviewGatingConfig {
             enforce_doc_review: config.block_on_unreviewed_docs,
             block_on_legacy_debt: config.block_on_legacy_debt,
+            block_on_missing_fragments: config.block_on_missing_fragments,
         };
         let affected = crate::drift::review::calculate_affected_documents(
             overlay.workspace_root,
@@ -381,7 +384,7 @@ pub fn evaluate_candidate(
                 file_path: doc.clone(),
                 line_number: None,
                 message: format!("Documentation '{}' has pending review obligations for modified code files", doc),
-                remediation_hint: format!("Update '{}', or run 'llm-wiki-core review resolve {}', or include 'Reviewed-Docs: {}' in commit message", doc, doc, doc),
+                remediation_hint: format!("Update '{}', or run 'knowframe-core review resolve {}', or include 'Reviewed-Docs: {}' in commit message", doc, doc, doc),
             });
         } else {
             warnings.push(WarningItem {
@@ -401,8 +404,57 @@ pub fn evaluate_candidate(
                 file_path: doc.clone(),
                 line_number: None,
                 message: format!("Legacy unreviewed documentation '{}' blocked by review policy (block_on_legacy_debt: true)", doc),
-                remediation_hint: format!("Update '{}' or run 'llm-wiki-core review resolve {}'", doc, doc),
+                remediation_hint: format!("Update '{}' or run 'knowframe-core review resolve {}'", doc, doc),
             });
+        }
+    }
+
+    // Evaluate unanchored reference regressions targeting multi-section documents
+    for edge in &overlay.overlay.mutated_edges {
+        if !edge.is_broken && edge.anchor.is_none() && edge.target_fragment.is_none() {
+            let target_headings_count = headings_map
+                .get(&edge.target)
+                .map(|h| h.len())
+                .or_else(|| overlay.get_node(&edge.target).map(|n| n.fragments.len()))
+                .unwrap_or(0);
+
+            if target_headings_count > 1 {
+                let severity = if config.block_on_missing_fragments {
+                    has_blocker = true;
+                    RegressionSeverity::Blocker
+                } else {
+                    RegressionSeverity::Warning
+                };
+
+                let msg = format!(
+                    "Link in '{}' (line {}) targets '{}' without specifying a section fragment. The target has {} sections.",
+                    edge.source,
+                    edge.line.unwrap_or(1),
+                    edge.target,
+                    target_headings_count
+                );
+                let hint = format!(
+                    "Specify a section anchor (e.g. '[{}#anchor]') to make reading more directed and preserve context budget.",
+                    edge.target
+                );
+
+                if severity == RegressionSeverity::Blocker {
+                    regressions.push(RegressionItem {
+                        id: format!("unanchored-ref-{}-{}-{}", edge.source, edge.target, edge.line.unwrap_or(1)),
+                        category: RegressionCategory::UnanchoredReference,
+                        severity,
+                        file_path: edge.source.clone(),
+                        line_number: edge.line,
+                        message: msg,
+                        remediation_hint: hint,
+                    });
+                } else {
+                    warnings.push(WarningItem {
+                        message: format!("{} {}", msg, hint),
+                        file_path: Some(edge.source.clone()),
+                    });
+                }
+            }
         }
     }
 

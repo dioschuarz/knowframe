@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as os from 'os';
 
 export function resolveBinaryPath(extensionPath: string): string {
-  const binaryName = os.platform() === 'win32' ? 'llm-wiki-core.exe' : 'llm-wiki-core';
+  const binaryName = os.platform() === 'win32' ? 'knowframe-core.exe' : 'knowframe-core';
 
   // 1. Check workspace dev target build (crates/core/target/debug or target/debug)
   const candidateDevPaths = [

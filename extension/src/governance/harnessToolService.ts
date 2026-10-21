@@ -127,7 +127,7 @@ export const CANONICAL_HARNESS_TOOLS: HarnessToolDefinition[] = [
     name: 'graphify (Code Architecture Graph Extractor)',
     category: 'core',
     binary: 'graphify',
-    description: 'Optional offline diagnostic tool for observed code relations and AST dependency extraction. Passively supplements LLM Wiki without mutating canonical markdown.',
+    description: 'Optional offline diagnostic tool for observed code relations and AST dependency extraction. Passively supplements KnowFrame without mutating canonical markdown.',
     installCommand: 'uv tool install graphifyy',
     requiredFor: 'Optional Code Diagnostics',
     docsUrl: 'https://github.com/Graphify-Labs/graphify',
@@ -231,13 +231,13 @@ export class HarnessToolService {
     options?.outputChannel?.appendLine(`[TOOL INSTALLER] Initiating install for ${tool.name}: ${tool.installCommand}`);
 
     if (options?.terminalLauncher) {
-      options.terminalLauncher(`LLM Wiki: Install ${tool.name}`, tool.installCommand);
+      options.terminalLauncher(`KnowFrame: Install ${tool.name}`, tool.installCommand);
       return true;
     }
 
     try {
       const vscode = await import('vscode');
-      const termName = `LLM Wiki: Install ${tool.name}`;
+      const termName = `KnowFrame: Install ${tool.name}`;
       const existingTerminal = vscode.window.terminals?.find((t: any) => t.name === termName);
       const terminal = existingTerminal || vscode.window.createTerminal({
         name: termName,
@@ -245,7 +245,7 @@ export class HarnessToolService {
       terminal.show(true);
       terminal.sendText(tool.installCommand);
       vscode.window.showInformationMessage(
-        `LLM Wiki: Installing ${tool.name} in terminal (${tool.installCommand}).`
+        `KnowFrame: Installing ${tool.name} in terminal (${tool.installCommand}).`
       );
       return true;
     } catch (err: any) {

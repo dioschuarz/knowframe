@@ -38,7 +38,7 @@ export class EngineRpcClient {
   }
 
   public start(binaryPath?: string): void {
-    const bin = binaryPath || this.binaryPath || 'llm-wiki-core';
+    const bin = binaryPath || this.binaryPath || 'knowframe-core';
     this.childProcess = spawn(bin, ['engine'], {
       stdio: ['pipe', 'pipe', 'pipe'],
     });

@@ -1,9 +1,9 @@
 ---
 wiki:
-  content_hash: ffdf62d8965460bd0e79c0b9a62cba888d3f3700538112d83bd904432c70706a
+  content_hash: 555bf09df1a1733c517b4a228365d3b2548e7d2b590f9b8eab18cbe3e4854fb1
   fragments:
     implementation-plan-deterministic-traceability-review-knowledge-consistency:
-      tokens: 2278
+      tokens: 2279
       inbound: 0
       outbound: 1
     summary:
@@ -15,7 +15,7 @@ wiki:
       inbound: 0
       outbound: 0
     constitution-check:
-      tokens: 506
+      tokens: 507
       inbound: 0
       outbound: 0
     project-structure:

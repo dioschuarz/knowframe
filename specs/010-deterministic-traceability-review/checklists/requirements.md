@@ -1,13 +1,13 @@
 ---
 wiki:
-  content_hash: d5113969265ca780e6af8b03a8a1e6bb3d778c332c09c74fe7ef95f0233370dd
+  content_hash: 7140dc6b4c2431e3ae63c8965345fe61f0f3a5e0456f667fa1b309fe5493ae5c
   fragments:
     specification-quality-checklist-deterministic-traceability-review-knowledge-consistency:
-      tokens: 875
+      tokens: 876
       inbound: 0
       outbound: 2
     1-constitutional-architectural-invariants:
-      tokens: 260
+      tokens: 261
       inbound: 0
       outbound: 0
     2-requirement-completeness-traceability:

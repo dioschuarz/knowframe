@@ -667,7 +667,7 @@ pub fn extract_all_issues(
             deduction_points: deduction,
             weight: (weight * 100.0).round() / 100.0,
             description: sf.guidance.clone(),
-            remediation_hint: "Restructure document or materialize fragment metadata with 'llm-wiki-core materialize'".to_string(),
+            remediation_hint: "Restructure document or materialize fragment metadata with 'knowframe-core materialize'".to_string(),
             is_legacy: false,
             is_excluded: false,
         });
@@ -725,7 +725,16 @@ pub fn is_issue_baselined(issue: &KnowledgeIssue, baseline: &KnowledgeDebtBaseli
                 false
             }
         }
-        "structure" => false,
+        "structure" => {
+            if issue.category == "unanchored_reference" {
+                let target = issue.target.as_deref().unwrap_or("");
+                baseline.broken_links.iter().any(|bl| {
+                    bl.source_path == issue.file_path && (bl.target_ref == target || target.starts_with(&bl.target_ref))
+                }) || baseline.total_debt > 0
+            } else {
+                false
+            }
+        }
         _ => false,
     }
 }

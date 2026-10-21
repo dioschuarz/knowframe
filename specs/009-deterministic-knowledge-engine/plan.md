@@ -1,9 +1,9 @@
 ---
 wiki:
-  content_hash: ab418534d373725978e909aad832ea01b254d88c5bf068b4a34084855e1f7d81
+  content_hash: 280da1086e1306cda5c8f7a4588996026857b8588308a23e850253c7a16bfb25
   fragments:
     implementation-plan-deterministic-knowledge-engineering-engine:
-      tokens: 2424
+      tokens: 2425
       inbound: 0
       outbound: 1
     summary:
@@ -15,7 +15,7 @@ wiki:
       inbound: 0
       outbound: 0
     constitution-check:
-      tokens: 459
+      tokens: 460
       inbound: 0
       outbound: 0
     project-structure:

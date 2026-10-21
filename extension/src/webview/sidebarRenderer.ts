@@ -73,7 +73,7 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="${cspPolicy}">
-  <title>LLM Wiki - Manager</title>
+  <title>KnowFrame - Manager</title>
   <style>
     body {
       font-family: var(--vscode-font-family, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif);
@@ -144,6 +144,40 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
     }
     .dash-action-btn.primary-action:hover {
       background: rgba(56, 189, 248, 0.2);
+    }
+    .gear-action-btn {
+      position: relative;
+      color: var(--vscode-textLink-foreground, #38bdf8);
+      border-color: rgba(56, 189, 248, 0.3);
+      background: rgba(56, 189, 248, 0.1);
+    }
+    .gear-action-btn:hover {
+      background: rgba(56, 189, 248, 0.2);
+      text-decoration: none;
+    }
+    .gear-action-btn[data-tooltip]::after {
+      content: attr(data-tooltip);
+      position: absolute;
+      right: 0;
+      bottom: calc(100% + 6px);
+      background: var(--vscode-editorHoverWidget-background, #252526);
+      color: var(--vscode-editorHoverWidget-foreground, #cccccc);
+      border: 1px solid var(--vscode-editorHoverWidget-border, #454545);
+      border-radius: 4px;
+      padding: 4px 8px;
+      font-size: 10.5px;
+      font-weight: 500;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transform: translateY(2px);
+      transition: opacity 0.14s ease, transform 0.14s ease;
+      z-index: 100;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+    }
+    .gear-action-btn[data-tooltip]:hover::after {
+      opacity: 1;
+      transform: translateY(0);
     }
     .quality-gauge-row {
       display: flex;
@@ -290,7 +324,7 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
       overflow: hidden;
       text-overflow: ellipsis;
       white-space: nowrap;
-      max-width: 70%;
+      max-width: 100%;
     }
     .hub-icon {
       font-size: 12px;
@@ -305,15 +339,6 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
     }
     .hub-path-link:hover {
       text-decoration: underline;
-    }
-    .evolution-objective-text {
-      font-size: 11px;
-      color: var(--vscode-descriptionForeground, #aaa);
-      margin-bottom: 6px;
-      line-height: 1.3;
-      max-width: 100%;
-      overflow: hidden;
-      text-overflow: ellipsis;
     }
     .opportunity-count-row {
       display: flex;
@@ -444,16 +469,19 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
       <div class="pillar-header">
         <div class="pillar-title">HEALTH</div>
         <div class="pillar-header-actions">
-          <button class="dash-action-btn icon-only-btn" id="dash-btn-open-settings" title="Management & Settings">
-            <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M9.1 4.4L8.6 2H7.4l-.5 2.4-.7.3-2-1.3-.9.8 1.3 2-.2.7-2.4.5v1.2l2.4.5.3.8-1.3 2 .8.8 2-1.3.8.3.4 2.3h1.2l.5-2.4.8-.3 2 1.3.8-.8-1.3-2 .3-.8 2.3-.4V7.4l-2.4-.5-.3-.7 1.3-2-.8-.9-2 1.3-.7-.2zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
+          <button class="dash-action-btn primary-action" id="dash-btn-explore-graph" title="Open Knowledge Graph">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align: -1px;">
+              <circle cx="12" cy="12" r="3" fill="currentColor"/>
+              <circle cx="5" cy="6" r="2" fill="currentColor"/>
+              <circle cx="19" cy="6" r="2" fill="currentColor"/>
+              <circle cx="5" cy="18" r="2" fill="currentColor"/>
+              <circle cx="19" cy="18" r="2" fill="currentColor"/>
+              <line x1="6.5" y1="7.5" x2="10" y2="10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="17.5" y1="7.5" x2="14" y2="10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="6.5" y1="16.5" x2="10" y2="13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
+              <line x1="17.5" y1="16.5" x2="14" y2="13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
-          </button>
-          <button class="dash-action-btn icon-only-btn" id="dash-btn-refresh-quality" title="Recalculate Knowledge Quality Score">
-            <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1.5 8a6.5 6.5 0 1 0 1.9-4.6L1.5 5.5"/>
-              <polyline points="1.5 1.5 1.5 5.5 5.5 5.5"/>
-            </svg>
+            Explore graph
           </button>
         </div>
       </div>
@@ -513,28 +541,11 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
     <div class="dashboard-pillar pillar-structure" id="pillar-structure">
       <div class="pillar-header">
         <div class="pillar-title">STRUCTURE</div>
-        <div class="pillar-header-actions">
-          <button class="dash-action-btn icon-only-btn" id="dash-btn-rescan-vault" title="Rescan Vault & Rebuild Graph">
-            <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M1.5 8a6.5 6.5 0 1 0 1.9-4.6L1.5 5.5"/>
-              <polyline points="1.5 1.5 1.5 5.5 5.5 5.5"/>
-            </svg>
-          </button>
-          <button class="dash-action-btn primary-action" id="dash-btn-explore-graph" title="Open Knowledge Graph">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align: -1px;">
-              <circle cx="12" cy="12" r="3" fill="currentColor"/>
-              <circle cx="5" cy="6" r="2" fill="currentColor"/>
-              <circle cx="19" cy="6" r="2" fill="currentColor"/>
-              <circle cx="5" cy="18" r="2" fill="currentColor"/>
-              <circle cx="19" cy="18" r="2" fill="currentColor"/>
-              <line x1="6.5" y1="7.5" x2="10" y2="10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="17.5" y1="7.5" x2="14" y2="10.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="6.5" y1="16.5" x2="10" y2="13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-              <line x1="17.5" y1="16.5" x2="14" y2="13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
-            </svg>
-            Explore graph
-          </button>
-        </div>
+        <button class="dash-action-btn icon-only-btn gear-action-btn" id="dash-btn-change-hub" title="Change central hub note" data-tooltip="Change central hub note" aria-label="Change central hub note">
+          <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M9.1 4.4L8.6 2H7.4l-.5 2.4-.7.3-2-1.3-.9.8 1.3 2-.2.7-2.4.5v1.2l2.4.5.3.8-1.3 2 .8.8 2-1.3.8.3.4 2.3h1.2l.5-2.4.8-.3 2 1.3.8-.8-1.3-2 .3-.8 2.3-.4V7.4l-2.4-.5-.3-.7 1.3-2-.8-.9-2 1.3-.7-.2zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
+          </svg>
+        </button>
       </div>
 
       <!-- Standardized Terminology 4-Pill Grid -->
@@ -567,7 +578,6 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
           </span>
           <span class="hub-path-link" id="dash-hub-link" title="Designated primary hub">00_meta/wiki_index.md</span>
         </div>
-        <button class="dash-action-btn" id="dash-btn-change-hub">Change</button>
       </div>
 
       <!-- Top Connected Notes (Collapsible) -->
@@ -590,7 +600,11 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
     <div class="dashboard-pillar pillar-evolution" id="pillar-evolution">
       <div class="pillar-header">
         <div class="pillar-title">EVOLUTION</div>
-        <button class="dash-action-btn" id="dash-btn-configure-evolution">Change</button>
+        <button class="dash-action-btn icon-only-btn gear-action-btn" id="dash-btn-configure-evolution" title="Configure evolution mode & strategies" data-tooltip="Configure evolution mode & strategies" aria-label="Configure evolution mode & strategies">
+          <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M9.1 4.4L8.6 2H7.4l-.5 2.4-.7.3-2-1.3-.9.8 1.3 2-.2.7-2.4.5v1.2l2.4.5.3.8-1.3 2 .8.8 2-1.3.8.3.4 2.3h1.2l.5-2.4.8-.3 2 1.3.8-.8-1.3-2 .3-.8 2.3-.4V7.4l-2.4-.5-.3-.7 1.3-2-.8-.9-2 1.3-.7-.2zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
+          </svg>
+        </button>
       </div>
 
       <div class="hub-info-row">
@@ -598,9 +612,6 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
           <span class="hub-icon" id="evolution-mode-icon">🤖</span>
           <span class="hub-path-link" id="evolution-mode-badge" title="Click to view evolution details">AI-Oriented</span>
         </div>
-      </div>
-      <div class="evolution-objective-text" id="evolution-objective-text">
-        Optimizing AI discovery, context efficiency & reuse
       </div>
       <div class="opportunity-count-row" id="evolution-opportunity-row">
         <span class="opportunity-count-badge" id="val-opportunity-count">0</span>
@@ -612,8 +623,10 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
     <div class="dashboard-pillar pillar-sync" id="pillar-sync">
       <div class="pillar-header">
         <div class="pillar-title">SYNC & HARNESS</div>
-        <button class="dash-action-btn" id="dash-btn-open-harness" title="Open AI Harness & Agent Tooling Catalog" style="font-size: 10.5px; padding: 2px 7px;">
-          ⚙ Harness Tools
+        <button class="dash-action-btn icon-only-btn gear-action-btn" id="dash-btn-open-harness" title="Configure AI harness & agent tools" data-tooltip="Configure AI harness & agent tools" aria-label="Configure AI harness & agent tools">
+          <svg viewBox="0 0 16 16" width="11" height="11" fill="currentColor">
+            <path fill-rule="evenodd" clip-rule="evenodd" d="M9.1 4.4L8.6 2H7.4l-.5 2.4-.7.3-2-1.3-.9.8 1.3 2-.2.7-2.4.5v1.2l2.4.5.3.8-1.3 2 .8.8 2-1.3.8.3.4 2.3h1.2l.5-2.4.8-.3 2 1.3.8-.8-1.3-2 .3-.8 2.3-.4V7.4l-2.4-.5-.3-.7 1.3-2-.8-.9-2 1.3-.7-.2zM8 10a2 2 0 1 0 0-4 2 2 0 0 0 0 4z"/>
+          </svg>
         </button>
       </div>
       <div class="sync-status-row">
@@ -629,23 +642,14 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
     const vscode = acquireVsCodeApi();
 
     // Wire buttons
-    document.getElementById('dash-btn-rescan-vault')?.addEventListener('click', () => {
-      vscode.postMessage({ type: 'rescanVault' });
-    });
     document.getElementById('dash-btn-explore-graph')?.addEventListener('click', () => {
       vscode.postMessage({ type: 'openGraph' });
     });
     document.getElementById('dash-btn-change-hub')?.addEventListener('click', () => {
       vscode.postMessage({ type: 'changeHub' });
     });
-    document.getElementById('dash-btn-open-settings')?.addEventListener('click', () => {
-      vscode.postMessage({ type: 'openSettings' });
-    });
     document.getElementById('dash-btn-open-harness')?.addEventListener('click', () => {
       vscode.postMessage({ type: 'openSettings', tab: 'harness' });
-    });
-    document.getElementById('dash-btn-refresh-quality')?.addEventListener('click', () => {
-      vscode.postMessage({ type: 'rescanVault' });
     });
     document.getElementById('dash-btn-configure-evolution')?.addEventListener('click', () => {
       vscode.postMessage({ type: 'navigateToDetail', primaryTab: 'insights', subTab: 'evolution' });
@@ -805,40 +809,33 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
       const orientation = evo.orientation || 'ai_oriented';
       const iconEl = document.getElementById('evolution-mode-icon');
       const badgeEl = document.getElementById('evolution-mode-badge');
-      const objEl = document.getElementById('evolution-objective-text');
       const oppCountEl = document.getElementById('val-opportunity-count');
       const oppTextEl = document.getElementById('evolution-opportunity-text');
 
       let icon = '🤖';
       let title = 'AI-Oriented';
-      let defaultObj = 'Optimizing AI discovery, context efficiency & reuse';
 
       switch (orientation) {
         case 'ai_oriented':
           icon = '🤖';
           title = 'AI-Oriented';
-          defaultObj = 'Optimizing AI discovery, context efficiency & reuse';
           break;
         case 'human_oriented':
           icon = '👤';
           title = 'Human-Oriented';
-          defaultObj = 'Prioritizing human reading, narrative & navigation';
           break;
         case 'balanced':
           icon = '⚖️';
           title = 'Balanced';
-          defaultObj = 'Balancing AI retrieval efficiency with human comprehension';
           break;
         case 'custom':
           icon = '⚙️';
           title = 'Custom';
-          defaultObj = 'Custom objectives, engine parameters & constraints';
           break;
       }
 
       if (iconEl) iconEl.textContent = icon;
       if (badgeEl) badgeEl.textContent = title;
-      if (objEl) objEl.textContent = evo.primary_objective || defaultObj;
 
       const opps = evo.opportunity_count != null ? evo.opportunity_count : 0;
       if (oppCountEl) oppCountEl.textContent = opps.toString();

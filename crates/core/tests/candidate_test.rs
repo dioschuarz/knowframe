@@ -279,6 +279,7 @@ Cites auth module.
     let blocking_config = ReviewGatingConfig {
         enforce_doc_review: true,
         block_on_legacy_debt: false,
+        block_on_missing_fragments: true,
     };
     let rep_blocked = calculate_affected_documents(
         root,
@@ -296,6 +297,7 @@ Cites auth module.
     let warn_config = ReviewGatingConfig {
         enforce_doc_review: false,
         block_on_legacy_debt: false,
+        block_on_missing_fragments: false,
     };
     let rep_pending = calculate_affected_documents(
         root,

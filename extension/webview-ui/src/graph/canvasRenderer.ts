@@ -420,6 +420,11 @@ export class CanvasRenderer {
         this.ctx.strokeStyle = '#EF4444'; // Dashed Red for Dead Links
         this.ctx.lineWidth = isSearchActive ? 2 : 1.5;
         this.ctx.setLineDash([4, 4]);
+      } else if (!edge.anchor && !edge.target_fragment && tgtNode && (tgtNode.fragments?.length || 0) > 1) {
+        // Amber dash for unanchored references to multi-fragment documents
+        this.ctx.strokeStyle = '#F59E0B'; // Amber / Orange for Missing Section Fragment
+        this.ctx.lineWidth = isSearchActive ? 1.8 : 1.4;
+        this.ctx.setLineDash([3, 3]);
       } else if (isSearchActive && srcMatched && tgtMatched) {
         // Bright active edge between search hits
         this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.75)';

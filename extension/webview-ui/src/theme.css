@@ -2764,7 +2764,16 @@ body, html {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  width: 100%;
   font-size: 12px;
+}
+
+.harness-tool-header-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  gap: 10px;
 }
 
 .settings-skill-card {
@@ -2773,6 +2782,13 @@ body, html {
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.12));
   border-radius: 4px;
   background: var(--vscode-editor-background, rgba(0, 0, 0, 0.12));
+}
+
+.hook-status-badge {
+  margin-left: auto;
+  text-align: right;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 
 .hook-status-badge.status-clean {

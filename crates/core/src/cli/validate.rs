@@ -149,7 +149,7 @@ pub async fn execute_validate_with_paths(
                             && !has_frontmatter_metadata
                         {
                             structure_warnings.push(format!(
-                                "Document '{}' exceeds structural threshold ({} tokens, {} headings) without materialized fragment metadata. Run 'llm-wiki-core materialize {}' to resolve structural debt.",
+                                "Document '{}' exceeds structural threshold ({} tokens, {} headings) without materialized fragment metadata. Run 'knowframe-core materialize {}' to resolve structural debt.",
                                 item.path, token_count, parsed.headings.len(), item.path
                             ));
                         }
@@ -240,10 +240,10 @@ pub async fn execute_validate_with_paths(
         let overlay = CandidateOverlay::new(&base_graph, workspace_root, &staged_delta);
 
         let vault_config = crate::config::ContextVaultConfig::load_from_workspace(workspace_root);
-        let (enforce_doc_review, block_on_legacy_debt) = if let Some(ref pol) = vault_config.review_policy {
-            (pol.enforce_doc_review, pol.block_on_legacy_debt)
+        let (enforce_doc_review, block_on_legacy_debt, block_on_missing_fragments) = if let Some(ref pol) = vault_config.review_policy {
+            (pol.enforce_doc_review, pol.block_on_legacy_debt, pol.block_on_missing_fragments)
         } else {
-            (true, false)
+            (true, false, true)
         };
 
         let admission_config = AdmissionConfig {
@@ -252,6 +252,7 @@ pub async fn execute_validate_with_paths(
             block_on_technical_drift: false,
             block_on_unreviewed_docs: enforce_doc_review,
             block_on_legacy_debt,
+            block_on_missing_fragments,
         };
 
         let mut report = evaluate_candidate(
@@ -281,7 +282,7 @@ pub async fn execute_validate_with_paths(
                 AdmissionDecision::Block => {
                     eprintln!("══════════════════════════════════════════════════════════════");
                     eprintln!(
-                        "LLM Wiki: Commit Blocked ({} knowledge regression(s) detected)",
+                        "KnowFrame: Commit Blocked ({} knowledge regression(s) detected)",
                         report.regressions.len()
                     );
                     eprintln!("══════════════════════════════════════════════════════════════\n");

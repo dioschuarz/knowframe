@@ -292,8 +292,8 @@ pub fn execute_issues_with_options(
                 "ℹ {} legacy debt findings recorded in brownfield baseline (.context-vault/baseline.json).",
                 legacy_debt_count
             );
-            println!("  • Run 'llm-wiki-core issues --include-debt' (or -d) to inspect baselined backlog.");
-            println!("  • Run 'llm-wiki-core issues --include-debt --summary' (or -s) for directory-level breakdown.");
+            println!("  • Run 'knowframe-core issues --include-debt' (or -d) to inspect baselined backlog.");
+            println!("  • Run 'knowframe-core issues --include-debt --summary' (or -s) for directory-level breakdown.");
             if let Some(ref p) = options.filter_path {
                 println!("  • Current filter path: '{}'", p);
             }

@@ -17,6 +17,8 @@ pub enum StructureDebtType {
     SecondaryRoutingLayer,
     /// Route divergence across multiple configured AI harness entry points.
     HarnessDrift,
+    /// Link targets document without specifying an anchor fragment when target has addressable sections.
+    UnanchoredReference,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
@@ -54,7 +56,7 @@ pub fn detect_structure_debt(topology: &GraphTopology) -> Vec<StructureDebtFindi
                 raw_metric_value: if node.tokens > 50_000 { node.tokens } else { headings_count as u32 },
                 penalty: 25.0,
                 guidance: format!(
-                    "Document exceeds structural threshold ({} tokens, {} headings) without materialized fragment metadata. Run 'llm-wiki-core materialize' to resolve structural debt.",
+                    "Document exceeds structural threshold ({} tokens, {} headings) without materialized fragment metadata. Run 'knowframe-core materialize' to resolve structural debt.",
                     node.tokens, headings_count
                 ),
             });
@@ -131,7 +133,32 @@ pub fn detect_structure_debt(topology: &GraphTopology) -> Vec<StructureDebtFindi
         }
     }
 
-    // 6. HarnessDrift: Route divergence across peer AI Harness entry points within the same directory scope
+    // 6. UnanchoredReference: Link targets document without specifying an anchor fragment when target has addressable sections
+    for edge in &topology.edges {
+        if !edge.is_broken && edge.anchor.is_none() && edge.target_fragment.is_none() {
+            if let Some(target_node) = topology.nodes.get(&edge.target) {
+                // If the target document has 2 or more section fragments, an anchor should direct the reader
+                if target_node.fragments.len() > 1 {
+                    findings.push(StructureDebtFinding {
+                        debt_type: StructureDebtType::UnanchoredReference,
+                        document_path: edge.source.clone(),
+                        fragment_anchor: None,
+                        raw_metric_value: target_node.fragments.len() as u32,
+                        penalty: 2.0,
+                        guidance: format!(
+                            "Link in '{}' (line {}) targets '{}' without a section fragment anchor. The destination has {} sections; target a specific section anchor to guide context reading.",
+                            edge.source,
+                            edge.line.unwrap_or(1),
+                            edge.target,
+                            target_node.fragments.len()
+                        ),
+                    });
+                }
+            }
+        }
+    }
+
+    // 7. HarnessDrift: Route divergence across peer AI Harness entry points within the same directory scope
     let standard_harness_names = [
         "AGENTS.md",
         "CLAUDE.md",

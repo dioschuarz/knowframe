@@ -11,7 +11,7 @@ export function registerRescanVaultCommand(
     await vscode.window.withProgress(
       {
         location: vscode.ProgressLocation.Notification,
-        title: 'LLM Wiki: Rescanning Vault...',
+        title: 'KnowFrame: Rescanning Vault...',
         cancellable: false,
       },
       async (progress) => {
@@ -19,7 +19,7 @@ export function registerRescanVaultCommand(
           progress.report({ message: 'Connecting to daemon...' });
           const ipc = await getOrEnsureIpcClient();
           if (!ipc) {
-            vscode.window.showWarningMessage('LLM Wiki: Daemon is not running and could not be started.');
+            vscode.window.showWarningMessage('KnowFrame: Daemon is not running and could not be started.');
             return;
           }
 
@@ -40,13 +40,13 @@ export function registerRescanVaultCommand(
           const docCount = scan.nodes?.length ?? 0;
           const refCount = scan.edges?.length ?? 0;
           vscode.window.showInformationMessage(
-            `LLM Wiki: Vault scan complete (${docCount} documents, ${refCount} references).`
+            `KnowFrame: Vault scan complete (${docCount} documents, ${refCount} references).`
           );
         } catch (err: any) {
           if (GraphPanelManager.currentPanel) {
             GraphPanelManager.currentPanel.sendLoadingProgress('complete', 100, 'Ready');
           }
-          vscode.window.showErrorMessage(`LLM Wiki: Rescan failed: ${err.message}`);
+          vscode.window.showErrorMessage(`KnowFrame: Rescan failed: ${err.message}`);
         }
       }
     );

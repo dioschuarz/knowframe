@@ -4,14 +4,14 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "CLI driver for LLM Wiki deterministic knowledge engine"
+description = "CLI driver for KnowFrame deterministic knowledge engine"
 
 [lib]
 name = "llm_wiki_cli"
 path = "src/lib.rs"
 
 [[bin]]
-name = "llm-wiki-cli"
+name = "knowframe-cli"
 path = "src/main.rs"
 
 [dependencies]

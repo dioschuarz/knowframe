@@ -1,9 +1,9 @@
 ---
 wiki:
-  content_hash: 6cdb4b51ae05863035d961c7df60a65b6ff56ed37cd9484ba02e8757bce76e9f
+  content_hash: 57aec8fbb351ffbc340fe97e0a7fa7546f292c67ef34489e0766cae2eae57b6f
   fragments:
     agentsmd-ai-harness-entry-point:
-      tokens: 1457
+      tokens: 1459
       inbound: 0
       outbound: 67
     1-naming-standards-conventions:
@@ -11,11 +11,11 @@ wiki:
       inbound: 0
       outbound: 0
     knowledge-index:
-      tokens: 1376
+      tokens: 1375
       inbound: 0
       outbound: 67
     governance-invariants:
-      tokens: 23
+      tokens: 22
       inbound: 0
       outbound: 1
     feature-specifications-architecture:
@@ -69,7 +69,7 @@ wiki:
 ---
 # AGENTS.md — AI Harness Entry Point
 
-Welcome to `llm_wiki_ext4vsc`. This file serves as the deterministic knowledge entry point for AI agents.
+Welcome to `knowframe` (**KnowFrame** — Knowledge Management Framework). This file serves as the deterministic knowledge entry point for AI agents.
 
 ## 1. Naming Standards & Conventions
 - **Files & Notes**: Use `snake_case` for markdown notes and documentation.
@@ -78,7 +78,7 @@ Welcome to `llm_wiki_ext4vsc`. This file serves as the deterministic knowledge e
 ## Knowledge Index
 
 ### Governance & Invariants
-- [LLM Wiki Constitution & 16 Invariants](CONSTITUTION.md)
+- [KnowFrame Constitution & 17 Invariants](CONSTITUTION.md)
 
 ### Feature Specifications & Architecture
 

@@ -3,10 +3,6 @@ description: Task list template for feature implementation
 wiki:
   content_hash: 6554134dd0453f0d88d0401e38e2bc10236c53df21543c454f89d4c867df9bef
   fragments:
-    description-task-list-template-for-feature-implementation:
-      tokens: 11
-      inbound: 0
-      outbound: 0
     tasks-feature-name:
       tokens: 2244
       inbound: 0

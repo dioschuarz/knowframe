@@ -8,13 +8,13 @@ export function registerFixBrokenLinksCommand(
   return vscode.commands.registerCommand('llmWiki.fixBrokenLinks', async () => {
     const scan = getScanResult();
     if (!scan) {
-      vscode.window.showInformationMessage('LLM Wiki: No graph data available.');
+      vscode.window.showInformationMessage('KnowFrame: No graph data available.');
       return;
     }
 
     const brokenEdges = scan.edges.filter((e) => e.is_broken);
     if (brokenEdges.length === 0) {
-      vscode.window.showInformationMessage('LLM Wiki: No broken links found in workspace!');
+      vscode.window.showInformationMessage('KnowFrame: No broken links found in workspace!');
       return;
     }
 

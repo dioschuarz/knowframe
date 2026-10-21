@@ -1,6 +1,6 @@
 version: '2.0'
 vault:
-  name: LLM Wiki Knowledge Base
+  name: KnowFrame Knowledge Base
   mode: single-repo
   auto_discovered_hub: null
   hubs:

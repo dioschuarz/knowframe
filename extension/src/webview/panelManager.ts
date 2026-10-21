@@ -55,7 +55,7 @@ export class GraphPanelManager implements vscode.Disposable {
 
     const panel = vscode.window.createWebviewPanel(
       GraphPanelManager.viewType,
-      'LLM Wiki - Graph',
+      'KnowFrame - Graph',
       column || vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -77,7 +77,7 @@ export class GraphPanelManager implements vscode.Disposable {
     ipcClient: IpcClient | null,
     scanResult: ScanResultPayload | null = null
   ): GraphPanelManager {
-    panel.title = 'LLM Wiki - Graph';
+    panel.title = 'KnowFrame - Graph';
     GraphPanelManager.currentPanel = new GraphPanelManager(panel, extensionUri, ipcClient, scanResult);
     const hasWorkspace = !!(vscode.workspace.workspaceFolders && vscode.workspace.workspaceFolders.length > 0);
     if (!hasWorkspace) {
@@ -100,7 +100,7 @@ export class GraphPanelManager implements vscode.Disposable {
     this.ipcClient = ipcClient;
     this.currentScanResult = scanResult;
 
-    this.panel.title = 'LLM Wiki - Graph';
+    this.panel.title = 'KnowFrame - Graph';
     this.panel.iconPath = {
       light: vscode.Uri.joinPath(extensionUri, 'media', 'tab-icon-light.svg'),
       dark: vscode.Uri.joinPath(extensionUri, 'media', 'tab-icon-dark.svg'),
@@ -698,18 +698,18 @@ export class GraphPanelManager implements vscode.Disposable {
       case 'installLLMWikiSkill': {
         const workspaceRoot = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
         if (!workspaceRoot) {
-          vscode.window.showErrorMessage('LLM Wiki: No open workspace folder found.');
+          vscode.window.showErrorMessage('KnowFrame: No open workspace folder found.');
           break;
         }
         try {
-          installLLMWikiSkill(workspaceRoot, this.extensionUri.fsPath, vscode.window.createOutputChannel('LLM Wiki'));
-          vscode.window.showInformationMessage('LLM Wiki: Skill installed successfully.');
+          installLLMWikiSkill(workspaceRoot, this.extensionUri.fsPath, vscode.window.createOutputChannel('KnowFrame'));
+          vscode.window.showInformationMessage('KnowFrame: Skill installed successfully.');
           this.panel.webview.postMessage({
             type: 'harnessStatus',
             payload: { llmWikiSkillAvailable: true },
           });
         } catch (err: any) {
-          vscode.window.showErrorMessage(`LLM Wiki: Failed to install skill: ${err.message}`);
+          vscode.window.showErrorMessage(`KnowFrame: Failed to install skill: ${err.message}`);
         }
         break;
       }
@@ -1382,7 +1382,7 @@ export class GraphPanelManager implements vscode.Disposable {
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta http-equiv="Content-Security-Policy" content="${cspPolicy}">
-  <title>LLM Wiki - Graph</title>
+  <title>KnowFrame - Graph</title>
   <link rel="stylesheet" href="${styleUri}">
 </head>
 <body>
@@ -1392,7 +1392,7 @@ export class GraphPanelManager implements vscode.Disposable {
   <div id="graph-loading-overlay" class="graph-loading-overlay">
     <div class="loading-card">
       <div class="loading-spinner"></div>
-      <div class="loading-title">LLM Wiki Engine</div>
+      <div class="loading-title">KnowFrame Engine</div>
       <div class="loading-percent" id="loading-percent">0%</div>
       <div class="loading-stage" id="loading-stage">Initializing knowledge engine...</div>
       <div class="loading-bar-track">

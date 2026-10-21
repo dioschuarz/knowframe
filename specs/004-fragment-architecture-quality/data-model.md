@@ -1,9 +1,9 @@
 ---
 wiki:
-  content_hash: b39116bef004544f8118e8c1488e4706548be185a9b82134103c80702f95a5a7
+  content_hash: 918a2df48dc1813bc2cfab825e50ed2d237722818d565c39f5bf7ea6f15fa150
   fragments:
     data-model-fragment-level-knowledge-architecture-5-pillar-quality-model:
-      tokens: 4077
+      tokens: 4075
       inbound: 0
       outbound: 0
     1-domain-entities-class-diagram:
@@ -43,15 +43,15 @@ wiki:
       inbound: 0
       outbound: 0
     3-typescript-extension-host-interfaces-srctypes:
-      tokens: 609
+      tokens: 608
       inbound: 0
       outbound: 0
     31-fragment-node-inspector-types-srctypesfragmentts:
-      tokens: 595
+      tokens: 594
       inbound: 0
       outbound: 0
     4-ui-presentation-formatter-contract-srcutilsnumberformatts:
-      tokens: 870
+      tokens: 869
       inbound: 0
       outbound: 0
 ---

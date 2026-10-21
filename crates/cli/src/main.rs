@@ -1,4 +1,4 @@
-//! CLI entrypoint for llm-wiki-cli.
+//! CLI entrypoint for knowframe-cli.
 
 use clap::{Parser, Subcommand};
 use llm_wiki_cli::commands::{
@@ -12,8 +12,8 @@ use llm_wiki_core::model::EvolutionMode;
 use std::path::PathBuf;
 
 #[derive(Parser)]
-#[command(name = "llm-wiki-cli")]
-#[command(about = "CLI driver for LLM Wiki deterministic knowledge engine")]
+#[command(name = "knowframe-cli")]
+#[command(about = "CLI driver for KnowFrame deterministic knowledge engine")]
 struct Cli {
     #[command(subcommand)]
     command: Commands,

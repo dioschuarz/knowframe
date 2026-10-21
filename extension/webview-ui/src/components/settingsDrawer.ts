@@ -117,7 +117,7 @@ export const FALLBACK_HARNESS_TOOLS: HarnessToolStatus[] = [
     name: 'graphify (Code Architecture Graph Extractor)',
     category: 'core',
     binary: 'graphify',
-    description: 'Optional offline diagnostic tool for observed code relations and AST dependency extraction. Passively supplements LLM Wiki without mutating canonical markdown.',
+    description: 'Optional offline diagnostic tool for observed code relations and AST dependency extraction. Passively supplements KnowFrame without mutating canonical markdown.',
     is_installed: false,
     install_command: 'uv tool install graphifyy',
     required_for: 'Optional Code Diagnostics',
@@ -200,6 +200,7 @@ export interface SettingsDrawerProps {
   blockOnBrokenLinks?: boolean;
   blockOnDuplicateCollision?: boolean;
   blockOnTechnicalDrift?: boolean;
+  blockOnMissingFragments?: boolean;
   baselineCommit?: string;
   baselineDebtCount?: number;
   totalNotes?: number;
@@ -577,6 +578,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
       const bBroken = props.blockOnBrokenLinks ?? true;
       const bDup = props.blockOnDuplicateCollision ?? true;
       const bDrift = props.blockOnTechnicalDrift ?? false;
+      const bMissingFrag = props.blockOnMissingFragments ?? true;
       const baseCommitStr = props.baselineCommit || 'Initial (HEAD)';
       const baseDebtNum = props.baselineDebtCount ?? 0;
       const effectiveToolsList = (props.harnessTools && props.harnessTools.length > 0)
@@ -638,6 +640,10 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             <label class="threshold-toggle-item">
               <input type="checkbox" id="toggle-block-drift" ${bDrift ? 'checked' : ''} />
               <span>Block on Technical Drift (Code target deleted/renamed)</span>
+            </label>
+            <label class="threshold-toggle-item">
+              <input type="checkbox" id="toggle-block-missing-fragments" ${bMissingFrag ? 'checked' : ''} />
+              <span>Block on Missing Section Fragments (Directs agent attention to sections)</span>
             </label>
           </div>
 
@@ -735,31 +741,29 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             </button>
           </div>
           <p class="settings-desc" style="margin-top: 4px; margin-bottom: 12px;">
-            LLM Wiki operates completely autonomously out of the box with zero external dependencies. The tools below are optional complementary accelerators for agent memory, dual Git hooks, and multi-agent execution if installed. None are required for LLM Wiki to organize and govern your documentation.
+            KnowFrame operates completely autonomously out of the box with zero external dependencies. The tools below are optional complementary accelerators for agent memory, dual Git hooks, and multi-agent execution if installed. None are required for KnowFrame to organize and govern your documentation.
           </p>
           <div class="harness-tools-list" style="display: flex; flex-direction: column; gap: 8px;">
             ${effectiveToolsList.map((tool) => `
               <div class="harness-tool-item-card" data-tool-id="${tool.id}" style="padding: 10px; border-radius: 4px; border: 1px solid var(--vscode-widget-border, #333333); background: rgba(0, 0, 0, 0.15);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; flex-wrap: wrap;">
-                  <div style="flex: 1 1 auto; min-width: 200px;">
-                    <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-                      <strong style="font-size: 12px; color: var(--vscode-foreground);">${tool.name}</strong>
-                      <span class="hook-status-badge ${tool.is_installed ? 'status-clean' : 'status-warn'}">
-                        ${tool.is_installed ? '● Active' : '○ Not Installed'}
-                      </span>
-                      ${tool.required_for ? `<span style="font-size: 9.5px; padding: 1px 5px; border-radius: 3px; background: rgba(255,255,255,0.06); color: var(--vscode-descriptionForeground);">${tool.required_for}</span>` : ''}
-                    </div>
-                    <div style="font-size: 11px; color: var(--vscode-descriptionForeground); margin-top: 4px; line-height: 1.4;">
-                      ${tool.description}
-                    </div>
-                    <div style="font-size: 10.5px; margin-top: 4px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
-                      <code style="color: #38bdf8;">${tool.binary}</code>
-                      ${tool.is_installed && tool.version ? `<span style="opacity: 0.85;">Version: <strong>${tool.version}</strong></span>` : ''}
-                      ${tool.is_installed && tool.bin_path ? `<span style="opacity: 0.65; font-size: 10px;">(${tool.bin_path})</span>` : ''}
-                      ${!tool.is_installed ? `<span style="opacity: 0.75;">Install: <code>${tool.install_command}</code></span>` : ''}
-                    </div>
+                <div class="harness-tool-header-row" style="display: flex; justify-content: space-between; align-items: center; gap: 10px; width: 100%;">
+                  <strong style="font-size: 12px; color: var(--vscode-foreground);">${tool.name}</strong>
+                  <span class="hook-status-badge ${tool.is_installed ? 'status-clean' : 'status-warn'}" style="margin-left: auto; text-align: right; white-space: nowrap; flex-shrink: 0;">
+                    ${tool.is_installed ? '● Active' : '○ Not Installed'}
+                  </span>
+                </div>
+                ${tool.required_for ? `<div style="margin-top: 4px;"><span style="font-size: 9.5px; padding: 1px 5px; border-radius: 3px; background: rgba(255,255,255,0.06); color: var(--vscode-descriptionForeground); display: inline-block;">${tool.required_for}</span></div>` : ''}
+                <div style="font-size: 11px; color: var(--vscode-descriptionForeground); margin-top: 4px; line-height: 1.4;">
+                  ${tool.description}
+                </div>
+                <div style="display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 6px;">
+                  <div style="font-size: 10.5px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
+                    <code style="color: #38bdf8;">${tool.binary}</code>
+                    ${tool.is_installed && tool.version ? `<span style="opacity: 0.85;">Version: <strong>${tool.version}</strong></span>` : ''}
+                    ${tool.is_installed && tool.bin_path ? `<span style="opacity: 0.65; font-size: 10px;">(${tool.bin_path})</span>` : ''}
+                    ${!tool.is_installed ? `<span style="opacity: 0.75;">Install: <code>${tool.install_command}</code></span>` : ''}
                   </div>
-                  <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-top: 2px;">
+                  <div style="display: flex; align-items: center; gap: 6px; flex-shrink: 0; margin-left: auto;">
                     ${!tool.is_installed ? `
                       <button class="btn-primary btn-install-harness-tool" data-tool-id="${tool.id}" style="padding: 4px 10px; font-size: 11px; white-space: nowrap; border-radius: 3px; cursor: pointer;">
                         Install ${tool.binary}
@@ -1168,16 +1172,16 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
           ${harnessCardHtml}
           ${skillsCatalogHtml}
           <div class="settings-skill-card" style="margin-top: 0;">
-            <div class="settings-subheading">LLM-Wiki Skill</div>
-            <p class="settings-desc">Install the workspace skill that documents the complete LLM Wiki CLI and its UI-equivalent workflows.</p>
-            <div class="settings-hook-row">
+            <div class="settings-subheading">KnowFrame Skill</div>
+            <p class="settings-desc">Install the workspace skill that documents the complete KnowFrame CLI and its UI-equivalent workflows.</p>
+            <div class="settings-hook-row" style="display: flex; justify-content: space-between; align-items: center; width: 100%;">
               <span class="hook-label">Skill availability:</span>
-              <span class="hook-status-badge ${skillAvailable ? 'status-clean' : 'status-warn'}">
+              <span class="hook-status-badge ${skillAvailable ? 'status-clean' : 'status-warn'}" style="margin-left: auto; text-align: right; white-space: nowrap; flex-shrink: 0;">
                 ${skillAvailable ? '● Available' : '○ Not Installed'}
               </span>
             </div>
             <button class="btn-secondary" id="btn-install-llm-wiki-skill" style="margin-top: 12px;">
-              ${skillAvailable ? 'Reinstall LLM-Wiki Skill' : 'Install LLM-Wiki Skill'}
+              ${skillAvailable ? 'Reinstall KnowFrame Skill' : 'Install KnowFrame Skill'}
             </button>
           </div>
         </div>
@@ -2049,6 +2053,13 @@ export function renderSettingsDrawer(
       e.stopPropagation();
       state.blockOnTechnicalDrift = toggleDrift.checked;
       callbacks.onToggleThreshold?.('blockOnTechnicalDrift', toggleDrift.checked);
+    });
+
+    const toggleMissingFrag = container.querySelector('#toggle-block-missing-fragments') as HTMLInputElement | null;
+    toggleMissingFrag?.addEventListener('change', (e) => {
+      e.stopPropagation();
+      state.blockOnMissingFragments = toggleMissingFrag.checked;
+      callbacks.onToggleThreshold?.('blockOnMissingFragments', toggleMissingFrag.checked);
     });
 
     container.querySelectorAll('.settings-hook-card .btn-install-harness-tool').forEach((btn) => {

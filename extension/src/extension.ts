@@ -29,8 +29,8 @@ let latestIssuesReport: KnowledgeIssuesReport | null = null;
 let latestGovernanceMatrix: AIOrientedCapabilityMatrix | null = null;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
-  const outputChannel = vscode.window.createOutputChannel('LLM Wiki');
-  outputChannel.appendLine('[EXTENSION] Activating LLM Wiki extension...');
+  const outputChannel = vscode.window.createOutputChannel('KnowFrame');
+  outputChannel.appendLine('[EXTENSION] Activating KnowFrame extension...');
 
   const secretManager = new SecretManager(context);
   processManager = new ProcessManager(context, secretManager, outputChannel);
@@ -40,7 +40,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.command = 'llmWiki.showKnowledgeGraph';
   statusBarItem.text = '$(llm-wiki-graph) Initializing';
-  statusBarItem.tooltip = 'Click to open LLM Wiki - Graph';
+  statusBarItem.tooltip = 'Click to open KnowFrame - Graph';
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
 
@@ -227,7 +227,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (statusBarItem) {
         statusBarItem.text = '$(sync~spin) 10% Starting Daemon';
         statusBarItem.command = 'llmWiki.showKnowledgeGraph';
-        statusBarItem.tooltip = 'Click to open LLM Wiki - Graph';
+        statusBarItem.tooltip = 'Click to open KnowFrame - Graph';
       }
       const port = await processManager!.start(rootPath);
       const token = secretManager.getToken() || '';
@@ -351,7 +351,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   } else {
     outputChannel.appendLine('[EXTENSION] No open workspace folder detected.');
     if (statusBarItem) {
-      statusBarItem.text = '$(folder-opened) LLM Wiki: Open Folder';
+      statusBarItem.text = '$(folder-opened) KnowFrame: Open Folder';
       statusBarItem.tooltip = 'Click to open a workspace folder or Obsidian vault';
       statusBarItem.command = 'llmWiki.openFolder';
     }
@@ -370,7 +370,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         latestQualityScore = null;
         latestIssuesReport = null;
         if (statusBarItem) {
-          statusBarItem.text = '$(folder-opened) LLM Wiki: Open Folder';
+          statusBarItem.text = '$(folder-opened) KnowFrame: Open Folder';
           statusBarItem.tooltip = 'Click to open a workspace folder or Obsidian vault';
           statusBarItem.command = 'llmWiki.openFolder';
         }

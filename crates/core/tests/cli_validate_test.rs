@@ -301,11 +301,11 @@ fn test_tier3_standalone_shell_hook_installation() {
     assert!(post_hook.is_file());
 
     let pre_content = fs::read_to_string(&pre_hook).unwrap();
-    assert!(pre_content.contains("llm-wiki-core validate"));
+    assert!(pre_content.contains("knowframe-core validate"));
     assert!(pre_content.contains("exit 0"));
 
     let post_content = fs::read_to_string(&post_hook).unwrap();
-    assert!(post_content.contains("llm-wiki-core git-delta"));
+    assert!(post_content.contains("knowframe-core git-delta"));
     assert!(post_content.contains("exit 0"));
 
     #[cfg(unix)]

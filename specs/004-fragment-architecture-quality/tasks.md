@@ -1,9 +1,9 @@
 ---
 wiki:
-  content_hash: 6626f4222beaa0172a99e3fe264a0bfc2111bce202e90a0035b8e61238a122c9
+  content_hash: 5461f1820b0d75c63a3a627324e92542cc9a41a9536aabd98f18463e806f7f24
   fragments:
     tasks-fragment-level-architecture-5-pillar-quality-model:
-      tokens: 8753
+      tokens: 8233
       inbound: 0
       outbound: 3
     task-matrix-dependencies:
@@ -35,7 +35,7 @@ wiki:
       inbound: 0
       outbound: 0
     phase-7-raw-numeric-integrity-presentation-formatter-tasks-t037t041:
-      tokens: 926
+      tokens: 406
       inbound: 0
       outbound: 0
     phase-8-webview-fragment-inspector-5-pillar-diagnostics-ui-tasks-t042t048:

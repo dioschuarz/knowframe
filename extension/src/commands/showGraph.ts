@@ -34,7 +34,7 @@ export function registerShowGraphCommand(
     if (!hasWorkspace) {
       panel.sendNoWorkspace();
       vscode.window.showInformationMessage(
-        'LLM Wiki: No open workspace folder detected. Please open a folder to explore the knowledge graph.',
+        'KnowFrame: No open workspace folder detected. Please open a folder to explore the knowledge graph.',
         'Open Folder'
       ).then((choice) => {
         if (choice === 'Open Folder') {
@@ -50,7 +50,7 @@ export function registerShowGraphCommand(
       panel.sendLoadingProgress('graph', 30, 'Scanning vault topology...');
       vscode.commands.executeCommand('llmWiki.rescanVault');
     } else {
-      panel.sendLoadingProgress('graph', 15, 'Starting LLM Wiki engine daemon...');
+      panel.sendLoadingProgress('graph', 15, 'Starting KnowFrame engine daemon...');
     }
   });
 }

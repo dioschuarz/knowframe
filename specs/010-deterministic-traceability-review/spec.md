@@ -1,6 +1,6 @@
 ---
 wiki:
-  content_hash: 51b9ad0ad54863b4220729d3a8229ca5c1c25fa0942131fa98b25980b96c42d9
+  content_hash: bb6b4200f0741242882dddfe55493584ef87f9815dbedeb21b4cf2c6c9fba94d
   fragments:
     feature-specification-deterministic-traceability-review-knowledge-consistency:
       tokens: 26459

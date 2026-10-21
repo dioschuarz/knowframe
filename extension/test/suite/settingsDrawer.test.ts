@@ -68,7 +68,7 @@ suite('SettingsDrawer Test Suite', () => {
 
     assert.ok(html.includes('Git Hook Integration'), 'Must display Git hook header');
     assert.ok(html.includes('threshold-toggles-list'), 'Must render threshold options as a dedicated vertical list');
-    assert.strictEqual((html.match(/class="threshold-toggle-item"/g) || []).length, 3, 'Must render one row per threshold checkbox');
+    assert.strictEqual((html.match(/class="threshold-toggle-item"/g) || []).length, 4, 'Must render one row per threshold checkbox');
     assert.ok(html.includes('Installed') || html.includes('Active'), 'Must show hook status');
     assert.ok(html.includes('Reinstall') || html.includes('Install'), 'Must have install/reinstall button');
     assert.ok(html.includes('Knowledge Debt Baseline'), 'Must display Knowledge Debt Baseline');
@@ -494,6 +494,7 @@ suite('SettingsDrawer Test Suite', () => {
 
     assert.ok(html.includes('Admission Blocking Thresholds'), 'Must render Admission Blocking Thresholds');
     assert.ok(html.includes('toggle-block-broken'), 'Must render admission threshold checkbox');
+    assert.ok(html.includes('toggle-block-missing-fragments'), 'Must render missing fragments threshold checkbox');
     assert.ok(html.includes('Knowledge Debt Baseline'), 'Must render Knowledge Debt Baseline section');
     assert.ok(!html.includes('chk-threshold-adv'), 'Must not render redundant adv checkboxes');
   });
@@ -1083,9 +1084,11 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(html.includes('id="btn-refresh-harness-tools"'), 'Must render Scan Tools refresh button');
     assert.ok(html.includes('Scan Tools'), 'Button text must be Scan Tools');
 
-    // 2. Installed tool (prek)
+    // 2. Installed tool (prek) with right-aligned status badge
     assert.ok(html.includes('data-tool-id="prek"'), 'Must render item card for prek');
     assert.ok(html.includes('prek (Rust Git Hook Orchestrator)'), 'Must render prek tool name');
+    assert.ok(html.includes('class="harness-tool-header-row"'), 'Must render flex header row for right-aligned status badge');
+    assert.ok(html.includes('margin-left: auto; text-align: right; white-space: nowrap; flex-shrink: 0;'), 'Status badge must have right-aligned flex styling');
     assert.ok(html.includes('Version: <strong>0.2.4</strong>'), 'Must display installed tool version');
     assert.ok(html.includes('(/usr/local/bin/prek)'), 'Must display installed tool binary path');
     assert.ok(html.includes('Reinstall'), 'Must render Reinstall button for installed tool');

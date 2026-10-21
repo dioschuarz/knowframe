@@ -680,6 +680,9 @@ pub struct ReviewGatingConfig {
     /// If true, legacy baseline debt blocks PR validation (defaults to false per Invariant XI)
     #[serde(default)]
     pub block_on_legacy_debt: bool,
+    /// If true, missing section fragments on links abort pre-commit admission (default true)
+    #[serde(default = "default_true")]
+    pub block_on_missing_fragments: bool,
 }
 
 impl Default for ReviewGatingConfig {
@@ -687,6 +690,7 @@ impl Default for ReviewGatingConfig {
         Self {
             enforce_doc_review: true,
             block_on_legacy_debt: false,
+            block_on_missing_fragments: true,
         }
     }
 }

@@ -4,10 +4,10 @@ version.workspace = true
 edition.workspace = true
 authors.workspace = true
 license.workspace = true
-description = "High-performance Rust core engine for LLM Wiki VS Code extension"
+description = "High-performance Rust core engine for KnowFrame VS Code extension"
 
 [[bin]]
-name = "llm-wiki-core"
+name = "knowframe-core"
 path = "src/main.rs"
 
 [lib]

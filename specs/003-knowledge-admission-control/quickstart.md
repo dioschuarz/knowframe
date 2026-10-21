@@ -1,13 +1,13 @@
 ---
 wiki:
-  content_hash: 54c738984d870c39bbf2b2c8860b529a975fe7495275abdae82621274e6acfb4
+  content_hash: f9e2aa7cd416df7de715a760be94f6ed2988bd9694393310e5af23bacd202abf
   fragments:
     quickstart-knowledge-quality-admission-control-git-lifecycles:
-      tokens: 926
+      tokens: 927
       inbound: 0
       outbound: 0
     1-establishing-the-initial-debt-baseline:
-      tokens: 139
+      tokens: 140
       inbound: 0
       outbound: 0
     2-pre-commit-validation-in-action-llm-wiki-validate:

@@ -67,7 +67,7 @@ pub fn execute_governance_plan(
         println!();
         println!("To apply this plan after reviewing the diff, run:");
         println!(
-            "  llm-wiki-core governance apply --strategy {} --target {} --approve",
+            "  knowframe-core governance apply --strategy {} --target {} --approve",
             plan.strategy_type.as_str(),
             plan.target_file_or_dir
         );
