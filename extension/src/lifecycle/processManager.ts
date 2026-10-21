@@ -35,6 +35,15 @@ export class ProcessManager implements vscode.Disposable {
 
   public async start(workspaceRoot: string, desiredPort = 0): Promise<number> {
     this.isIntentionallyStopped = false;
+    if (this.process) {
+      await this.stop();
+    }
+    // Clean up any orphaned sidecar daemons running for this workspace root
+    try {
+      const { execSync } = require('child_process');
+      execSync(`pkill -9 -f "knowframe-core daemon --root ${workspaceRoot}" 2>/dev/null || true`, { stdio: 'ignore' });
+    } catch {}
+
     const binaryPath = resolveBinaryPath(this.context.extensionPath);
     const token = await this.secretManager.initializeToken();
 

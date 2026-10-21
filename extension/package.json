@@ -78,6 +78,12 @@
         "title": "KnowFrame: Open AI Harness & Tooling",
         "category": "KnowFrame",
         "icon": "$(tools)"
+      },
+      {
+        "command": "llmWiki.restartDaemon",
+        "title": "KnowFrame: Restart Knowledge Engine Daemon",
+        "category": "KnowFrame",
+        "icon": "$(refresh)"
       }
     ],
     "menus": {
@@ -108,6 +114,9 @@
         },
         {
           "command": "llmWiki.openHarness"
+        },
+        {
+          "command": "llmWiki.restartDaemon"
         }
       ],
       "editor/title": [
@@ -193,6 +202,10 @@
     "compile": "node esbuild.js",
     "watch": "node esbuild.js --watch",
     "package": "node esbuild.js --production",
+    "build:rust": "cargo build --release --manifest-path ../Cargo.toml && cp ../target/release/knowframe-core bin/ && cp ../target/release/knowframe-cli bin/",
+    "vsix": "npm run build:rust && npm run package && npx --yes @vscode/vsce package --no-dependencies -o knowframe-0.1.0.vsix",
+    "reinstall": "bash ../scripts/distribute.sh",
+    "distribute": "bash ../scripts/distribute.sh",
     "package:verify": "npm run package && node -e \"const fs = require('fs'); const file = fs.existsSync('knowframe-0.1.0.vsix') ? 'knowframe-0.1.0.vsix' : 'llm-wiki-0.1.0.vsix'; const st = fs.statSync(file); console.log('VSIX size: ' + (st.size / (1024*1024)).toFixed(2) + ' MB'); if(st.size > 25*1024*1024) { console.error('VSIX exceeds 25MB budget'); process.exit(1); }\"",
     "lint": "eslint src --ext ts",
     "test": "node --test --experimental-strip-types test/suite/*.test.ts",

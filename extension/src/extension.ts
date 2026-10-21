@@ -170,6 +170,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('llmWiki.refreshQualityScore', async () => {
       await vscode.commands.executeCommand('llmWiki.rescanVault');
     }),
+    vscode.commands.registerCommand('llmWiki.restartDaemon', async () => {
+      const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+      if (rootPath) {
+        outputChannel.appendLine('[EXTENSION] User triggered manual daemon restart');
+        vscode.window.showInformationMessage('Restarting KnowFrame Knowledge Engine daemon...');
+        try {
+          await processManager.stop();
+          const port = await processManager.start(rootPath, 0);
+          await ensureIpcClient();
+          await vscode.commands.executeCommand('llmWiki.rescanVault');
+          vscode.window.showInformationMessage(`KnowFrame daemon restarted successfully on port ${port}.`);
+        } catch (err: any) {
+          vscode.window.showErrorMessage(`Failed to restart KnowFrame daemon: ${err.message}`);
+        }
+      }
+    }),
     vscode.commands.registerCommand('llmWiki.reviewIssues', async () => {
       const panel = GraphPanelManager.createOrShow(context.extensionUri, ipcClient, latestScanResult);
       if (evolutionManager) {
