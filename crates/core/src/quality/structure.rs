@@ -142,7 +142,7 @@ pub fn detect_structure_debt(topology: &GraphTopology) -> Vec<StructureDebtFindi
                     findings.push(StructureDebtFinding {
                         debt_type: StructureDebtType::UnanchoredReference,
                         document_path: edge.source.clone(),
-                        fragment_anchor: None,
+                        fragment_anchor: Some(edge.target.clone()),
                         raw_metric_value: target_node.fragments.len() as u32,
                         penalty: 2.0,
                         guidance: format!(

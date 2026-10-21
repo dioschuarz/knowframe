@@ -264,8 +264,9 @@ pub fn calculate_quality_score(
 
     // Pillar 2: Structure
     let structure_findings = crate::quality::structure::detect_structure_debt(topology);
-    let structure_score =
+    let raw_structure_score =
         crate::quality::structure::calculate_structure_score(&structure_findings, topology);
+    let mut eff_structure_deductions = 0.0f32;
 
     for sf in &structure_findings {
         let b = topology
@@ -282,8 +283,14 @@ pub fn calculate_quality_score(
             description: sf.guidance.clone(),
         };
         raw_degradation_factors.push(factor.clone());
-        eff_degradation_factors.push(factor);
+
+        let is_legacy = baseline.is_some() && baseline.map(|b| b.total_debt > 0).unwrap_or(false);
+        if !is_legacy {
+            eff_structure_deductions += penalty;
+            eff_degradation_factors.push(factor);
+        }
     }
+    let eff_structure_score = (100.0f32 - eff_structure_deductions).clamp(0.0, 100.0);
 
     // Baseline debt accounting integration
     let (legacy_debt_count, new_regressions_count, resolved_debt_count) =
@@ -335,13 +342,13 @@ pub fn calculate_quality_score(
     let active_issues_count_calc = all_issues.iter().filter(|i| !i.is_legacy).count() as u32;
 
     let raw_overall = (0.25 * raw_integrity_score
-        + 0.20 * structure_score
+        + 0.20 * raw_structure_score
         + 0.20 * raw_consistency_score
         + 0.20 * raw_discoverability_score
         + 0.15 * raw_freshness_score).clamp(0.0, 100.0);
 
     let eff_overall = (0.25 * eff_integrity_score
-        + 0.20 * structure_score
+        + 0.20 * eff_structure_score
         + 0.20 * eff_consistency_score
         + 0.20 * eff_discoverability_score
         + 0.15 * eff_freshness_score).clamp(0.0, 100.0);
@@ -349,6 +356,7 @@ pub fn calculate_quality_score(
     let (
         overall_score,
         integrity_score,
+        structure_score,
         consistency_score,
         discoverability_score,
         freshness_score,
@@ -361,6 +369,7 @@ pub fn calculate_quality_score(
         (
             eff_overall,
             eff_integrity_score,
+            eff_structure_score,
             eff_consistency_score,
             eff_discoverability_score,
             eff_freshness_score,
@@ -374,6 +383,7 @@ pub fn calculate_quality_score(
         (
             raw_overall,
             raw_integrity_score,
+            raw_structure_score,
             raw_consistency_score,
             raw_discoverability_score,
             raw_freshness_score,
@@ -726,13 +736,13 @@ pub fn is_issue_baselined(issue: &KnowledgeIssue, baseline: &KnowledgeDebtBaseli
             }
         }
         "structure" => {
-            if issue.category == "unanchored_reference" {
+            if issue.category == "unanchored_reference" || issue.category == "unanchoredreference" {
                 let target = issue.target.as_deref().unwrap_or("");
                 baseline.broken_links.iter().any(|bl| {
                     bl.source_path == issue.file_path && (bl.target_ref == target || target.starts_with(&bl.target_ref))
                 }) || baseline.total_debt > 0
             } else {
-                false
+                baseline.total_debt > 0
             }
         }
         _ => false,
