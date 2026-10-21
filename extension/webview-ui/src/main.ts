@@ -185,6 +185,11 @@ const settingsDrawer = renderSettingsDrawer(
       rpc.sendMessage({ type: 'requestIssues', payload: { pillar } });
     },
     onRequestIssuesWithOptions: (options) => {
+      if (options?.include_debt) {
+        renderer.setShowAllUnanchored(true);
+      } else {
+        renderer.setShowAllUnanchored(false);
+      }
       rpc.sendMessage({ type: 'requestIssues', payload: options });
     },
     onRequestEvolution: () => {
@@ -797,6 +802,17 @@ rpc.on('navigateToDetail', (data: any) => {
 });
 
 rpc.on('issuesReportUpdate', (data: any) => {
+  const activeUnanchored = new Set<string>();
+  if (data?.issues && Array.isArray(data.issues)) {
+    for (const issue of data.issues) {
+      if ((issue.pillar === 'structure' || issue.category?.includes('unanchored')) && !issue.is_legacy) {
+        if (issue.file_path && issue.target) {
+          activeUnanchored.add(`${issue.file_path}->${issue.target}`);
+        }
+      }
+    }
+  }
+  renderer.setActiveUnanchoredEdges(activeUnanchored);
   settingsDrawer.updateProps({
     issuesReport: data,
   });

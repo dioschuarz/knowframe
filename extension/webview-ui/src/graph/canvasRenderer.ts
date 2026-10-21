@@ -23,6 +23,8 @@ export class CanvasRenderer {
   private labelsMode: LabelsMode = 'hover';
   private matchedNodeIds: Set<string> | null = null;
   private showExcluded: boolean = false;
+  private activeUnanchoredEdges: Set<string> = new Set();
+  private showAllUnanchored: boolean = false;
 
   // Zoom & Pan
   private scale = 1;
@@ -98,6 +100,16 @@ export class CanvasRenderer {
 
   public getShowExcluded(): boolean {
     return this.showExcluded;
+  }
+
+  public setActiveUnanchoredEdges(edgeKeys: Set<string>): void {
+    this.activeUnanchoredEdges = edgeKeys;
+    this.draw();
+  }
+
+  public setShowAllUnanchored(show: boolean): void {
+    this.showAllUnanchored = show;
+    this.draw();
   }
 
   public resetZoom(): void {
@@ -420,8 +432,8 @@ export class CanvasRenderer {
         this.ctx.strokeStyle = '#EF4444'; // Dashed Red for Dead Links
         this.ctx.lineWidth = isSearchActive ? 2 : 1.5;
         this.ctx.setLineDash([4, 4]);
-      } else if (!edge.anchor && !edge.target_fragment && tgtNode && (tgtNode.fragments?.length || 0) > 1) {
-        // Amber dash for unanchored references to multi-fragment documents
+      } else if (!edge.anchor && !edge.target_fragment && tgtNode && (tgtNode.fragments?.length || 0) > 1 && (this.showAllUnanchored || this.activeUnanchoredEdges.has(`${edge.source}->${edge.target}`) || this.activeUnanchoredEdges.has(`${srcNode?.id}->${tgtNode?.id}`))) {
+        // Amber dash for unanchored references to multi-fragment documents that are active findings (or when showAllUnanchored is enabled)
         this.ctx.strokeStyle = '#F59E0B'; // Amber / Orange for Missing Section Fragment
         this.ctx.lineWidth = isSearchActive ? 1.8 : 1.4;
         this.ctx.setLineDash([3, 3]);

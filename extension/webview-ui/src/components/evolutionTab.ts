@@ -870,6 +870,9 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
 
   // 1. Ingest all vaultFindings
   for (const f of rawFindings) {
+    if (f.is_legacy) {
+      continue;
+    }
     const filePath = f.file_path;
     const matchingSig = rawSignatures.find((s: any) => {
       const dp = s.documentPath || s.document_path;
