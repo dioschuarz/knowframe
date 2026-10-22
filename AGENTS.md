@@ -74,11 +74,13 @@ Welcome to `knowframe` (**KnowFrame** — Knowledge Management Framework). This 
 ## 1. Naming Standards & Conventions
 - **Files & Notes**: Use `snake_case` for markdown notes and documentation.
 - **Code Symbols**: Use `CamelCase` for types, classes, and components.
+- **DRY & Single Source of Truth**: Never duplicate architectural principles, rules, or schemas across markdown files. Always promote shared principles into canonical documents under `foundations/` or `concepts/` and link to them.
 
 ## Knowledge Index
 
 ### Governance & Invariants
 - [KnowFrame Constitution & 17 Invariants](CONSTITUTION.md)
+- [Product Management Foundations: Sensible Defaults with Unconstrained Customization](../notes/07_c_suite/ctaas/foundations/product_management.md)
 
 ### Feature Specifications & Architecture
 
