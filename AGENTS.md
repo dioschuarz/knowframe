@@ -76,6 +76,12 @@ Welcome to `knowframe` (**KnowFrame** — Knowledge Management Framework). This 
 - **Code Symbols**: Use `CamelCase` for types, classes, and components.
 - **DRY & Single Source of Truth**: Never duplicate architectural principles, rules, or schemas across markdown files. Always promote shared principles into canonical documents under `foundations/` or `concepts/` and link to them.
 
+## 2. Mermaid & Visual Architecture Standard
+- **Canonical Specification**: Obey [[04_harness/skills/mermaid-reviewer/SKILL|Mermaid Visualization & Terminal Rendering Standard]] — Single Source of Truth.
+- **Dual Modality Protocol**:
+  - **In Markdown files (`.md`)**: Always write clean, valid ````mermaid```` code blocks (rendered natively in Obsidian and GitHub).
+  - **In Terminal chat sessions**: NEVER output raw Mermaid code. Render visually to Unicode/ASCII via `merman-cli` (constrained to **max 155 characters** per line) before responding to the user.
+
 ## Knowledge Index
 
 ### Governance & Invariants
