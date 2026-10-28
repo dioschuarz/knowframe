@@ -587,8 +587,8 @@ export class CanvasRenderer {
       const shouldDraw = isSearchActive
         ? (isMatched || isHovered)
         : (this.labelsMode === 'all'
-            ? (this.scale >= 0.35 || isHovered || isHub || isProminent || hasIssues)
-            : (isHovered || isHub || hasIssues));
+            ? (this.scale >= 0.35 || isHovered || isHub || isProminent)
+            : (isHovered || isHub));
 
       if (!shouldDraw) continue;
 
@@ -598,7 +598,7 @@ export class CanvasRenderer {
       const worldFontPx = Math.max(4, Math.min(22, targetScreenPx / this.scale));
       const labelY = node.y + r + (4 / this.scale);
 
-      this.ctx.font = `${isHub || isHovered || (isSearchActive && isMatched) || hasIssues ? 'bold ' : ''}${Math.round(worldFontPx)}px sans-serif`;
+      this.ctx.font = `${isHub || isHovered || (isSearchActive && isMatched) ? 'bold ' : ''}${Math.round(worldFontPx)}px sans-serif`;
 
       // Dark background outline/stroke for maximum legibility across complex graphs
       this.ctx.lineWidth = 3.5 / this.scale;
@@ -611,10 +611,10 @@ export class CanvasRenderer {
         this.ctx.fillStyle = 'rgba(148, 163, 184, 0.45)';
       } else if (isSearchActive && isMatched) {
         this.ctx.fillStyle = '#38BDF8';
+      } else if (isHovered) {
+        this.ctx.fillStyle = hasIssues ? '#FCA5A5' : '#38BDF8';
       } else if (isHub) {
         this.ctx.fillStyle = '#60A5FA';
-      } else if (isHovered) {
-        this.ctx.fillStyle = '#38BDF8';
       } else if (hasIssues) {
         this.ctx.fillStyle = '#F87171';
       } else {
