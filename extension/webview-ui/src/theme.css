@@ -1611,8 +1611,8 @@ body, html {
    ========================================================================== */
 
 .issue-modal-dialog {
-  width: 540px;
-  max-width: 92vw;
+  width: 580px;
+  max-width: 94vw;
 }
 
 .issue-modal-body {
@@ -1621,7 +1621,7 @@ body, html {
 
 .issue-points-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 8px;
   background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-color);
@@ -1633,6 +1633,7 @@ body, html {
   display: flex;
   flex-direction: column;
   gap: 2px;
+  min-width: 0;
 }
 
 .issue-point-span-full {
@@ -1651,9 +1652,14 @@ body, html {
   font-size: 12px;
   font-weight: 500;
   color: var(--fg-color);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  min-width: 0;
+}
+
+.issue-point-span-full .issue-point-val {
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  line-height: 1.4;
 }
 
 .issue-cat-val {
@@ -1670,6 +1676,9 @@ body, html {
 .issue-target-code {
   font-family: var(--vscode-editor-font-family, monospace);
   color: #38bdf8;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  white-space: normal;
 }
 
 .issue-desc-card {
@@ -1680,6 +1689,7 @@ body, html {
   display: flex;
   flex-direction: column;
   gap: 6px;
+  min-width: 0;
 }
 
 .issue-desc-title {
@@ -1694,6 +1704,10 @@ body, html {
   font-size: 12px;
   line-height: 1.45;
   color: var(--vscode-editor-foreground, #e2e8f0);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  min-width: 0;
 }
 
 .issue-hint-row {
@@ -1703,9 +1717,18 @@ body, html {
   font-size: 11.5px;
   color: #94a3b8;
   background: rgba(0, 0, 0, 0.15);
-  padding: 6px 8px;
+  padding: 8px 10px;
   border-radius: 4px;
-  line-height: 1.35;
+  line-height: 1.4;
+  min-width: 0;
+}
+
+.issue-hint-text {
+  word-break: break-word;
+  overflow-wrap: anywhere;
+  white-space: normal;
+  min-width: 0;
+  flex: 1;
 }
 
 .issue-options-section {

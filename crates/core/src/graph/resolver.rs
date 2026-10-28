@@ -247,6 +247,27 @@ pub fn resolve_edge_integrity(
     let canonical_target = match matched_target {
         Some(found) => found,
         None => {
+            // Check if target file physically exists on disk (e.g. non-markdown workspace files like Caddyfile, configs, scripts)
+            let source_dir_exists = index
+                .known_nodes
+                .get(&edge.source)
+                .and_then(|p| p.parent())
+                .map(|dir| dir.join(&raw_target).is_file())
+                .unwrap_or(false);
+
+            let disk_target_exists = source_dir_exists
+                || candidate_paths.iter().any(|c| Path::new(c).is_file())
+                || Path::new(&raw_target).is_file()
+                || Path::new(&rel_target).is_file();
+
+            if disk_target_exists {
+                edge.target = rel_target.clone();
+                edge.id = format!("{}->{}", edge.source, edge.target);
+                edge.is_broken = false;
+                edge.resolution_status = Some(LinkResolutionStatus::Resolved);
+                return;
+            }
+
             edge.target = rel_target.clone();
             edge.id = format!("{}->{}", edge.source, edge.target);
             edge.is_broken = true;
@@ -431,6 +452,33 @@ mod tests {
         resolve_edge_integrity(&mut edge, &index, &headings);
 
         assert!(!edge.is_broken);
+        assert_eq!(edge.resolution_status, Some(LinkResolutionStatus::Resolved));
+    }
+
+    #[test]
+    fn test_non_markdown_file_link_resolved_if_exists_on_disk() {
+        let temp_dir = tempfile::tempdir().unwrap();
+        let src_file = temp_dir.path().join("README.md");
+        let caddy_file = temp_dir.path().join("Caddyfile");
+        std::fs::write(&src_file, "# Readme").unwrap();
+        std::fs::write(&caddy_file, "# Caddyfile config").unwrap();
+
+        let mut known_nodes = HashMap::new();
+        known_nodes.insert("README.md".to_string(), src_file);
+        let index = ResolverIndex::new(&known_nodes);
+        let headings = HashMap::new();
+
+        let mut edge = NoteEdge::new(
+            "README.md",
+            "Caddyfile",
+            LinkType::Markdown,
+            "Caddyfile",
+            None,
+            Some(10),
+        );
+        resolve_edge_integrity(&mut edge, &index, &headings);
+
+        assert!(!edge.is_broken, "Caddyfile physically exists on disk and should be resolved");
         assert_eq!(edge.resolution_status, Some(LinkResolutionStatus::Resolved));
     }
 }
