@@ -485,8 +485,9 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
         <div class="pillar-title">HEALTH</div>
         <div class="pillar-header-actions">
           <button class="dash-action-btn icon-only-btn ai-review-btn" id="dash-btn-review-all-ai" data-tooltip="Review all with AI" title="Review all with AI" aria-label="Review all with AI">
-            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
-              <path fill-rule="evenodd" clip-rule="evenodd" d="M14.7 3.3a3.5 3.5 0 0 0-4.9-.1L8.5 4.5l2.9 2.9 1.3-1.3c.6-.6 1.5-.6 2.1 0 .2.2.3.5.3.8 0 .3-.1.6-.3.8l-1.3 1.3 2.9 2.9 1.3-1.3a3.5 3.5 0 0 0-.1-4.9l-2.6-2.6zM7.8 5.2L1.4 11.6a1.5 1.5 0 0 0 0 2.1l.9.9a1.5 1.5 0 0 0 2.1 0l6.4-6.4-3-3z"/>
+            <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M7.5 1.5L9 5l3.5 1.5L9 8l-1.5 3.5L6 8 2.5 6.5 6 5z" fill="currentColor" fill-opacity="0.3"/>
+              <path d="M12.5 10.5l.75 1.75 1.75.75-1.75.75-.75 1.75-.75-1.75-1.75-.75 1.75-.75z" fill="currentColor"/>
             </svg>
           </button>
           <button class="dash-action-btn icon-only-btn primary-action" id="dash-btn-explore-graph" data-tooltip="Explore graph" title="Explore graph" aria-label="Explore graph">

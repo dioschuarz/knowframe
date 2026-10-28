@@ -219,6 +219,26 @@ export class GraphPanelManager implements vscode.Disposable {
         });
       }).catch(() => {});
     }
+
+    if (GraphPanelManager.cachedIssuesReport) {
+      this.panel.webview.postMessage({
+        type: 'issuesReportUpdate',
+        payload: GraphPanelManager.cachedIssuesReport,
+      });
+    } else if (this.ipcClient && !this.isFetchingIssues) {
+      this.isFetchingIssues = true;
+      this.ipcClient.sendRequest('workspace/getIssues', {}).then((issuesReport: any) => {
+        GraphPanelManager.cachedIssuesReport = issuesReport;
+        this.panel.webview.postMessage({
+          type: 'issuesReportUpdate',
+          payload: issuesReport,
+        });
+      }).catch((err) => {
+        console.error('Failed to fetch issues report on updateData:', err);
+      }).finally(() => {
+        this.isFetchingIssues = false;
+      });
+    }
   }
 
   public async openSettingsDrawer(tab: string = 'knowledge'): Promise<void> {
@@ -732,6 +752,26 @@ export class GraphPanelManager implements vscode.Disposable {
           this.sendLoadingProgress('graph', 20, 'Scanning vault topology...');
         }
 
+        if (GraphPanelManager.cachedIssuesReport) {
+          this.panel.webview.postMessage({
+            type: 'issuesReportUpdate',
+            payload: GraphPanelManager.cachedIssuesReport,
+          });
+        } else if (this.ipcClient && !this.isFetchingIssues) {
+          this.isFetchingIssues = true;
+          this.ipcClient.sendRequest('workspace/getIssues', {}).then((issuesReport: any) => {
+            GraphPanelManager.cachedIssuesReport = issuesReport;
+            this.panel.webview.postMessage({
+              type: 'issuesReportUpdate',
+              payload: issuesReport,
+            });
+          }).catch((err) => {
+            console.error('Failed to fetch issues report on requestGraphData:', err);
+          }).finally(() => {
+            this.isFetchingIssues = false;
+          });
+        }
+
         if (this.pendingOpenTab) {
           const tabToOpen = this.pendingOpenTab;
           this.pendingOpenTab = null;
@@ -739,12 +779,6 @@ export class GraphPanelManager implements vscode.Disposable {
             type: 'openSettingsDrawer',
             payload: { tab: tabToOpen },
           });
-          if (GraphPanelManager.cachedIssuesReport) {
-            this.panel.webview.postMessage({
-              type: 'issuesReportUpdate',
-              payload: GraphPanelManager.cachedIssuesReport,
-            });
-          }
         }
         break;
       }

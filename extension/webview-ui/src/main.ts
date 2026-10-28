@@ -300,32 +300,98 @@ let latestIssues: KnowledgeIssue[] = [];
 const currentIssueNodeIds = new Set<string>();
 
 function getIssuesForNode(node: NoteNode): KnowledgeIssue[] {
-  if (!latestIssues || latestIssues.length === 0) return [];
-  const nPath = (node.filePath || '').toLowerCase();
-  const nId = (node.id || '').toLowerCase();
+  const nPath = (node.filePath || '').toLowerCase().replace(/\\/g, '/');
+  const nId = (node.id || '').toLowerCase().replace(/\\/g, '/');
   const nLabel = (node.label || '').toLowerCase();
 
-  return latestIssues.filter((issue) => {
-    const fPath = (issue.file_path || '').toLowerCase();
-    if (!fPath) return false;
-    if (fPath === nPath || fPath === nId) return true;
-    if (nPath && (fPath.endsWith(nPath) || nPath.endsWith(fPath))) return true;
-    if (nId && (fPath.endsWith(nId) || nId.endsWith(fPath))) return true;
-    const base = fPath.split('/').pop()?.replace(/\.md$/, '') || '';
-    if (base && (base === nLabel || base === nId)) return true;
-    return false;
-  });
+  const issues: KnowledgeIssue[] = [];
+  const seenKeys = new Set<string>();
+
+  if (latestIssues && latestIssues.length > 0) {
+    for (const issue of latestIssues) {
+      const fPath = (issue.file_path || '').toLowerCase().replace(/\\/g, '/');
+      if (!fPath) continue;
+      const isMatch =
+        fPath === nPath ||
+        fPath === nId ||
+        (nPath && (fPath.endsWith(nPath) || nPath.endsWith(fPath))) ||
+        (nId && (fPath.endsWith(nId) || nId.endsWith(fPath))) ||
+        (nLabel && fPath.split('/').pop()?.replace(/\.md$/, '') === nLabel);
+
+      if (isMatch) {
+        issues.push(issue);
+        seenKeys.add(`${issue.category}:${issue.target || ''}:${issue.line_number || ''}`);
+      }
+    }
+  }
+
+  // Also include any broken references from graph edges for this node
+  for (const edge of edges) {
+    const src = (typeof edge.source === 'object' ? (edge.source as any).id : edge.source || '').toLowerCase().replace(/\\/g, '/');
+    const isEdgeMatch =
+      src === nId ||
+      src === nPath ||
+      (nPath && (src.endsWith(nPath) || nPath.endsWith(src))) ||
+      (nId && (src.endsWith(nId) || nId.endsWith(src)));
+
+    if (isEdgeMatch && edge.isBroken) {
+      const tgt = edge.target || '';
+      const line = edge.line;
+      const key = `broken_link:${tgt}:${line || ''}`;
+      if (!seenKeys.has(key)) {
+        seenKeys.add(key);
+        issues.push({
+          id: `integrity:${node.id}:${tgt}:${line || 0}`,
+          pillar: 'integrity',
+          category: 'broken_link',
+          file_path: node.filePath || node.id,
+          line_number: line,
+          target: tgt,
+          deduction_points: 5.0,
+          weight: 1.0,
+          description: `Broken reference to missing target '${tgt}'`,
+          remediation_hint: `Create target file '${tgt}' or update link in '${node.filePath || node.id}'`,
+          is_legacy: false,
+          is_excluded: false,
+        });
+      }
+    }
+  }
+
+  // Fallback if node has brokenLinks count but no edges were mapped
+  if (issues.length === 0 && node.brokenLinks && node.brokenLinks > 0) {
+    issues.push({
+      id: `integrity:${node.id}:broken_links`,
+      pillar: 'integrity',
+      category: 'broken_link',
+      file_path: node.filePath || node.id,
+      line_number: undefined,
+      target: undefined,
+      deduction_points: 5.0 * node.brokenLinks,
+      weight: 1.0,
+      description: `${node.brokenLinks} broken reference${node.brokenLinks > 1 ? 's' : ''} detected in document`,
+      remediation_hint: `Check and update broken references in '${node.filePath || node.id}'`,
+      is_legacy: false,
+      is_excluded: false,
+    });
+  }
+
+  return issues;
 }
 
 function updateIssueHighlights(): void {
   currentIssueNodeIds.clear();
   for (const node of rawNodes) {
     const nodeIssues = getIssuesForNode(node);
-    if (nodeIssues.length > 0) {
+    if (nodeIssues.length > 0 || (node.brokenLinks && node.brokenLinks > 0)) {
       currentIssueNodeIds.add(node.id);
+      if (node.filePath) {
+        currentIssueNodeIds.add(node.filePath);
+      }
     }
   }
   renderer.setIssueNodeIds(currentIssueNodeIds);
+  renderer.draw();
 }
 
 function inspectNode(node: NoteNode): void {
@@ -1038,6 +1104,7 @@ rpc.on('constraintValidationResult', (data: any) => {
 
 // Request initial or refreshed graph data, harness, skills, and directory metrics from Extension Host
 rpc.send('requestGraphData');
+rpc.sendMessage({ type: 'requestIssues', payload: { include_debt: true } });
 rpc.send('requestHarnessStatus');
 rpc.getSkillCatalog();
 rpc.analyzeDirectoryStructure();
