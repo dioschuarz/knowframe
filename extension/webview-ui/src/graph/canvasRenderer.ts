@@ -554,17 +554,6 @@ export class CanvasRenderer {
         this.ctx.fillStyle = '#F59E0B';
         this.ctx.fill();
       }
-
-      // Red alert badge indicator for nodes with issues
-      if (hasIssues && !isSearchActive) {
-        this.ctx.beginPath();
-        this.ctx.arc(node.x - r * 0.7, node.y - r * 0.7, Math.max(2.5, 3.5 / this.scale), 0, 2 * Math.PI);
-        this.ctx.fillStyle = '#EF4444';
-        this.ctx.fill();
-        this.ctx.lineWidth = 1;
-        this.ctx.strokeStyle = '#FFFFFF';
-        this.ctx.stroke();
-      }
     }
 
     // 3. Draw Labels (Pass 2: on top of all circles to prevent clipping)

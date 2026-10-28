@@ -49,6 +49,7 @@ export interface InspectorCallbacks {
   onFixBrokenLink?: (source: string, target: string, line?: number) => void;
   onNavigateLink?: (target: string) => void;
   onMarkReviewed?: (docId: string) => void;
+  onSelectIssue?: (issue: KnowledgeIssue, node: NoteNode) => void;
   onOpen?: () => void;
   onClose?: () => void;
 }
@@ -125,44 +126,53 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
         </div>
       </div>
 
-      <!-- Section: Active Issues / Findings -->
+      <!-- Section: Active Issues / Findings (Collapsible direct list) -->
       ${nodeIssues.length > 0 ? `
-      <div class="insp-section insp-section-issues">
-        <div class="insp-section-header insp-section-header-issues">
+      <div class="insp-section insp-section-issues insp-section-balanced">
+        <div class="insp-section-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;" id="insp-issues-toggle">
           <span style="font-weight: 700; display: flex; align-items: center; gap: 5px; color: #ef4444;">
             <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M8 1.5L14.5 13.5H1.5L8 1.5Z"/><line x1="8" y1="6" x2="8" y2="9.5"/><circle cx="8" cy="11.5" r="0.75" fill="#ef4444"/>
             </svg>
             Active Issues (${nodeIssues.length})
           </span>
-          <span class="insp-badge status-critical" style="font-size: 9.5px; padding: 1px 6px; font-weight: 700;">
-            -${nodeIssues.reduce((acc, i) => acc + (i.deduction_points || 0), 0)} pts
-          </span>
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <span class="insp-badge status-critical" style="font-size: 9.5px; padding: 1px 6px; font-weight: 700;">
+              -${nodeIssues.reduce((acc, i) => acc + (i.deduction_points || 0), 0)} pts
+            </span>
+            <span class="insp-chevron-icon" id="insp-issues-chevron" style="color: #ef4444; font-size: 10px;">▼</span>
+          </div>
         </div>
-        <div class="insp-issues-list">
-          ${nodeIssues.map((issue) => `
-            <div class="insp-issue-card">
-              <div class="insp-issue-header">
-                <span class="insp-issue-cat">${issue.category.replace(/_/g, ' ')}</span>
-                ${issue.line_number ? `<span class="insp-issue-line">Line ${issue.line_number}</span>` : ''}
-              </div>
-              <div class="insp-issue-desc">${issue.description}</div>
-              ${issue.target ? `<div class="insp-issue-target" title="${issue.target}">Target: ${issue.target}</div>` : ''}
-              ${issue.remediation_hint ? `<div class="insp-issue-hint">💡 ${issue.remediation_hint}</div>` : ''}
-              <div class="insp-issue-actions">
-                ${issue.line_number ? `
-                  <button class="insp-issue-btn insp-open-line-btn" data-path="${issue.file_path}" data-line="${issue.line_number}" title="Jump directly to line ${issue.line_number} in editor">
-                    Jump to Line ${issue.line_number}
-                  </button>
-                ` : ''}
-                ${issue.category === 'broken_reference' && issue.target ? `
-                  <button class="insp-issue-btn insp-fix-ref-btn" data-source="${issue.file_path}" data-target="${issue.target}" data-line="${issue.line_number || 1}" title="Quick-pick fix target or create file">
-                    Fix Reference
-                  </button>
-                ` : ''}
-              </div>
-            </div>
-          `).join('')}
+        <div id="insp-issues-content" class="insp-scrollable-content" style="max-height: 140px; overflow-y: auto;">
+          <table class="insp-fragments-table insp-issues-table" style="width: 100%; border-collapse: collapse; font-size: 11px;">
+            <thead>
+              <tr style="border-bottom: 1px solid rgba(239, 68, 68, 0.25); opacity: 0.8; text-align: left;">
+                <th style="padding: 3px 6px;">Issue</th>
+                <th style="padding: 3px 6px; text-align: right;">Line</th>
+                <th style="padding: 3px 6px; text-align: right;">Pts</th>
+                <th style="padding: 3px 6px; text-align: right; width: 16px;"></th>
+              </tr>
+            </thead>
+            <tbody>
+              ${nodeIssues.map((issue, idx) => `
+                <tr class="insp-issue-row" data-issue-index="${idx}" style="cursor: pointer; border-bottom: 1px solid rgba(239, 68, 68, 0.15);" title="Click to view resolution options, root cause, and fix actions">
+                  <td style="padding: 4px 6px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <span style="font-weight: 600; color: #f87171; text-transform: capitalize;">${issue.category.replace(/_/g, ' ')}</span>
+                    ${issue.target ? `<span style="opacity: 0.7; font-size: 10px; margin-left: 4px; font-family: monospace;">${issue.target}</span>` : ''}
+                  </td>
+                  <td style="padding: 4px 6px; text-align: right; font-variant-numeric: tabular-nums; opacity: 0.85;">
+                    ${issue.line_number ? `Line ${issue.line_number}` : '—'}
+                  </td>
+                  <td style="padding: 4px 6px; text-align: right; font-variant-numeric: tabular-nums; color: #ef4444; font-weight: 600;">
+                    -${issue.deduction_points || 0} pts
+                  </td>
+                  <td style="padding: 4px 6px; text-align: right; color: #38bdf8;">
+                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 3.5L10.5 8 6 12.5"/></svg>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
         </div>
       </div>
       ` : ''}
@@ -503,27 +513,35 @@ export function renderInspectorDrawer(
         callbacks.onMarkReviewed?.(p);
       });
 
-      // Wire active issue actions
-      content.querySelectorAll('.insp-open-line-btn').forEach((btn) => {
-        btn.addEventListener('click', (e) => {
+      // Wire issue row clicks to open issue resolution modal
+      content.querySelectorAll('.insp-issue-row').forEach((row) => {
+        row.addEventListener('click', (e) => {
           e.stopPropagation();
-          const p = btn.getAttribute('data-path') || (typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id);
-          const lineStr = btn.getAttribute('data-line');
-          const line = lineStr ? parseInt(lineStr, 10) : undefined;
-          callbacks.onOpenSource?.(p, line);
+          const idxStr = row.getAttribute('data-issue-index');
+          if (idxStr !== null && issues) {
+            const idx = parseInt(idxStr, 10);
+            const selectedIssue = issues[idx];
+            if (selectedIssue) {
+              callbacks.onSelectIssue?.(selectedIssue, node);
+            }
+          }
         });
       });
 
-      content.querySelectorAll('.insp-fix-ref-btn').forEach((btn) => {
-        btn.addEventListener('click', (e) => {
+      // Toggle issues collapsible accordion
+      const issuesToggleBtn = content.querySelector('#insp-issues-toggle');
+      const issuesContent = content.querySelector('#insp-issues-content');
+      const issuesChevron = content.querySelector('#insp-issues-chevron');
+      if (issuesToggleBtn && issuesContent) {
+        issuesToggleBtn.addEventListener('click', (e) => {
           e.stopPropagation();
-          const src = btn.getAttribute('data-source') || (typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id);
-          const tgt = btn.getAttribute('data-target') || '';
-          const lineStr = btn.getAttribute('data-line');
-          const line = lineStr ? parseInt(lineStr, 10) : undefined;
-          callbacks.onFixBrokenLink?.(src, tgt, line);
+          const isHidden = (issuesContent as HTMLElement).style.display === 'none';
+          (issuesContent as HTMLElement).style.display = isHidden ? 'block' : 'none';
+          if (issuesChevron) {
+            issuesChevron.textContent = isHidden ? '▼' : '▶';
+          }
         });
-      });
+      }
 
       // T044: Wire fragment row clicks to navigate to line coordinates
       content.querySelectorAll('.insp-fragment-row').forEach((row) => {

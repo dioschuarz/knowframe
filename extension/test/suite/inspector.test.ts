@@ -243,11 +243,10 @@ describe('InspectorDrawer Test Suite', () => {
 
     assert.ok(html.includes('Active Issues (2)'), 'Should display Active Issues count header');
     assert.ok(html.includes('-8 pts'), 'Should display total deduction points');
-    assert.ok(html.includes('broken reference'), 'Should format category badge');
+    assert.ok(html.includes('broken reference'), 'Should format category label');
     assert.ok(html.includes('Line 42'), 'Should display line number badge');
-    assert.ok(html.includes('Jump to Line 42'), 'Should render jump to line button');
-    assert.ok(html.includes('Fix Reference'), 'Should render fix reference action button');
-    assert.ok(html.includes('data-line="42"'), 'Should embed line coordinate attribute');
+    assert.ok(html.includes('insp-issue-row'), 'Should render issue rows');
+    assert.ok(html.includes('data-issue-index="0"'), 'Should embed issue index attribute');
   });
 
   it('renders balanced footer actions with span-2 for hub node', () => {

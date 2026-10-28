@@ -5,6 +5,7 @@ import { renderActionsToolbar } from './components/actionsToolbar';
 import { renderColorManager } from './components/colorManager';
 import { renderInspectorDrawer, InspectorDrawerController } from './components/inspectorDrawer';
 import { renderExclusionModal, ExclusionModalController } from './components/exclusionModal';
+import { renderIssueResolutionModal, IssueResolutionModalController } from './components/issueResolutionModal';
 import { renderSettingsDrawer, SettingsDrawerController, type SettingsTab } from './components/settingsDrawer';
 import { filterNodesByQuery, SearchMatchOptions } from './graph/searchMatcher';
 import { filterGraphByFocus } from './graph/focusEngine';
@@ -30,6 +31,7 @@ const inspectorContainer = document.getElementById('inspector-container') as HTM
 const exclusionModalContainer = document.getElementById('exclusion-modal-container') as HTMLElement;
 const settingsContainer = document.getElementById('settings-container') as HTMLElement;
 const transformationModalContainer = document.getElementById('transformation-modal-container') as HTMLElement;
+const issueModalContainer = document.getElementById('issue-modal-container') as HTMLElement;
 const tooltip = document.getElementById('node-tooltip') as HTMLElement;
 
 let rawNodes: NoteNode[] = [];
@@ -110,6 +112,18 @@ let currentShowOrphans: boolean = savedState?.showOrphans !== undefined ? savedS
 const exclusionModal = renderExclusionModal(exclusionModalContainer, {
   onApply: (pattern, scope) => {
     rpc.excludePath(pattern, scope);
+  },
+});
+
+const issueResolutionModal = renderIssueResolutionModal(issueModalContainer, {
+  onOpenSource: (filePath, line) => {
+    rpc.openFile(filePath, line);
+  },
+  onFixBrokenLink: (source, target, line) => {
+    rpc.fixBrokenLink(source, line, target);
+  },
+  onMarkReviewed: (docId) => {
+    rpc.resolveDocumentReview([docId]);
   },
 });
 
@@ -350,6 +364,13 @@ const inspectorDrawer = renderInspectorDrawer(inspectorContainer, {
   },
   onFixBrokenLink: (source, target, line) => {
     rpc.fixBrokenLink(source, line, target);
+  },
+  onSelectIssue: (issue, node) => {
+    issueResolutionModal.show({
+      issue,
+      nodeLabel: node.label,
+      nodeFilePath: node.filePath || node.id,
+    });
   },
   onNavigateLink: (target) => {
     const targetNode = nodes.find((n) => n.id === target || n.label === target || n.filePath === target);
