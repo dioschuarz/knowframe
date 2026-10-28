@@ -21,7 +21,25 @@ export function filterGraphByFocus(
   edges: NoteEdge[],
   focusMode: FocusMode,
   showOrphans: boolean = true,
+  issueNodeIds?: Set<string>,
 ): FilterResult {
+  if (focusMode === 'issues_only') {
+    const targetSet = issueNodeIds || new Set<string>();
+    const filteredNodes = nodes.filter(
+      (n) => targetSet.has(n.id) || (n.filePath && targetSet.has(n.filePath)) || n.brokenLinks > 0,
+    );
+    const nodeIds = new Set<string>(filteredNodes.map((n) => n.id));
+    const filteredEdges = edges.filter((e) => {
+      const srcId = typeof e.source === 'object' ? (e.source as any).id : e.source;
+      const tgtId = typeof e.target === 'object' ? (e.target as any).id : e.target;
+      return nodeIds.has(srcId) && nodeIds.has(tgtId);
+    });
+    return {
+      nodes: filteredNodes,
+      edges: filteredEdges,
+    };
+  }
+
   let maxHop: number;
   switch (focusMode) {
     case 'hub':

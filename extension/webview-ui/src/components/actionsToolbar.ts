@@ -143,6 +143,20 @@ export function renderActionsToolbar(
               </div>
               <span class="focus-check" id="check-focus-1_hop" style="display: none;">✓</span>
             </div>
+            <div class="menu-item focus-item" data-focus="issues_only">
+              <span class="m-icon">
+                <svg viewBox="0 0 16 16" width="15" height="15" fill="none" stroke="#ef4444" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+                  <circle cx="8" cy="8" r="6.5"/>
+                  <line x1="8" y1="4.5" x2="8" y2="8.5"/>
+                  <circle cx="8" cy="11.5" r="0.75" fill="#ef4444"/>
+                </svg>
+              </span>
+              <div class="m-text">
+                <div class="m-title" style="color: #ef4444; font-weight: 600;">Issues Only</div>
+                <div class="m-desc">Filter graph to notes with active findings</div>
+              </div>
+              <span class="focus-check" id="check-focus-issues_only" style="display: none;">✓</span>
+            </div>
             <div class="menu-divider"></div>
             <label class="focus-checkbox-item">
               <input type="checkbox" id="chk-focus-orphans" checked>
@@ -697,6 +711,7 @@ export function renderActionsToolbar(
       '2_hops': '2 Hops',
       '1_hop': '1 Hop',
       hub: '1 Hop',
+      issues_only: 'Issues Only',
     };
     if (tbFocusLabel) {
       tbFocusLabel.textContent = labelMap[mode] || 'All Notes';
@@ -705,11 +720,13 @@ export function renderActionsToolbar(
     const check3Hops = container.querySelector('#check-focus-3_hops') as HTMLElement;
     const check2Hops = container.querySelector('#check-focus-2_hops') as HTMLElement;
     const check1Hop = container.querySelector('#check-focus-1_hop') as HTMLElement;
+    const checkIssues = container.querySelector('#check-focus-issues_only') as HTMLElement;
 
     if (checkAll) checkAll.style.display = mode === 'all' ? 'inline' : 'none';
     if (check3Hops) check3Hops.style.display = mode === '3_hops' ? 'inline' : 'none';
     if (check2Hops) check2Hops.style.display = mode === '2_hops' ? 'inline' : 'none';
     if (check1Hop) check1Hop.style.display = (mode === '1_hop' || mode === 'hub') ? 'inline' : 'none';
+    if (checkIssues) checkIssues.style.display = mode === 'issues_only' ? 'inline' : 'none';
   }
 
   function toggleFocusDropdown(e?: MouseEvent): void {

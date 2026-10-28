@@ -7,6 +7,7 @@
  */
 
 import type { NoteNode, NoteEdge, TokenSummary } from '../../../src/types/graph.ts';
+import type { KnowledgeIssue } from '../../../src/types/admission.ts';
 import { formatCompactNumber } from '../utils/numberFormat.ts';
 
 export function formatHopTier(hopDistance: number): string {
@@ -26,6 +27,7 @@ export interface NodeInspectionProps {
   inLinks: string[];
   outLinks: string[];
   isHub: boolean;
+  issues?: KnowledgeIssue[];
 }
 
 export interface EdgeInspectionProps {
@@ -44,6 +46,7 @@ export interface InspectorCallbacks {
   onSetHub?: (hubId: string) => void;
   onExclude?: (pattern: string) => void;
   onFixReference?: (edge: NoteEdge) => void;
+  onFixBrokenLink?: (source: string, target: string, line?: number) => void;
   onNavigateLink?: (target: string) => void;
   onMarkReviewed?: (docId: string) => void;
   onOpen?: () => void;
@@ -51,7 +54,7 @@ export interface InspectorCallbacks {
 }
 
 export interface InspectorDrawerController {
-  inspectNode: (node: NoteNode, inLinks: string[], outLinks: string[], isHub: boolean) => void;
+  inspectNode: (node: NoteNode, inLinks: string[], outLinks: string[], isHub: boolean, issues?: KnowledgeIssue[]) => void;
   inspectEdge: (edge: NoteEdge, sourceLabel?: string) => void;
   inspectTokenEconomics: (summary: TokenSummary, topNodes: Array<{ label: string; filePath: string; tokens: number }>) => void;
   open: () => void;
@@ -60,7 +63,8 @@ export interface InspectorDrawerController {
 }
 
 export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
-  const { node, inLinks, outLinks, isHub } = props;
+  const { node, inLinks, outLinks, isHub, issues } = props;
+  const nodeIssues = issues || [];
   const tierName = formatHopTier(node.hopDistance);
   const tokenFormatted = formatCompactNumber(node.tokens) + ' tok';
 
@@ -121,34 +125,76 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
         </div>
       </div>
 
+      <!-- Section: Active Issues / Findings -->
+      ${nodeIssues.length > 0 ? `
+      <div class="insp-section insp-section-issues">
+        <div class="insp-section-header insp-section-header-issues">
+          <span style="font-weight: 700; display: flex; align-items: center; gap: 5px; color: #ef4444;">
+            <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="#ef4444" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M8 1.5L14.5 13.5H1.5L8 1.5Z"/><line x1="8" y1="6" x2="8" y2="9.5"/><circle cx="8" cy="11.5" r="0.75" fill="#ef4444"/>
+            </svg>
+            Active Issues (${nodeIssues.length})
+          </span>
+          <span class="insp-badge status-critical" style="font-size: 9.5px; padding: 1px 6px; font-weight: 700;">
+            -${nodeIssues.reduce((acc, i) => acc + (i.deduction_points || 0), 0)} pts
+          </span>
+        </div>
+        <div class="insp-issues-list">
+          ${nodeIssues.map((issue) => `
+            <div class="insp-issue-card">
+              <div class="insp-issue-header">
+                <span class="insp-issue-cat">${issue.category.replace(/_/g, ' ')}</span>
+                ${issue.line_number ? `<span class="insp-issue-line">Line ${issue.line_number}</span>` : ''}
+              </div>
+              <div class="insp-issue-desc">${issue.description}</div>
+              ${issue.target ? `<div class="insp-issue-target" title="${issue.target}">Target: ${issue.target}</div>` : ''}
+              ${issue.remediation_hint ? `<div class="insp-issue-hint">💡 ${issue.remediation_hint}</div>` : ''}
+              <div class="insp-issue-actions">
+                ${issue.line_number ? `
+                  <button class="insp-issue-btn insp-open-line-btn" data-path="${issue.file_path}" data-line="${issue.line_number}" title="Jump directly to line ${issue.line_number} in editor">
+                    Jump to Line ${issue.line_number}
+                  </button>
+                ` : ''}
+                ${issue.category === 'broken_reference' && issue.target ? `
+                  <button class="insp-issue-btn insp-fix-ref-btn" data-source="${issue.file_path}" data-target="${issue.target}" data-line="${issue.line_number || 1}" title="Quick-pick fix target or create file">
+                    Fix Reference
+                  </button>
+                ` : ''}
+              </div>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+      ` : ''}
+
       <!-- Section: Fragments (3-column: Fragment | Tok | I/O) -->
-      <div class="insp-section insp-section-fragments" style="max-height: 180px; overflow-y: auto;">
+      <div class="insp-section insp-section-fragments insp-section-balanced">
         <div class="insp-section-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;" id="insp-fragments-toggle">
           <span>Fragments (${formatCompactNumber((node.fragments || []).length)})</span>
           <span class="insp-chevron-icon" id="insp-fragments-chevron">▼</span>
         </div>
-        <div id="insp-fragments-content">
+        <div id="insp-fragments-content" class="insp-scrollable-content">
           ${(node.fragments || []).length > 0
             ? `
-              <table class="insp-fragments-table" style="width: 100%; border-collapse: collapse; font-size: 11px;">
+              <table class="insp-fragments-table">
                 <thead>
-                  <tr style="border-bottom: 1px solid var(--vscode-widget-border, #333); opacity: 0.8; text-align: left;">
-                    <th style="padding: 4px 6px;">Fragment</th>
-                    <th style="padding: 4px 6px; text-align: right;">Tok</th>
-                    <th style="padding: 4px 6px; text-align: right;">I/O</th>
+                  <tr>
+                    <th>Fragment</th>
+                    <th style="text-align: right;">Tok</th>
+                    <th style="text-align: right;">I/O</th>
                   </tr>
                 </thead>
                 <tbody>
                   ${(node.fragments || []).map((f) => `
-                    <tr class="insp-fragment-row" data-start-line="${f.start_line}" data-end-line="${f.end_line}" data-anchor="${f.anchor}" style="cursor: pointer; border-bottom: 1px solid rgba(255,255,255,0.05);" title="Click to navigate to line ${f.start_line}">
-                      <td style="padding: 4px 6px; max-width: 130px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">
+                    <tr class="insp-fragment-row" data-start-line="${f.start_line}" data-end-line="${f.end_line}" data-anchor="${f.anchor}" title="Click to navigate to line ${f.start_line}">
+                      <td class="insp-frag-cell">
                         <span style="font-weight: 500;">${f.heading}</span>
                         <span style="opacity: 0.6; font-size: 10px; margin-left: 4px;">#${f.anchor}</span>
                       </td>
-                      <td style="padding: 4px 6px; text-align: right; font-variant-numeric: tabular-nums;">
+                      <td style="text-align: right; font-variant-numeric: tabular-nums;">
                         ${formatCompactNumber(f.tokens)}
                       </td>
-                      <td style="padding: 4px 6px; text-align: right; font-variant-numeric: tabular-nums;" title="Inbound references: ${f.inbound} · Outbound references: ${f.outbound}">
+                      <td style="text-align: right; font-variant-numeric: tabular-nums;" title="Inbound references: ${f.inbound} · Outbound references: ${f.outbound}">
                         ${formatCompactNumber(f.inbound)}/${formatCompactNumber(f.outbound)}
                       </td>
                     </tr>
@@ -161,42 +207,42 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
         </div>
       </div>
 
-      <!-- Section: Tags (1/3 of remaining space, scrollable) -->
-      <div class="insp-section insp-section-third">
+      <!-- Section: Tags -->
+      <div class="insp-section insp-section-balanced">
         <div class="insp-section-header">Tags</div>
-        <div class="insp-tags-row">${tagsChips}</div>
+        <div class="insp-tags-row insp-scrollable-content">${tagsChips}</div>
       </div>
 
-      <!-- Section: Incoming References (1/3 of remaining space, scrollable) -->
-      <div class="insp-section insp-section-third">
+      <!-- Section: Incoming References -->
+      <div class="insp-section insp-section-balanced">
         <div class="insp-section-header">Incoming References (${formatCompactNumber(inLinks.length)})</div>
-        <ul class="insp-links-list">${inLinksList}</ul>
+        <ul class="insp-links-list insp-scrollable-content">${inLinksList}</ul>
       </div>
 
-      <!-- Section: Outgoing References (1/3 of remaining space, scrollable) -->
-      <div class="insp-section insp-section-third">
+      <!-- Section: Outgoing References -->
+      <div class="insp-section insp-section-balanced">
         <div class="insp-section-header">Outgoing References (${formatCompactNumber(outLinks.length)})</div>
-        <ul class="insp-links-list">${outLinksList}</ul>
+        <ul class="insp-links-list insp-scrollable-content">${outLinksList}</ul>
       </div>
     </div>
 
-    <!-- Footer Actions -->
+    <!-- Footer Actions (Balanced 2x2 grid) -->
     <div class="insp-footer">
-      <button class="btn-primary insp-action-btn" id="insp-btn-open-file">
-        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h8a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H4a1.5 1.5 0 0 1-1.5-1.5v-9Z"/><line x1="5" y1="5.5" x2="11" y2="5.5"/><line x1="5" y1="8.5" x2="11" y2="8.5"/></svg>
+      <button class="btn-primary insp-action-btn ${isHub ? 'insp-btn-span-2' : ''}" id="insp-btn-open-file" title="Open file in editor">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h8a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H4a1.5 1.5 0 0 1-1.5-1.5v-9Z"/><line x1="5" y1="5.5" x2="11" y2="5.5"/><line x1="5" y1="8.5" x2="11" y2="8.5"/></svg>
         <span>Open file</span>
       </button>
       ${!isHub ? `
-      <button class="btn-secondary insp-action-btn" id="insp-btn-set-hub">
-        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2.5" fill="currentColor"/></svg>
+      <button class="btn-secondary insp-action-btn" id="insp-btn-set-hub" title="Set as central hub">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><circle cx="8" cy="8" r="2.5" fill="currentColor"/></svg>
         <span>Set as hub</span>
       </button>` : ''}
-      <button class="btn-secondary insp-action-btn" id="insp-btn-exclude">
-        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><circle cx="8" cy="8" r="6"/><line x1="3.5" y1="3.5" x2="12.5" y2="12.5"/></svg>
+      <button class="btn-secondary insp-action-btn" id="insp-btn-exclude" title="Exclude note from graph">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><line x1="3.5" y1="3.5" x2="12.5" y2="12.5"/></svg>
         <span>Exclude note</span>
       </button>
       <button class="btn-secondary insp-action-btn" id="insp-btn-mark-reviewed" title="Mark document review resolved">
-        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><path d="M13.5 4.5 6 12 2.5 8.5"/></svg>
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 4.5 6 12 2.5 8.5"/></svg>
         <span>Mark Reviewed</span>
       </button>
     </div>
@@ -433,8 +479,8 @@ export function renderInspectorDrawer(
   }
 
   return {
-    inspectNode(node: NoteNode, inLinks: string[], outLinks: string[], isHub: boolean) {
-      content.innerHTML = renderNodeInspectionHtml({ node, inLinks, outLinks, isHub });
+    inspectNode(node: NoteNode, inLinks: string[], outLinks: string[], isHub: boolean, issues?: KnowledgeIssue[]) {
+      content.innerHTML = renderNodeInspectionHtml({ node, inLinks, outLinks, isHub, issues });
       wireContentEvents();
 
       content.querySelector('#insp-btn-open-file')?.addEventListener('click', (e) => {
@@ -455,6 +501,28 @@ export function renderInspectorDrawer(
         e.stopPropagation();
         const p = typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id;
         callbacks.onMarkReviewed?.(p);
+      });
+
+      // Wire active issue actions
+      content.querySelectorAll('.insp-open-line-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const p = btn.getAttribute('data-path') || (typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id);
+          const lineStr = btn.getAttribute('data-line');
+          const line = lineStr ? parseInt(lineStr, 10) : undefined;
+          callbacks.onOpenSource?.(p, line);
+        });
+      });
+
+      content.querySelectorAll('.insp-fix-ref-btn').forEach((btn) => {
+        btn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          const src = btn.getAttribute('data-source') || (typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id);
+          const tgt = btn.getAttribute('data-target') || '';
+          const lineStr = btn.getAttribute('data-line');
+          const line = lineStr ? parseInt(lineStr, 10) : undefined;
+          callbacks.onFixBrokenLink?.(src, tgt, line);
+        });
       });
 
       // T044: Wire fragment row clicks to navigate to line coordinates

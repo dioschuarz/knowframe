@@ -24,6 +24,7 @@ export class CanvasRenderer {
   private matchedNodeIds: Set<string> | null = null;
   private showExcluded: boolean = false;
   private activeUnanchoredEdges: Set<string> = new Set();
+  private issueNodeIds: Set<string> = new Set();
   private showAllUnanchored: boolean = false;
 
   // Zoom & Pan
@@ -109,6 +110,11 @@ export class CanvasRenderer {
 
   public setShowAllUnanchored(show: boolean): void {
     this.showAllUnanchored = show;
+    this.draw();
+  }
+
+  public setIssueNodeIds(ids: Set<string>): void {
+    this.issueNodeIds = ids;
     this.draw();
   }
 
@@ -502,6 +508,8 @@ export class CanvasRenderer {
       this.ctx.fill();
 
       // Node border
+      const hasIssues = this.issueNodeIds.has(node.id) || (node.filePath && this.issueNodeIds.has(node.filePath)) || (node.brokenLinks > 0);
+
       if (isSearchActive) {
         // Vivid cyan highlight ring for search matches
         this.ctx.lineWidth = 2.5;
@@ -514,13 +522,20 @@ export class CanvasRenderer {
         this.ctx.lineWidth = 1.5;
         this.ctx.strokeStyle = 'rgba(56, 189, 248, 0.45)';
         this.ctx.stroke();
+      } else if (hasIssues) {
+        // Distinct red alert ring and outer halo for notes with active findings
+        this.ctx.lineWidth = 2.5;
+        this.ctx.strokeStyle = '#EF4444';
+        this.ctx.stroke();
+
+        this.ctx.beginPath();
+        this.ctx.arc(node.x, node.y, r + 3, 0, 2 * Math.PI);
+        this.ctx.lineWidth = 1.2;
+        this.ctx.strokeStyle = 'rgba(239, 68, 68, 0.55)';
+        this.ctx.stroke();
       } else if (node.hopDistance === 0) {
         this.ctx.lineWidth = 3;
         this.ctx.strokeStyle = '#3B82F6';
-        this.ctx.stroke();
-      } else if (node.brokenLinks > 0) {
-        this.ctx.lineWidth = 2;
-        this.ctx.strokeStyle = '#EF4444';
         this.ctx.stroke();
       } else if (node.fx !== null && node.fx !== undefined) {
         this.ctx.lineWidth = 2.5;
@@ -539,6 +554,17 @@ export class CanvasRenderer {
         this.ctx.fillStyle = '#F59E0B';
         this.ctx.fill();
       }
+
+      // Red alert badge indicator for nodes with issues
+      if (hasIssues && !isSearchActive) {
+        this.ctx.beginPath();
+        this.ctx.arc(node.x - r * 0.7, node.y - r * 0.7, Math.max(2.5, 3.5 / this.scale), 0, 2 * Math.PI);
+        this.ctx.fillStyle = '#EF4444';
+        this.ctx.fill();
+        this.ctx.lineWidth = 1;
+        this.ctx.strokeStyle = '#FFFFFF';
+        this.ctx.stroke();
+      }
     }
 
     // 3. Draw Labels (Pass 2: on top of all circles to prevent clipping)
@@ -553,6 +579,7 @@ export class CanvasRenderer {
       const isHub = node.hopDistance === 0;
       const isHovered = node === this.hoveredNode;
       const isProminent = (node.inDegree || 0) + (node.outDegree || 0) >= 4 || node.hopDistance === 1;
+      const hasIssues = this.issueNodeIds.has(node.id) || (node.filePath && this.issueNodeIds.has(node.filePath)) || (node.brokenLinks > 0);
 
       // Label visibility:
       // When search is active, show labels ONLY for matching nodes (and hovered node)
@@ -560,8 +587,8 @@ export class CanvasRenderer {
       const shouldDraw = isSearchActive
         ? (isMatched || isHovered)
         : (this.labelsMode === 'all'
-            ? (this.scale >= 0.35 || isHovered || isHub || isProminent)
-            : (isHovered || isHub));
+            ? (this.scale >= 0.35 || isHovered || isHub || isProminent || hasIssues)
+            : (isHovered || isHub || hasIssues));
 
       if (!shouldDraw) continue;
 
@@ -571,7 +598,7 @@ export class CanvasRenderer {
       const worldFontPx = Math.max(4, Math.min(22, targetScreenPx / this.scale));
       const labelY = node.y + r + (4 / this.scale);
 
-      this.ctx.font = `${isHub || isHovered || (isSearchActive && isMatched) ? 'bold ' : ''}${Math.round(worldFontPx)}px sans-serif`;
+      this.ctx.font = `${isHub || isHovered || (isSearchActive && isMatched) || hasIssues ? 'bold ' : ''}${Math.round(worldFontPx)}px sans-serif`;
 
       // Dark background outline/stroke for maximum legibility across complex graphs
       this.ctx.lineWidth = 3.5 / this.scale;
@@ -588,6 +615,8 @@ export class CanvasRenderer {
         this.ctx.fillStyle = '#60A5FA';
       } else if (isHovered) {
         this.ctx.fillStyle = '#38BDF8';
+      } else if (hasIssues) {
+        this.ctx.fillStyle = '#F87171';
       } else {
         this.ctx.fillStyle = '#E2E8F0';
       }

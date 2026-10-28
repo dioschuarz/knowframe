@@ -61,4 +61,21 @@ suite('FocusEngine Subgraph Filtering & Hop Horizon Test Suite', () => {
     assert.strictEqual(res.nodes.length, 4);
     assert.strictEqual(res.edges.length, 3);
   });
+
+  test('FocusMode "issues_only" isolates nodes with registered issues or broken links', () => {
+    const issueNodeIds = new Set(['hop2']);
+    const res = filterGraphByFocus(sampleNodes, sampleEdges, 'issues_only', true, issueNodeIds);
+    const ids = res.nodes.map((n) => n.id);
+    assert.deepStrictEqual(ids, ['hop2']);
+    assert.strictEqual(res.edges.length, 0);
+
+    // If broken link exists on node
+    const brokenNodes: NoteNode[] = [
+      ...sampleNodes,
+      { id: 'brokenNode', label: 'Broken', filePath: 'broken.md', tokens: 100, hopDistance: 1, inDegree: 1, outDegree: 1, brokenLinks: 2 },
+    ];
+    const res2 = filterGraphByFocus(brokenNodes, sampleEdges, 'issues_only', true, issueNodeIds);
+    const ids2 = res2.nodes.map((n) => n.id).sort();
+    assert.deepStrictEqual(ids2, ['brokenNode', 'hop2']);
+  });
 });

@@ -9,6 +9,7 @@ import { renderSettingsDrawer, SettingsDrawerController, type SettingsTab } from
 import { filterNodesByQuery, SearchMatchOptions } from './graph/searchMatcher';
 import { filterGraphByFocus } from './graph/focusEngine';
 import { renderTransformationPlanModalHtml } from './components/transformationPlanModal';
+import type { KnowledgeIssue } from '../../src/types/admission';
 import {
   NoteNode,
   NoteEdge,
@@ -275,6 +276,38 @@ const settingsDrawer = renderSettingsDrawer(
   },
 );
 
+let latestIssues: KnowledgeIssue[] = [];
+const currentIssueNodeIds = new Set<string>();
+
+function getIssuesForNode(node: NoteNode): KnowledgeIssue[] {
+  if (!latestIssues || latestIssues.length === 0) return [];
+  const nPath = (node.filePath || '').toLowerCase();
+  const nId = (node.id || '').toLowerCase();
+  const nLabel = (node.label || '').toLowerCase();
+
+  return latestIssues.filter((issue) => {
+    const fPath = (issue.file_path || '').toLowerCase();
+    if (!fPath) return false;
+    if (fPath === nPath || fPath === nId) return true;
+    if (nPath && (fPath.endsWith(nPath) || nPath.endsWith(fPath))) return true;
+    if (nId && (fPath.endsWith(nId) || nId.endsWith(fPath))) return true;
+    const base = fPath.split('/').pop()?.replace(/\.md$/, '') || '';
+    if (base && (base === nLabel || base === nId)) return true;
+    return false;
+  });
+}
+
+function updateIssueHighlights(): void {
+  currentIssueNodeIds.clear();
+  for (const node of rawNodes) {
+    const nodeIssues = getIssuesForNode(node);
+    if (nodeIssues.length > 0) {
+      currentIssueNodeIds.add(node.id);
+    }
+  }
+  renderer.setIssueNodeIds(currentIssueNodeIds);
+}
+
 function inspectNode(node: NoteNode): void {
   selectedNode = node;
   const inLinks: string[] = [];
@@ -290,7 +323,8 @@ function inspectNode(node: NoteNode): void {
     }
   }
   const isHub = node.hopDistance === 0;
-  inspectorDrawer.inspectNode(node, inLinks, outLinks, isHub);
+  const nodeIssues = getIssuesForNode(node);
+  inspectorDrawer.inspectNode(node, inLinks, outLinks, isHub, nodeIssues);
 }
 
 const inspectorDrawer = renderInspectorDrawer(inspectorContainer, {
@@ -313,6 +347,9 @@ const inspectorDrawer = renderInspectorDrawer(inspectorContainer, {
     const srcId = typeof edge.source === 'object' ? (edge.source as any).id : edge.source;
     const tgtId = typeof edge.target === 'object' ? (edge.target as any).id : edge.target;
     rpc.fixBrokenLink(srcId, edge.line, tgtId);
+  },
+  onFixBrokenLink: (source, target, line) => {
+    rpc.fixBrokenLink(source, line, target);
   },
   onNavigateLink: (target) => {
     const targetNode = nodes.find((n) => n.id === target || n.label === target || n.filePath === target);
@@ -417,7 +454,7 @@ window.addEventListener('resize', () => {
 });
 
 function applyFocusFilter(reheatAlpha: number = 0.3): void {
-  const result = filterGraphByFocus(rawNodes, rawEdges, currentFocusMode, currentShowOrphans);
+  const result = filterGraphByFocus(rawNodes, rawEdges, currentFocusMode, currentShowOrphans, currentIssueNodeIds);
   nodes = result.nodes;
   edges = result.edges;
   renderer.setData(nodes, edges);
@@ -685,6 +722,7 @@ rpc.on('graphDataUpdate', (data: any) => {
   applyClientSideColorGroups(rawNodes, colorGroups);
 
   hideLoadingOverlay();
+  updateIssueHighlights();
   applyFocusFilter(0.4);
 
   if (isFirstLoad && rawNodes.length > 0 && !savedState?.viewTransform) {
@@ -808,6 +846,7 @@ rpc.on('navigateToDetail', (data: any) => {
 rpc.on('issuesReportUpdate', (data: any) => {
   const activeUnanchored = new Set<string>();
   if (data?.issues && Array.isArray(data.issues)) {
+    latestIssues = data.issues;
     for (const issue of data.issues) {
       if ((issue.pillar === 'structure' || issue.category?.includes('unanchored')) && !issue.is_legacy) {
         if (issue.file_path && issue.target) {
@@ -815,6 +854,15 @@ rpc.on('issuesReportUpdate', (data: any) => {
         }
       }
     }
+  } else {
+    latestIssues = [];
+  }
+  updateIssueHighlights();
+  if (currentFocusMode === 'issues_only') {
+    applyFocusFilter(0.2);
+  }
+  if (selectedNode) {
+    inspectNode(selectedNode);
   }
   renderer.setActiveUnanchoredEdges(activeUnanchored);
   settingsDrawer.updateProps({

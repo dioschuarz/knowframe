@@ -194,4 +194,87 @@ describe('InspectorDrawer Test Suite', () => {
 
     assert.ok(html.includes('No heading sections found'), 'Should display empty fragment state');
   });
+
+  it('renders active issues section when issues are present for selected node', () => {
+    const node: NoteNode = {
+      id: 'docs/architecture.md',
+      label: 'Architecture',
+      filePath: 'docs/architecture.md',
+      tags: ['design'],
+      color: '#3b82f6',
+      status: 'active',
+      tokens: 450,
+      hopDistance: 1,
+      inDegree: 3,
+      outDegree: 2,
+      betweenness: 0.1,
+      brokenLinks: 1,
+    };
+
+    const issues = [
+      {
+        id: 'iss-1',
+        category: 'broken_reference',
+        file_path: 'docs/architecture.md',
+        target: 'missing_overview.md',
+        line_number: 42,
+        deduction_points: 5,
+        description: 'Link target does not exist',
+        remediation_hint: 'Update link target to existing note',
+      },
+      {
+        id: 'iss-2',
+        category: 'stale_concept',
+        file_path: 'docs/architecture.md',
+        line_number: 88,
+        deduction_points: 3,
+        description: 'Document references deprecated module',
+        remediation_hint: 'Review and update module references',
+      },
+    ];
+
+    const html = renderNodeInspectionHtml({
+      node,
+      inLinks: ['docs/index.md'],
+      outLinks: ['docs/details.md'],
+      isHub: false,
+      issues,
+    });
+
+    assert.ok(html.includes('Active Issues (2)'), 'Should display Active Issues count header');
+    assert.ok(html.includes('-8 pts'), 'Should display total deduction points');
+    assert.ok(html.includes('broken reference'), 'Should format category badge');
+    assert.ok(html.includes('Line 42'), 'Should display line number badge');
+    assert.ok(html.includes('Jump to Line 42'), 'Should render jump to line button');
+    assert.ok(html.includes('Fix Reference'), 'Should render fix reference action button');
+    assert.ok(html.includes('data-line="42"'), 'Should embed line coordinate attribute');
+  });
+
+  it('renders balanced footer actions with span-2 for hub node', () => {
+    const hubNode: NoteNode = {
+      id: 'docs/hub.md',
+      label: 'Hub',
+      filePath: 'docs/hub.md',
+      tags: [],
+      color: '#38bdf8',
+      status: 'active',
+      tokens: 1000,
+      hopDistance: 0,
+      inDegree: 5,
+      outDegree: 5,
+      betweenness: 0.5,
+      brokenLinks: 0,
+    };
+
+    const html = renderNodeInspectionHtml({
+      node: hubNode,
+      inLinks: [],
+      outLinks: [],
+      isHub: true,
+    });
+
+    assert.ok(html.includes('insp-btn-span-2'), 'Open file button should span 2 columns when isHub is true');
+    assert.ok(!html.includes('insp-btn-set-hub'), 'Set as hub button should not appear for current hub');
+    assert.ok(html.includes('insp-btn-mark-reviewed'), 'Mark reviewed button must always be present');
+  });
 });

@@ -16,7 +16,7 @@ export type LinkType = 'markdown' | 'wikilink';
 export type TokenBudgetStatus = 'normal' | 'warning' | 'critical';
 export type ClusterQueryType = 'tag' | 'path';
 export type LabelsMode = 'hover' | 'all';
-export type FocusMode = 'hub' | '1_hop' | '2_hops' | '3_hops' | 'all';
+export type FocusMode = 'hub' | '1_hop' | '2_hops' | '3_hops' | 'all' | 'issues_only';
 
 export interface NoteNode {
   id: string;
