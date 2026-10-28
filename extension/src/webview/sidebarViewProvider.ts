@@ -100,6 +100,12 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         case 'resolveDocumentReview':
           vscode.commands.executeCommand('llmWiki.resolveDocumentReview', data);
           break;
+        case 'reviewWithAi':
+          vscode.commands.executeCommand('llmWiki.reviewWithAi', data?.payload || data);
+          break;
+        case 'reviewAllWithAi':
+          vscode.commands.executeCommand('llmWiki.reviewAllWithAi');
+          break;
       }
     });
 

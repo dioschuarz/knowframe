@@ -271,6 +271,20 @@ export class WebviewRpcBridge {
     });
   }
 
+  public reviewWithAi(filePath?: string, issue?: unknown): void {
+    this.sendMessage({
+      type: 'reviewWithAi',
+      payload: { filePath, issue },
+    });
+  }
+
+  public reviewAllWithAi(): void {
+    this.sendMessage({
+      type: 'reviewAllWithAi',
+      payload: {},
+    });
+  }
+
   public getAffectedDocuments(options?: { base_ref?: string; head_ref?: string; staged?: boolean }): void {
     this.sendMessage({
       type: 'getAffectedDocuments',

@@ -80,6 +80,18 @@
         "icon": "$(tools)"
       },
       {
+        "command": "llmWiki.reviewWithAi",
+        "title": "KnowFrame: Review with AI",
+        "category": "KnowFrame",
+        "icon": "$(tools)"
+      },
+      {
+        "command": "llmWiki.reviewAllWithAi",
+        "title": "KnowFrame: Review All with AI",
+        "category": "KnowFrame",
+        "icon": "$(tools)"
+      },
+      {
         "command": "llmWiki.restartDaemon",
         "title": "KnowFrame: Restart Knowledge Engine Daemon",
         "category": "KnowFrame",
@@ -114,6 +126,12 @@
         },
         {
           "command": "llmWiki.openHarness"
+        },
+        {
+          "command": "llmWiki.reviewWithAi"
+        },
+        {
+          "command": "llmWiki.reviewAllWithAi"
         },
         {
           "command": "llmWiki.restartDaemon"

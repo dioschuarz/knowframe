@@ -1221,6 +1221,15 @@ export class GraphPanelManager implements vscode.Disposable {
         }
         break;
       }
+      case 'reviewWithAi': {
+        const payload = (message.payload || {}) as any;
+        vscode.commands.executeCommand('llmWiki.reviewWithAi', payload);
+        break;
+      }
+      case 'reviewAllWithAi': {
+        vscode.commands.executeCommand('llmWiki.reviewAllWithAi');
+        break;
+      }
       case 'getAffectedDocuments': {
         const payload = (message.payload || {}) as any;
         if (this.ipcClient) {

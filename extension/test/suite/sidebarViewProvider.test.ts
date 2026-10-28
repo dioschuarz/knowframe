@@ -101,6 +101,8 @@ suite('SidebarViewProvider 4-Card Redesign Test Suite', () => {
     assert.ok(html.includes('<title>KnowFrame - Manager</title>'), 'Title must be KnowFrame - Manager');
     assert.ok(html.includes('id="dash-btn-explore-graph"'), 'Must have Explore graph button');
     assert.ok(html.includes('Explore graph'), 'Button text must be Explore graph');
+    assert.ok(html.includes('id="dash-btn-review-all-ai"'), 'Must have Review all with AI button');
+    assert.ok(html.includes('data-tooltip="Review all with AI"'), 'Review all with AI must have tooltip');
     // SVG icon matching sidebar-icon.svg
     assert.ok(html.includes('viewBox="0 0 24 24"'), 'Must contain 24x24 SVG graph icon matching sidebar-icon.svg');
 
@@ -109,12 +111,13 @@ suite('SidebarViewProvider 4-Card Redesign Test Suite', () => {
     assert.ok(!html.includes('id="dash-btn-refresh-quality"'), 'Duplicate refresh button in Health header must be removed');
     assert.ok(!html.includes('id="dash-btn-rescan-vault"'), 'Duplicate rescan button in Structure header must be removed');
 
-    // Verify Explore graph is inside the Health card (appears before Structure card)
+    // Verify Review all with AI and Explore graph are inside Health card, with Review all to the left of Explore graph
     const healthIdx = html.indexOf('id="pillar-health"');
+    const reviewAllIdx = html.indexOf('id="dash-btn-review-all-ai"');
     const exploreIdx = html.indexOf('id="dash-btn-explore-graph"');
     const structureIdx = html.indexOf('id="pillar-structure"');
-    assert.ok(healthIdx !== -1 && exploreIdx !== -1 && structureIdx !== -1, 'Health, Explore graph, and Structure must exist');
-    assert.ok(healthIdx < exploreIdx && exploreIdx < structureIdx, 'Explore graph button must be inside the Health card header');
+    assert.ok(healthIdx !== -1 && reviewAllIdx !== -1 && exploreIdx !== -1 && structureIdx !== -1, 'Health, Review all with AI, Explore graph, and Structure must exist');
+    assert.ok(healthIdx < reviewAllIdx && reviewAllIdx < exploreIdx && exploreIdx < structureIdx, 'Review all with AI must be to the left of Explore graph inside Health card');
   });
 
   test('T015 & T016: Evolution card (no objective sentence) and Sync card invariants with gear icon-only buttons & hover tooltips', () => {

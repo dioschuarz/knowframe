@@ -49,6 +49,7 @@ export interface InspectorCallbacks {
   onFixBrokenLink?: (source: string, target: string, line?: number) => void;
   onNavigateLink?: (target: string) => void;
   onMarkReviewed?: (docId: string) => void;
+  onReviewWithAi?: (filePath: string, issue?: KnowledgeIssue) => void;
   onSelectIssue?: (issue: KnowledgeIssue, node: NoteNode) => void;
   onOpen?: () => void;
   onClose?: () => void;
@@ -251,9 +252,12 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><line x1="3.5" y1="3.5" x2="12.5" y2="12.5"/></svg>
         <span>Exclude note</span>
       </button>
-      <button class="btn-secondary insp-action-btn" id="insp-btn-mark-reviewed" title="Mark document review resolved">
-        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M13.5 4.5 6 12 2.5 8.5"/></svg>
-        <span>Mark Reviewed</span>
+      <button class="btn-secondary insp-action-btn insp-btn-review-ai insp-btn-mark-reviewed" id="insp-btn-review-ai" title="Review and resolve with AI agent">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7.5 1.5L9 5l3.5 1.5L9 8l-1.5 3.5L6 8 2.5 6.5 6 5z" fill="currentColor" fill-opacity="0.3"/>
+          <path d="M12.5 10.5l.75 1.75 1.75.75-1.75.75-.75 1.75-.75-1.75-1.75-.75 1.75-.75z" fill="currentColor"/>
+        </svg>
+        <span>Review with AI</span>
       </button>
     </div>
   `;
@@ -507,10 +511,15 @@ export function renderInspectorDrawer(
         const p = typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id;
         callbacks.onExclude?.(p);
       });
-      content.querySelector('#insp-btn-mark-reviewed')?.addEventListener('click', (e) => {
+      const reviewAiBtn = content.querySelector('#insp-btn-review-ai') || content.querySelector('#insp-btn-mark-reviewed');
+      reviewAiBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
         const p = typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id;
-        callbacks.onMarkReviewed?.(p);
+        if (callbacks.onReviewWithAi) {
+          callbacks.onReviewWithAi(p);
+        } else {
+          callbacks.onMarkReviewed?.(p);
+        }
       });
 
       // Wire issue row clicks to open issue resolution modal

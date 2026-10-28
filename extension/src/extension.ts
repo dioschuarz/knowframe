@@ -15,6 +15,7 @@ import { EvolutionManager } from './evolution/evolutionManager';
 import { KnowledgeQualityScore, KnowledgeIssuesReport } from './types/admission';
 import { GovernanceManager } from './governance/governanceManager';
 import { AIOrientedCapabilityMatrix } from './types/governance';
+import { AiReviewDispatcher } from './governance/aiReviewDispatcher';
 
 let processManager: ProcessManager | null = null;
 let ipcClient: IpcClient | null = null;
@@ -235,6 +236,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           vscode.window.showErrorMessage(`Failed to resolve document review: ${err.message}`);
         }
       }
+    }),
+    vscode.commands.registerCommand('llmWiki.reviewWithAi', async (payload?: any) => {
+      const dispatcher = new AiReviewDispatcher(undefined, governanceManager || undefined);
+      const filePath = payload?.filePath || payload?.doc_id || payload?.file_path || (typeof payload === 'string' ? payload : undefined);
+      const issue = payload?.issue || (payload?.category ? payload : undefined);
+      await dispatcher.dispatchReview({ filePath, issue });
+    }),
+    vscode.commands.registerCommand('llmWiki.reviewAllWithAi', async () => {
+      const dispatcher = new AiReviewDispatcher(undefined, governanceManager || undefined);
+      await dispatcher.dispatchReview({ all: true });
     })
   );
 

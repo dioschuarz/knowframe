@@ -18,6 +18,7 @@ export interface IssueResolutionModalCallbacks {
   onOpenSource?: (filePath: string, line?: number) => void;
   onFixBrokenLink?: (source: string, target: string, line?: number) => void;
   onMarkReviewed?: (docId: string) => void;
+  onReviewWithAi?: (filePath: string, issue?: FindingIssue) => void;
   onClose?: () => void;
 }
 
@@ -204,13 +205,16 @@ export function renderIssueResolutionModalHtml(props: IssueResolutionModalProps)
           </div>
           <div class="issue-modal-footer-right">
             ${isBroken && issue.target ? `
-            <button class="btn-primary" id="issue-btn-fix-ref" title="Select target note from quick-pick">
+            <button class="btn-secondary" id="issue-btn-fix-ref" title="Select target note from quick-pick">
               Fix Reference
             </button>` : ''}
-            ${isReview ? `
-            <button class="btn-primary" id="issue-btn-mark-reviewed" title="Mark review resolved">
-              Mark Reviewed
-            </button>` : ''}
+            <button class="btn-primary issue-btn-review-ai issue-btn-mark-reviewed" id="issue-btn-review-ai" title="Review and fix this issue with configured AI agent">
+              <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" style="vertical-align: -1px; margin-right: 4px;">
+                <path d="M7.5 1.5L9 5l3.5 1.5L9 8l-1.5 3.5L6 8 2.5 6.5 6 5z" fill="currentColor" fill-opacity="0.3"/>
+                <path d="M12.5 10.5l.75 1.75 1.75.75-1.75.75-.75 1.75-.75-1.75-1.75-.75 1.75-.75z" fill="currentColor"/>
+              </svg>
+              Review with AI
+            </button>
             <button class="btn-secondary" id="issue-btn-cancel">Close</button>
           </div>
         </div>
@@ -270,10 +274,15 @@ export function renderIssueResolutionModal(
         handleClose();
       });
 
-      markRevBtn?.addEventListener('click', (e) => {
+      const reviewAiBtn = container.querySelector('#issue-btn-review-ai') || container.querySelector('#issue-btn-mark-reviewed');
+      reviewAiBtn?.addEventListener('click', (e) => {
         e.stopPropagation();
         const p = props.issue.file_path || props.nodeFilePath;
-        callbacks.onMarkReviewed?.(p);
+        if (callbacks.onReviewWithAi) {
+          callbacks.onReviewWithAi(p, props.issue);
+        } else {
+          callbacks.onMarkReviewed?.(p);
+        }
         handleClose();
       });
     },

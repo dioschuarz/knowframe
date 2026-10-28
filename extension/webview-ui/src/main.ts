@@ -125,6 +125,9 @@ const issueResolutionModal = renderIssueResolutionModal(issueModalContainer, {
   onMarkReviewed: (docId) => {
     rpc.resolveDocumentReview([docId]);
   },
+  onReviewWithAi: (filePath, issue) => {
+    rpc.reviewWithAi(filePath, issue);
+  },
 });
 
 const settingsDrawer = renderSettingsDrawer(
@@ -282,6 +285,9 @@ const settingsDrawer = renderSettingsDrawer(
     onMarkReviewed: (docId) => {
       rpc.resolveDocumentReview([docId]);
     },
+    onReviewWithAi: (filePath) => {
+      rpc.reviewWithAi(filePath);
+    },
     onOpen: () => {
       if (typeof inspectorDrawer !== 'undefined' && inspectorDrawer) {
         inspectorDrawer.close();
@@ -383,6 +389,9 @@ const inspectorDrawer = renderInspectorDrawer(inspectorContainer, {
   },
   onMarkReviewed: (docId) => {
     rpc.resolveDocumentReview([docId]);
+  },
+  onReviewWithAi: (filePath, issue) => {
+    rpc.reviewWithAi(filePath, issue);
   },
   onClose: () => {
     selectedNode = null;

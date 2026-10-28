@@ -214,6 +214,8 @@ export type WebviewInboundType =
   | 'applyGovernancePlan'
   | 'installLLMWikiSkill'
   | 'resolveDocumentReview'
+  | 'reviewWithAi'
+  | 'reviewAllWithAi'
   | 'getAffectedDocuments'
   | 'requestHarnessTools'
   | 'installHarnessTool';

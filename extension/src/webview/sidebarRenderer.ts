@@ -145,6 +145,16 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
     .dash-action-btn.primary-action:hover {
       background: rgba(56, 189, 248, 0.2);
     }
+    .dash-action-btn.ai-review-btn {
+      position: relative;
+      color: #a855f7;
+      border-color: rgba(168, 85, 247, 0.35);
+      background: rgba(168, 85, 247, 0.1);
+    }
+    .dash-action-btn.ai-review-btn:hover {
+      background: rgba(168, 85, 247, 0.22);
+      text-decoration: none;
+    }
     .gear-action-btn {
       position: relative;
       color: var(--vscode-textLink-foreground, #38bdf8);
@@ -155,7 +165,11 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
       background: rgba(56, 189, 248, 0.2);
       text-decoration: none;
     }
-    .gear-action-btn[data-tooltip]::after {
+    .dash-action-btn[data-tooltip] {
+      position: relative;
+    }
+    .gear-action-btn[data-tooltip]::after,
+    .dash-action-btn[data-tooltip]::after {
       content: attr(data-tooltip);
       position: absolute;
       right: 0;
@@ -175,7 +189,8 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
       z-index: 100;
       box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
     }
-    .gear-action-btn[data-tooltip]:hover::after {
+    .gear-action-btn[data-tooltip]:hover::after,
+    .dash-action-btn[data-tooltip]:hover::after {
       opacity: 1;
       transform: translateY(0);
     }
@@ -469,7 +484,12 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
       <div class="pillar-header">
         <div class="pillar-title">HEALTH</div>
         <div class="pillar-header-actions">
-          <button class="dash-action-btn primary-action" id="dash-btn-explore-graph" title="Open Knowledge Graph">
+          <button class="dash-action-btn icon-only-btn ai-review-btn" id="dash-btn-review-all-ai" data-tooltip="Review all with AI" title="Review all with AI" aria-label="Review all with AI">
+            <svg viewBox="0 0 16 16" width="12" height="12" fill="currentColor">
+              <path fill-rule="evenodd" clip-rule="evenodd" d="M14.7 3.3a3.5 3.5 0 0 0-4.9-.1L8.5 4.5l2.9 2.9 1.3-1.3c.6-.6 1.5-.6 2.1 0 .2.2.3.5.3.8 0 .3-.1.6-.3.8l-1.3 1.3 2.9 2.9 1.3-1.3a3.5 3.5 0 0 0-.1-4.9l-2.6-2.6zM7.8 5.2L1.4 11.6a1.5 1.5 0 0 0 0 2.1l.9.9a1.5 1.5 0 0 0 2.1 0l6.4-6.4-3-3z"/>
+            </svg>
+          </button>
+          <button class="dash-action-btn icon-only-btn primary-action" id="dash-btn-explore-graph" data-tooltip="Explore graph" title="Explore graph" aria-label="Explore graph">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" style="vertical-align: -1px;">
               <circle cx="12" cy="12" r="3" fill="currentColor"/>
               <circle cx="5" cy="6" r="2" fill="currentColor"/>
@@ -481,7 +501,6 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
               <line x1="6.5" y1="16.5" x2="10" y2="13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
               <line x1="17.5" y1="16.5" x2="14" y2="13.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/>
             </svg>
-            Explore graph
           </button>
         </div>
       </div>
@@ -642,6 +661,9 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
     const vscode = acquireVsCodeApi();
 
     // Wire buttons
+    document.getElementById('dash-btn-review-all-ai')?.addEventListener('click', () => {
+      vscode.postMessage({ type: 'reviewAllWithAi' });
+    });
     document.getElementById('dash-btn-explore-graph')?.addEventListener('click', () => {
       vscode.postMessage({ type: 'openGraph' });
     });

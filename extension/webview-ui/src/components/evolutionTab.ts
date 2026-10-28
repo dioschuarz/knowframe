@@ -1247,8 +1247,8 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
                   class="btn btn-primary btn-finding-action btn-mark-reviewed"
                   data-action="mark-reviewed"
                   data-doc-id="${f.file_path || f.doc_id || f.target || ''}"
-                  title="Mark this document as reviewed for pending changes">
-            ✓ Mark Reviewed
+                  title="Review and resolve this document with configured AI agent">
+            Review with AI
           </button>
         `;
       } else {

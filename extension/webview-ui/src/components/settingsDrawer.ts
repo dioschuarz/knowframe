@@ -310,6 +310,7 @@ export interface SettingsDrawerCallbacks {
   onReviewPlan?: (planId: string) => void;
   onApplyPlan?: (planId: string) => void;
   onMarkReviewed?: (docId: string) => void;
+  onReviewWithAi?: (filePath: string) => void;
   onOpen?: () => void;
   onClose?: () => void;
 }
@@ -1395,7 +1396,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               (issue as any).obligation !== undefined ||
               (issue as any).review_status !== undefined;
             const reviewBtnHtml = isReview
-              ? `<button type="button" class="btn-tiny btn-primary diag-mark-reviewed-btn" data-action="mark-reviewed" data-file="${issue.file_path}" data-doc-id="${issue.file_path}">Mark Reviewed</button>`
+              ? `<button type="button" class="btn-tiny btn-primary diag-mark-reviewed-btn" data-action="mark-reviewed" data-file="${issue.file_path}" data-doc-id="${issue.file_path}">Review with AI</button>`
               : '';
 
             const openCodeBtnHtml = (isFreshness && issue.target)
@@ -3618,7 +3619,11 @@ export function renderSettingsDrawer(
         e.stopPropagation();
         const docId = btn.getAttribute('data-doc-id') || btn.getAttribute('data-file');
         if (docId) {
-          callbacks.onMarkReviewed?.(docId);
+          if (callbacks.onReviewWithAi) {
+            callbacks.onReviewWithAi(docId);
+          } else {
+            callbacks.onMarkReviewed?.(docId);
+          }
         }
       });
     });
