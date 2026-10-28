@@ -661,6 +661,18 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
       vscode.postMessage({ type: 'navigateToDetail', primaryTab: 'insights', subTab: 'evolution' });
     });
 
+    // Clicking health gauge or findings summary opens Health diagnostics (all pillars)
+    document.querySelectorAll('.quality-gauge-row, #quality-circle, .findings-container').forEach(el => {
+      el.addEventListener('click', () => {
+        vscode.postMessage({
+          type: 'navigateToDetail',
+          primaryTab: 'insights',
+          subTab: 'health'
+        });
+      });
+      el.style.cursor = 'pointer';
+    });
+
     // Deep-linking clicks on Health dimension rows
     document.querySelectorAll('.pillar-mini-row').forEach(row => {
       row.addEventListener('click', () => {

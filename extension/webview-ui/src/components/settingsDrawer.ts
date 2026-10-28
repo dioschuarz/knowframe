@@ -188,6 +188,13 @@ export interface SettingsDrawerProps {
   tokenSummary?: TokenSummary | null;
   primaryHub?: string | null;
   brokenLinksCount?: number;
+  brokenEdges?: Array<{
+    source: string;
+    target: string;
+    line?: number;
+    anchor?: string;
+    resolutionStatus?: string;
+  }>;
   scanExclusions: string[];
   graphExclusions: string[];
   colorGroups: ClusterColorGroup[];
@@ -209,6 +216,7 @@ export interface SettingsDrawerProps {
   excludedNotes?: number;
   issuesReport?: KnowledgeIssuesReport | null;
   selectedPillarFilter?: string;
+  autoExpandIssues?: boolean;
   selectedDebtScope?: 'active' | 'legacy' | 'all';
   includeExcluded?: boolean;
   selectedRuleScope?: 'scan' | 'graph';
@@ -1192,15 +1200,37 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
     case 'health':
     case 'diagnostics': {
       const report = props.issuesReport;
-      const allIssues = report?.issues ?? [];
+      const rawReportIssues = report?.issues ?? [];
       const overallScore = report ? Math.round(report.overall_score) : 100;
       const rawScore = report?.raw_score !== undefined && report.raw_score !== null ? Math.round(report.raw_score) : null;
       const selectedScope = props.selectedDebtScope || 'active';
       const includeExcluded = Boolean(props.includeExcluded);
 
+      // Synthesize missing integrity issues from brokenEdges if report lacks them
+      const hasIntegrityInIssues = rawReportIssues.some((i) => i.pillar?.toLowerCase() === 'integrity');
+      let allIssues = [...rawReportIssues];
+      if (!hasIntegrityInIssues && props.brokenEdges && props.brokenEdges.length > 0) {
+        for (const edge of props.brokenEdges) {
+          allIssues.push({
+            id: `edge:${edge.source}:${edge.target}:${edge.line || 0}`,
+            pillar: 'integrity',
+            category: edge.anchor ? 'invalid_anchor' : 'broken_link',
+            file_path: edge.source,
+            line_number: edge.line || null,
+            target: edge.target + (edge.anchor ? `#${edge.anchor}` : ''),
+            deduction_points: 5.0,
+            weight: 1.0,
+            description: `Broken reference to missing target '${edge.target}'${edge.anchor ? ` (anchor: ${edge.anchor})` : ''}`,
+            remediation_hint: `Create target file '${edge.target}' or update link in '${edge.source}'`,
+            is_legacy: false,
+            is_excluded: false,
+          });
+        }
+      }
+
       // Determine active vs legacy counts
       const activeCount = report?.active_issues_count !== undefined
-        ? report.active_issues_count
+        ? Math.max(report.active_issues_count, allIssues.filter((i) => !i.is_legacy).length)
         : allIssues.filter((i) => !i.is_legacy).length;
       const legacyDebtCount = report?.legacy_debt_count !== undefined
         ? report.legacy_debt_count
@@ -1220,8 +1250,8 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
       const integrityCount = report
         ? (selectedScope === 'all' && report.integrity_count !== undefined && report.integrity_count >= integFilterCount
             ? report.integrity_count
-            : integFilterCount)
-        : (selectedScope !== 'legacy' ? brokenLinksCount : 0);
+            : Math.max(integFilterCount, selectedScope !== 'legacy' ? (props.brokenLinksCount ?? 0) : 0))
+        : (selectedScope !== 'legacy' ? Math.max(integFilterCount, props.brokenLinksCount ?? 0) : 0);
 
       const structFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'structure').length;
       const structureCount = report
@@ -1341,6 +1371,11 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               issue.category === 'harness_drift' ||
               issue.category === 'harnessdrift' ||
               (issue.description && (issue.description.toLowerCase().includes('harness route drift') || issue.description.toLowerCase().includes('harness drift')));
+            const isFreshness = issue.pillar?.toLowerCase() === 'freshness';
+            const isConsistency = issue.pillar?.toLowerCase() === 'consistency';
+            const isStructure = issue.pillar?.toLowerCase() === 'structure';
+            const isDiscoverability = issue.pillar?.toLowerCase() === 'discoverability';
+
             const fixBtnHtml = isBroken
               ? `<button type="button" class="btn-tiny btn-primary diag-fix-ref-btn" data-file="${issue.file_path}" data-target="${issue.target || ''}" data-line="${issue.line_number ?? ''}">Fix Reference</button>`
               : '';
@@ -1362,6 +1397,87 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             const reviewBtnHtml = isReview
               ? `<button type="button" class="btn-tiny btn-primary diag-mark-reviewed-btn" data-action="mark-reviewed" data-file="${issue.file_path}" data-doc-id="${issue.file_path}">Mark Reviewed</button>`
               : '';
+
+            const openCodeBtnHtml = (isFreshness && issue.target)
+              ? `<button type="button" class="btn-tiny btn-primary diag-open-code-btn" data-file="${issue.target}" title="Open referenced code file '${issue.target}' in editor">Open Code</button>`
+              : '';
+            const openCandidateBtnHtml = (isConsistency && issue.target)
+              ? `<button type="button" class="btn-tiny btn-primary diag-open-doc-btn" data-file="${issue.target}" title="Open candidate note '${issue.target}' to compare">Open Candidate Note</button>`
+              : '';
+            const openHubBtnHtml = (isDiscoverability && props.primaryHub)
+              ? `<button type="button" class="btn-tiny btn-primary diag-open-doc-btn" data-file="${props.primaryHub}" title="Open primary hub '${props.primaryHub}' to add reference">Open Hub to Link</button>`
+              : '';
+
+            let waysToFixHtml = '';
+            if (isBroken) {
+              waysToFixHtml = `
+                <div class="diag-fix-guidance">
+                  <div class="diag-fix-guidance-title">
+                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8"/><circle cx="8" cy="11" r="0.5" fill="currentColor"/></svg>
+                    <strong>Ways to fix:</strong>
+                  </div>
+                  <ul>
+                    <li><strong>Interactive Fix:</strong> Click <em>Fix Reference</em> to select a valid replacement target.</li>
+                    <li><strong>CLI Auto-Repair:</strong> Run <code>knowframe fix</code> in terminal to auto-resolve broken wikilinks to closest matches.</li>
+                    <li><strong>Exclude Path:</strong> Click <em>Exclude Path</em> if target is an external or generated artifact.</li>
+                  </ul>
+                </div>
+              `;
+            } else if (isFreshness) {
+              waysToFixHtml = `
+                <div class="diag-fix-guidance">
+                  <div class="diag-fix-guidance-title">
+                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><polyline points="8 4 8 8 11 10"/></svg>
+                    <strong>Ways to fix:</strong>
+                  </div>
+                  <ul>
+                    <li><strong>Update Documentation:</strong> ${issue.target ? `Click <em>Open Code</em> to inspect <code>${issue.target}</code> and ` : ''}check <code>git diff HEAD~5${issue.target ? ` -- ${issue.target}` : ''}</code> to refresh obsolete citations.</li>
+                    <li><strong>Acknowledge in Baseline:</strong> If doc update is deferred to next milestone, record baseline via <code>knowframe baseline record</code>.</li>
+                    <li><strong>CLI Drift Audit:</strong> Run <code>knowframe drift</code> to inspect detailed AST drift and commit citations.</li>
+                  </ul>
+                </div>
+              `;
+            } else if (isConsistency) {
+              waysToFixHtml = `
+                <div class="diag-fix-guidance">
+                  <div class="diag-fix-guidance-title">
+                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><line x1="5" y1="8" x2="11" y2="8"/></svg>
+                    <strong>Ways to fix:</strong>
+                  </div>
+                  <ul>
+                    <li><strong>Consolidate Notes:</strong> ${issue.target ? `Click <em>Open Candidate Note</em> to compare side-by-side, then ` : ''}merge duplicate sections into the canonical note.</li>
+                    <li><strong>Differentiate Scope:</strong> Refocus boundaries to reduce vocabulary overlap below 70%.</li>
+                    <li><strong>Acknowledge Baseline:</strong> Run <code>knowframe baseline record</code> if overlap is intentional across different domains.</li>
+                  </ul>
+                </div>
+              `;
+            } else if (isStructure) {
+              waysToFixHtml = `
+                <div class="diag-fix-guidance">
+                  <div class="diag-fix-guidance-title">
+                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><line x1="8" y1="4" x2="8" y2="12"/><line x1="4" y1="8" x2="12" y2="8"/></svg>
+                    <strong>Ways to fix:</strong>
+                  </div>
+                  <ul>
+                    <li><strong>Materialize Fragments:</strong> Run <code>knowframe materialize</code> in terminal to record heading fragment anchors in frontmatter.</li>
+                    <li><strong>Anchor Wikilinks:</strong> Change generic links <code>[[note]]</code> to targeted anchors <code>[[note#section]]</code>.</li>
+                  </ul>
+                </div>
+              `;
+            } else if (isDiscoverability) {
+              waysToFixHtml = `
+                <div class="diag-fix-guidance">
+                  <div class="diag-fix-guidance-title">
+                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><polyline points="5 8 7.5 10.5 11 5.5"/></svg>
+                    <strong>Ways to fix:</strong>
+                  </div>
+                  <ul>
+                    <li><strong>Connect to Hub:</strong> ${props.primaryHub ? `Click <em>Open Hub to Link</em> to add <code>[[${issue.file_path}]]</code> to <code>${props.primaryHub}</code>.` : `Add a wikilink from your central index.`}</li>
+                    <li><strong>Cross-Link:</strong> Add inbound links from parent or sibling domain notes.</li>
+                  </ul>
+                </div>
+              `;
+            }
 
             return `
               <div class="diag-issue-card ${issue.is_legacy ? 'diag-issue-legacy' : ''}">
@@ -1386,8 +1502,12 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
                 </div>
                 <div class="diag-issue-desc">${issue.description}</div>
                 <div class="diag-issue-hint">💡 ${issue.remediation_hint}</div>
+                ${waysToFixHtml}
                 <div class="diag-issue-actions">
                   <button type="button" class="btn-tiny diag-open-doc-btn" data-file="${issue.file_path}" data-line="${issue.line_number ?? ''}">Open Note</button>
+                  ${openCodeBtnHtml}
+                  ${openCandidateBtnHtml}
+                  ${openHubBtnHtml}
                   ${fixBtnHtml}
                   ${excludeBtnHtml}
                   ${removeSecBtnHtml}
@@ -1398,12 +1518,13 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             `;
           }).join('');
 
+          const isPillarExpanded = Boolean(props.autoExpandIssues);
           accordionsHtml += `
             <div class="diag-accordion-group" data-pillar="${p.id}">
-              <div class="diag-accordion-header collapsed" data-pillar="${p.id}">
+              <div class="diag-accordion-header ${isPillarExpanded ? '' : 'collapsed'}" data-pillar="${p.id}">
                 <div class="diag-accordion-title">
                   <span>${p.label}</span>
-                  <span class="diag-count-badge">${pillarIssues.length}</span>
+                  <span class="diag-count-badge" style="background: ${p.count > 0 ? (p.id === 'integrity' ? '#ef4444' : p.id === 'freshness' ? '#a855f7' : p.id === 'consistency' ? '#ec4899' : p.id === 'structure' ? '#0ea5e9' : '#eab308') : 'var(--vscode-badge-background)'}; color: #ffffff;">${pillarIssues.length}</span>
                 </div>
                 <span class="diag-accordion-chevron">
                   <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1411,7 +1532,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
                   </svg>
                 </span>
               </div>
-              <div class="diag-accordion-body collapsed" id="diag-body-${p.id}">
+              <div class="diag-accordion-body ${isPillarExpanded ? '' : 'collapsed'}" id="diag-body-${p.id}">
                 ${issuesHtml || '<div style="color:var(--vscode-descriptionForeground); font-size:11px; padding:4px;">No issues in this pillar.</div>'}
               </div>
             </div>
@@ -1430,7 +1551,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             <div class="diag-overview-header">
               <span class="diag-overview-title">Quality & Defect Overview</span>
               <div class="diag-overview-actions">
-                <button type="button" class="diag-toggle-all" id="diag-toggle-all">Expand all</button>
+                <button type="button" class="diag-toggle-all" id="diag-toggle-all">${props.autoExpandIssues ? 'Collapse all' : 'Expand all'}</button>
                 ${rawScore !== null && rawScore !== overallScore ? `<span class="diag-score-raw-label" title="Raw unmasked audit score">Audit: ${rawScore}/100</span>` : ''}
                 <span class="diag-score-badge ${scoreClass}" title="Effective Score: ${overallScore}/100${rawScore !== null ? ` | Raw Historical Audit: ${rawScore}/100` : ''}">${overallScore}/100</span>
               </div>
@@ -2770,8 +2891,8 @@ export function renderSettingsDrawer(
   }
 
   function wireHealthAndStructureActions(): void {
-    // Open Note buttons & clickable file links
-    container.querySelectorAll('.diag-open-doc-btn, .diag-file-clickable').forEach((el) => {
+    // Open Note & Open Code buttons & clickable file links
+    container.querySelectorAll('.diag-open-doc-btn, .diag-open-code-btn, .diag-file-clickable').forEach((el) => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         const file = el.getAttribute('data-file');
@@ -2891,6 +3012,8 @@ export function renderSettingsDrawer(
 
       if (clearButton) {
         state.selectedPillarFilter = '';
+        scheduleRender();
+        return;
       } else if (filterButton) {
         const filter = filterButton.getAttribute('data-filter');
         if (!filter) return;
@@ -2903,6 +3026,8 @@ export function renderSettingsDrawer(
         if (selected.has(filter)) selected.delete(filter);
         else selected.add(filter);
         state.selectedPillarFilter = Array.from(selected).join(',');
+        scheduleRender();
+        return;
       }
 
       applyDiagnosticsFilterToDom();

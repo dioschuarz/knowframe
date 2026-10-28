@@ -698,10 +698,18 @@ rpc.on('graphDataUpdate', (data: any) => {
   const connectedCount = rawNodes.filter((n) => n.hopDistance >= 0).length;
   const orphanCount = rawNodes.filter((n) => n.hopDistance < 0).length;
   const excludedCount = rawNodes.filter((n) => n.status === 'excluded').length;
+  const brokenEdges = rawEdges.filter((e) => e.isBroken).map((e) => ({
+    source: typeof e.source === 'object' ? (e.source as any).id : e.source,
+    target: typeof e.target === 'object' ? (e.target as any).id : e.target,
+    line: e.line ?? undefined,
+    anchor: e.anchor ?? undefined,
+    resolutionStatus: e.resolutionStatus,
+  }));
 
   settingsDrawer.updateProps({
     primaryHub: data.recommended_hub || (rawNodes[0] ? rawNodes[0].label : null),
     brokenLinksCount,
+    brokenEdges,
     totalNotes: rawNodes.length,
     connectedNotes: connectedCount,
     orphanNotes: orphanCount,
@@ -770,12 +778,14 @@ rpc.on('exclusionPreviewResult', (data: any) => {
 
 rpc.on('openSettingsDrawer', (data: any) => {
   inspectorDrawer.close();
+  const tab = data?.tab || 'knowledge';
   settingsDrawer.updateProps({
+    activeTab: tab,
+    selectedPillarFilter: data?.targetSection || '',
     nodes: rawNodes,
     colorGroups,
     tokenSummary: lastTokenSummary,
   });
-  const tab = data?.tab || 'knowledge';
   if (tab === 'harness' || tab === 'git_harness' || tab === 'git') {
     rpc.getHarnessStatus();
     rpc.requestHarnessTools();
@@ -788,16 +798,10 @@ rpc.on('navigateToDetail', (data: any) => {
   inspectorDrawer.close();
   const subTab = data?.subTab || 'health';
   const targetSection = data?.targetSection;
-  if (targetSection) {
-    settingsDrawer.updateProps({
-      selectedPillarFilter: targetSection,
-      tokenSummary: lastTokenSummary,
-    });
-  } else {
-    settingsDrawer.updateProps({
-      tokenSummary: lastTokenSummary,
-    });
-  }
+  settingsDrawer.updateProps({
+    selectedPillarFilter: targetSection || '',
+    tokenSummary: lastTokenSummary,
+  });
   settingsDrawer.open(subTab);
 });
 

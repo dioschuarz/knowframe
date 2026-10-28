@@ -339,6 +339,66 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(combined.includes('id="diag-body-discoverability"'), 'Must show second selected pillar');
   });
 
+  test('synthesizes missing integrity issues from brokenEdges and renders rich actionable guidance', () => {
+    const issuesReport = {
+      overall_score: 80,
+      total_issues: 1,
+      integrity_count: 0,
+      structure_count: 0,
+      consistency_count: 0,
+      discoverability_count: 0,
+      freshness_count: 1,
+      issues: [
+        {
+          id: 'fresh:docs/api.md',
+          pillar: 'freshness',
+          category: 'technical_drift',
+          file_path: 'docs/api.md',
+          line_number: 14,
+          target: 'src/server.ts',
+          deduction_points: 8.0,
+          weight: 1.0,
+          description: "Cites modified code 'src/server.ts'",
+          remediation_hint: "Update documentation to reflect changes in 'src/server.ts'",
+        },
+      ],
+    };
+
+    const brokenEdges = [
+      {
+        source: 'docs/guide.md',
+        target: 'missing_target.md',
+        line: 42,
+        anchor: 'setup',
+      },
+    ];
+
+    const html = renderSettingsDrawerHtml({
+      ...sampleProps,
+      activeTab: 'diagnostics',
+      issuesReport,
+      brokenEdges,
+      brokenLinksCount: 1,
+    });
+
+    // Integrity was synthesized into issues and both pillars are rendered
+    assert.ok(html.includes('id="diag-body-integrity"'), 'Must render synthesized integrity accordion');
+    assert.ok(html.includes('id="diag-body-freshness"'), 'Must render freshness accordion');
+    assert.ok(html.includes('docs/guide.md:42'), 'Must show broken reference source file and line');
+    assert.ok(html.includes('missing_target.md#setup'), 'Must show target with fragment');
+
+    // Action buttons
+    assert.ok(html.includes('diag-open-code-btn'), 'Must render Open Code action button for freshness');
+    assert.ok(html.includes('Open Code'), 'Must label button Open Code');
+    assert.ok(html.includes('Fix Reference'), 'Must offer Fix Reference action button for broken links');
+    assert.ok(html.includes('Exclude Path'), 'Must offer Exclude Path action button');
+
+    // Rich guidance
+    assert.ok(html.includes('diag-fix-guidance'), 'Must render rich guidance box');
+    assert.ok(html.includes('knowframe fix'), 'Must cite knowframe fix CLI command for integrity');
+    assert.ok(html.includes('knowframe baseline record'), 'Must cite knowframe baseline record command');
+  });
+
   test('scopes drawer-entering class strictly to isEntering state to prevent re-animation on updates', () => {
     const defaultHtml = renderSettingsDrawerHtml(sampleProps);
     assert.ok(!defaultHtml.includes('drawer-entering'), 'Must not have drawer-entering class by default or on property updates');
