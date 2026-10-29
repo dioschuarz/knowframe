@@ -285,8 +285,8 @@ const settingsDrawer = renderSettingsDrawer(
     onMarkReviewed: (docId) => {
       rpc.resolveDocumentReview([docId]);
     },
-    onReviewWithAi: (filePath) => {
-      rpc.reviewWithAi(filePath);
+    onReviewWithAi: (filePath, issue) => {
+      rpc.reviewWithAi(filePath, issue);
     },
     onOpen: () => {
       if (typeof inspectorDrawer !== 'undefined' && inspectorDrawer) {

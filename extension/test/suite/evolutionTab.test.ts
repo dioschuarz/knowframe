@@ -734,6 +734,32 @@ suite('EvolutionTab Unit Test Suite (T053)', () => {
     // Finding-loc must contain the file path with line number
     assert.ok(html.includes('specs/009-deterministic-knowledge-engine/RESEARCH_2.md:42'), 'Must contain file path with line number');
   });
+
+  test('renders Review with AI and Open Target buttons for technical drift findings with target reference', () => {
+    const findings = [
+      {
+        file_path: 'notes/00_meta/wiki_index.md',
+        line_number: 275,
+        description: 'Missing code citation `hitch_consult.py`',
+        category: 'technical_drift',
+        target: 'hitch_consult.py',
+        pillar: 'freshness',
+      },
+    ];
+
+    const html = renderEvolutionTabHtml({
+      signatures: [],
+      recommendations: [],
+      vaultFindings: findings,
+    });
+
+    assert.ok(html.includes('btn-finding-review-ai'), 'Must render Review with AI button');
+    assert.ok(html.includes('data-action="review-with-ai"'), 'Must have review-with-ai action hook');
+    assert.ok(html.includes('btn-finding-open-target'), 'Must render Open Target button');
+    assert.ok(html.includes('data-action="open-target"'), 'Must have open-target action hook');
+    assert.ok(html.includes('Open Target (hitch_consult.py) ↗'), 'Must display target basename on button');
+    assert.ok(html.includes('btn-finding-open-file'), 'Must render Open File button');
+  });
 });
 
 

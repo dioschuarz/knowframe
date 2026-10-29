@@ -86,8 +86,11 @@ export class AiReviewDispatcher {
     const cat = options.issue?.category ? `${options.issue.category}` : 'integrity';
     const line = options.issue?.line_number ? ` at line ${options.issue.line_number}` : '';
     const desc = options.issue?.description ? `: ${options.issue.description}` : '';
+    const targetHint = options.issue?.target
+      ? ` If the referenced target file '${options.issue.target}' exists elsewhere in the workspace, locate its actual path and update the citation or link in '${filePath}' to point to the correct relative path.`
+      : '';
 
-    return `Review and fix the ${cat} issue in '${filePath}'${line}${desc}. IMPORTANT: Modify ONLY '${filePath}' and fix ONLY this issue. Re-check until the ${cat} issue in '${filePath}' is completely resolved.`;
+    return `Review and fix the ${cat} issue in '${filePath}'${line}${desc}.${targetHint} IMPORTANT: Modify ONLY '${filePath}' and fix ONLY this issue. Re-check until the ${cat} issue in '${filePath}' is completely resolved.`;
   }
 
   /**

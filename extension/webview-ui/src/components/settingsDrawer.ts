@@ -310,7 +310,7 @@ export interface SettingsDrawerCallbacks {
   onReviewPlan?: (planId: string) => void;
   onApplyPlan?: (planId: string) => void;
   onMarkReviewed?: (docId: string) => void;
-  onReviewWithAi?: (filePath: string) => void;
+  onReviewWithAi?: (filePath: string, issue?: unknown) => void;
   onOpen?: () => void;
   onClose?: () => void;
 }
@@ -1361,7 +1361,9 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
 
           const issuesHtml = pillarIssues.map((issue) => {
             const catClass = `cat-${issue.category.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
-            const targetHtml = issue.target ? `<span class="diag-arrow">→</span><span class="diag-target-text" title="${issue.target}">${issue.target}</span>` : '';
+            const targetHtml = issue.target
+              ? `<span class="diag-arrow">→</span><span class="diag-target-text diag-open-target-btn" data-target="${issue.target}" style="cursor: pointer; text-decoration: underline;" title="Click to open ${issue.target}">${issue.target}</span>`
+              : '';
             const lineStr = issue.line_number ? `:${issue.line_number}` : '';
             const isBroken = issue.category === 'broken_link' || issue.category === 'invalid_anchor' || issue.category === 'broken_fragment_anchor';
             const isSecondary =
@@ -1395,9 +1397,17 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               issue.category === 'unreviewed' ||
               (issue as any).obligation !== undefined ||
               (issue as any).review_status !== undefined;
-            const reviewBtnHtml = isReview
-              ? `<button type="button" class="btn-tiny btn-primary diag-mark-reviewed-btn" data-action="mark-reviewed" data-file="${issue.file_path}" data-doc-id="${issue.file_path}">Review with AI</button>`
-              : '';
+            const reviewBtnHtml = `
+              <button type="button"
+                      class="btn-tiny ${isReview ? 'btn-primary' : 'btn-secondary'} diag-mark-reviewed-btn"
+                      data-action="review-with-ai"
+                      data-file="${issue.file_path}"
+                      data-doc-id="${issue.file_path}"
+                      data-issue="${encodeURIComponent(JSON.stringify(issue))}"
+                      title="Review and resolve this specific issue with configured AI agent">
+                Review with AI
+              </button>
+            `;
 
             const openCodeBtnHtml = (isFreshness && issue.target)
               ? `<button type="button" class="btn-tiny btn-primary diag-open-code-btn" data-file="${issue.target}" title="Open referenced code file '${issue.target}' in editor">Open Code</button>`
@@ -1407,6 +1417,9 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               : '';
             const openHubBtnHtml = (isDiscoverability && props.primaryHub)
               ? `<button type="button" class="btn-tiny btn-primary diag-open-doc-btn" data-file="${props.primaryHub}" title="Open primary hub '${props.primaryHub}' to add reference">Open Hub to Link</button>`
+              : '';
+            const openTargetBtnHtml = (issue.target && !openCodeBtnHtml && !openCandidateBtnHtml)
+              ? `<button type="button" class="btn-tiny btn-secondary diag-open-target-btn" data-target="${issue.target}" title="Open referenced target '${issue.target}' in editor">Open Target (${issue.target.split('/').pop()}) ↗</button>`
               : '';
 
             let waysToFixHtml = '';
@@ -1506,6 +1519,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
                 ${waysToFixHtml}
                 <div class="diag-issue-actions">
                   <button type="button" class="btn-tiny diag-open-doc-btn" data-file="${issue.file_path}" data-line="${issue.line_number ?? ''}">Open Note</button>
+                  ${openTargetBtnHtml}
                   ${openCodeBtnHtml}
                   ${openCandidateBtnHtml}
                   ${openHubBtnHtml}
@@ -2892,11 +2906,11 @@ export function renderSettingsDrawer(
   }
 
   function wireHealthAndStructureActions(): void {
-    // Open Note & Open Code buttons & clickable file links
-    container.querySelectorAll('.diag-open-doc-btn, .diag-open-code-btn, .diag-file-clickable').forEach((el) => {
+    // Open Note & Open Code buttons & clickable file links & open target
+    container.querySelectorAll('.diag-open-doc-btn, .diag-open-code-btn, .diag-open-target-btn, .diag-file-clickable, [data-action="open-target"]').forEach((el) => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
-        const file = el.getAttribute('data-file');
+        const file = el.getAttribute('data-target') || el.getAttribute('data-file');
         const lineAttr = el.getAttribute('data-line');
         const line = lineAttr ? parseInt(lineAttr, 10) : undefined;
         if (file) {
@@ -3599,6 +3613,17 @@ export function renderSettingsDrawer(
       });
     });
 
+    // 9a. Open Target Navigation
+    container.querySelectorAll('[data-action="open-target"], .btn-finding-open-target, .finding-target-link').forEach((el) => {
+      el.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = el.getAttribute('data-target') || el.getAttribute('data-file');
+        if (target) {
+          callbacks.onOpenFile?.(target);
+        }
+      });
+    });
+
     // 9b. Broken Reference Fix Action
     container.querySelectorAll('[data-action="fix-broken"]').forEach((btn) => {
       btn.addEventListener('click', (e) => {
@@ -3613,17 +3638,22 @@ export function renderSettingsDrawer(
       });
     });
 
-    // 9c. Document Review Resolution Action (T032)
-    container.querySelectorAll('[data-action="mark-reviewed"], .diag-mark-reviewed-btn').forEach((btn) => {
+    // 9c. Review with AI Action
+    container.querySelectorAll('[data-action="review-with-ai"], [data-action="mark-reviewed"], .diag-mark-reviewed-btn, .btn-mark-reviewed, .btn-finding-review-ai').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
-        const docId = btn.getAttribute('data-doc-id') || btn.getAttribute('data-file');
-        if (docId) {
-          if (callbacks.onReviewWithAi) {
-            callbacks.onReviewWithAi(docId);
-          } else {
-            callbacks.onMarkReviewed?.(docId);
-          }
+        const docId = btn.getAttribute('data-file') || btn.getAttribute('data-doc-id');
+        const issueRaw = btn.getAttribute('data-issue');
+        let issue: any = undefined;
+        if (issueRaw) {
+          try {
+            issue = JSON.parse(decodeURIComponent(issueRaw));
+          } catch {}
+        }
+        if (callbacks.onReviewWithAi) {
+          callbacks.onReviewWithAi(docId || '', issue);
+        } else if (docId) {
+          callbacks.onMarkReviewed?.(docId);
         }
       });
     });

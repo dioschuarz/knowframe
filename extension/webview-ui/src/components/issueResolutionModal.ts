@@ -167,7 +167,7 @@ export function renderIssueResolutionModalHtml(props: IssueResolutionModalProps)
             ${issue.target ? `
             <div class="issue-point-box issue-point-span-full">
               <span class="issue-point-lbl">Target Reference</span>
-              <span class="issue-point-val issue-target-code">${issue.target}</span>
+              <span class="issue-point-val issue-target-code" id="issue-target-clickable" style="cursor: pointer; text-decoration: underline;" title="Click to open ${issue.target}">${issue.target}</span>
             </div>` : ''}
             <div class="issue-point-box issue-point-span-full">
               <span class="issue-point-lbl">Source File</span>
@@ -204,6 +204,10 @@ export function renderIssueResolutionModalHtml(props: IssueResolutionModalProps)
             </button>` : ''}
           </div>
           <div class="issue-modal-footer-right">
+            ${issue.target ? `
+            <button class="btn-secondary" id="issue-btn-open-target" title="Open target file '${issue.target}' in editor">
+              Open Target (${issue.target.split('/').pop()}) ↗
+            </button>` : ''}
             ${isBroken && issue.target ? `
             <button class="btn-secondary" id="issue-btn-fix-ref" title="Select target note from quick-pick">
               Fix Reference
@@ -273,6 +277,16 @@ export function renderIssueResolutionModal(
         callbacks.onFixBrokenLink?.(src, tgt, props.issue.line_number || 1);
         handleClose();
       });
+
+      const handleOpenTarget = (e: Event) => {
+        e.stopPropagation();
+        if (props.issue.target) {
+          callbacks.onOpenSource?.(props.issue.target);
+          handleClose();
+        }
+      };
+      container.querySelector('#issue-btn-open-target')?.addEventListener('click', handleOpenTarget);
+      container.querySelector('#issue-target-clickable')?.addEventListener('click', handleOpenTarget);
 
       const reviewAiBtn = container.querySelector('#issue-btn-review-ai') || container.querySelector('#issue-btn-mark-reviewed');
       reviewAiBtn?.addEventListener('click', (e) => {

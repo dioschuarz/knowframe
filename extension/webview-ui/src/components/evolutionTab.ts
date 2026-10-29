@@ -1247,6 +1247,8 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
                   class="btn btn-primary btn-finding-action btn-mark-reviewed"
                   data-action="mark-reviewed"
                   data-doc-id="${f.file_path || f.doc_id || f.target || ''}"
+                  data-file="${f.file_path}"
+                  data-issue="${encodeURIComponent(JSON.stringify(f))}"
                   title="Review and resolve this document with configured AI agent">
             Review with AI
           </button>
@@ -1254,6 +1256,49 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
       } else {
         primaryActionBtn = '';
       }
+
+      const isActionableForAi = Boolean(
+        f.target ||
+        f.remediation_hint ||
+        isBrokenRef ||
+        isHarnessDrift ||
+        isSecondary ||
+        catLower.includes('drift') ||
+        catLower.includes('link') ||
+        catLower.includes('anchor') ||
+        catLower.includes('stale') ||
+        catLower.includes('freshness') ||
+        catLower.includes('orphan') ||
+        catLower.includes('unanchored') ||
+        catLower.includes('review')
+      );
+
+      const hasReviewWithAiInPrimary = primaryActionBtn.includes('Review with AI') || primaryActionBtn.includes('btn-mark-reviewed');
+      const reviewWithAiBtn = (!hasReviewWithAiInPrimary && isActionableForAi)
+        ? `
+          <button type="button"
+                  class="btn ${primaryActionBtn ? 'btn-secondary' : 'btn-primary'} btn-finding-action btn-finding-review-ai"
+                  data-action="review-with-ai"
+                  data-file="${f.file_path}"
+                  data-doc-id="${f.file_path || f.doc_id || f.target || ''}"
+                  data-issue="${encodeURIComponent(JSON.stringify(f))}"
+                  title="Review and resolve this specific issue with configured AI agent">
+            Review with AI
+          </button>
+        `
+        : '';
+
+      const openTargetBtn = f.target
+        ? `
+          <button type="button"
+                  class="btn btn-secondary btn-finding-action btn-finding-open-target"
+                  data-action="open-target"
+                  data-target="${f.target}"
+                  title="Open referenced target in editor (${f.target})">
+            Open Target (${f.target.split('/').pop()}) ↗
+          </button>
+        `
+        : '';
 
       const kosBadgeHtml = fKosMeta
         ? `<span class="badge-kos badge-kos-${fKosMeta.id}" title="${fKosMeta.discipline}: ${fKosMeta.description}">${fKosMeta.shortLabel}</span>`
@@ -1283,12 +1328,20 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
               ${probBadgeHtml}
               ${confHtml}
             </div>
-            <div class="finding-loc" data-file="${f.file_path}" ${f.line_number ? `data-line="${f.line_number}"` : ''} title="Click to open file in editor">
-              <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; opacity: 0.7;">
-                <path d="M9 1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5L9 1z"/>
-                <polyline points="9 1 9 5 13 5"/>
-              </svg>
-              <span class="finding-path">${f.file_path}${lineSuffix}</span>
+            <div class="finding-loc-row" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+              <div class="finding-loc" data-file="${f.file_path}" ${f.line_number ? `data-line="${f.line_number}"` : ''} title="Click to open file in editor">
+                <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; opacity: 0.7;">
+                  <path d="M9 1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5L9 1z"/>
+                  <polyline points="9 1 9 5 13 5"/>
+                </svg>
+                <span class="finding-path">${f.file_path}${lineSuffix}</span>
+              </div>
+              ${f.target ? `
+                <span class="diag-arrow" style="opacity: 0.6; font-size: 11px;">→</span>
+                <span class="finding-target-link" data-action="open-target" data-target="${f.target}" style="cursor: pointer; text-decoration: underline; font-size: 11px; opacity: 0.85;" title="Click to open target: ${f.target}">
+                  ${f.target}
+                </span>
+              ` : ''}
             </div>
           </div>
 
@@ -1315,8 +1368,10 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
 
           <div class="finding-actions-row">
             ${primaryActionBtn}
+            ${reviewWithAiBtn}
+            ${openTargetBtn}
             <button type="button"
-                    class="btn ${primaryActionBtn ? 'btn-secondary' : 'btn-primary'} btn-finding-open-file"
+                    class="btn ${primaryActionBtn || reviewWithAiBtn ? 'btn-secondary' : 'btn-primary'} btn-finding-open-file"
                     data-action="open-file"
                     data-file="${f.file_path}"
                     ${f.line_number ? `data-line="${f.line_number}"` : ''}

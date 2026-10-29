@@ -1358,23 +1358,63 @@ export class GraphPanelManager implements vscode.Disposable {
       if (typeof filePath !== 'string') {
         filePath = (filePath as any).filePath || (filePath as any).id || String(filePath);
       }
+      let targetPath = filePath.trim();
+      if (targetPath.includes('#')) {
+        targetPath = targetPath.split('#')[0];
+      }
+      if (!targetPath) { return; }
+
       let uri: vscode.Uri;
-      if (path.isAbsolute(filePath)) {
-        uri = vscode.Uri.file(filePath);
+      if (path.isAbsolute(targetPath)) {
+        uri = vscode.Uri.file(targetPath);
       } else {
         const root = vscode.workspace.workspaceFolders?.[0]?.uri;
-        if (!root) {return;}
-        let candidateUri = vscode.Uri.joinPath(root, filePath);
+        if (!root) { return; }
+        let candidateUri = vscode.Uri.joinPath(root, targetPath);
         try {
           await vscode.workspace.fs.stat(candidateUri);
           uri = candidateUri;
         } catch {
-          const notesUri = vscode.Uri.joinPath(root, 'notes', filePath);
+          const notesUri = vscode.Uri.joinPath(root, 'notes', targetPath);
           try {
             await vscode.workspace.fs.stat(notesUri);
             uri = notesUri;
           } catch {
-            uri = candidateUri;
+            let found = false;
+            if (!path.extname(targetPath)) {
+              for (const ext of ['.md', '.markdown']) {
+                const mdCandidate = vscode.Uri.joinPath(root, targetPath + ext);
+                try {
+                  await vscode.workspace.fs.stat(mdCandidate);
+                  uri = mdCandidate;
+                  found = true;
+                  break;
+                } catch {
+                  const mdNotes = vscode.Uri.joinPath(root, 'notes', targetPath + ext);
+                  try {
+                    await vscode.workspace.fs.stat(mdNotes);
+                    uri = mdNotes;
+                    found = true;
+                    break;
+                  } catch {}
+                }
+              }
+            }
+            if (!found) {
+              const cleanName = path.basename(targetPath);
+              try {
+                const pattern = path.extname(targetPath) ? `**/${cleanName}` : `**/${cleanName}{.md,}`;
+                const matches = await vscode.workspace.findFiles(pattern, '**/node_modules/**', 5);
+                if (matches.length > 0) {
+                  const best = matches.find((m) => m.fsPath.endsWith(targetPath)) || matches[0];
+                  uri = best;
+                } else {
+                  uri = candidateUri;
+                }
+              } catch {
+                uri = candidateUri;
+              }
+            }
           }
         }
       }

@@ -21,6 +21,22 @@ suite('AiReviewDispatcher Unit Test Suite', () => {
     assert.ok(prompt.includes("Re-check until the broken_link issue in 'notes/01_projects/core.md' is completely resolved"));
   });
 
+  test('buildPrompt includes target relocation instruction when issue.target is present', () => {
+    const dispatcher = new AiReviewDispatcher();
+    const prompt = dispatcher.buildPrompt({
+      filePath: 'notes/00_meta/wiki_index.md',
+      issue: {
+        category: 'technical_drift',
+        target: 'hitch_consult.py',
+        line_number: 275,
+        description: "Missing code citation `hitch_consult.py`",
+      },
+    });
+
+    assert.ok(prompt.includes("locate its actual path and update the citation or link in 'notes/00_meta/wiki_index.md'"));
+    assert.ok(prompt.includes("hitch_consult.py"));
+  });
+
   test('buildPrompt generates full workspace review prompt when all=true', () => {
     const dispatcher = new AiReviewDispatcher();
     const prompt = dispatcher.buildPrompt({ all: true });
