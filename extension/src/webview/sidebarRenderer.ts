@@ -225,18 +225,59 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
     }
     .findings-container {
       display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      flex: 1;
+      min-width: 0;
+      padding: 6px 9px;
+      background: var(--vscode-input-background, rgba(255, 255, 255, 0.04));
+      border: 1px solid var(--vscode-widget-border, rgba(255, 255, 255, 0.12));
+      border-radius: 6px;
+      cursor: pointer;
+      transition: background 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+      user-select: none;
+    }
+    .findings-container:hover {
+      background: var(--vscode-list-hoverBackground, rgba(255, 255, 255, 0.08));
+      border-color: var(--vscode-focusBorder, #38bdf8);
+    }
+    .findings-container:active {
+      transform: scale(0.99);
+    }
+    .findings-content {
+      display: flex;
       flex-direction: column;
       gap: 2px;
+      min-width: 0;
       flex: 1;
     }
     .findings-summary-text {
       font-size: 11.5px;
       font-weight: 600;
-      color: var(--vscode-editor-foreground, #fff);
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
     }
     .findings-debt-detail {
       font-size: 10px;
       color: var(--vscode-descriptionForeground, #888);
+      line-height: 1.3;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .findings-chevron {
+      flex-shrink: 0;
+      opacity: 0.6;
+      color: var(--vscode-descriptionForeground, #888);
+      transition: transform 0.12s ease, opacity 0.12s ease;
+    }
+    .findings-container:hover .findings-chevron {
+      opacity: 1;
+      color: var(--vscode-focusBorder, #38bdf8);
+      transform: translateX(1px);
     }
     .quality-pillars-mini {
       display: flex;
@@ -511,9 +552,14 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
           <span class="score-number" id="val-quality-score">100</span>
           <span class="score-max">/100</span>
         </div>
-        <div class="findings-container">
-          <div class="findings-summary-text" id="dash-findings-count" style="color: ${initialFindings > 0 ? 'var(--vscode-charts-yellow, #eab308)' : 'var(--vscode-charts-green, #22c55e)'};">${initialFindings === 1 ? '1 finding needs attention' : (initialFindings + ' findings need attention')}</div>
-          <div class="findings-debt-detail" id="dash-debt-counts">${initialRegressions} regressions · ${initialBaselined} baselined</div>
+        <div class="findings-container" role="button" tabindex="0" title="Click to open Health & Diagnostics to inspect all issues">
+          <div class="findings-content">
+            <div class="findings-summary-text" id="dash-findings-count" style="color: ${initialFindings > 0 ? 'var(--vscode-charts-yellow, #eab308)' : 'var(--vscode-charts-green, #22c55e)'};">${initialFindings === 1 ? '1 finding needs attention' : (initialFindings + ' findings need attention')}</div>
+            <div class="findings-debt-detail" id="dash-debt-counts">${initialRegressions} regressions · ${initialBaselined} baselined</div>
+          </div>
+          <svg class="findings-chevron" viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <polyline points="6 3 11 8 6 13"/>
+          </svg>
         </div>
       </div>
 

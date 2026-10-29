@@ -1383,7 +1383,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               ? `<button type="button" class="btn-tiny btn-primary diag-fix-ref-btn" data-file="${issue.file_path}" data-target="${issue.target || ''}" data-line="${issue.line_number ?? ''}">Fix Reference</button>`
               : '';
             const excludeBtnHtml = isBroken
-              ? `<button type="button" class="btn-tiny diag-exclude-path-btn" data-file="${issue.file_path}">Exclude Path</button>`
+              ? `<button type="button" class="btn-tiny btn-secondary diag-exclude-path-btn" data-file="${issue.file_path}">Exclude Path</button>`
               : '';
             const removeSecBtnHtml = isSecondary
               ? `<button type="button" class="btn-tiny btn-gov-eliminate-secondary" data-target="${issue.file_path}" style="padding: 4px 8px; font-size: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; border-radius: 4px; cursor: pointer; white-space: normal; word-break: break-all; overflow-wrap: anywhere; text-align: left; max-width: 100%; line-height: 1.35; display: inline-block; box-sizing: border-box;">Safely Remove ${issue.file_path}</button>`
@@ -1518,7 +1518,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
                 <div class="diag-issue-hint">💡 ${issue.remediation_hint}</div>
                 ${waysToFixHtml}
                 <div class="diag-issue-actions">
-                  <button type="button" class="btn-tiny diag-open-doc-btn" data-file="${issue.file_path}" data-line="${issue.line_number ?? ''}">Open Note</button>
+                  <button type="button" class="btn-tiny btn-secondary diag-open-doc-btn" data-file="${issue.file_path}" data-line="${issue.line_number ?? ''}">Open Note</button>
                   ${openTargetBtnHtml}
                   ${openCodeBtnHtml}
                   ${openCandidateBtnHtml}
