@@ -134,7 +134,14 @@ import type {
   ObjectiveLevel,
   ConstraintLevel,
 } from '../../../src/types/evolution.ts';
-import { renderEvolutionTabHtml } from './evolutionTab.ts';
+import {
+  renderEvolutionTabHtml,
+  renderEvolutionMethodologyCatalogHtml,
+  KOS_18_METHODOLOGIES,
+  inferFindingKos,
+  getKosMethodologyItem,
+  formatPillarName,
+} from './evolutionTab.ts';
 import { wireInfoBubbleListeners } from './infoBubble.ts';
 import { renderOrientationSelectorHtml } from './orientationSelector.ts';
 import {
@@ -175,10 +182,11 @@ export const DEFAULT_TIER2_PARAMETERS: Tier2Parameters = {
 
 export type DrawerPrimaryTab = 'insights' | 'settings';
 export type InsightsSubTab = 'health' | 'structure' | 'evolution' | 'load';
-export type SettingsSubTab = 'knowledge' | 'exclusions' | 'clusters' | 'git' | 'harness' | 'git_harness';
+export type SettingsSubTab = 'exclusions' | 'clusters' | 'git' | 'harness' | 'git_harness';
 export type SettingsTab =
   | InsightsSubTab
   | SettingsSubTab
+  | 'knowledge'   // backwards-compatibility alias; maps to health
   | 'diagnostics' // backwards-compatibility alias for health
   | 'git_sync'    // backwards-compatibility alias for git
   | 'advanced';   // backwards-compatibility alias for git
@@ -323,7 +331,7 @@ export interface SettingsDrawerController {
 }
 
 export function normalizeTab(tab: SettingsTab): InsightsSubTab | SettingsSubTab {
-  if (tab === 'diagnostics') return 'health';
+  if (tab === 'diagnostics' || tab === 'knowledge') return 'health';
   if (tab === 'git_sync' || tab === 'advanced') return 'git';
   if (tab === 'git_harness') return 'harness';
   return tab as InsightsSubTab | SettingsSubTab;
@@ -1229,6 +1237,32 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         }
       }
 
+      // Synthesize structural problem signatures if report lacks them
+      if (props.structuralSignatures && props.structuralSignatures.length > 0) {
+        for (const s of props.structuralSignatures) {
+          const docPath = s.documentPath || (s as any).document_path;
+          const problemType = s.problemType || (s as any).problem_type || 'god_document';
+          const already = allIssues.some((i) => (i.file_path === docPath || (i.file_path && docPath && (i.file_path.endsWith(docPath) || docPath.endsWith(i.file_path)))) && i.category === problemType);
+          if (!already) {
+            const pillar = (problemType === 'isolated_silo' || problemType === 'implicit_router') ? 'discoverability' : 'structure';
+            allIssues.push({
+              id: `sig:${s.signatureId || (s as any).signature_id || docPath}`,
+              pillar,
+              category: problemType,
+              file_path: docPath,
+              line_number: null,
+              target: null,
+              deduction_points: 5.0,
+              weight: 1.0,
+              description: s.rationale || `${problemType.replace(/_/g, ' ')} detected on ${docPath}.`,
+              remediation_hint: 'Review structural balance and modular boundaries in note frontmatter.',
+              is_legacy: false,
+              is_excluded: false,
+            });
+          }
+        }
+      }
+
       // Determine active vs legacy counts
       const activeCount = report?.active_issues_count !== undefined
         ? Math.max(report.active_issues_count, allIssues.filter((i) => !i.is_legacy).length)
@@ -1244,6 +1278,17 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         issues = allIssues.filter((i) => !i.is_legacy);
       } else if (selectedScope === 'legacy') {
         issues = allIssues.filter((i) => !!i.is_legacy);
+      }
+
+      // Compute KOS methodology counts for the current scope
+      const selectedKosFilter = props.selectedKosFilter || 'all';
+      const kosCounts: Record<string, number> = {};
+      for (const k of KOS_18_METHODOLOGIES) {
+        kosCounts[k.id] = 0;
+      }
+      for (const issue of issues) {
+        const kosId = inferFindingKos(issue);
+        kosCounts[kosId] = (kosCounts[kosId] || 0) + 1;
       }
 
       // Compute pillar counts for displayed scope
@@ -1288,12 +1333,17 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
           .map((pillar) => pillar.trim())
           .filter(Boolean),
       );
-      const issuesForDisplay = selectedPillars.size === 0
-        ? issues
-        : issues.filter((issue) => {
-            const p = issue.pillar.toLowerCase();
-            return selectedPillars.has(p) || (selectedPillars.has('traceability') && p === 'freshness') || (selectedPillars.has('freshness') && p === 'traceability');
-          });
+
+      let issuesForDisplay = issues;
+      if (selectedKosFilter !== 'all') {
+        issuesForDisplay = issuesForDisplay.filter((issue) => inferFindingKos(issue) === selectedKosFilter);
+      }
+      if (selectedPillars.size > 0) {
+        issuesForDisplay = issuesForDisplay.filter((issue) => {
+          const p = issue.pillar.toLowerCase();
+          return selectedPillars.has(p) || (selectedPillars.has('traceability') && p === 'freshness') || (selectedPillars.has('freshness') && p === 'traceability');
+        });
+      }
 
       const scoreClass = overallScore >= 90 ? 'diag-score-good' : overallScore >= 75 ? 'diag-score-warn' : 'diag-score-bad';
 
@@ -1503,16 +1553,21 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               `;
             }
 
+            const kosDiscipline = inferFindingKos(issue);
+            const kosMeta = getKosMethodologyItem(kosDiscipline);
+
             return `
               <div class="diag-issue-card ${issue.is_legacy ? 'diag-issue-legacy' : ''}">
                 <div class="diag-issue-top">
-                  <div style="display: flex; align-items: center; gap: 6px;">
+                  <div style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
+                    ${kosMeta ? `<span class="badge-kos badge-kos-${kosMeta.id}" title="${kosMeta.discipline}: ${kosMeta.description}">${kosMeta.shortLabel}</span>` : ''}
+                    <span class="badge-pillar badge-pillar-${issue.pillar?.toLowerCase()}">${formatPillarName(issue.pillar)}</span>
                     <span class="diag-cat-badge ${catClass}">${issue.category}</span>
                     ${(issue as any).review_status ? `<span class="diag-cat-badge diag-cat-review" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;">Review: ${(issue as any).review_status}</span>` : ''}
                     ${issue.is_legacy ? '<span class="diag-legacy-badge" title="Acknowledged in debt baseline">Baselined</span>' : ''}
                     ${issue.is_excluded ? '<span class="diag-excluded-badge" title="From path excluded in .context-vault.yaml">Excluded</span>' : ''}
                   </div>
-                  <span class="diag-penalty-badge">-${issue.deduction_points.toFixed(1)} pts (${issue.weight.toFixed(2)}x)</span>
+                  <span class="diag-penalty-badge">-${(issue.deduction_points ?? 5.0).toFixed(1)} pts (${(issue.weight ?? 1.0).toFixed(2)}x)</span>
                 </div>
                 <div class="diag-issue-loc">
                   <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; opacity: 0.7;">
@@ -1525,7 +1580,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
                   ${targetHtml}
                 </div>
                 <div class="diag-issue-desc">${issue.description}</div>
-                <div class="diag-issue-hint">💡 ${issue.remediation_hint}</div>
+                <div class="finding-hint" style="margin-top: 6px; font-size: 11px; padding: 4px 8px; border-radius: 4px; background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8;">💡 <strong>Suggested Resolution:</strong> ${issue.remediation_hint}</div>
                 ${waysToFixHtml}
                 <div class="diag-issue-actions">
                   <button type="button" class="btn-tiny btn-secondary diag-open-doc-btn" data-file="${issue.file_path}" data-line="${issue.line_number ?? ''}">Open Note</button>
@@ -1569,7 +1624,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         <div class="settings-section">
           <div class="settings-sec-title">Knowledge Quality Diagnostics</div>
           <p class="settings-desc">
-            Itemized findings detected from last sync across all 5 quality pillars. Inspect issues one-by-one and resolve them in editor.
+            Itemized findings detected from last sync across all 5 quality pillars and 18 KOS disciplines. Inspect issues one-by-one and resolve them in editor.
           </p>
 
           <div class="diag-overview-card">
@@ -1621,7 +1676,27 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
                 <span class="diag-chip-lbl">Traceability</span>
               </button>
               </div>
-              <button type="button" class="diag-clear-filters" id="diag-clear-filters" ${selectedPillars.size === 0 ? 'disabled' : ''}>Clear</button>
+              <button type="button" class="diag-clear-filters" id="diag-clear-filters" ${selectedPillars.size === 0 && selectedKosFilter === 'all' ? 'disabled' : ''}>Clear</button>
+            </div>
+            <div class="findings-kos-filter-bar" style="margin-top: 10px; padding-top: 8px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+              <span class="findings-filter-label" style="font-size: 11px; font-weight: 600; opacity: 0.85; margin-bottom: 6px; display: block;">Filter by KOS Discipline:</span>
+              <div class="kos-chips-container">
+                <button type="button" class="kos-filter-chip diag-kos-chip ${selectedKosFilter === 'all' ? 'active' : ''}" data-kos-id="all" title="All 18 KOS Methodologies (${issues.length} findings)">
+                  <span class="chip-name">All 18 KOS</span>
+                  <span class="chip-count">${issues.length}</span>
+                </button>
+                ${KOS_18_METHODOLOGIES.map((k) => {
+                  const count = kosCounts[k.id] || 0;
+                  const isActive = selectedKosFilter === k.id;
+                  return `
+                    <button type="button" class="kos-filter-chip diag-kos-chip ${isActive ? 'active' : ''} ${count > 0 ? 'has-findings' : 'zero-findings'}" data-kos-id="${k.id}" title="${k.name}: ${k.description}">
+                      <span class="chip-icon">${k.icon}</span>
+                      <span class="chip-name">${k.shortLabel}</span>
+                      <span class="chip-count">${count}</span>
+                    </button>
+                  `;
+                }).join('')}
+              </div>
             </div>
           </div>
 
@@ -1770,21 +1845,6 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
 
     case 'evolution': {
       try {
-        // Extract all vault debt findings from issuesReport across all pillars & 18 KOS methodologies
-        const vaultFindings = (props.issuesReport?.issues || (props.issuesReport as any)?.findings || []).map((i) => ({
-          file_path: i.file_path,
-          description: i.description,
-          remediation_hint: i.remediation_hint,
-          category: i.category,
-          debt_type: i.category,
-          pillar: i.pillar,
-          target: i.target,
-          line_number: i.line_number,
-          deduction_points: i.deduction_points,
-          weight: i.weight,
-          is_legacy: i.is_legacy,
-        }));
-
         const activeOrientation = props.activeOrientation || 'ai_oriented';
         const isCustomOpen = props.isCustomDrawerOpen !== undefined
           ? props.isCustomDrawerOpen
@@ -1813,31 +1873,23 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
           });
         }
 
-        const evolutionTabHtml = renderEvolutionTabHtml({
-          signatures: props.structuralSignatures || [],
-          recommendations: props.structuralRecommendations || [],
-          activeOrientation,
-          structureFindings: vaultFindings,
-          vaultFindings,
-          isLoading: props.isEvolutionLoading,
-          generatingPlanRecId: props.generatingPlanRecId,
-          planGenerationError: props.planGenerationError,
-          findingsPage: props.evolutionFindingsPage,
-          findingsPageSize: props.evolutionFindingsPageSize,
-          selectedKosFilter: props.selectedKosFilter,
-          selectedPillarFilter: props.evolutionPillarFilter,
-          signaturesPage: props.evolutionSignaturesPage,
-          signaturesPageSize: props.evolutionSignaturesPageSize,
-          selectedSignatureTypeFilter: props.selectedSignatureTypeFilter,
-        });
+        const orientationLabel = activeOrientation
+          .replace(/_/g, ' ')
+          .replace(/\b\w/g, (c) => c.toUpperCase());
+
+        const methodologyCatalogHtml = renderEvolutionMethodologyCatalogHtml(orientationLabel);
 
         tabContentHtml = `
           <div class="evolution-settings-wrapper">
+            <div class="evolution-header" style="margin-bottom: 12px;">
+              <h2 style="font-size: 15px; font-weight: 600; margin: 0 0 4px 0;">Structural Evolution & Knowledge Methodology</h2>
+              <p class="evolution-subtitle" style="font-size: 11.5px; opacity: 0.75; margin: 0;">Configure evolutionary optimization profiles, objective trade-offs, and governance parameters for your knowledge graph.</p>
+            </div>
             ${orientationHtml}
             ${customToggleBtnHtml}
             ${customDrawerHtml}
             <div class="evolution-section-divider"></div>
-            ${evolutionTabHtml}
+            ${methodologyCatalogHtml}
           </div>
         `;
       } catch (err) {
@@ -1983,7 +2035,6 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         <div class="settings-nav-group" data-tier="settings">
           <span class="settings-nav-label">Settings</span>
           <div class="settings-tabs-subgroup">
-            <button class="settings-tab-btn ${normalizedTab === 'knowledge' ? 'active' : ''}" data-tab="knowledge">Knowledge</button>
             <button class="settings-tab-btn ${normalizedTab === 'exclusions' ? 'active' : ''}" data-tab="exclusions">Exclusions</button>
             <button class="settings-tab-btn ${normalizedTab === 'clusters' ? 'active' : ''}" data-tab="clusters">Clusters</button>
             <button class="settings-tab-btn ${normalizedTab === 'git' ? 'active' : ''}" data-tab="git">Git</button>
@@ -3016,9 +3067,10 @@ export function renderSettingsDrawer(
     container.addEventListener('click', (event) => {
       const target = event.target as HTMLElement;
       const filterButton = target.closest<HTMLElement>('.diag-pillar-chip');
+      const kosChip = target.closest<HTMLElement>('.diag-kos-chip');
       const clearButton = target.closest<HTMLElement>('#diag-clear-filters');
       const scopeButton = target.closest<HTMLElement>('.diag-scope-btn, .diag-inspect-debt-btn');
-      if (!filterButton && !clearButton && !scopeButton) return;
+      if (!filterButton && !kosChip && !clearButton && !scopeButton) return;
 
       event.preventDefault();
       event.stopPropagation();
@@ -3035,8 +3087,16 @@ export function renderSettingsDrawer(
         return;
       }
 
+      if (kosChip) {
+        const kosId = kosChip.getAttribute('data-kos-id') || 'all';
+        state.selectedKosFilter = kosId;
+        scheduleRender();
+        return;
+      }
+
       if (clearButton) {
         state.selectedPillarFilter = '';
+        state.selectedKosFilter = 'all';
         scheduleRender();
         return;
       } else if (filterButton) {

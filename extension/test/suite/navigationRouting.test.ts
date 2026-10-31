@@ -58,6 +58,6 @@ suite('NavigationRouting Test Suite (T031)', () => {
     assert.strictEqual(normalizeTab('git_harness'), 'harness');
     assert.strictEqual(normalizeTab('git'), 'git');
     assert.strictEqual(normalizeTab('harness'), 'harness');
-    assert.strictEqual(normalizeTab('knowledge'), 'knowledge');
+    assert.strictEqual(normalizeTab('knowledge'), 'health');
   });
 });

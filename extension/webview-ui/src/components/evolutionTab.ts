@@ -107,6 +107,76 @@ export function getKosMethodologyItem(id: string): KosMethodologyItem | undefine
   return KOS_18_METHODOLOGIES.find((k) => k.id === id);
 }
 
+export function renderEvolutionMethodologyCatalogHtml(orientationLabel: string): string {
+  const categories = [
+    {
+      title: 'Hierarchical & Relational Taxonomies',
+      icon: '📂',
+      items: ['classification', 'taxonomy', 'faceted_classification', 'controlled_vocabulary', 'thesaurus'],
+    },
+    {
+      title: 'Conceptual & Semantic Networks',
+      icon: '🕸️',
+      items: ['semantic_networks', 'conceptual_maps', 'ontology_engineering', 'domain_analysis'],
+    },
+    {
+      title: 'Wayfinding & Metadata Governance',
+      icon: '🏷️',
+      items: ['metadata_application_profiles', 'information_architecture', 'information_retrieval', 'terminology_management'],
+    },
+    {
+      title: 'Topology, Provenance & Temporal Evolution',
+      icon: '📊',
+      items: ['knowledge_graph_network_analysis', 'knowledge_quality', 'provenance', 'knowledge_drift', 'context_routing'],
+    },
+  ];
+
+  const categoriesHtml = categories.map((cat) => {
+    const items = cat.items.map((id) => getKosMethodologyItem(id)).filter(Boolean) as KosMethodologyItem[];
+    return `
+      <div class="methodology-group-col" style="background: rgba(255, 255, 255, 0.02); border: 1px solid rgba(255, 255, 255, 0.07); border-radius: 6px; padding: 10px; margin-bottom: 10px;">
+        <div class="mg-header" style="font-size: 12px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 6px; color: #38bdf8;">
+          <span>${cat.icon}</span>
+          <span>${cat.title}</span>
+        </div>
+        <div class="mg-items-list" style="display: flex; flex-direction: column; gap: 6px;">
+          ${items.map((item) => `
+            <div class="mg-item-card" style="display: flex; flex-direction: column; gap: 2px; background: rgba(0, 0, 0, 0.15); border: 1px solid rgba(255, 255, 255, 0.04); border-radius: 4px; padding: 6px 8px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; gap: 6px;">
+                <span style="font-size: 11px; font-weight: 600; display: flex; align-items: center; gap: 5px;">
+                  <span>${item.icon}</span>
+                  <span>${item.name}</span>
+                </span>
+                <span class="badge-kos" style="font-size: 9px; padding: 1px 5px; opacity: 0.85;">${item.discipline}</span>
+              </div>
+              <p style="font-size: 10.5px; opacity: 0.75; margin: 2px 0 0 0; line-height: 1.35;">${item.description}</p>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  }).join('');
+
+  return `
+    <div class="evolution-methodology-container" style="margin-top: 16px;">
+      <div class="kos-menu-header" style="margin-bottom: 12px;">
+        <div class="kos-menu-title-box">
+          <span class="kos-menu-icon">🏛️</span>
+          <div>
+            <span class="kos-menu-title" style="font-size: 13px; font-weight: 600;">Knowledge Organization Systems (18 KOS)</span>
+            <p class="kos-menu-subtitle" style="font-size: 11px; opacity: 0.75; margin: 2px 0 0 0;">
+              Architectural disciplines governing the evolutionary strategy of your knowledge base under <strong>${orientationLabel}</strong> optimization.
+            </p>
+          </div>
+        </div>
+      </div>
+      <div class="methodology-groups-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 10px;">
+        ${categoriesHtml}
+      </div>
+    </div>
+  `;
+}
+
 export function inferFindingKos(f: any): string {
   if (f.methodology && typeof f.methodology === 'string') {
     const m = f.methodology.toLowerCase();
@@ -252,8 +322,10 @@ export function inferFindingKos(f: any): string {
     return 'provenance';
   }
 
-  // 11. Metadata Profiles (DCAP, frontmatter materialized metadata, oversized docs, concentration)
+  // 11. Metadata Profiles (DCAP, frontmatter materialized metadata, oversized docs, concentration, god documents)
   if (
+    cat.includes('god_document') ||
+    desc.includes('god document') ||
     cat.includes('missingfragmentmetadata') ||
     cat.includes('missing_fragment_metadata') ||
     cat.includes('oversizeddocument') ||

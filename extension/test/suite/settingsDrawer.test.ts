@@ -30,8 +30,8 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(html.includes('Load'), 'Must have Load tab');
     assert.ok(html.includes('data-tab="load"'), 'Must have data-tab="load" attribute');
 
-    // SETTINGS sub-tabs
-    assert.ok(html.includes('Knowledge'), 'Must have Knowledge tab');
+    // SETTINGS sub-tabs (Knowledge consolidated into Health)
+    assert.ok(!html.includes('data-tab="knowledge"'), 'Knowledge tab must be consolidated into Health');
     assert.ok(html.includes('Exclusions'), 'Must have Exclusions tab');
     assert.ok(html.includes('Clusters'), 'Must have Clusters tab');
     assert.ok(html.includes('Git'), 'Must have Git tab');
@@ -407,8 +407,8 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(enteringHtml.includes('drawer-entering'), 'Must include drawer-entering class when entering');
   });
 
-  test('renders Structural Evolution tab with Orientation Selector and synchronized Pillar 2 Structural findings', () => {
-    const htmlWithDebt = renderSettingsDrawerHtml({
+  test('renders Structural Evolution tab with Orientation Selector and 18 KOS methodology reference catalog', () => {
+    const htmlEvolution = renderSettingsDrawerHtml({
       ...sampleProps,
       activeTab: 'evolution',
       activeOrientation: 'ai_oriented',
@@ -437,21 +437,47 @@ suite('SettingsDrawer Test Suite', () => {
     });
 
     // 1. Must render Orientation Selector cards
-    assert.ok(htmlWithDebt.includes('Documentation Orientation'), 'Must display Documentation Orientation heading');
-    assert.ok(htmlWithDebt.includes('AI-Oriented'), 'Must render AI-Oriented mode card');
-    assert.ok(htmlWithDebt.includes('Human-Oriented'), 'Must render Human-Oriented mode card');
-    assert.ok(htmlWithDebt.includes('Balanced'), 'Must render Balanced mode card');
-    assert.ok(htmlWithDebt.includes('Custom'), 'Must render Custom mode card');
-    assert.ok(!htmlWithDebt.includes('Custom (Advanced)'), 'Must not include (Advanced) in Custom mode card');
+    assert.ok(htmlEvolution.includes('Documentation Orientation'), 'Must display Documentation Orientation heading');
+    assert.ok(htmlEvolution.includes('AI-Oriented'), 'Must render AI-Oriented mode card');
+    assert.ok(htmlEvolution.includes('Human-Oriented'), 'Must render Human-Oriented mode card');
+    assert.ok(htmlEvolution.includes('Balanced'), 'Must render Balanced mode card');
+    assert.ok(htmlEvolution.includes('Custom'), 'Must render Custom mode card');
 
-    // 2. Must render Pillar 2 Structural findings matching Diagnostics
-    assert.ok(htmlWithDebt.includes('Pillar 2 Structural Findings (1)'), 'Must render Pillar 2 Structural Findings card');
-    assert.ok(htmlWithDebt.includes('notes/giant.md'), 'Must contain path of structural finding');
-    assert.ok(htmlWithDebt.includes('Decompose or add section fragment anchors'), 'Must contain remediation hint');
+    // 2. Evolution tab must be dedicated to methodology configuration (no defect issue cards)
+    assert.ok(htmlEvolution.includes('Structural Evolution & Knowledge Methodology'), 'Must display methodology title');
+    assert.ok(htmlEvolution.includes('Knowledge Organization Systems (18 KOS)'), 'Must display 18 KOS methodology reference');
+    assert.ok(!htmlEvolution.includes('Vault Knowledge & KOS Findings'), 'Issues must NOT be blended into Evolution tab');
 
-    // 3. Must NOT say "Vault Structure is Balanced & Clean" when structure debt exists
-    assert.ok(!htmlWithDebt.includes('Vault Structure is Balanced & Clean'), 'Must NOT report vault is balanced when structure debt exists');
-    assert.ok(htmlWithDebt.includes('Pillar 2 Structural Debt Active (1)'), 'Must report active structure debt notice');
+    // 3. Health tab must consolidate the structural finding
+    const htmlHealth = renderSettingsDrawerHtml({
+      ...sampleProps,
+      activeTab: 'health',
+      issuesReport: {
+        timestamp: '2026-09-14T00:00:00Z',
+        overall_score: 78,
+        integrity_score: 95,
+        consistency_score: 90,
+        discoverability_score: 85,
+        freshness_score: 80,
+        legacy_debt_count: 1,
+        regressions_count: 0,
+        issues: [
+          {
+            id: 'struct:notes/giant.md',
+            pillar: 'structure',
+            category: 'oversized_document',
+            file_path: 'notes/giant.md',
+            deduction_points: 10,
+            weight: 1.0,
+            description: 'Document exceeds 50,000 tokens without fragment addressing',
+            remediation_hint: 'Decompose or add section fragment anchors',
+          },
+        ],
+      },
+    });
+    assert.ok(htmlHealth.includes('notes/giant.md'), 'Structural finding must be consolidated into Health');
+    assert.ok(htmlHealth.includes('Decompose or add section fragment anchors'), 'Must contain remediation hint in Health');
+    assert.ok(htmlHealth.includes('badge-kos-metadata_application_profiles'), 'Must map oversized doc to Metadata KOS badge');
   });
 
   test('renders Custom Settings knobs and sliders when custom drawer is open or mode is custom', () => {
@@ -468,7 +494,7 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(htmlCustom.includes('Save &amp; Compile Profile') || htmlCustom.includes('Save & Compile Profile'), 'Must render Save button');
   });
 
-  test('renders Structural Evolution tab with active signatures and recommendations from sidecar without errors', () => {
+  test('consolidates structural problem signatures into Health tab with KOS badges and resolution hints', () => {
     const rawRustSignatures: any = [
       {
         signature_id: 'sig_god_test',
@@ -491,30 +517,16 @@ suite('SettingsDrawer Test Suite', () => {
       },
     ];
 
-    const rawRustRecommendations: any = [
-      {
-        recommendation_id: 'rec_test_1',
-        signature_id: 'sig_god_test',
-        strategy: 'topic_decomposition',
-        confidence: 0.92,
-        expected_benefits: ['Eliminates God Document by splitting topics'],
-        trade_offs: ['Increases file count'],
-      },
-    ];
-
     const html = renderSettingsDrawerHtml({
       ...sampleProps,
-      activeTab: 'evolution',
-      activeOrientation: 'ai_oriented',
+      activeTab: 'health',
       structuralSignatures: rawRustSignatures,
-      structuralRecommendations: rawRustRecommendations,
     });
 
-    assert.ok(html.includes('docs/test_doc.md'), 'Must render signature document path');
-    assert.ok(html.includes('God Document'), 'Must render problem badge');
-    assert.ok(html.includes('Topic Decomposition'), 'Must render recommendation strategy');
-    assert.ok(html.includes('Eliminates God Document by splitting topics'), 'Must render expected benefits');
-    assert.ok(html.includes('Increases file count'), 'Must render countervailing trade-offs');
+    assert.ok(html.includes('docs/test_doc.md'), 'Must render signature document path in Health');
+    assert.ok(html.includes('god_document'), 'Must render problem category');
+    assert.ok(html.includes('Review with AI'), 'Must render Review with AI button');
+    assert.ok(html.includes('badge-kos-metadata_application_profiles'), 'Must render KOS badge for god document');
   });
 
   test('renders Structure tab with 4-stat metrics grid, central hub, and top notes (T028c)', () => {
@@ -1052,16 +1064,7 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(html.includes('class="load-consumer-item"'), 'Must have clickable consumer items');
   });
 
-  test('renders Evolution tab with pagination bars, filter chips, and custom popover menus', () => {
-    const sampleSignatures = Array.from({ length: 25 }, (_, i) => ({
-      signatureId: `sig_${i}`,
-      documentPath: `notes/silo_${i}.md`,
-      problemType: 'isolated_silo',
-      confidence: 0.88,
-      evidence: {},
-      rationale: `Silo ${i}`,
-    }));
-
+  test('renders Health tab with KOS discipline filter chips, Quality Pillar chips, and standardized findings', () => {
     const sampleFindings = [
       { file_path: 'notes/broken.md', description: 'Broken link', category: 'broken_link', pillar: 'integrity' },
       { file_path: 'notes/silo_0.md', description: 'Orphan note', category: 'isolated_orphan', pillar: 'discoverability' },
@@ -1069,39 +1072,28 @@ suite('SettingsDrawer Test Suite', () => {
 
     const html = renderSettingsDrawerHtml({
       ...sampleProps,
-      activeTab: 'evolution',
-      structuralSignatures: sampleSignatures as any,
-      structuralRecommendations: [],
+      activeTab: 'health',
       issuesReport: {
         total_findings: 2,
         active_findings: 2,
         legacy_debt_count: 0,
         baseline_commit: null,
         debt_limit_exceeded: false,
-        findings: sampleFindings,
+        issues: sampleFindings,
       } as any,
-      evolutionFindingsPage: 1,
-      evolutionFindingsPageSize: 10,
-      evolutionSignaturesPage: 1,
-      evolutionSignaturesPageSize: 10,
-      evolutionPillarFilter: 'all',
-      selectedSignatureTypeFilter: 'all',
     });
 
-    // Evolution tab header & orientation
-    assert.ok(html.includes('evolution-settings-wrapper'), 'Must render evolution-settings-wrapper');
-    assert.ok(html.includes('Balanced'), 'Must render active orientation');
+    // Health tab overview & pillars
+    assert.ok(html.includes('Quality & Defect Overview'), 'Must render Quality & Defect Overview');
+    assert.ok(html.includes('Filter by KOS Discipline:'), 'Must render KOS discipline filter bar');
+    assert.ok(html.includes('All 18 KOS'), 'Must render All 18 KOS chip');
+    assert.ok(html.includes('data-kos-id="thesaurus"'), 'Must render Thesaurus KOS chip for broken links');
 
-    // Unified Findings header & single pagination bar
-    assert.ok(html.includes('Vault Knowledge & KOS Findings (2)'), 'Must render unified findings title with vault findings count');
-    assert.ok(html.includes('single-pagination-bar'), 'Must render single unified pagination bar');
-    assert.ok(html.includes('findings-pagination-bar'), 'Must render findings pagination bar');
-    assert.ok(html.includes('Showing <strong>1–2</strong> of <strong>2</strong> findings'), 'Must paginate unified list');
-
-    // Quality Pillar filter chips in KOS menu bar
-    assert.ok(html.includes('findings-pillar-chip'), 'Must render pillar filter chips');
-    assert.ok(html.includes('data-pillar-id="integrity"'), 'Must have integrity filter chip');
-    assert.ok(html.includes('data-pillar-id="discoverability"'), 'Must have discoverability filter chip');
+    // Standardized findings in Health
+    assert.ok(html.includes('notes/broken.md'), 'Must render finding file path');
+    assert.ok(html.includes('badge-kos-thesaurus'), 'Must map broken_link to Thesaurus badge');
+    assert.ok(html.includes('badge-kos-knowledge_graph_network_analysis'), 'Must map orphan to Network Analysis badge');
+    assert.ok(html.includes('Review with AI'), 'Must render Review with AI button');
   });
 
   test('renders Harness Required & Suggested Tools catalog card with badges, details, and buttons in Harness tab', () => {
