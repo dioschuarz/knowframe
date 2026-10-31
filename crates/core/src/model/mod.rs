@@ -326,7 +326,8 @@ pub enum QualityPillar {
     Structure,
     Consistency,
     Discoverability,
-    Freshness,
+    #[serde(alias = "freshness")]
+    Traceability,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
@@ -407,6 +408,7 @@ pub struct HealthScore {
     pub structure: PillarHealth,
     pub consistency: PillarHealth,
     pub discoverability: PillarHealth,
+    #[serde(alias = "traceability")]
     pub freshness: PillarHealth,
 }
 
@@ -480,6 +482,7 @@ pub struct PillarDeltas {
     pub structure: f64,
     pub consistency: f64,
     pub discoverability: f64,
+    #[serde(alias = "traceability")]
     pub freshness: f64,
 }
 
@@ -497,6 +500,7 @@ pub struct ProfileWeights {
     pub structure: f64,
     pub consistency: f64,
     pub discoverability: f64,
+    #[serde(alias = "traceability")]
     pub freshness: f64,
     pub context_efficiency: f64,
     pub navigation_depth: f64,

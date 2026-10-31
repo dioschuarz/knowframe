@@ -593,12 +593,12 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
           </div>
           <span class="mini-val" id="val-discoverability">100%</span>
         </div>
-        <div class="pillar-mini-row" data-dimension="freshness" title="Freshness - Technical drift & stale code citations">
-          <span class="mini-label">Freshness</span>
+        <div class="pillar-mini-row" data-dimension="traceability" data-legacy-dimension="freshness" title="Traceability - Codebase-documentation alignment & AST citations">
+          <span class="mini-label">Traceability</span>
           <div class="mini-bar-track">
-            <div class="mini-bar-fill" id="fill-freshness" style="width: 100%; background-color: var(--vscode-charts-green, #22c55e);"></div>
+            <div class="mini-bar-fill" id="fill-traceability" style="width: 100%; background-color: var(--vscode-charts-green, #22c55e);"></div>
           </div>
-          <span class="mini-val" id="val-freshness">100%</span>
+          <span class="mini-val" id="val-traceability">100%</span>
         </div>
       </div>
     </div>
@@ -834,7 +834,13 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
       updateBar('fill-structure', 'val-structure', health.structure != null ? health.structure : (health.structure_score != null ? health.structure_score : 100));
       updateBar('fill-consistency', 'val-consistency', health.consistency != null ? health.consistency : health.consistency_score);
       updateBar('fill-discoverability', 'val-discoverability', health.discoverability != null ? health.discoverability : health.discoverability_score);
-      updateBar('fill-freshness', 'val-freshness', health.freshness != null ? health.freshness : health.freshness_score);
+      const traceVal = health.traceability != null
+        ? health.traceability
+        : (health.traceability_score != null
+            ? health.traceability_score
+            : (health.freshness != null ? health.freshness : health.freshness_score));
+      updateBar('fill-traceability', 'val-traceability', traceVal);
+      updateBar('fill-freshness', 'val-freshness', traceVal);
     }
 
     function partialUpdateStructure(structure, nodes) {

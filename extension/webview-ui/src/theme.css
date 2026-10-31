@@ -5200,6 +5200,7 @@ textarea {
 .badge-pillar-structure,
 .badge-pillar-discoverability,
 .badge-pillar-consistency,
+.badge-pillar-traceability,
 .badge-pillar-freshness {
   background: rgba(255, 255, 255, 0.04);
   color: var(--vscode-foreground, #cccccc);

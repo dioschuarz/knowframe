@@ -366,7 +366,8 @@ export function formatPillarName(pillar?: string): string {
     case 'consistency':
       return 'Consistency';
     case 'freshness':
-      return 'Freshness';
+    case 'traceability':
+      return 'Traceability';
     default:
       return p.charAt(0).toUpperCase() + p.slice(1);
   }
@@ -631,7 +632,7 @@ function renderPillarFilterChipsHtml(
     { id: 'discoverability', label: 'Discoverability', count: pillarCounts['discoverability'] || 0, color: '#eab308' },
     { id: 'structure', label: 'Structure', count: pillarCounts['structure'] || 0, color: '#38bdf8' },
     { id: 'consistency', label: 'Consistency', count: pillarCounts['consistency'] || 0, color: '#f472b6' },
-    { id: 'freshness', label: 'Freshness', count: pillarCounts['freshness'] || 0, color: '#c084fc' },
+    { id: 'traceability', label: 'Traceability', count: (pillarCounts['traceability'] || 0) + (pillarCounts['freshness'] || 0), color: '#c084fc' },
   ];
 
   return `
@@ -983,12 +984,17 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
     structure: 0,
     consistency: 0,
     discoverability: 0,
+    traceability: 0,
     freshness: 0,
   };
   for (const f of allUnifiedFindings) {
-    const p = f.pillar.toLowerCase();
+    const rawP = f.pillar.toLowerCase();
+    const p = (rawP === 'freshness' || rawP === 'traceability') ? 'traceability' : rawP;
     if (pillarCounts[p] !== undefined) {
       pillarCounts[p]++;
+    }
+    if (rawP === 'freshness' && pillarCounts['freshness'] !== undefined) {
+      pillarCounts['freshness']++;
     }
   }
 
@@ -996,7 +1002,13 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
   const selectedPillar = props.selectedPillarFilter || 'all';
   const pillarFiltered = selectedPillar === 'all'
     ? allUnifiedFindings
-    : allUnifiedFindings.filter((f) => f.pillar.toLowerCase() === selectedPillar);
+    : allUnifiedFindings.filter((f) => {
+        const p = f.pillar.toLowerCase();
+        if (selectedPillar === 'traceability' || selectedPillar === 'freshness') {
+          return p === 'traceability' || p === 'freshness';
+        }
+        return p === selectedPillar;
+      });
 
   // Filter by problem signature type (if specified)
   const selectedSigType = props.selectedSignatureTypeFilter || 'all';

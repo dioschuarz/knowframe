@@ -108,6 +108,7 @@ export interface KnowledgeQualityScore {
   consistency_score: number;
   discoverability_score: number;
   freshness_score: number;
+  traceability_score?: number;
   legacy_debt_count: number;
   regressions_count: number;
   resolved_debt_count?: number;
@@ -125,7 +126,7 @@ export interface KnowledgeQualityScore {
 
 export interface KnowledgeIssue {
   id: string;
-  pillar: "integrity" | "structure" | "consistency" | "discoverability" | "freshness" | string;
+  pillar: "integrity" | "structure" | "consistency" | "discoverability" | "traceability" | "freshness" | string;
   category: string;
   file_path: string;
   line_number?: number | null;
@@ -146,6 +147,7 @@ export interface KnowledgeIssuesReport {
   consistency_count: number;
   discoverability_count: number;
   freshness_count: number;
+  traceability_count?: number;
   issues: KnowledgeIssue[];
   active_issues_count?: number;
   legacy_debt_count?: number;

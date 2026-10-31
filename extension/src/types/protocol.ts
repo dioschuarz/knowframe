@@ -368,6 +368,7 @@ export interface KnowledgeQualityScorePayload {
   consistency_score: number;
   discoverability_score: number;
   freshness_score: number;
+  traceability_score?: number;
   legacy_debt_count: number;
   regressions_count: number;
   resolved_debt_count?: number;
@@ -388,6 +389,7 @@ export interface HealthSummaryState {
   consistency: number;
   discoverability: number;
   freshness: number;
+  traceability?: number;
   findings_count: number;
   broken_references: number;
   invalid_anchors: number;
@@ -447,6 +449,7 @@ export interface ManagerViewState {
     consistency: number;
     discoverability: number;
     freshness: number;
+    traceability?: number;
     findingsCount: number;
     brokenReferences: number;
     invalidAnchors: number;

@@ -411,6 +411,7 @@ pub fn calculate_quality_score(
         consistency_score: (consistency_score * 10.0).round() / 10.0,
         discoverability_score: (discoverability_score * 10.0).round() / 10.0,
         freshness_score: (freshness_score * 10.0).round() / 10.0,
+        traceability_score: (freshness_score * 10.0).round() / 10.0,
         legacy_debt_count,
         new_regressions_count,
         resolved_debt_count,
@@ -721,7 +722,7 @@ pub fn is_issue_baselined(issue: &KnowledgeIssue, baseline: &KnowledgeDebtBaseli
                 false
             }
         }
-        "freshness" => {
+        "freshness" | "traceability" => {
             let target = issue.target.as_deref().unwrap_or("");
             if issue.category == "technical_drift" || issue.category == "missing_code_citation" {
                 baseline.technical_drifts.iter().any(|td| {

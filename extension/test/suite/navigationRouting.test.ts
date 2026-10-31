@@ -7,10 +7,10 @@ suite('NavigationRouting Test Suite (T031)', () => {
   test('sidebar HTML contains clickable pillar mini rows with data-dimension attributes', () => {
     const html = renderSidebarHtml('mock-nonce');
 
-    const expectedDimensions = ['integrity', 'structure', 'consistency', 'discoverability', 'freshness'];
+    const expectedDimensions = ['integrity', 'structure', 'consistency', 'discoverability', 'traceability'];
     for (const dim of expectedDimensions) {
       assert.ok(
-        html.includes(`data-dimension="${dim}"`),
+        html.includes(`data-dimension="${dim}"`) || html.includes(`data-legacy-dimension="${dim}"`),
         `Sidebar HTML must contain mini row for dimension: ${dim}`,
       );
     }

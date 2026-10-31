@@ -32,6 +32,7 @@ export type QualityPillar =
   | 'structure'
   | 'consistency'
   | 'discoverability'
+  | 'traceability'
   | 'freshness';
 
 export type StructureDebtType =
@@ -66,6 +67,7 @@ export interface FivePillarQualityScore {
   readonly consistency_score: number;
   readonly discoverability_score: number;
   readonly freshness_score: number;
+  readonly traceability_score?: number;
   readonly reasons: Record<QualityPillar, readonly string[]>;
   readonly debt_summary: DebtSummary;
 }

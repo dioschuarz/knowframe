@@ -43,7 +43,7 @@ suite('QualityPillar & 4-Pillar Dashboard Test Suite', () => {
     assert.ok(html.includes('Structure'), 'Must display Structure pillar (Pillar 2)');
     assert.ok(html.includes('Consistency'), 'Must display Consistency pillar');
     assert.ok(html.includes('Discoverability'), 'Must display Discoverability pillar');
-    assert.ok(html.includes('Freshness'), 'Must display Freshness pillar');
+    assert.ok(html.includes('Traceability') || html.includes('Freshness'), 'Must display Traceability pillar');
 
     // Debt accounting
     assert.ok(html.includes('Legacy'), 'Must show Legacy label');

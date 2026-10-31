@@ -175,6 +175,7 @@ pub fn execute_issues_with_options(
         consistency_count,
         discoverability_count,
         freshness_count,
+        traceability_count: freshness_count,
         issues: report_issues,
         active_issues_count,
         legacy_debt_count,

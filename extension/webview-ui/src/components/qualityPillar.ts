@@ -99,11 +99,11 @@ export function renderQualityPillarHtml(props: QualityPillarProps): string {
             <span class="mini-val">${score.discoverability_score.toFixed(0)}%</span>
           </div>
           <div class="pillar-mini-row" title="Evidence-based citation & commit drift (15%)">
-            <span class="mini-label">Freshness</span>
+            <span class="mini-label">Traceability</span>
             <div class="mini-bar-track">
-              <div class="mini-bar-fill" style="width: ${score.freshness_score}%; background: ${getScoreColor(score.freshness_score)};"></div>
+              <div class="mini-bar-fill" style="width: ${((score as any).traceability_score != null ? (score as any).traceability_score : score.freshness_score)}%; background: ${getScoreColor((score as any).traceability_score != null ? (score as any).traceability_score : score.freshness_score)};"></div>
             </div>
-            <span class="mini-val">${score.freshness_score.toFixed(0)}%</span>
+            <span class="mini-val">${((score as any).traceability_score != null ? (score as any).traceability_score : score.freshness_score).toFixed(0)}%</span>
           </div>
         </div>
       </div>

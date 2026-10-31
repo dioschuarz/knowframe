@@ -465,6 +465,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                     "consistency_score": quality.consistency_score,
                     "discoverability_score": quality.discoverability_score,
                     "freshness_score": quality.freshness_score,
+                    "traceability_score": quality.traceability_score,
                     "legacy_debt_count": quality.legacy_debt_count,
                     "regressions_count": quality.new_regressions_count,
                     "resolved_debt_count": quality.resolved_debt_count,
@@ -633,7 +634,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 .count();
             let freshness_count = filtered_issues
                 .iter()
-                .filter(|i| i.pillar == "freshness")
+                .filter(|i| i.pillar == "freshness" || i.pillar == "traceability")
                 .count();
 
             let limit = req
@@ -664,6 +665,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                     "consistency_count": consistency_count,
                     "discoverability_count": discoverability_count,
                     "freshness_count": freshness_count,
+                    "traceability_count": freshness_count,
                     "issues": report_issues,
                 }),
             )
@@ -1024,7 +1026,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                     "structure_debt" => crate::quality::QualityPillar::Structure,
                     "collision" => crate::quality::QualityPillar::Consistency,
                     "technical_drift" | "missing_code_citation" | "code_modified_after_doc" => {
-                        crate::quality::QualityPillar::Freshness
+                        crate::quality::QualityPillar::Traceability
                     }
                     _ => crate::quality::QualityPillar::Discoverability,
                 };
@@ -1041,6 +1043,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 consistency_score: score.consistency_score as f64,
                 discoverability_score: score.discoverability_score as f64,
                 freshness_score: score.freshness_score as f64,
+                traceability_score: score.traceability_score as f64,
                 reasons,
                 debt_summary,
             };

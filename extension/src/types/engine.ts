@@ -40,6 +40,7 @@ export type QualityPillar =
   | 'structure'
   | 'consistency'
   | 'discoverability'
+  | 'traceability'
   | 'freshness';
 
 export type FindingSeverity =
@@ -121,6 +122,7 @@ export interface HealthScore {
   consistency: PillarHealth;
   discoverability: PillarHealth;
   freshness: PillarHealth;
+  traceability?: PillarHealth;
 }
 
 export interface ContextTrace {
@@ -181,6 +183,7 @@ export interface PillarDeltas {
   consistency: number;
   discoverability: number;
   freshness: number;
+  traceability?: number;
 }
 
 export interface ReMeasurementDelta {
@@ -196,6 +199,7 @@ export interface ProfileWeights {
   consistency: number;
   discoverability: number;
   freshness: number;
+  traceability?: number;
   context_efficiency: number;
   navigation_depth: number;
   vocabulary_adherence: number;

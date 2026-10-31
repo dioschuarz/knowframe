@@ -383,7 +383,7 @@ suite('SettingsDrawer Test Suite', () => {
 
     // Integrity was synthesized into issues and both pillars are rendered
     assert.ok(html.includes('id="diag-body-integrity"'), 'Must render synthesized integrity accordion');
-    assert.ok(html.includes('id="diag-body-freshness"'), 'Must render freshness accordion');
+    assert.ok(html.includes('id="diag-body-traceability"') || html.includes('id="diag-body-freshness"'), 'Must render traceability/freshness accordion');
     assert.ok(html.includes('docs/guide.md:42'), 'Must show broken reference source file and line');
     assert.ok(html.includes('missing_target.md#setup'), 'Must show target with fragment');
 

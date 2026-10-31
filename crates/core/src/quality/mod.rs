@@ -15,6 +15,10 @@ fn default_100() -> f32 {
     100.0
 }
 
+fn default_100_f64() -> f64 {
+    100.0
+}
+
 /// 5-pillar knowledge quality score.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct KnowledgeQualityScore {
@@ -25,6 +29,8 @@ pub struct KnowledgeQualityScore {
     pub consistency_score: f32, // 0.0 to 100.0
     pub discoverability_score: f32, // 0.0 to 100.0
     pub freshness_score: f32, // 0.0 to 100.0
+    #[serde(default = "default_100")]
+    pub traceability_score: f32, // 0.0 to 100.0 (Pillar 5 Traceability)
     pub legacy_debt_count: u32,
     pub new_regressions_count: u32,
     pub resolved_debt_count: u32,
@@ -55,6 +61,7 @@ impl Default for KnowledgeQualityScore {
             consistency_score: 100.0,
             discoverability_score: 100.0,
             freshness_score: 100.0,
+            traceability_score: 100.0,
             legacy_debt_count: 0,
             new_regressions_count: 0,
             resolved_debt_count: 0,
@@ -79,7 +86,8 @@ pub enum QualityPillar {
     Structure,
     Consistency,
     Discoverability,
-    Freshness,
+    #[serde(alias = "freshness")]
+    Traceability,
 }
 
 /// Formal 5-pillar composite quality score with explainable reasons.
@@ -91,6 +99,8 @@ pub struct FivePillarQualityScore {
     pub consistency_score: f64,
     pub discoverability_score: f64,
     pub freshness_score: f64,
+    #[serde(default = "default_100_f64")]
+    pub traceability_score: f64,
     pub reasons: HashMap<QualityPillar, Vec<String>>,
     pub debt_summary: DebtSummary,
 }
@@ -104,6 +114,7 @@ impl Default for FivePillarQualityScore {
             consistency_score: 100.0,
             discoverability_score: 100.0,
             freshness_score: 100.0,
+            traceability_score: 100.0,
             reasons: HashMap::new(),
             debt_summary: DebtSummary::default(),
         }
@@ -150,6 +161,8 @@ pub struct KnowledgeIssuesReport {
     pub consistency_count: usize,
     pub discoverability_count: usize,
     pub freshness_count: usize,
+    #[serde(default)]
+    pub traceability_count: usize,
     pub issues: Vec<KnowledgeIssue>,
     #[serde(default)]
     pub active_issues_count: usize,

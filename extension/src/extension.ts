@@ -436,7 +436,8 @@ function updateStatusBarWithBudget(
   let tooltipText = `Active Prompt Load: ${activeTokens} tokens\nAccessible Subcall: ${subcallTokens} tokens\nStatus: ${status.toUpperCase()}`;
   if (quality) {
     const regrCount = quality.regressions_count ?? (quality as any).new_regressions_count ?? 0;
-    tooltipText += `\n\nKnowledge Quality: ${quality.overall_score.toFixed(0)}/100\n- Integrity: ${quality.integrity_score.toFixed(0)}%\n- Consistency: ${quality.consistency_score.toFixed(0)}%\n- Discoverability: ${quality.discoverability_score.toFixed(0)}%\n- Freshness: ${quality.freshness_score.toFixed(0)}%\n- Issues: ${regrCount} active regressions, ${quality.legacy_debt_count} baselined`;
+    const traceScore = (quality as any).traceability_score != null ? (quality as any).traceability_score : quality.freshness_score;
+    tooltipText += `\n\nKnowledge Quality: ${quality.overall_score.toFixed(0)}/100\n- Integrity: ${quality.integrity_score.toFixed(0)}%\n- Consistency: ${quality.consistency_score.toFixed(0)}%\n- Discoverability: ${quality.discoverability_score.toFixed(0)}%\n- Traceability: ${traceScore.toFixed(0)}%\n- Issues: ${regrCount} active regressions, ${quality.legacy_debt_count} baselined`;
   }
   if (governance) {
     tooltipText += `\n\nAI Governance: ${governance.overall_governance_score.toFixed(0)}/100\n- Entry: ${governance.entry_score.toFixed(0)}%\n- Discovery: ${governance.discovery_score.toFixed(0)}%\n- Retrieval: ${governance.retrieval_score.toFixed(0)}%\n- Reuse: ${governance.reuse_score.toFixed(0)}%`;

@@ -29,7 +29,7 @@ pub fn compute_health_score(
     let mut structure_findings = Vec::new();
     let mut consistency_findings = Vec::new();
     let mut discoverability_findings = Vec::new();
-    let mut freshness_findings = Vec::new();
+    let mut traceability_findings = Vec::new();
 
     for f in findings {
         match f.pillar {
@@ -37,7 +37,7 @@ pub fn compute_health_score(
             QualityPillar::Structure => structure_findings.push(f.clone()),
             QualityPillar::Consistency => consistency_findings.push(f.clone()),
             QualityPillar::Discoverability => discoverability_findings.push(f.clone()),
-            QualityPillar::Freshness => freshness_findings.push(f.clone()),
+            QualityPillar::Traceability => traceability_findings.push(f.clone()),
         }
     }
 
@@ -59,7 +59,7 @@ pub fn compute_health_score(
     let structure = compute_pillar(structure_findings);
     let consistency = compute_pillar(consistency_findings);
     let discoverability = compute_pillar(discoverability_findings);
-    let freshness = compute_pillar(freshness_findings);
+    let traceability = compute_pillar(traceability_findings);
 
     let weights = &profile.weights;
     let total_weight = weights.integrity
@@ -73,7 +73,7 @@ pub fn compute_health_score(
             + structure.raw_score * weights.structure
             + consistency.raw_score * weights.consistency
             + discoverability.raw_score * weights.discoverability
-            + freshness.raw_score * weights.freshness)
+            + traceability.raw_score * weights.freshness)
             / total_weight
     } else {
         100.0
@@ -87,6 +87,6 @@ pub fn compute_health_score(
         structure,
         consistency,
         discoverability,
-        freshness,
+        freshness: traceability,
     }
 }

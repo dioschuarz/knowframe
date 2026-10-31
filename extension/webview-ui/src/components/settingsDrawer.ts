@@ -1275,10 +1275,10 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             : discFilterCount)
         : (selectedScope !== 'legacy' ? orphanNotes : 0);
 
-      const freshFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'freshness').length;
+      const freshFilterCount = issues.filter((i) => i.pillar?.toLowerCase() === 'freshness' || i.pillar?.toLowerCase() === 'traceability').length;
       const freshnessCount = report
-        ? (selectedScope === 'all' && report.freshness_count !== undefined && report.freshness_count >= freshFilterCount
-            ? report.freshness_count
+        ? (selectedScope === 'all' && (report.traceability_count !== undefined || report.freshness_count !== undefined)
+            ? (report.traceability_count ?? report.freshness_count)
             : freshFilterCount)
         : 0;
 
@@ -1290,7 +1290,10 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
       );
       const issuesForDisplay = selectedPillars.size === 0
         ? issues
-        : issues.filter((issue) => selectedPillars.has(issue.pillar.toLowerCase()));
+        : issues.filter((issue) => {
+            const p = issue.pillar.toLowerCase();
+            return selectedPillars.has(p) || (selectedPillars.has('traceability') && p === 'freshness') || (selectedPillars.has('freshness') && p === 'traceability');
+          });
 
       const scoreClass = overallScore >= 90 ? 'diag-score-good' : overallScore >= 75 ? 'diag-score-warn' : 'diag-score-bad';
 
@@ -1299,12 +1302,12 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         { id: 'structure', label: 'Structure', count: structureCount },
         { id: 'consistency', label: 'Consistency', count: consistencyCount },
         { id: 'discoverability', label: 'Discoverability', count: discoverabilityCount },
-        { id: 'freshness', label: 'Freshness', count: freshnessCount },
+        { id: 'traceability', label: 'Traceability', count: freshnessCount },
       ];
 
       const visiblePillars = selectedPillars.size === 0
         ? pillarDefs
-        : pillarDefs.filter((p) => selectedPillars.has(p.id));
+        : pillarDefs.filter((p) => selectedPillars.has(p.id) || (selectedPillars.has('freshness') && p.id === 'traceability') || (selectedPillars.has('traceability') && p.id === 'freshness'));
 
       let accordionsHtml = '';
       if (allIssues.length === 0 && !report) {
@@ -1356,7 +1359,13 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         `;
       } else {
         for (const p of visiblePillars) {
-          const pillarIssues = issuesForDisplay.filter((i) => i.pillar.toLowerCase() === p.id);
+          const pillarIssues = issuesForDisplay.filter((i) => {
+            const raw = i.pillar.toLowerCase();
+            if (p.id === 'traceability' || p.id === 'freshness') {
+              return raw === 'traceability' || raw === 'freshness';
+            }
+            return raw === p.id;
+          });
           if (selectedPillars.size === 0 && pillarIssues.length === 0) continue;
 
           const issuesHtml = pillarIssues.map((issue) => {
@@ -1374,7 +1383,8 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               issue.category === 'harness_drift' ||
               issue.category === 'harnessdrift' ||
               (issue.description && (issue.description.toLowerCase().includes('harness route drift') || issue.description.toLowerCase().includes('harness drift')));
-            const isFreshness = issue.pillar?.toLowerCase() === 'freshness';
+            const isTraceability = issue.pillar?.toLowerCase() === 'traceability' || issue.pillar?.toLowerCase() === 'freshness';
+            const isFreshness = isTraceability;
             const isConsistency = issue.pillar?.toLowerCase() === 'consistency';
             const isStructure = issue.pillar?.toLowerCase() === 'structure';
             const isDiscoverability = issue.pillar?.toLowerCase() === 'discoverability';
@@ -1535,11 +1545,11 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
 
           const isPillarExpanded = Boolean(props.autoExpandIssues);
           accordionsHtml += `
-            <div class="diag-accordion-group" data-pillar="${p.id}">
+            <div class="diag-accordion-group" data-pillar="${p.id}" ${p.id === 'traceability' ? 'data-legacy-pillar="freshness"' : ''}>
               <div class="diag-accordion-header ${isPillarExpanded ? '' : 'collapsed'}" data-pillar="${p.id}">
                 <div class="diag-accordion-title">
                   <span>${p.label}</span>
-                  <span class="diag-count-badge" style="background: ${p.count > 0 ? (p.id === 'integrity' ? '#ef4444' : p.id === 'freshness' ? '#a855f7' : p.id === 'consistency' ? '#ec4899' : p.id === 'structure' ? '#0ea5e9' : '#eab308') : 'var(--vscode-badge-background)'}; color: #ffffff;">${pillarIssues.length}</span>
+                  <span class="diag-count-badge" style="background: ${p.count > 0 ? (p.id === 'integrity' ? '#ef4444' : (p.id === 'traceability' || p.id === 'freshness') ? '#a855f7' : p.id === 'consistency' ? '#ec4899' : p.id === 'structure' ? '#0ea5e9' : '#eab308') : 'var(--vscode-badge-background)'}; color: #ffffff;">${pillarIssues.length}</span>
                 </div>
                 <span class="diag-accordion-chevron">
                   <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -1606,9 +1616,9 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
                 <span class="diag-chip-val" style="color: ${discoverabilityCount > 0 ? '#eab308' : 'inherit'};">${discoverabilityCount}</span>
                 <span class="diag-chip-lbl">Discovery</span>
               </button>
-              <button type="button" class="diag-pillar-chip ${selectedPillars.has('freshness') ? 'active' : ''}" data-filter="freshness" aria-pressed="${selectedPillars.has('freshness')}">
+              <button type="button" class="diag-pillar-chip ${selectedPillars.has('traceability') || selectedPillars.has('freshness') ? 'active' : ''}" data-filter="traceability" aria-pressed="${selectedPillars.has('traceability') || selectedPillars.has('freshness')}">
                 <span class="diag-chip-val" style="color: ${freshnessCount > 0 ? '#c084fc' : 'inherit'};">${freshnessCount}</span>
-                <span class="diag-chip-lbl">Freshness</span>
+                <span class="diag-chip-lbl">Traceability</span>
               </button>
               </div>
               <button type="button" class="diag-clear-filters" id="diag-clear-filters" ${selectedPillars.size === 0 ? 'disabled' : ''}>Clear</button>
