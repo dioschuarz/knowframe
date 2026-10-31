@@ -508,7 +508,7 @@ export class CanvasRenderer {
       this.ctx.fill();
 
       // Node border
-      const hasIssues = this.issueNodeIds.has(node.id) || (node.filePath && this.issueNodeIds.has(node.filePath)) || (node.brokenLinks > 0);
+      const hasIssues = this.issueNodeIds.has(node.id) || (Boolean(node.filePath) && this.issueNodeIds.has(node.filePath!));
 
       if (isSearchActive) {
         // Vivid cyan highlight ring for search matches
@@ -568,7 +568,7 @@ export class CanvasRenderer {
       const isHub = node.hopDistance === 0;
       const isHovered = node === this.hoveredNode;
       const isProminent = (node.inDegree || 0) + (node.outDegree || 0) >= 4 || node.hopDistance === 1;
-      const hasIssues = this.issueNodeIds.has(node.id) || (node.filePath && this.issueNodeIds.has(node.filePath)) || (node.brokenLinks > 0);
+      const hasIssues = this.issueNodeIds.has(node.id) || (Boolean(node.filePath) && this.issueNodeIds.has(node.filePath!));
 
       // Label visibility:
       // When search is active, show labels ONLY for matching nodes (and hovered node)

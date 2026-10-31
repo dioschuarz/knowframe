@@ -299,6 +299,11 @@ const settingsDrawer = renderSettingsDrawer(
 let latestIssues: KnowledgeIssue[] = [];
 const currentIssueNodeIds = new Set<string>();
 
+let hasReceivedGraphData = false;
+let hasReceivedIssuesReport = false;
+let isPhysicsWarmedUp = false;
+let isScanCycleComplete = false;
+
 function getIssuesForNode(node: NoteNode): KnowledgeIssue[] {
   const nPath = (node.filePath || '').toLowerCase().replace(/\\/g, '/');
   const nId = (node.id || '').toLowerCase().replace(/\\/g, '/');
@@ -325,7 +330,13 @@ function getIssuesForNode(node: NoteNode): KnowledgeIssue[] {
     }
   }
 
-  // Also include any broken references from graph edges for this node
+  // When authoritative issues report has been loaded (or while waiting for it during initial load),
+  // do NOT inject raw un-reconciled links. Baseline debt accepted those links.
+  if (hasReceivedIssuesReport || !isScanCycleComplete) {
+    return issues;
+  }
+
+  // Fallback ONLY in purely offline / mock environments where no report is available:
   for (const edge of edges) {
     const src = (typeof edge.source === 'object' ? (edge.source as any).id : edge.source || '').toLowerCase().replace(/\\/g, '/');
     const isEdgeMatch =
@@ -381,9 +392,16 @@ function getIssuesForNode(node: NoteNode): KnowledgeIssue[] {
 
 function updateIssueHighlights(): void {
   currentIssueNodeIds.clear();
+  // While scan cycle is running and issues report hasn't arrived, keep node highlights clean
+  if (!hasReceivedIssuesReport && !isScanCycleComplete) {
+    renderer.setIssueNodeIds(currentIssueNodeIds);
+    renderer.draw();
+    return;
+  }
+
   for (const node of rawNodes) {
     const nodeIssues = getIssuesForNode(node);
-    if (nodeIssues.length > 0 || (node.brokenLinks && node.brokenLinks > 0)) {
+    if (nodeIssues.length > 0) {
       currentIssueNodeIds.add(node.id);
       if (node.filePath) {
         currentIssueNodeIds.add(node.filePath);
@@ -768,6 +786,17 @@ function hideLoadingOverlay(): void {
   }
 }
 
+function checkAndRevealGraph(): void {
+  const isIssuesReady = hasReceivedIssuesReport || isScanCycleComplete;
+  if (hasReceivedGraphData && isIssuesReady && isPhysicsWarmedUp) {
+    updateLoadingProgress(100, 'Ready');
+    clearLoadingTimeoutGuard();
+    setTimeout(() => {
+      hideLoadingOverlay();
+    }, 200);
+  }
+}
+
 function showNoWorkspace(): void {
   clearLoadingTimeoutGuard();
   if (loadingOverlay) loadingOverlay.classList.remove('hidden');
@@ -817,16 +846,23 @@ rpc.on('graphDataUpdate', (data: any) => {
   // Apply cluster color rules, or ensure default grey for unassigned nodes
   applyClientSideColorGroups(rawNodes, colorGroups);
 
-  hideLoadingOverlay();
+  hasReceivedGraphData = true;
   updateIssueHighlights();
   applyFocusFilter(0.4);
+
+  if (isFirstLoad) {
+    physics.tickSync?.(35);
+  }
 
   if (isFirstLoad && rawNodes.length > 0 && !savedState?.viewTransform) {
     const hub = rawNodes.find((n) => n.hopDistance === 0) || rawNodes[0];
     if (hub) {
-      setTimeout(() => renderer.centerOnNode(hub.id), 120);
+      setTimeout(() => renderer.centerOnNode(hub.id), 80);
     }
   }
+
+  isPhysicsWarmedUp = true;
+  renderer.draw();
 
   const brokenLinksCount = rawEdges.filter((e) => e.isBroken).length;
   const connectedCount = rawNodes.filter((n) => n.hopDistance >= 0).length;
@@ -860,6 +896,7 @@ rpc.on('graphDataUpdate', (data: any) => {
 
   toolbarController.updatePinnedCount(physics.getPinnedCount());
   persistState();
+  checkAndRevealGraph();
 });
 
 // Recover state on tab restoration
@@ -890,9 +927,16 @@ rpc.on('loadingProgress', (data: any) => {
     const msg = data.message || 'Loading...';
     updateLoadingProgress(p, msg);
     if (data.stage === 'complete' || p >= 100) {
-      clearLoadingTimeoutGuard();
-      setTimeout(hideLoadingOverlay, 300);
+      isScanCycleComplete = true;
+      checkAndRevealGraph();
     } else {
+      if (data.stage === 'graph' || p <= 35) {
+        hasReceivedGraphData = false;
+        hasReceivedIssuesReport = false;
+        isPhysicsWarmedUp = false;
+        isScanCycleComplete = false;
+        if (loadingOverlay) loadingOverlay.classList.remove('hidden');
+      }
       startLoadingTimeoutGuard();
     }
   }
@@ -953,6 +997,7 @@ rpc.on('issuesReportUpdate', (data: any) => {
   } else {
     latestIssues = [];
   }
+  hasReceivedIssuesReport = true;
   updateIssueHighlights();
   if (currentFocusMode === 'issues_only') {
     applyFocusFilter(0.2);
@@ -964,6 +1009,7 @@ rpc.on('issuesReportUpdate', (data: any) => {
   settingsDrawer.updateProps({
     issuesReport: data,
   });
+  checkAndRevealGraph();
 });
 
 rpc.on('exclusionsUpdate', (data: any) => {

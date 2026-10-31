@@ -158,6 +158,7 @@ export class GraphPanelManager implements vscode.Disposable {
       type: 'issuesReportUpdate',
       payload: issuesReport,
     });
+    this.sendLoadingProgress('complete', 100, 'Ready');
   }
 
   public sendNoWorkspace(): void {
@@ -176,7 +177,7 @@ export class GraphPanelManager implements vscode.Disposable {
 
   public updateData(scanResult: ScanResultPayload): void {
     this.currentScanResult = scanResult;
-    this.currentLoadingProgress = { stage: 'complete', percent: 100, message: 'Ready' };
+    this.sendLoadingProgress('issues', 65, 'Reconciling baseline debt & findings...');
     this.panel.webview.postMessage({
       type: 'graphDataUpdate',
       payload: {
@@ -203,10 +204,6 @@ export class GraphPanelManager implements vscode.Disposable {
         recommendedHub: scanResult.recommended_hub,
       },
     });
-    this.panel.webview.postMessage({
-      type: 'loadingProgress',
-      payload: { stage: 'complete', percent: 100, message: 'Ready' },
-    });
 
     if (this.ipcClient) {
       this.ipcClient.sendRequest('graph/getExclusions', {}).then((res: any) => {
@@ -225,6 +222,7 @@ export class GraphPanelManager implements vscode.Disposable {
         type: 'issuesReportUpdate',
         payload: GraphPanelManager.cachedIssuesReport,
       });
+      this.sendLoadingProgress('complete', 100, 'Ready');
     } else if (this.ipcClient && !this.isFetchingIssues) {
       this.isFetchingIssues = true;
       this.ipcClient.sendRequest('workspace/getIssues', {}).then((issuesReport: any) => {
@@ -233,8 +231,10 @@ export class GraphPanelManager implements vscode.Disposable {
           type: 'issuesReportUpdate',
           payload: issuesReport,
         });
+        this.sendLoadingProgress('complete', 100, 'Ready');
       }).catch((err) => {
         console.error('Failed to fetch issues report on updateData:', err);
+        this.sendLoadingProgress('complete', 100, 'Ready');
       }).finally(() => {
         this.isFetchingIssues = false;
       });

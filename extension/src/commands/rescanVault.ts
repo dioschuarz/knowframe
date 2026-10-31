@@ -5,7 +5,7 @@ import { GraphPanelManager } from '../webview/panelManager';
 
 export function registerRescanVaultCommand(
   getOrEnsureIpcClient: () => Promise<IpcClient | null> | (IpcClient | null),
-  onScanResultUpdated: (newResult: ScanResultPayload) => void
+  onScanResultUpdated: (newResult: ScanResultPayload) => Promise<void> | void
 ): vscode.Disposable {
   return vscode.commands.registerCommand('llmWiki.rescanVault', async () => {
     await vscode.window.withProgress(
@@ -23,6 +23,7 @@ export function registerRescanVaultCommand(
             return;
           }
 
+          GraphPanelManager.setCachedIssuesReport(null);
           progress.report({ message: 'Scanning markdown documents & graph topology...' });
           if (GraphPanelManager.currentPanel) {
             GraphPanelManager.currentPanel.sendLoadingProgress('graph', 30, 'Rescanning vault...');
@@ -30,12 +31,11 @@ export function registerRescanVaultCommand(
 
           const scan = await ipc.sendRequest<ScanResultPayload>('workspace/scan');
 
-          progress.report({ message: 'Updating graph and quality metrics...' });
-          onScanResultUpdated(scan);
+          progress.report({ message: 'Reconciling baseline debt & quality metrics...' });
           if (GraphPanelManager.currentPanel) {
-            GraphPanelManager.currentPanel.updateData(scan);
-            GraphPanelManager.currentPanel.sendLoadingProgress('complete', 100, 'Ready');
+            GraphPanelManager.currentPanel.sendLoadingProgress('issues', 65, 'Reconciling baseline debt & findings...');
           }
+          await onScanResultUpdated(scan);
 
           const docCount = scan.nodes?.length ?? 0;
           const refCount = scan.edges?.length ?? 0;

@@ -16,6 +16,7 @@ export interface PhysicsSimulation {
   getPinnedCount: () => number;
   restart: (alpha?: number) => void;
   stop: () => void;
+  tickSync?: (ticks?: number) => void;
 }
 
 export function createPhysicsSimulation(
@@ -98,6 +99,11 @@ export function createPhysicsSimulation(
       simulation.nodes(nodes);
       applyEdges();
       simulation.alpha(isInitial ? 1 : 0.4).restart();
+    },
+    tickSync: (ticks: number = 35) => {
+      for (let i = 0; i < ticks; i++) {
+        simulation.tick();
+      }
     },
     updateParameters: (newParams: Partial<PhysicsParameters>) => {
       params = { ...params, ...newParams };

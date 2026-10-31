@@ -83,14 +83,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   };
 
-  const onScanResultUpdated = (newResult: ScanResultPayload) => {
+  const onScanResultUpdated = async (newResult: ScanResultPayload) => {
     latestScanResult = newResult;
     updateStatusBarWithBudget(newResult, latestQualityScore, latestGovernanceMatrix);
     if (GraphPanelManager.currentPanel) {
       GraphPanelManager.currentPanel.updateData(newResult);
     }
     sidebarProvider?.updateData(newResult, latestQualityScore);
-    refreshQualityScore();
+    await refreshQualityScore();
   };
 
   const ensureIpcClient = async (): Promise<IpcClient | null> => {
