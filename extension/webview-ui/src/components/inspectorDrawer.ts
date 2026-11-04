@@ -49,7 +49,7 @@ export interface InspectorCallbacks {
   onFixBrokenLink?: (source: string, target: string, line?: number) => void;
   onNavigateLink?: (target: string) => void;
   onMarkReviewed?: (docId: string) => void;
-  onReviewWithAi?: (filePath: string, issue?: KnowledgeIssue) => void;
+  onReviewWithAi?: (filePath: string, issue?: KnowledgeIssue | KnowledgeIssue[]) => void;
   onSelectIssue?: (issue: KnowledgeIssue, node: NoteNode) => void;
   onOpen?: () => void;
   onClose?: () => void;
@@ -516,7 +516,13 @@ export function renderInspectorDrawer(
         e.stopPropagation();
         const p = typeof node.filePath === 'string' && node.filePath.length > 0 ? node.filePath : node.id;
         if (callbacks.onReviewWithAi) {
-          callbacks.onReviewWithAi(p);
+          if (issues && issues.length === 1) {
+            callbacks.onReviewWithAi(p, issues[0]);
+          } else if (issues && issues.length > 1) {
+            callbacks.onReviewWithAi(p, issues);
+          } else {
+            callbacks.onReviewWithAi(p);
+          }
         } else {
           callbacks.onMarkReviewed?.(p);
         }

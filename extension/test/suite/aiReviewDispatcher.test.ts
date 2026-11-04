@@ -45,6 +45,22 @@ suite('AiReviewDispatcher Unit Test Suite', () => {
     assert.ok(prompt.includes('Fix broken links, unanchored references, and review obligations'));
   });
 
+  test('buildPrompt generates itemized prompt when multiple issues are provided', () => {
+    const dispatcher = new AiReviewDispatcher();
+    const prompt = dispatcher.buildPrompt({
+      filePath: 'notes/06_studies/sample/assets/report_nb.md',
+      issues: [
+        { category: 'orphan_node', description: 'Isolated orphan note' },
+        { category: 'technical_drift', line_number: 263, description: 'Cites modified code' },
+      ],
+    });
+
+    assert.ok(prompt.includes("Review and fix the 2 active issues in 'notes/06_studies/sample/assets/report_nb.md'"));
+    assert.ok(prompt.includes("1. [orphan_node]: Isolated orphan note"));
+    assert.ok(prompt.includes("2. [technical_drift] (line 263): Cites modified code"));
+    assert.ok(prompt.includes("IMPORTANT: Modify ONLY 'notes/06_studies/sample/assets/report_nb.md'"));
+  });
+
   test('buildCommand correctly formats agent-specific CLI commands and escapes quotes', () => {
     const dispatcher = new AiReviewDispatcher();
     const prompt = 'Fix "link" in file.md';
@@ -53,7 +69,7 @@ suite('AiReviewDispatcher Unit Test Suite', () => {
     assert.strictEqual(agyCmd, 'agy -i "Fix \\"link\\" in file.md"');
 
     const codexCmd = dispatcher.buildCommand('codex', prompt);
-    assert.strictEqual(codexCmd, 'codex "Fix \\"link\\" in file.md"');
+    assert.strictEqual(codexCmd, 'codex --dangerously-bypass-hook-trust "Fix \\"link\\" in file.md"');
 
     const claudeCmd = dispatcher.buildCommand('claude', prompt);
     assert.strictEqual(claudeCmd, 'claude "Fix \\"link\\" in file.md"');

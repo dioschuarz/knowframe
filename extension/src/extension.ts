@@ -240,8 +240,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.commands.registerCommand('llmWiki.reviewWithAi', async (payload?: any) => {
       const dispatcher = new AiReviewDispatcher(undefined, governanceManager || undefined);
       const filePath = payload?.filePath || payload?.doc_id || payload?.file_path || (typeof payload === 'string' ? payload : undefined);
-      const issue = payload?.issue || (payload?.category ? payload : undefined);
-      await dispatcher.dispatchReview({ filePath, issue });
+      const issue = Array.isArray(payload?.issue) ? undefined : (payload?.issue || (payload?.category ? payload : undefined));
+      const issues = Array.isArray(payload?.issue) ? payload.issue : (Array.isArray(payload?.issues) ? payload.issues : undefined);
+      await dispatcher.dispatchReview({ filePath, issue, issues });
     }),
     vscode.commands.registerCommand('llmWiki.reviewAllWithAi', async () => {
       const dispatcher = new AiReviewDispatcher(undefined, governanceManager || undefined);

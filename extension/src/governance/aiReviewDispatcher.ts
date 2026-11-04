@@ -12,6 +12,13 @@ export interface AiReviewOptions {
     target?: string;
     pillar?: string;
   };
+  issues?: Array<{
+    category?: string;
+    line_number?: number;
+    description?: string;
+    target?: string;
+    pillar?: string;
+  }>;
   all?: boolean;
 }
 
@@ -54,10 +61,10 @@ export class AiReviewDispatcher {
           const gh = installed.find((t) => t.id === 'gh');
           if (gh) return gh;
         } else if (activeType === 'agents_md') {
-          const codex = installed.find((t) => t.id === 'codex');
-          if (codex) return codex;
           const agy = installed.find((t) => t.id === 'agy');
           if (agy) return agy;
+          const codex = installed.find((t) => t.id === 'codex');
+          if (codex) return codex;
         }
       } catch {
         // Fall back to default priority
@@ -83,6 +90,20 @@ export class AiReviewDispatcher {
     }
 
     const filePath = options.filePath || options.issue?.target || 'target file';
+
+    if (options.issues && options.issues.length > 0) {
+      const issueBullets = options.issues
+        .map((iss, idx) => {
+          const cat = iss.category || 'issue';
+          const line = iss.line_number ? ` (line ${iss.line_number})` : '';
+          const desc = iss.description ? `: ${iss.description}` : '';
+          return `${idx + 1}. [${cat}]${line}${desc}`;
+        })
+        .join('\n');
+
+      return `Review and fix the ${options.issues.length} active issue${options.issues.length > 1 ? 's' : ''} in '${filePath}':\n${issueBullets}\n\nIMPORTANT: Modify ONLY '${filePath}' and fix ONLY these issues. Re-check until all issues in '${filePath}' are completely resolved.`;
+    }
+
     const cat = options.issue?.category ? `${options.issue.category}` : 'integrity';
     const line = options.issue?.line_number ? ` at line ${options.issue.line_number}` : '';
     const desc = options.issue?.description ? `: ${options.issue.description}` : '';
@@ -102,7 +123,7 @@ export class AiReviewDispatcher {
       case 'agy':
         return `agy -i "${escaped}"`;
       case 'codex':
-        return `codex "${escaped}"`;
+        return `codex --dangerously-bypass-hook-trust "${escaped}"`;
       case 'claude':
         return `claude "${escaped}"`;
       case 'cursor':
@@ -136,10 +157,15 @@ export class AiReviewDispatcher {
 
     const termName = 'KnowFrame: AI Review';
     let terminal = vscode.window.terminals?.find((t) => t.name === termName);
+    const isNew = !terminal;
     if (!terminal) {
       terminal = vscode.window.createTerminal({ name: termName });
     }
     terminal.show(true);
+    if (isNew) {
+      // Delay briefly to allow shell (bash) and virtualenv startup scripts to finish initializing before receiving command text
+      await new Promise((resolve) => setTimeout(resolve, 800));
+    }
     terminal.sendText(cmd);
 
     const targetLabel = options.all ? 'all issues' : (options.filePath || 'selected issue');
