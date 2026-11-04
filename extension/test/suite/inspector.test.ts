@@ -9,12 +9,47 @@ import {
 import type { NoteNode, NoteEdge, TokenSummary } from '../../src/types/graph.ts';
 
 describe('InspectorDrawer Test Suite', () => {
-  it('formats hop tier names correctly', () => {
-    assert.strictEqual(formatHopTier(0), 'Level 0 (Central Hub)');
-    assert.strictEqual(formatHopTier(1), 'Level 1 (Direct Reference)');
-    assert.strictEqual(formatHopTier(2), 'Level 2 (Transitive Reference)');
-    assert.strictEqual(formatHopTier(3), 'Level 3 (Deep Reference)');
-    assert.strictEqual(formatHopTier(-1), 'Orphan (Disconnected)');
+  it('formats hop tier names without redundant brackets and distinguishes inbound vs outbound connections', () => {
+    assert.strictEqual(formatHopTier(0), 'Level 0 · Central Hub');
+    assert.strictEqual(formatHopTier(1), 'Level 1 · Direct Reference');
+    assert.strictEqual(formatHopTier(2), 'Level 2 · Transitive Reference');
+    assert.strictEqual(formatHopTier(3), 'Level 3 · Deep Reference');
+    assert.strictEqual(formatHopTier(-1, 0, 0), 'Orphan');
+    assert.strictEqual(formatHopTier(-1, 0, 1), 'Connected · Outbound');
+    assert.strictEqual(formatHopTier(-1, 1, 0), 'Connected · Inbound');
+    assert.strictEqual(formatHopTier(-1, 1, 1), 'Connected · Bidirectional');
+  });
+
+  it('never labels a note with an outgoing connection as Orphan in node inspection', () => {
+    const node: NoteNode = {
+      id: 'notes/06_studies/cmaas_instagram_growth/assets/report_nb.md',
+      label: 'CMaaS Study 05: Instagram Growth Synthesis Report',
+      filePath: 'notes/06_studies/cmaas_instagram_growth/assets/report_nb.md',
+      tags: ['cmaas', 'study'],
+      color: '#64748b',
+      status: 'connected_inactive',
+      tokens: 5790,
+      hopDistance: -1,
+      inDegree: 0,
+      outDegree: 1,
+      betweenness: 0,
+      brokenLinks: 0,
+    };
+
+    const html = renderNodeInspectionHtml({
+      node,
+      inLinks: [],
+      outLinks: ['notes/06_studies/cmaas_instagram_growth/01_index.md'],
+      isHub: false,
+    });
+
+    assert.ok(html.includes('Connected · Outbound'), 'Should display Connected · Outbound');
+    assert.ok(html.includes('tier-connected'), 'Should apply tier-connected badge class');
+    assert.ok(!html.includes('Orphan'), 'Should never display Orphan for a connected note');
+    assert.ok(html.includes('Inbound'), 'Should distinctly display Inbound metric');
+    assert.ok(html.includes('Outbound'), 'Should distinctly display Outbound metric');
+    assert.ok(html.includes('From Other Files'), 'Should explicitly label inbound references from other files');
+    assert.ok(html.includes('To Other Files'), 'Should explicitly label outbound references to other files');
   });
 
   it('renders node inspection view with metrics, links, and contextual actions', () => {
@@ -48,7 +83,7 @@ describe('InspectorDrawer Test Suite', () => {
     assert.ok(html.includes('01_projects/my_project.md'), 'Should display file path');
 
     // Check tier and token weight
-    assert.ok(html.includes('Level 1 (Direct Reference)'), 'Should display correct tier');
+    assert.ok(html.includes('Level 1 · Direct Reference'), 'Should display correct tier');
     assert.ok(html.includes('4.25k tok') || html.includes('4.3k tok') || html.includes('4,250 tok'), 'Should display tokens');
 
     // Check links
@@ -164,8 +199,9 @@ describe('InspectorDrawer Test Suite', () => {
     assert.ok(html.includes('data-start-line="12"'), 'Should set start line attribute');
     assert.ok(html.includes('data-end-line="45"'), 'Should set end line attribute');
     assert.ok(html.includes('1.50k') || html.includes('1.5k'), 'Should display compact tokens');
-    assert.ok(html.includes('5/2'), 'Should display I/O ratio');
-    assert.ok(html.includes('Inbound references: 5 · Outbound references: 2'), 'Should display informative tooltip');
+    assert.ok(html.includes('↙ In') && html.includes('↗ Out'), 'Should display separate In and Out columns');
+    assert.ok(html.includes('Inbound references into this section: 5'), 'Should display informative inbound tooltip');
+    assert.ok(html.includes('Outbound references from this section: 2'), 'Should display informative outbound tooltip');
   });
 
   it('renders empty fragment banner when no headings exist (FR-023)', () => {

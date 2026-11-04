@@ -855,9 +855,23 @@ rpc.on('graphDataUpdate', (data: any) => {
   isPhysicsWarmedUp = true;
   renderer.draw();
 
+  if (selectedNode) {
+    const refreshed = rawNodes.find(
+      (n) => n.id === selectedNode!.id || isSameFilePath(n.filePath, selectedNode!.filePath)
+    );
+    if (refreshed) {
+      selectedNode = refreshed;
+      if (inspectorDrawer.isOpen()) {
+        inspectNode(refreshed);
+      }
+    }
+  }
+
+  const isTrueOrphanNode = (n: NoteNode) =>
+    n.status !== 'excluded' && n.hopDistance < 0 && (n.inDegree || 0) === 0 && (n.outDegree || 0) === 0;
   const brokenLinksCount = rawEdges.filter((e) => e.isBroken).length;
-  const connectedCount = rawNodes.filter((n) => n.hopDistance >= 0).length;
-  const orphanCount = rawNodes.filter((n) => n.hopDistance < 0).length;
+  const connectedCount = rawNodes.filter((n) => n.status !== 'excluded' && !isTrueOrphanNode(n)).length;
+  const orphanCount = rawNodes.filter((n) => isTrueOrphanNode(n)).length;
   const excludedCount = rawNodes.filter((n) => n.status === 'excluded').length;
   const brokenEdges = rawEdges.filter((e) => e.isBroken).map((e) => ({
     source: typeof e.source === 'object' ? (e.source as any).id : e.source,

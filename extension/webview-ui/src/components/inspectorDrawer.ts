@@ -10,12 +10,19 @@ import type { NoteNode, NoteEdge, TokenSummary } from '../../../src/types/graph.
 import type { KnowledgeIssue } from '../../../src/types/admission.ts';
 import { formatCompactNumber } from '../utils/numberFormat.ts';
 
-export function formatHopTier(hopDistance: number): string {
-  if (hopDistance === 0) return 'Level 0 (Central Hub)';
-  if (hopDistance === 1) return 'Level 1 (Direct Reference)';
-  if (hopDistance === 2) return 'Level 2 (Transitive Reference)';
-  if (hopDistance >= 3) return `Level ${hopDistance} (Deep Reference)`;
-  return 'Orphan (Disconnected)';
+export function formatHopTier(
+  hopDistance: number,
+  inDegree: number = 0,
+  outDegree: number = 0,
+): string {
+  if (hopDistance === 0) return 'Level 0 · Central Hub';
+  if (hopDistance === 1) return 'Level 1 · Direct Reference';
+  if (hopDistance === 2) return 'Level 2 · Transitive Reference';
+  if (hopDistance >= 3) return `Level ${hopDistance} · Deep Reference`;
+  if (inDegree > 0 && outDegree > 0) return 'Connected · Bidirectional';
+  if (inDegree > 0) return 'Connected · Inbound';
+  if (outDegree > 0) return 'Connected · Outbound';
+  return 'Orphan';
 }
 
 function formatTokens(tokens: number): string {
@@ -67,16 +74,31 @@ export interface InspectorDrawerController {
 export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
   const { node, inLinks, outLinks, isHub, issues } = props;
   const nodeIssues = issues || [];
-  const tierName = formatHopTier(node.hopDistance);
+  const effectiveInDegree = Math.max(node.inDegree || 0, inLinks.length);
+  const effectiveOutDegree = Math.max(node.outDegree || 0, outLinks.length);
+  const tierName = formatHopTier(node.hopDistance, effectiveInDegree, effectiveOutDegree);
+  const isTrueOrphan = node.hopDistance < 0 && effectiveInDegree === 0 && effectiveOutDegree === 0;
+  const tierBadgeClass =
+    node.hopDistance === 0
+      ? 'tier-hub'
+      : node.hopDistance === 1
+        ? 'tier-1'
+        : node.hopDistance === 2
+          ? 'tier-2'
+          : node.hopDistance > 2
+            ? 'tier-deep'
+            : isTrueOrphan
+              ? 'tier-orphan'
+              : 'tier-connected';
   const tokenFormatted = formatCompactNumber(node.tokens) + ' tok';
 
   const inLinksList = inLinks.length > 0
-    ? inLinks.map((l) => `<li class="insp-link-item" data-link="${l}"><span class="insp-link-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M10 12L6 8L10 4"/></svg></span><span class="insp-link-text" title="${l}">${l}</span></li>`).join('')
-    : '<li class="insp-empty-item">No incoming links</li>';
+    ? inLinks.map((l) => `<li class="insp-link-item insp-link-in" data-link="${l}" title="Inbound (Ingress): '${l}' links into this note"><span class="insp-dir-badge insp-dir-in">↙ IN</span><span class="insp-link-text" title="${l}">${l}</span></li>`).join('')
+    : '<li class="insp-empty-item">No inbound links — no other file links into this note</li>';
 
   const outLinksList = outLinks.length > 0
-    ? outLinks.map((l) => `<li class="insp-link-item" data-link="${l}"><span class="insp-link-icon"><svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M6 4L10 8L6 12"/></svg></span><span class="insp-link-text" title="${l}">${l}</span></li>`).join('')
-    : '<li class="insp-empty-item">No outgoing links</li>';
+    ? outLinks.map((l) => `<li class="insp-link-item insp-link-out" data-link="${l}" title="Outbound (Egress): This note links out to '${l}'"><span class="insp-dir-badge insp-dir-out">↗ OUT</span><span class="insp-link-text" title="${l}">${l}</span></li>`).join('')
+    : '<li class="insp-empty-item">No outbound links — this note does not link to other files</li>';
 
   const tagsChips = (node.tags || []).length > 0
     ? (node.tags || []).map((t) => `<span class="insp-tag-chip">${t}</span>`).join('')
@@ -103,7 +125,7 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
       <!-- Section: Tier & Token Weight (Fixed header) -->
       <div class="insp-section insp-section-fixed">
         <div class="insp-section-header">Context Observer Tier</div>
-        <div class="insp-tier-badge ${node.hopDistance === 0 ? 'tier-hub' : node.hopDistance === 1 ? 'tier-1' : node.hopDistance === 2 ? 'tier-2' : node.hopDistance > 2 ? 'tier-deep' : 'tier-orphan'}">
+        <div class="insp-tier-badge ${tierBadgeClass}">
           ${tierName}
         </div>
         ${node.reviewStatus ? `
@@ -111,16 +133,20 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
           Review: ${node.reviewStatus}
         </div>
         ` : ''}
-        <div class="insp-metrics-row">
-          <div class="insp-metric-col">
+        <div class="insp-metrics-row insp-metrics-row-4">
+          <div class="insp-metric-col" title="Total BPE tokens in this document">
             <span class="insp-m-val">${tokenFormatted}</span>
             <span class="insp-m-lbl">BPE Tokens</span>
           </div>
-          <div class="insp-metric-col">
-            <span class="insp-m-val">${formatCompactNumber(node.inDegree)} / ${formatCompactNumber(node.outDegree)}</span>
-            <span class="insp-m-lbl">In / Out Degree</span>
+          <div class="insp-metric-col insp-metric-inbound" title="Inbound (Ingress): Other files linking INTO this note">
+            <span class="insp-m-val ${effectiveInDegree > 0 ? 'val-inbound-active' : ''}">↙ ${formatCompactNumber(effectiveInDegree)}</span>
+            <span class="insp-m-lbl">Inbound</span>
           </div>
-          <div class="insp-metric-col">
+          <div class="insp-metric-col insp-metric-outbound" title="Outbound (Egress): Other files that this note links OUT to">
+            <span class="insp-m-val ${effectiveOutDegree > 0 ? 'val-outbound-active' : ''}">↗ ${formatCompactNumber(effectiveOutDegree)}</span>
+            <span class="insp-m-lbl">Outbound</span>
+          </div>
+          <div class="insp-metric-col" title="Brandes betweenness centrality across shortest paths">
             <span class="insp-m-val">${(node.betweenness || 0).toFixed(3)}</span>
             <span class="insp-m-lbl">Betweenness</span>
           </div>
@@ -178,7 +204,31 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
       </div>
       ` : ''}
 
-      <!-- Section: Fragments (3-column: Fragment | Tok | I/O) -->
+      <!-- Section: Inbound References (Ingress from other files) -->
+      <div class="insp-section insp-section-balanced">
+        <div class="insp-section-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="display: flex; align-items: center; gap: 5px;">
+            <span class="insp-dir-pill insp-dir-in">↙ INBOUND</span>
+            <span>From Other Files (${formatCompactNumber(inLinks.length)})</span>
+          </span>
+          <span style="font-size: 9.5px; opacity: 0.65; font-weight: 400; text-transform: none;">Links into this note</span>
+        </div>
+        <ul class="insp-links-list insp-scrollable-content">${inLinksList}</ul>
+      </div>
+
+      <!-- Section: Outbound References (Egress to other files) -->
+      <div class="insp-section insp-section-balanced">
+        <div class="insp-section-header" style="display: flex; justify-content: space-between; align-items: center;">
+          <span style="display: flex; align-items: center; gap: 5px;">
+            <span class="insp-dir-pill insp-dir-out">↗ OUTBOUND</span>
+            <span>To Other Files (${formatCompactNumber(outLinks.length)})</span>
+          </span>
+          <span style="font-size: 9.5px; opacity: 0.65; font-weight: 400; text-transform: none;">Referenced by this note</span>
+        </div>
+        <ul class="insp-links-list insp-scrollable-content">${outLinksList}</ul>
+      </div>
+
+      <!-- Section: Fragments (4-column: Fragment | Tok | ↙ In | ↗ Out) -->
       <div class="insp-section insp-section-fragments insp-section-balanced">
         <div class="insp-section-header" style="cursor: pointer; display: flex; justify-content: space-between; align-items: center;" id="insp-fragments-toggle">
           <span>Fragments (${formatCompactNumber((node.fragments || []).length)})</span>
@@ -192,7 +242,8 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
                   <tr>
                     <th>Fragment</th>
                     <th style="text-align: right;">Tok</th>
-                    <th style="text-align: right;">I/O</th>
+                    <th style="text-align: right;" title="Inbound references pointing to this section">↙ In</th>
+                    <th style="text-align: right;" title="Outbound references inside this section">↗ Out</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -205,8 +256,11 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
                       <td style="text-align: right; font-variant-numeric: tabular-nums;">
                         ${formatCompactNumber(f.tokens)}
                       </td>
-                      <td style="text-align: right; font-variant-numeric: tabular-nums;" title="Inbound references: ${f.inbound} · Outbound references: ${f.outbound}">
-                        ${formatCompactNumber(f.inbound)}/${formatCompactNumber(f.outbound)}
+                      <td style="text-align: right; font-variant-numeric: tabular-nums; color: ${f.inbound > 0 ? '#10b981' : 'inherit'};" title="Inbound references into this section: ${f.inbound}">
+                        ${formatCompactNumber(f.inbound)}
+                      </td>
+                      <td style="text-align: right; font-variant-numeric: tabular-nums; color: ${f.outbound > 0 ? '#38bdf8' : 'inherit'};" title="Outbound references from this section: ${f.outbound}">
+                        ${formatCompactNumber(f.outbound)}
                       </td>
                     </tr>
                   `).join('')}
@@ -222,18 +276,6 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
       <div class="insp-section insp-section-balanced">
         <div class="insp-section-header">Tags</div>
         <div class="insp-tags-row insp-scrollable-content">${tagsChips}</div>
-      </div>
-
-      <!-- Section: Incoming References -->
-      <div class="insp-section insp-section-balanced">
-        <div class="insp-section-header">Incoming References (${formatCompactNumber(inLinks.length)})</div>
-        <ul class="insp-links-list insp-scrollable-content">${inLinksList}</ul>
-      </div>
-
-      <!-- Section: Outgoing References -->
-      <div class="insp-section insp-section-balanced">
-        <div class="insp-section-header">Outgoing References (${formatCompactNumber(outLinks.length)})</div>
-        <ul class="insp-links-list insp-scrollable-content">${outLinksList}</ul>
       </div>
     </div>
 

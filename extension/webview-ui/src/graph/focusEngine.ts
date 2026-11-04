@@ -61,12 +61,17 @@ export function filterGraphByFocus(
   }
 
   const filteredNodes = nodes.filter((n) => {
-    // If it's an orphan (hopDistance < 0)
-    if (n.hopDistance < 0) {
+    const isOrphan = n.hopDistance < 0 && (n.inDegree || 0) === 0 && (n.outDegree || 0) === 0;
+    if (isOrphan) {
       if (focusMode !== 'all') {
         return false;
       }
       return showOrphans;
+    }
+
+    if (n.hopDistance < 0) {
+      // Connected via inbound or outbound reference, shown in 'all' view regardless of showOrphans
+      return focusMode === 'all';
     }
 
     // Connected note: test hop horizon

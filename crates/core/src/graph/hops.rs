@@ -10,11 +10,15 @@ pub fn assign_bfs_hops(
     nodes: &mut HashMap<String, NoteNode>,
     adj: &HashMap<String, Vec<String>>,
 ) {
-    // Reset all non-excluded nodes to orphan (-1)
+    // Reset all non-excluded nodes; only nodes with zero inbound and outbound edges are Orphan
     for node in nodes.values_mut() {
         if node.status != NodeStatus::Excluded {
             node.hop_distance = -1;
-            node.status = NodeStatus::Orphan;
+            node.status = if node.in_degree + node.out_degree > 0 {
+                NodeStatus::ConnectedInactive
+            } else {
+                NodeStatus::Orphan
+            };
         }
     }
 

@@ -386,6 +386,47 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     GraphPanelManager.currentPanel?.sendNoWorkspace();
   }
 
+  let mdWatchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
+  let isBackgroundRescanning = false;
+  const triggerSilentRescan = (uri?: vscode.Uri) => {
+    if (uri) {
+      const p = uri.fsPath.replace(/\\/g, '/');
+      if (
+        p.includes('/.git/') ||
+        p.includes('/node_modules/') ||
+        p.includes('/target/') ||
+        p.includes('/dist/') ||
+        p.includes('/.gemini/')
+      ) {
+        return;
+      }
+    }
+    if (mdWatchDebounceTimer) {
+      clearTimeout(mdWatchDebounceTimer);
+    }
+    mdWatchDebounceTimer = setTimeout(async () => {
+      if (isBackgroundRescanning || !ipcClient) {
+        return;
+      }
+      isBackgroundRescanning = true;
+      try {
+        GraphPanelManager.setCachedIssuesReport(null);
+        const scan = await ipcClient.sendRequest<ScanResultPayload>('workspace/scan');
+        await onScanResultUpdated(scan);
+      } catch (err: any) {
+        outputChannel.appendLine(`[EXTENSION] Background file-watch rescan warning: ${err.message}`);
+      } finally {
+        isBackgroundRescanning = false;
+      }
+    }, 1200);
+  };
+
+  const mdWatcher = vscode.workspace.createFileSystemWatcher('**/*.md');
+  mdWatcher.onDidChange(triggerSilentRescan);
+  mdWatcher.onDidCreate(triggerSilentRescan);
+  mdWatcher.onDidDelete(triggerSilentRescan);
+  context.subscriptions.push(mdWatcher);
+
   context.subscriptions.push(
     vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
       if (event.added.length > 0) {

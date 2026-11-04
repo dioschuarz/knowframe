@@ -1959,11 +1959,53 @@ textarea {
   border: 1px solid rgba(239, 68, 68, 0.3);
 }
 
+.tier-connected {
+  background: rgba(16, 185, 129, 0.16);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.38);
+}
+
 .insp-metrics-row {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 6px;
   margin-top: 4px;
+}
+
+.insp-metrics-row-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.val-inbound-active {
+  color: #10b981 !important;
+}
+
+.val-outbound-active {
+  color: #38bdf8 !important;
+}
+
+.insp-dir-pill,
+.insp-dir-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
+}
+
+.insp-dir-in {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+
+.insp-dir-out {
+  background: rgba(56, 189, 248, 0.15);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.35);
 }
 
 .insp-metric-col {
