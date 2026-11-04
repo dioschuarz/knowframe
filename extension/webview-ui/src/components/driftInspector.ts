@@ -17,6 +17,7 @@ export interface DriftInspectorProps {
   explanation: string;
   onOpenDoc?: (docPath: string, line?: number) => void;
   onOpenCode?: (codePath: string) => void;
+  onReviewWithAi?: (filePath: string, issue?: unknown) => void;
 }
 
 export function renderDriftInspectorHtml(props: DriftInspectorProps): string {
@@ -57,6 +58,7 @@ export function renderDriftInspectorHtml(props: DriftInspectorProps): string {
         <div class="drift-actions">
           <button class="btn-drift-action" id="btn-action-open-doc">Open Document</button>
           <button class="btn-drift-action secondary" id="btn-action-open-code">Open Code Reference</button>
+          <button class="btn-drift-action secondary" id="btn-action-review-ai" data-action="review-with-ai" data-file="${props.docPath}" title="Review and resolve technical drift with AI agent">Review with AI</button>
         </div>
       </div>
     </div>
@@ -102,5 +104,19 @@ export class DriftInspector {
     };
     openCodeLink?.addEventListener('click', handleOpenCode);
     openCodeBtn?.addEventListener('click', handleOpenCode);
+
+    const reviewAiBtn = this.container.querySelector('#btn-action-review-ai');
+    reviewAiBtn?.addEventListener('click', () => {
+      if (this.currentProps) {
+        this.currentProps.onReviewWithAi?.(this.currentProps.docPath, {
+          category: 'technical_drift',
+          file_path: this.currentProps.docPath,
+          line_number: this.currentProps.citationLine,
+          target: this.currentProps.codeTarget,
+          description: this.currentProps.explanation,
+          remediation_hint: `Update documentation citation in '${this.currentProps.docPath}' at line ${this.currentProps.citationLine} to match '${this.currentProps.codeTarget}'.`,
+        });
+      }
+    });
   }
 }

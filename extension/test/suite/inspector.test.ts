@@ -121,6 +121,31 @@ describe('InspectorDrawer Test Suite', () => {
     // Check action buttons
     assert.ok(html.includes('id="insp-btn-open-source"'), 'Should render Open source button');
     assert.ok(html.includes('id="insp-btn-fix-reference"'), 'Should render Fix reference button');
+    assert.ok(html.includes('id="insp-btn-edge-review-ai"'), 'Should render Review with AI button on broken link edge');
+    assert.ok(html.includes('Review with AI'), 'Should include Review with AI label');
+  });
+
+  it('always renders Review with AI button on unanchored reference edge inspection', () => {
+    const edge: NoteEdge = {
+      id: 'notes/07_c_suite/ctaas/foundations/context_routing.md->notes/07_c_suite/ctaas/foundations/context_routing_theory.md:56',
+      source: 'notes/07_c_suite/ctaas/foundations/context_routing.md',
+      target: 'notes/07_c_suite/ctaas/foundations/context_routing_theory.md',
+      isBroken: false,
+      linkType: 'wikilink',
+      line: 56,
+    };
+
+    const html = renderEdgeInspectionHtml({
+      edge,
+      sourceLabel: 'context_routing.md',
+    });
+
+    assert.ok(html.includes('Unanchored Reference'), 'Should display Unanchored Reference title');
+    assert.ok(html.includes('unanchored_reference'), 'Should display unanchored_reference finding type');
+    assert.ok(html.includes('id="insp-btn-open-source"'), 'Should render Open source button');
+    assert.ok(html.includes('id="insp-btn-fix-reference"'), 'Should render Edit link button');
+    assert.ok(html.includes('id="insp-btn-edge-review-ai"'), 'Should always render Review with AI button');
+    assert.ok(html.includes('Review with AI'), 'Should display Review with AI button label');
   });
 
   it('renders token economics breakdown view with budget bars and top consumers', () => {

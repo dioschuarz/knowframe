@@ -382,6 +382,13 @@ export function renderEdgeInspectionHtml(props: EdgeInspectionProps): string {
         <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><path d="M12.5 1.5a3 3 0 0 0-3.8 3.8L2 12l2 2 6.7-6.7a3 3 0 0 0 3.8-3.8l-2 2-2-2 2-2Z"/></svg>
         <span>${isUnanchored ? 'Edit link' : 'Fix reference'}</span>
       </button>
+      <button class="btn-secondary insp-action-btn insp-btn-review-ai insp-btn-mark-reviewed insp-btn-span-2" id="insp-btn-edge-review-ai" title="Review and resolve with AI agent">
+        <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M7.5 1.5L9 5l3.5 1.5L9 8l-1.5 3.5L6 8 2.5 6.5 6 5z" fill="currentColor" fill-opacity="0.3"/>
+          <path d="M12.5 10.5l.75 1.75 1.75.75-1.75.75-.75 1.75-.75-1.75-1.75-.75 1.75-.75z" fill="currentColor"/>
+        </svg>
+        <span>Review with AI</span>
+      </button>
     </div>
   `;
 }
@@ -636,6 +643,11 @@ export function renderInspectorDrawer(
       const srcPath = typeof edge.source === 'object'
         ? (edge.source as any).filePath || (edge.source as any).id
         : edge.source;
+      const tgtPath = typeof edge.target === 'object'
+        ? (edge.target as any).filePath || (edge.target as any).id
+        : edge.target;
+      const isUnanchored = !edge.isBroken && !edge.anchor && !edge.target_fragment;
+
       content.querySelector('#insp-btn-open-source')?.addEventListener('click', (e) => {
         e.stopPropagation();
         callbacks.onOpenSource?.(srcPath, edge.line ?? undefined);
@@ -643,6 +655,32 @@ export function renderInspectorDrawer(
       content.querySelector('#insp-btn-fix-reference')?.addEventListener('click', (e) => {
         e.stopPropagation();
         callbacks.onFixReference?.(edge);
+      });
+      content.querySelector('#insp-btn-edge-review-ai')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const edgeIssue: KnowledgeIssue = {
+          id: `edge:${srcPath}:${tgtPath}:${edge.line || 0}`,
+          pillar: isUnanchored ? 'structure' : 'integrity',
+          category: isUnanchored ? 'unanchored_reference' : (edge.resolutionStatus || 'broken_link'),
+          file_path: srcPath,
+          line_number: edge.line ?? null,
+          target: tgtPath + (edge.anchor ? `#${edge.anchor}` : ''),
+          deduction_points: isUnanchored ? 2 : 5,
+          weight: 1.0,
+          description: isUnanchored
+            ? `The link in '${srcPath}' on line ${edge.line || 1} points to '${tgtPath}' without specifying a section heading anchor (#fragment).`
+            : `The link in '${srcPath}' on line ${edge.line || 1} points to '${tgtPath}' which does not resolve to an existing note in this workspace.`,
+          remediation_hint: isUnanchored
+            ? `Refine link to point directly to a specific section heading in '${tgtPath}' (e.g. [[${tgtPath}#section]]).`
+            : `Update reference in '${srcPath}' to an existing note or create '${tgtPath}'.`,
+          is_legacy: false,
+          is_excluded: false,
+        };
+        if (callbacks.onReviewWithAi) {
+          callbacks.onReviewWithAi(srcPath, edgeIssue);
+        } else {
+          callbacks.onMarkReviewed?.(srcPath);
+        }
       });
 
       open();

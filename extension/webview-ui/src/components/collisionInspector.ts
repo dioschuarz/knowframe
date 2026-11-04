@@ -20,6 +20,7 @@ export interface CollisionInspectorProps {
   canonicalEvidence?: string[];
   onProposeCanonical?: (noteId: string) => void;
   onOpenNote?: (noteId: string) => void;
+  onReviewWithAi?: (filePath: string, issue?: unknown) => void;
 }
 
 export function renderCollisionInspectorHtml(props: CollisionInspectorProps): string {
@@ -82,6 +83,9 @@ export function renderCollisionInspectorHtml(props: CollisionInspectorProps): st
             <button class="btn-canonical-propose" id="btn-propose-canonical" data-candidate="${canonicalCandidate}">
               Propose as Canonical
             </button>
+            <button class="btn-secondary" id="btn-collision-review-ai" data-action="review-with-ai" data-file="${props.sourceNote}" title="Review and resolve semantic collision with AI agent">
+              Review with AI
+            </button>
           </div>
         </div>
       </div>
@@ -129,6 +133,21 @@ export class CollisionInspector {
         const candidate = this.currentProps?.canonicalCandidate || this.currentProps?.targetNote;
         if (candidate) {
           this.currentProps?.onProposeCanonical?.(candidate);
+        }
+      });
+    }
+
+    const reviewAiBtn = this.container.querySelector('#btn-collision-review-ai');
+    if (reviewAiBtn) {
+      reviewAiBtn.addEventListener('click', () => {
+        if (this.currentProps) {
+          this.currentProps.onReviewWithAi?.(this.currentProps.sourceNote, {
+            category: 'semantic_collision',
+            file_path: this.currentProps.sourceNote,
+            target: this.currentProps.targetNote,
+            description: `Semantic collision (${Math.round(this.currentProps.compositeSimilarity * 100)}% ${this.currentProps.classification}) between '${this.currentProps.sourceNote}' and '${this.currentProps.targetNote}'.`,
+            remediation_hint: `Consolidate overlapping concepts into canonical candidate '${this.currentProps.canonicalCandidate || this.currentProps.targetNote}'.`,
+          });
         }
       });
     }

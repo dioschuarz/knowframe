@@ -1334,24 +1334,8 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
         primaryActionBtn = '';
       }
 
-      const isActionableForAi = Boolean(
-        f.target ||
-        f.remediation_hint ||
-        isBrokenRef ||
-        isHarnessDrift ||
-        isSecondary ||
-        catLower.includes('drift') ||
-        catLower.includes('link') ||
-        catLower.includes('anchor') ||
-        catLower.includes('stale') ||
-        catLower.includes('freshness') ||
-        catLower.includes('orphan') ||
-        catLower.includes('unanchored') ||
-        catLower.includes('review')
-      );
-
       const hasReviewWithAiInPrimary = primaryActionBtn.includes('Review with AI') || primaryActionBtn.includes('btn-mark-reviewed');
-      const reviewWithAiBtn = (!hasReviewWithAiInPrimary && isActionableForAi)
+      const reviewWithAiBtn = !hasReviewWithAiInPrimary
         ? `
           <button type="button"
                   class="btn ${primaryActionBtn ? 'btn-secondary' : 'btn-primary'} btn-finding-action btn-finding-review-ai"

@@ -678,7 +678,7 @@ suite('EvolutionTab Unit Test Suite (T053)', () => {
     assert.ok(!html.includes('(Fix Reference)'), 'Must not have (Fix Reference)');
   });
 
-  test('renders ONLY Open File button when finding has no automated action, avoiding fake duplicate button', () => {
+  test('renders Review with AI and Open File buttons when finding has no automated plan action, avoiding fake duplicate button', () => {
     const findingsWithoutAction = [
       {
         file_path: 'notes/simple_doc.md',
@@ -697,10 +697,9 @@ suite('EvolutionTab Unit Test Suite (T053)', () => {
     assert.ok(!html.includes('btn-generate-plan'), 'Must not render plan button');
     assert.ok(!html.includes('btn-generate-multi-plan'), 'Must not render multi-plan button');
     assert.ok(!html.includes('Read & Apply'), 'Must not render fake Read & Apply button');
+    assert.ok(html.includes('btn-finding-review-ai'), 'Must always render Review with AI button');
+    assert.ok(html.includes('Review with AI'), 'Must display Review with AI label');
     assert.ok(html.includes('btn-finding-open-file'), 'Must render Open File button');
-
-    // Open File button must have btn-primary when it is the sole button
-    assert.ok(html.includes('btn btn-primary btn-finding-open-file'), 'Sole Open File button must use primary styling');
   });
 
   test('renders finding tags on line 1 and file location on a new line (separate lines) inside finding header', () => {

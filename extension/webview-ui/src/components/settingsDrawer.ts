@@ -1036,7 +1036,10 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
                     <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" style="flex-shrink: 0; margin-top: 2px;"><path d="M8 2l6 11H2L8 2zM8 6v3M8 11h.01"/></svg>
                     <span>Secondary Routing Layer: <code style="word-break: break-all; overflow-wrap: anywhere; white-space: normal;">${sec.file_path}</code></span>
                   </span>
-                  <button class="btn-tiny btn-gov-eliminate-secondary" data-target="${sec.file_path}" style="padding: 4px 8px; font-size: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; border-radius: 4px; cursor: pointer; white-space: normal; word-break: break-all; overflow-wrap: anywhere; text-align: left; max-width: 100%; line-height: 1.35; display: inline-block; box-sizing: border-box;">Safely Remove ${sec.file_path}</button>
+                  <div style="display: flex; gap: 6px; flex-wrap: wrap;">
+                    <button class="btn-tiny btn-gov-eliminate-secondary" data-target="${sec.file_path}" style="padding: 4px 8px; font-size: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; border-radius: 4px; cursor: pointer; white-space: normal; word-break: break-all; overflow-wrap: anywhere; text-align: left; max-width: 100%; line-height: 1.35; display: inline-block; box-sizing: border-box;">Safely Remove ${sec.file_path}</button>
+                    <button type="button" class="btn-tiny btn-secondary diag-mark-reviewed-btn" data-action="review-with-ai" data-file="${sec.file_path}" data-doc-id="${sec.file_path}" data-issue="${encodeURIComponent(JSON.stringify({ category: 'secondary_routing_layer', file_path: sec.file_path, description: sec.description, remediation_hint: sec.recommendation_hint }))}" title="Review and resolve with AI agent">Review with AI</button>
+                  </div>
                 </div>
                 <div class="secondary-layer-alert-desc" style="word-break: break-word; overflow-wrap: anywhere; white-space: normal; min-width: 0;">
                   ${sec.description} (${sec.outgoing_routes_count} outgoing routes, +${sec.intermediate_hops} hops, -${sec.penalty_points} penalty points).
@@ -1823,11 +1826,14 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               <div class="directory-signals-list" style="display: flex; flex-direction: column; gap: 8px;">
                 ${props.directoryMetrics.organizational_signals.map((sig) => `
                   <div class="directory-signal-item" style="padding: 8px 12px; border-radius: 4px; background: var(--vscode-editor-inactiveSelectionBackground); border: 1px solid var(--vscode-widget-border);">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px;">
+                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; gap: 6px; flex-wrap: wrap;">
                       <span class="signal-badge" style="font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; background: rgba(245, 158, 11, 0.2); color: #f59e0b;">
                         ${sig.signal_type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
                       </span>
-                      ${sig.target_directory ? `<code style="font-size: 11px;">${sig.target_directory}</code>` : ''}
+                      <div style="display: flex; align-items: center; gap: 6px;">
+                        ${sig.target_directory ? `<code style="font-size: 11px;">${sig.target_directory}</code>` : ''}
+                        <button type="button" class="btn-tiny btn-secondary diag-mark-reviewed-btn" data-action="review-with-ai" data-file="${sig.target_directory || primaryHub}" data-doc-id="${sig.target_directory || primaryHub}" data-issue="${encodeURIComponent(JSON.stringify({ category: sig.signal_type, file_path: sig.target_directory || primaryHub, description: sig.message, remediation_hint: sig.cost_evidence }))}" title="Review and resolve organizational signal with AI agent">Review with AI</button>
+                      </div>
                     </div>
                     <div style="font-size: 12px; margin-bottom: 2px;">${sig.message}</div>
                     <div style="font-size: 11px; color: var(--vscode-descriptionForeground);"><code>${sig.cost_evidence}</code></div>
