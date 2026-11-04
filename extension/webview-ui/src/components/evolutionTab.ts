@@ -21,15 +21,8 @@ import type {
 } from '../../../src/types/evolution.ts';
 import { formatCompactNumber } from '../utils/numberFormat.ts';
 import { renderInfoBubbleHtml } from './infoBubble.ts';
-
-export function isSameFilePath(pathA?: string, pathB?: string): boolean {
-  if (!pathA || !pathB) return false;
-  if (pathA === pathB) return true;
-  const cleanA = pathA.includes('\\') ? pathA.replace(/\\/g, '/') : pathA;
-  const cleanB = pathB.includes('\\') ? pathB.replace(/\\/g, '/') : pathB;
-  if (cleanA === cleanB) return true;
-  return cleanA.endsWith('/' + cleanB) || cleanB.endsWith('/' + cleanA);
-}
+import { isSameFilePath } from '../utils/pathUtils.ts';
+export { isSameFilePath };
 
 export interface EvolutionTabProps {
   signatures: StructuralProblemSignature[];

@@ -10,6 +10,7 @@ import { renderSettingsDrawer, SettingsDrawerController, type SettingsTab } from
 import { filterNodesByQuery, SearchMatchOptions } from './graph/searchMatcher';
 import { filterGraphByFocus } from './graph/focusEngine';
 import { renderTransformationPlanModalHtml } from './components/transformationPlanModal';
+import { isSameFilePath } from './utils/pathUtils';
 import type { KnowledgeIssue } from '../../src/types/admission';
 import {
   NoteNode,
@@ -305,23 +306,15 @@ let isPhysicsWarmedUp = false;
 let isScanCycleComplete = false;
 
 function getIssuesForNode(node: NoteNode): KnowledgeIssue[] {
-  const nPath = (node.filePath || '').toLowerCase().replace(/\\/g, '/');
-  const nId = (node.id || '').toLowerCase().replace(/\\/g, '/');
-  const nLabel = (node.label || '').toLowerCase();
-
   const issues: KnowledgeIssue[] = [];
   const seenKeys = new Set<string>();
 
   if (latestIssues && latestIssues.length > 0) {
     for (const issue of latestIssues) {
-      const fPath = (issue.file_path || '').toLowerCase().replace(/\\/g, '/');
-      if (!fPath) continue;
+      if (!issue.file_path) continue;
       const isMatch =
-        fPath === nPath ||
-        fPath === nId ||
-        (nPath && (fPath.endsWith(nPath) || nPath.endsWith(fPath))) ||
-        (nId && (fPath.endsWith(nId) || nId.endsWith(fPath))) ||
-        (nLabel && fPath.split('/').pop()?.replace(/\.md$/, '') === nLabel);
+        isSameFilePath(issue.file_path, node.filePath) ||
+        (Boolean(node.id) && isSameFilePath(issue.file_path, node.id));
 
       if (isMatch) {
         issues.push(issue);
@@ -338,12 +331,10 @@ function getIssuesForNode(node: NoteNode): KnowledgeIssue[] {
 
   // Fallback ONLY in purely offline / mock environments where no report is available:
   for (const edge of edges) {
-    const src = (typeof edge.source === 'object' ? (edge.source as any).id : edge.source || '').toLowerCase().replace(/\\/g, '/');
+    const src = typeof edge.source === 'object' ? (edge.source as any).id : edge.source || '';
     const isEdgeMatch =
-      src === nId ||
-      src === nPath ||
-      (nPath && (src.endsWith(nPath) || nPath.endsWith(src))) ||
-      (nId && (src.endsWith(nId) || nId.endsWith(src)));
+      isSameFilePath(src, node.filePath) ||
+      (Boolean(node.id) && isSameFilePath(src, node.id));
 
     if (isEdgeMatch && edge.isBroken) {
       const tgt = edge.target || '';
@@ -419,10 +410,10 @@ function inspectNode(node: NoteNode): void {
   for (const edge of edges) {
     const srcId = typeof edge.source === 'object' ? (edge.source as any).id : edge.source;
     const tgtId = typeof edge.target === 'object' ? (edge.target as any).id : edge.target;
-    if (tgtId === node.id || tgtId === node.label) {
+    if (tgtId === node.id || isSameFilePath(tgtId, node.filePath || node.id)) {
       inLinks.push(srcId);
     }
-    if (srcId === node.id || srcId === node.label) {
+    if (srcId === node.id || isSameFilePath(srcId, node.filePath || node.id)) {
       outLinks.push(tgtId);
     }
   }

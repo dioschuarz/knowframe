@@ -12,6 +12,7 @@
 
 import type { ClusterColorGroup, NoteNode, TokenSummary } from '../../../src/types/graph.ts';
 import type { KnowledgeIssue, KnowledgeIssuesReport } from '../../../src/types/admission.ts';
+import { isSameFilePath } from '../utils/pathUtils.ts';
 import type {
   HarnessEntryPoint,
   AIOrientedCapabilityMatrix,
@@ -1242,7 +1243,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         for (const s of props.structuralSignatures) {
           const docPath = s.documentPath || (s as any).document_path;
           const problemType = s.problemType || (s as any).problem_type || 'god_document';
-          const already = allIssues.some((i) => (i.file_path === docPath || (i.file_path && docPath && (i.file_path.endsWith(docPath) || docPath.endsWith(i.file_path)))) && i.category === problemType);
+          const already = allIssues.some((i) => isSameFilePath(i.file_path, docPath) && i.category === problemType);
           if (!already) {
             const pillar = (problemType === 'isolated_silo' || problemType === 'implicit_router') ? 'discoverability' : 'structure';
             allIssues.push({
