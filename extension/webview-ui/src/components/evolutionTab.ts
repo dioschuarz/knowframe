@@ -207,25 +207,31 @@ export function inferFindingKos(f: any): string {
     return 'knowledge_drift';
   }
 
-  // 3. Classification (Subject partitioning, concept fragmentation, unclassified notes)
+  // 3. Classification (Subject partitioning, concept fragmentation, unclassified notes, overconcentration)
   if (
     cat.includes('collision_potentialfragmentation') ||
     desc.includes('potentialfragmentation') ||
+    cat.includes('document_overconcentration') ||
+    cat.includes('documentoverconcentration') ||
     cat.includes('classification') ||
     desc.includes('classification') ||
+    desc.includes('overconcentration') ||
     desc.includes('partition') ||
     desc.includes('fragmented concept')
   ) {
     return 'classification';
   }
 
-  // 4. Taxonomy (Hierarchy depth, high hop distance, specialization, acyclic subsumption)
+  // 4. Taxonomy (Hierarchy depth, high hop distance, specialization, acyclic subsumption, excessive directory depth)
   if (
     cat.includes('high_hop') ||
+    cat.includes('excessive_depth') ||
+    cat.includes('excessivedepth') ||
     cat.includes('collision_potentialspecialization') ||
     desc.includes('potentialspecialization') ||
     cat.includes('taxonomy') ||
     desc.includes('taxonomy') ||
+    desc.includes('nesting depth') ||
     desc.includes('hops away') ||
     desc.includes('hop distance') ||
     desc.includes('acyclic') ||
@@ -234,7 +240,7 @@ export function inferFindingKos(f: any): string {
     return 'taxonomy';
   }
 
-  // 5. Information Architecture (Wayfinding, secondary routing layers, scent navigation, summaries)
+  // 5. Information Architecture (Wayfinding, secondary routing layers, scent navigation, summaries, navigational coupling)
   if (
     cat.includes('secondaryroutinglayer') ||
     cat.includes('secondary_routing_layer') ||
@@ -242,12 +248,15 @@ export function inferFindingKos(f: any): string {
     cat.includes('unfragmented_central_hub') ||
     cat.includes('harnessdrift') ||
     cat.includes('harness_drift') ||
+    cat.includes('high_navigational_coupling') ||
+    cat.includes('highnavigationalcoupling') ||
     cat.includes('collision_potentialsummary') ||
     desc.includes('potentialsummary') ||
     cat.includes('harness') ||
     cat.includes('wayfinding') ||
     desc.includes('secondary routing') ||
     desc.includes('harness route') ||
+    desc.includes('navigational coupling') ||
     desc.includes('wayfinding') ||
     desc.includes('unfragmented central hub')
   ) {

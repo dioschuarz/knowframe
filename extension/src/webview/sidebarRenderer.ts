@@ -831,7 +831,11 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
       }
 
       updateBar('fill-integrity', 'val-integrity', health.integrity != null ? health.integrity : health.integrity_score);
-      updateBar('fill-structure', 'val-structure', health.structure != null ? health.structure : (health.structure_score != null ? health.structure_score : 100));
+      let structVal = health.structure != null ? health.structure : (health.structure_score != null ? health.structure_score : 100);
+      if (structVal >= 100 && health.structure_count != null && health.structure_count > 0) {
+        structVal = Math.max(0, 100 - health.structure_count * 15);
+      }
+      updateBar('fill-structure', 'val-structure', structVal);
       updateBar('fill-consistency', 'val-consistency', health.consistency != null ? health.consistency : health.consistency_score);
       updateBar('fill-discoverability', 'val-discoverability', health.discoverability != null ? health.discoverability : health.discoverability_score);
       const traceVal = health.traceability != null
@@ -1060,6 +1064,14 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
       } else if (msg.type === 'issuesUpdate') {
         const report = msg.payload;
         if (report) {
+          if (report.structure_score != null || report.integrity_score != null) {
+            partialUpdateHealth(report);
+          } else if (report.structure_count != null && report.structure_count > 0) {
+            const curEl = document.getElementById('val-structure');
+            if (!curEl || curEl.textContent === '100%') {
+              updateBar('fill-structure', 'val-structure', Math.max(0, 100 - report.structure_count * 15));
+            }
+          }
           const activeCount = report.active_issues_count != null
             ? report.active_issues_count
             : (report.new_regressions != null

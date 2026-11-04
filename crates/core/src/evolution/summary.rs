@@ -135,7 +135,19 @@ pub fn compute_manager_summary(
         ((1.0 - ratio) * 100.0).round().clamp(0.0, 100.0) as u32
     };
 
-    let structure_score = 100u32;
+    let structure_findings: Vec<_> = crate::quality::structure::detect_structure_debt(topology)
+        .into_iter()
+        .filter(|sf| {
+            if sf.debt_type == crate::quality::structure::StructureDebtType::UnanchoredReference {
+                !baseline.as_ref().map(|b| b.total_debt > 0).unwrap_or(false)
+            } else {
+                true
+            }
+        })
+        .collect();
+    let structure_score = crate::quality::structure::calculate_structure_score(&structure_findings, topology)
+        .round()
+        .clamp(0.0, 100.0) as u32;
     let consistency_score = 100u32;
     let discoverability_score = if total_documents == 0 {
         100

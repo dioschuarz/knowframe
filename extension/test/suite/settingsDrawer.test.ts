@@ -529,11 +529,27 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(html.includes('badge-kos-metadata_application_profiles'), 'Must render KOS badge for god document');
   });
 
-  test('renders Structure tab with 4-stat metrics grid, central hub, and top notes (T028c)', () => {
+  test('renders Structure tab with 4-stat metrics grid, central hub, and top notes without duplicating findings or organizational signals (T028c)', () => {
     const sampleNodes = [
       { id: 'a.md', label: 'Alpha', filePath: 'a.md', tags: [], color: '#3B82F6', status: 'active' as const, tokens: 100, hopDistance: 0, inDegree: 4, outDegree: 2, betweenness: 0.5, brokenLinks: 0 },
       { id: 'b.md', label: 'Beta', filePath: 'b.md', tags: [], color: '#3B82F6', status: 'active' as const, tokens: 100, hopDistance: -1, inDegree: 0, outDegree: 0, betweenness: 0, brokenLinks: 0 },
     ];
+
+    const sampleDirMetrics = {
+      max_directory_depth: 4,
+      average_directory_depth: 2.3,
+      concentration_entropy: 0.85,
+      domain_mixing_score: 0.2,
+      cross_folder_coupling: 0.42,
+      organizational_signals: [
+        {
+          target_directory: 'notes/deep',
+          signal_type: 'excessive_depth' as const,
+          message: 'Excessive directory nesting depth (6) exceeds threshold (5)',
+          cost_evidence: 'Directory depth 6 > threshold 5',
+        },
+      ],
+    };
 
     const html = renderSettingsDrawerHtml({
       ...sampleProps,
@@ -542,6 +558,7 @@ suite('SettingsDrawer Test Suite', () => {
       connectedNotes: 1,
       orphanNotes: 1,
       nodes: sampleNodes,
+      directoryMetrics: sampleDirMetrics,
     });
 
     assert.ok(html.includes('Knowledge Graph Structure'), 'Must render title');
@@ -551,7 +568,21 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(html.includes('Central Hub Note'), 'Must render central hub card');
     assert.ok(html.includes('Top Connected Notes'), 'Must render Top Connected Notes section');
     assert.ok(html.includes('Alpha'), 'Must render top connected note');
-    assert.ok(html.includes('Beta'), 'Must render isolated document');
+    assert.ok(html.includes('Physical Directory & Knowledge Organization'), 'Must render Physical Directory metrics section');
+    assert.ok(html.includes('Max Depth'), 'Must render Max Depth metric');
+    assert.ok(html.includes('Entropy'), 'Must render Entropy metric');
+    assert.ok(!html.includes('Organizational Signals'), 'Must NOT render Organizational Signals findings list in Structure tab');
+    assert.ok(!html.includes('Isolated Documents ('), 'Must NOT render duplicate Isolated Documents findings list in Structure tab');
+
+    // Verify organizational signals are consolidated into Health tab under Structure pillar
+    const healthHtml = renderSettingsDrawerHtml({
+      ...sampleProps,
+      activeTab: 'health',
+      directoryMetrics: sampleDirMetrics,
+    });
+    assert.ok(healthHtml.includes('notes/deep'), 'Organizational signal target directory must be consolidated in Health tab');
+    assert.ok(healthHtml.includes('excessive_depth'), 'Organizational signal category must be rendered in Health tab');
+    assert.ok(healthHtml.includes('badge-kos-taxonomy'), 'Excessive depth signal must map to Taxonomy KOS badge in Health tab');
   });
 
   test('gracefully routes legacy advanced tab alias to git_harness', () => {

@@ -1267,6 +1267,31 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
         }
       }
 
+      // Synthesize directory organizational signals into Health -> Structure
+      if (props.directoryMetrics && props.directoryMetrics.organizational_signals && props.directoryMetrics.organizational_signals.length > 0) {
+        for (const sig of props.directoryMetrics.organizational_signals) {
+          const targetDir = sig.target_directory || props.primaryHub || 'AGENTS.md';
+          const cat = sig.signal_type || 'organizational_signal';
+          const already = allIssues.some((i) => i.category === cat && isSameFilePath(i.file_path, targetDir));
+          if (!already) {
+            allIssues.push({
+              id: `org:${cat}:${targetDir}`,
+              pillar: 'structure',
+              category: cat,
+              file_path: targetDir,
+              line_number: null,
+              target: null,
+              deduction_points: 5.0,
+              weight: 1.0,
+              description: `${sig.message} (${sig.cost_evidence})`,
+              remediation_hint: 'Rebalance directory depth or cross-folder navigation structure.',
+              is_legacy: false,
+              is_excluded: false,
+            });
+          }
+        }
+      }
+
       // Determine active vs legacy counts
       const activeCount = report?.active_issues_count !== undefined
         ? Math.max(report.active_issues_count, allIssues.filter((i) => !i.is_legacy).length)
@@ -1717,7 +1742,6 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
       const topConnected = [...nodes]
         .sort((a, b) => ((b.inDegree || 0) + (b.outDegree || 0)) - ((a.inDegree || 0) + (a.outDegree || 0)))
         .slice(0, 8);
-      const isolatedDocs = nodes.filter((n) => ((n.inDegree || 0) + (n.outDegree || 0)) === 0 || n.hopDistance === -1);
 
       const topConnectedHtml = topConnected.length > 0
         ? topConnected.map((n) => `
@@ -1728,19 +1752,10 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
           `).join('')
         : '<div class="settings-empty-msg">No connected documents in graph</div>';
 
-      const isolatedHtml = isolatedDocs.length > 0
-        ? isolatedDocs.map((n) => `
-            <div class="structure-note-item" data-file="${n.filePath}" title="Click to open ${n.filePath}">
-              <span class="structure-note-title">${n.label}</span>
-              <span class="structure-note-path">${n.filePath}</span>
-            </div>
-          `).join('')
-        : '<div class="settings-empty-msg">No isolated documents detected</div>';
-
       tabContentHtml = `
         <div class="settings-section">
           <div class="settings-sec-title">Knowledge Graph Structure</div>
-          <p class="settings-desc">Document topology, reference density, designated hub anchor, and isolated document detection.</p>
+          <p class="settings-desc">Document topology, reference density, and designated hub anchor.</p>
 
           <div class="settings-diag-grid">
             <div class="diag-item">
@@ -1785,18 +1800,10 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
           </div>
         </div>
 
-        <div class="settings-section">
-          <div class="settings-sec-title">Isolated Documents (${isolatedDocs.length})</div>
-          <p class="settings-desc">Documents with zero active graph references. Neutral status: may be standalone drafts or entry points.</p>
-          <div class="structure-notes-list">
-            ${isolatedHtml}
-          </div>
-        </div>
-
         ${props.directoryMetrics ? `
         <div class="settings-section">
           <div class="settings-sec-title">Physical Directory & Knowledge Organization</div>
-          <p class="settings-desc">Non-prescriptive directory depth, Shannon concentration entropy, cross-folder coupling, and organizational signals.</p>
+          <p class="settings-desc">Non-prescriptive directory depth, Shannon concentration entropy, and cross-folder coupling.</p>
 
           <div class="settings-diag-grid">
             <div class="diag-item">
@@ -1815,34 +1822,6 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               <span class="diag-lbl">Cross Coupling</span>
               <span class="diag-val">${Math.round(props.directoryMetrics.cross_folder_coupling * 100)}%</span>
             </div>
-          </div>
-
-          <div style="margin-top: 12px;">
-            <div style="font-size: 11px; font-weight: 600; color: var(--vscode-descriptionForeground); margin-bottom: 6px;">
-              Organizational Signals (${props.directoryMetrics.organizational_signals.length})
-            </div>
-            ${props.directoryMetrics.organizational_signals.length > 0
-              ? `
-              <div class="directory-signals-list" style="display: flex; flex-direction: column; gap: 8px;">
-                ${props.directoryMetrics.organizational_signals.map((sig) => `
-                  <div class="directory-signal-item" style="padding: 8px 12px; border-radius: 4px; background: var(--vscode-editor-inactiveSelectionBackground); border: 1px solid var(--vscode-widget-border);">
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 4px; gap: 6px; flex-wrap: wrap;">
-                      <span class="signal-badge" style="font-size: 10px; font-weight: 700; padding: 2px 6px; border-radius: 3px; background: rgba(245, 158, 11, 0.2); color: #f59e0b;">
-                        ${sig.signal_type.replace(/_/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase())}
-                      </span>
-                      <div style="display: flex; align-items: center; gap: 6px;">
-                        ${sig.target_directory ? `<code style="font-size: 11px;">${sig.target_directory}</code>` : ''}
-                        <button type="button" class="btn-tiny btn-secondary diag-mark-reviewed-btn" data-action="review-with-ai" data-file="${sig.target_directory || primaryHub}" data-doc-id="${sig.target_directory || primaryHub}" data-issue="${encodeURIComponent(JSON.stringify({ category: sig.signal_type, file_path: sig.target_directory || primaryHub, description: sig.message, remediation_hint: sig.cost_evidence }))}" title="Review and resolve organizational signal with AI agent">Review with AI</button>
-                      </div>
-                    </div>
-                    <div style="font-size: 12px; margin-bottom: 2px;">${sig.message}</div>
-                    <div style="font-size: 11px; color: var(--vscode-descriptionForeground);"><code>${sig.cost_evidence}</code></div>
-                  </div>
-                `).join('')}
-              </div>
-              `
-              : '<div class="settings-empty-msg">No organizational degradation signals detected</div>'
-            }
           </div>
         </div>
         ` : ''}

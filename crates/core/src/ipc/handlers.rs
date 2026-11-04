@@ -654,6 +654,12 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 req.id,
                 json!({
                     "overall_score": quality.overall_score,
+                    "integrity_score": quality.integrity_score,
+                    "structure_score": quality.structure_score,
+                    "consistency_score": quality.consistency_score,
+                    "discoverability_score": quality.discoverability_score,
+                    "freshness_score": quality.freshness_score,
+                    "traceability_score": quality.traceability_score,
                     "total_issues": total_issues,
                     "active_issues_count": active_issues_count,
                     "legacy_debt_count": legacy_debt_count,

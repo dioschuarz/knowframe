@@ -133,12 +133,11 @@ pub fn detect_structure_debt(topology: &GraphTopology) -> Vec<StructureDebtFindi
         }
     }
 
-    // 6. UnanchoredReference: Link targets document without specifying an anchor fragment when target has addressable sections
+    // 6. UnanchoredReference: Link targets an oversized document (>50k tokens) without specifying an anchor fragment when target has addressable sections
     for edge in &topology.edges {
         if !edge.is_broken && edge.anchor.is_none() && edge.target_fragment.is_none() {
             if let Some(target_node) = topology.nodes.get(&edge.target) {
-                // If the target document has 2 or more section fragments, an anchor should direct the reader
-                if target_node.fragments.len() > 1 {
+                if target_node.tokens > 50_000 && target_node.fragments.len() > 1 {
                     findings.push(StructureDebtFinding {
                         debt_type: StructureDebtType::UnanchoredReference,
                         document_path: edge.source.clone(),

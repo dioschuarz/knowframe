@@ -131,10 +131,17 @@ impl DirectoryMetricsAnalyzer {
                 cross_folder_coupling = cross_edges as f32 / total_edges as f32;
             }
 
-            // Check high navigational coupling per folder
-            for (dir, total_out) in dir_outgoing {
-                if total_out >= 3 {
-                    let cross_out = dir_cross_outgoing.get(&dir).copied().unwrap_or(0);
+            // Check high navigational coupling when repo-level cross-folder coupling exceeds threshold
+            if cross_folder_coupling > CROSS_FOLDER_COUPLING_THRESHOLD {
+                if let Some((dir, &total_out)) = dir_outgoing
+                    .iter()
+                    .filter(|(_, &out)| out >= 3)
+                    .max_by_key(|(d, &out)| {
+                        let cross = dir_cross_outgoing.get(*d).copied().unwrap_or(0);
+                        (cross, out, d.as_str())
+                    })
+                {
+                    let cross_out = dir_cross_outgoing.get(dir).copied().unwrap_or(0);
                     let ratio = cross_out as f32 / total_out as f32;
                     if ratio > CROSS_FOLDER_COUPLING_THRESHOLD {
                         signals.push(OrganizationalSignal {
@@ -170,9 +177,13 @@ impl DirectoryMetricsAnalyzer {
             }
         }
 
-        // 4. Check excessive depth
-        for (dir, &depth) in &dir_depths {
-            if depth > MAX_NAVIGATION_DEPTH_THRESHOLD {
+        // 4. Check excessive depth (report deepest directory when max depth exceeds threshold)
+        if max_directory_depth > MAX_NAVIGATION_DEPTH_THRESHOLD {
+            if let Some((dir, &depth)) = dir_depths
+                .iter()
+                .filter(|(_, &d)| d > MAX_NAVIGATION_DEPTH_THRESHOLD)
+                .max_by_key(|(dir, &d)| (d, dir.as_str()))
+            {
                 signals.push(OrganizationalSignal {
                     target_directory: dir.clone(),
                     signal_type: OrganizationalSignalType::ExcessiveDepth,

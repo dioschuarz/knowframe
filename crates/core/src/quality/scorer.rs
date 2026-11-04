@@ -284,7 +284,11 @@ pub fn calculate_quality_score(
         };
         raw_degradation_factors.push(factor.clone());
 
-        let is_legacy = baseline.is_some() && baseline.map(|b| b.total_debt > 0).unwrap_or(false);
+        let is_legacy = if sf.debt_type == crate::quality::structure::StructureDebtType::UnanchoredReference {
+            baseline.is_some() && baseline.map(|b| b.total_debt > 0).unwrap_or(false)
+        } else {
+            false
+        };
         if !is_legacy {
             eff_structure_deductions += penalty;
             eff_degradation_factors.push(factor);
@@ -743,7 +747,7 @@ pub fn is_issue_baselined(issue: &KnowledgeIssue, baseline: &KnowledgeDebtBaseli
                     bl.source_path == issue.file_path && (bl.target_ref == target || target.starts_with(&bl.target_ref))
                 }) || baseline.total_debt > 0
             } else {
-                baseline.total_debt > 0
+                false
             }
         }
         _ => false,
