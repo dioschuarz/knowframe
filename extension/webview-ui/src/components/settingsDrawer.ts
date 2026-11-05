@@ -2927,23 +2927,46 @@ export function renderSettingsDrawer(
       });
     });
 
+    function closeAllSplitMenus(): void {
+      container.querySelectorAll<HTMLElement>('.diag-split-menu').forEach((m) => {
+        m.style.display = 'none';
+      });
+      container.querySelectorAll('.diag-split-toggle').forEach((t) => {
+        t.setAttribute('aria-expanded', 'false');
+      });
+      container.querySelectorAll('.diag-action-split-btn').forEach((p) => {
+        p.classList.remove('is-open');
+      });
+      container.querySelectorAll('.diag-issue-card, .evolution-finding-item').forEach((c) => {
+        c.classList.remove('menu-open');
+      });
+    }
+
     // Split button dropdown toggles
     container.querySelectorAll('.diag-split-toggle').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const parent = btn.closest('.diag-action-split-btn');
+        const card = btn.closest('.diag-issue-card, .evolution-finding-item');
         const menu = parent?.querySelector('.diag-split-menu') as HTMLElement | null;
         if (!menu) return;
         const isShown = menu.style.display === 'block';
-        container.querySelectorAll<HTMLElement>('.diag-split-menu').forEach((m) => {
-          m.style.display = 'none';
-        });
-        container.querySelectorAll('.diag-split-toggle').forEach((t) => {
-          t.setAttribute('aria-expanded', 'false');
-        });
+        closeAllSplitMenus();
         if (!isShown) {
           menu.style.display = 'block';
           btn.setAttribute('aria-expanded', 'true');
+          parent?.classList.add('is-open');
+          card?.classList.add('menu-open');
+
+          // Auto-flip upward if overflowing viewport bottom
+          const rect = menu.getBoundingClientRect();
+          if (rect.bottom > window.innerHeight - 10) {
+            menu.style.top = 'auto';
+            menu.style.bottom = 'calc(100% + 4px)';
+          } else {
+            menu.style.top = 'calc(100% + 4px)';
+            menu.style.bottom = 'auto';
+          }
         }
       });
     });
@@ -3198,12 +3221,7 @@ export function renderSettingsDrawer(
 
         // Dismiss split button menus if clicked outside .diag-action-split-btn
         if (!target.closest('.diag-action-split-btn')) {
-          container.querySelectorAll<HTMLElement>('.diag-split-menu').forEach((m) => {
-            m.style.display = 'none';
-          });
-          container.querySelectorAll('.diag-split-toggle').forEach((b) => {
-            b.setAttribute('aria-expanded', 'false');
-          });
+          closeAllSplitMenus();
         }
 
         const delBtn = target.closest<HTMLElement>('.rule-del-btn');
@@ -3276,24 +3294,14 @@ export function renderSettingsDrawer(
         });
       }
       if (!target || !target.closest('.diag-action-split-btn')) {
-        container.querySelectorAll<HTMLElement>('.diag-split-menu').forEach((m) => {
-          m.style.display = 'none';
-        });
-        container.querySelectorAll('.diag-split-toggle').forEach((b) => {
-          b.setAttribute('aria-expanded', 'false');
-        });
+        closeAllSplitMenus();
       }
     });
 
     // Close dropdown on Escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
-        container.querySelectorAll<HTMLElement>('.diag-split-menu').forEach((m) => {
-          m.style.display = 'none';
-        });
-        container.querySelectorAll('.diag-split-toggle').forEach((b) => {
-          b.setAttribute('aria-expanded', 'false');
-        });
+        closeAllSplitMenus();
         const menu = container.querySelector('#menu-scope-options') as HTMLElement | null;
         if (menu && menu.style.display === 'block') {
           menu.style.display = 'none';
@@ -3704,6 +3712,7 @@ export function renderSettingsDrawer(
     container.querySelectorAll('[data-action="review-with-ai"], [data-action="mark-reviewed"], .diag-mark-reviewed-btn, .btn-mark-reviewed, .btn-finding-review-ai').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
+        closeAllSplitMenus();
         const docId = btn.getAttribute('data-file') || btn.getAttribute('data-doc-id');
         const issueRaw = btn.getAttribute('data-issue');
         let issue: any = undefined;
