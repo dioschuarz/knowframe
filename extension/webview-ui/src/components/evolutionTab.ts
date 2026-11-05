@@ -1259,116 +1259,89 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
         `;
       }
 
-      // Primary Action Button (Driving the user to inspect plan preview and apply resolution)
+      // Single Action Button (Deterministic Review Split-Button vs Direct AI Button)
       const oppId = f.opportunity_id || (sig ? (sig.signatureId || sig.signature_id) : undefined);
-      let primaryActionBtn = '';
+      const isGenerating = oppId ? generatingPlanRecId === oppId : (f.recommendation_id ? generatingPlanRecId === f.recommendation_id : false);
 
-      if (oppId) {
-        const isGenerating = generatingPlanRecId === oppId;
-        primaryActionBtn = `
-          <button type="button"
-                  class="btn btn-primary btn-finding-action btn-generate-multi-plan${isGenerating ? ' is-loading' : ''}"
-                  data-action="generate-multi-plan"
-                  data-opp-id="${oppId}"
-                  title="Generate transformation plan to preview diff and apply resolution"
-                  ${isGenerating ? 'disabled' : ''}>
-            ${isGenerating
-              ? '<span class="btn-spinner"></span> Generating Transformation Plan...'
-              : '⚡ Generate Transformation Plan'}
-          </button>
-        `;
-      } else if (f.recommendation_id) {
-        const isGenerating = generatingPlanRecId === f.recommendation_id;
-        primaryActionBtn = `
-          <button type="button"
-                  class="btn btn-primary btn-finding-action btn-generate-plan${isGenerating ? ' is-loading' : ''}"
-                  data-action="generate-plan"
-                  data-rec-id="${f.recommendation_id}"
-                  title="Generate transformation plan to preview diff and apply resolution"
-                  ${isGenerating ? 'disabled' : ''}>
-            ${isGenerating
-              ? '<span class="btn-spinner"></span> Generating Transformation Plan...'
-              : '⚡ Generate Transformation Plan'}
-          </button>
-        `;
-      } else if (isBrokenRef) {
-        primaryActionBtn = `
-          <button type="button"
-                  class="btn btn-primary btn-finding-action btn-fix-broken"
-                  data-action="fix-broken"
-                  data-file="${f.file_path}"
-                  data-target="${f.target || ''}"
-                  ${f.line_number ? `data-line="${f.line_number}"` : ''}
-                  title="Select valid target note and fix reference">
-            🔗 Fix Reference
-          </button>
-        `;
-      } else if (isSecondary) {
-        primaryActionBtn = `
-          <button type="button"
-                  class="btn btn-primary btn-finding-action btn-gov-eliminate-secondary"
-                  data-target="${f.file_path}"
-                  title="Safely remove secondary routing layer">
-            ⚡ Safely Remove Secondary Route
-          </button>
-        `;
-      } else if (isHarnessDrift) {
-        primaryActionBtn = `
-          <button type="button"
-                  class="btn btn-primary btn-finding-action btn-gov-sync-harnesses"
-                  data-target="${f.file_path}"
-                  title="Review and synchronize harness routes">
-            ⚡ Review & Sync Harnesses
-          </button>
-        `;
-      } else if (
-        f.category === 'review_required' ||
-        f.category === 'document_review' ||
-        f.category === 'unreviewed' ||
-        f.obligation !== undefined ||
-        f.review_status !== undefined
-      ) {
-        primaryActionBtn = `
-          <button type="button"
-                  class="btn btn-primary btn-finding-action btn-mark-reviewed"
-                  data-action="mark-reviewed"
-                  data-doc-id="${f.file_path || f.doc_id || f.target || ''}"
-                  data-file="${f.file_path}"
-                  data-issue="${encodeURIComponent(JSON.stringify(f))}"
-                  title="Review and resolve this document with configured AI agent">
-            Review with AI
-          </button>
+      const sparklesSvg = `
+        <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:5px;">
+          <path d="M7.5 1.5L9 5l3.5 1.5L9 8l-1.5 3.5L6 8 2.5 6.5 6 5z" fill="currentColor" fill-opacity="0.3"/>
+          <path d="M12.5 10.5l.75 1.75 1.75.75-1.75.75-.75 1.75-.75-1.75-1.75-.75 1.75-.75z" fill="currentColor"/>
+        </svg>
+      `;
+
+      let actionComponentHtml = '';
+      const hasDeterministicAction = Boolean(oppId || f.recommendation_id || isBrokenRef || isSecondary || isHarnessDrift || f.category === 'review_required' || f.category === 'document_review' || f.category === 'unreviewed' || f.obligation !== undefined || f.review_status !== undefined);
+
+      if (hasDeterministicAction) {
+        let detAttrs = '';
+        let detClasses = 'btn-primary btn-finding-action diag-split-primary';
+
+        if (oppId) {
+          detClasses += ` btn-generate-multi-plan${isGenerating ? ' is-loading' : ''}`;
+          detAttrs = `data-action="generate-multi-plan" data-opp-id="${oppId}" ${isGenerating ? 'disabled' : ''}`;
+        } else if (f.recommendation_id) {
+          detClasses += ` btn-generate-plan${isGenerating ? ' is-loading' : ''}`;
+          detAttrs = `data-action="generate-plan" data-rec-id="${f.recommendation_id}" ${isGenerating ? 'disabled' : ''}`;
+        } else if (isBrokenRef) {
+          detClasses += ' btn-fix-broken';
+          detAttrs = `data-action="fix-broken" data-file="${f.file_path}" data-target="${f.target || ''}" ${f.line_number ? `data-line="${f.line_number}"` : ''}`;
+        } else if (isSecondary) {
+          detClasses += ' btn-gov-eliminate-secondary';
+          detAttrs = `data-target="${f.file_path}"`;
+        } else if (isHarnessDrift) {
+          detClasses += ' btn-gov-sync-harnesses';
+          detAttrs = `data-target="${f.file_path}"`;
+        } else {
+          detClasses += ' btn-mark-reviewed';
+          detAttrs = `data-action="mark-reviewed" data-doc-id="${f.file_path || f.doc_id || f.target || ''}" data-file="${f.file_path}" data-issue="${encodeURIComponent(JSON.stringify(f))}"`;
+        }
+
+        actionComponentHtml = `
+          <div class="diag-action-split-btn">
+            <button type="button"
+                    class="btn ${detClasses}"
+                    ${detAttrs}
+                    title="Apply deterministic algorithmic fix">
+              ${isGenerating ? '<span class="btn-spinner"></span> Generating...' : 'Review'}
+            </button>
+            <button type="button"
+                    class="btn btn-primary btn-finding-action diag-split-toggle"
+                    title="More review options"
+                    aria-haspopup="true"
+                    aria-expanded="false">
+              ▾
+            </button>
+            <div class="diag-split-menu" style="display: none;">
+              <button type="button"
+                      class="diag-split-menu-item btn-finding-review-ai"
+                      data-action="review-with-ai"
+                      data-file="${f.file_path}"
+                      data-doc-id="${f.file_path || f.doc_id || f.target || ''}"
+                      data-issue="${encodeURIComponent(JSON.stringify(f))}"
+                      title="Resolve issue with AI">
+                ${sparklesSvg}
+                <span>Review with AI</span>
+              </button>
+            </div>
+          </div>
         `;
       } else {
-        primaryActionBtn = '';
+        actionComponentHtml = `
+          <div class="diag-action-direct-btn">
+            <button type="button"
+                    class="btn btn-primary btn-finding-action btn-finding-review-ai diag-btn-sparkles"
+                    data-action="review-with-ai"
+                    data-file="${f.file_path}"
+                    data-doc-id="${f.file_path || f.doc_id || f.target || ''}"
+                    data-issue="${encodeURIComponent(JSON.stringify(f))}"
+                    title="Resolve issue with AI">
+              ${sparklesSvg}
+              <span>Review with AI</span>
+            </button>
+          </div>
+        `;
       }
-
-      const hasReviewWithAiInPrimary = primaryActionBtn.includes('Review with AI') || primaryActionBtn.includes('btn-mark-reviewed');
-      const reviewWithAiBtn = !hasReviewWithAiInPrimary
-        ? `
-          <button type="button"
-                  class="btn ${primaryActionBtn ? 'btn-secondary' : 'btn-primary'} btn-finding-action btn-finding-review-ai"
-                  data-action="review-with-ai"
-                  data-file="${f.file_path}"
-                  data-doc-id="${f.file_path || f.doc_id || f.target || ''}"
-                  data-issue="${encodeURIComponent(JSON.stringify(f))}"
-                  title="Review and resolve this specific issue with configured AI agent">
-            Review with AI
-          </button>
-        `
-        : '';
-
-      const openTargetBtn = f.target
-        ? `
-          <button type="button"
-                  class="btn btn-secondary btn-finding-action btn-finding-open-target"
-                  data-action="open-target"
-                  data-target="${f.target}"
-                  title="Open referenced target in editor (${f.target})">
-            Open Target (${f.target.split('/').pop()}) ↗
-          </button>
-        `
-        : '';
 
       const kosBadgeHtml = fKosMeta
         ? `<span class="badge-kos badge-kos-${fKosMeta.id}" title="${fKosMeta.discipline}: ${fKosMeta.description}">${fKosMeta.shortLabel}</span>`
@@ -1398,20 +1371,16 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
               ${probBadgeHtml}
               ${confHtml}
             </div>
-            <div class="finding-loc-row" style="display: flex; align-items: center; gap: 6px; flex-wrap: wrap;">
-              <div class="finding-loc" data-file="${f.file_path}" ${f.line_number ? `data-line="${f.line_number}"` : ''} title="Click to open file in editor">
-                <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; opacity: 0.7;">
-                  <path d="M9 1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5L9 1z"/>
-                  <polyline points="9 1 9 5 13 5"/>
-                </svg>
-                <span class="finding-path">${f.file_path}${lineSuffix}</span>
+            <div class="diag-issue-locations">
+              <div class="diag-loc-row">
+                <span class="diag-loc-label">Source</span>
+                <span class="diag-loc-path finding-loc" data-file="${f.file_path}" ${f.line_number ? `data-line="${f.line_number}"` : ''} title="Open source file">${f.file_path}${lineSuffix}</span>
               </div>
               ${f.target ? `
-                <span class="diag-arrow" style="opacity: 0.6; font-size: 11px;">→</span>
-                <span class="finding-target-link" data-action="open-target" data-target="${f.target}" style="cursor: pointer; text-decoration: underline; font-size: 11px; opacity: 0.85;" title="Click to open target: ${f.target}">
-                  ${f.target}
-                </span>
-              ` : ''}
+              <div class="diag-loc-row">
+                <span class="diag-loc-label">Target</span>
+                <span class="diag-loc-path finding-target-link" data-action="open-target" data-target="${f.target}" title="Open target file">${f.target}</span>
+              </div>` : ''}
             </div>
           </div>
 
@@ -1431,23 +1400,14 @@ export function renderEvolutionTabHtml(props: EvolutionTabProps): string {
           ` : ''}
 
           ${f.remediation_hint ? `
-            <div class="finding-hint">
-              💡 Suggested Resolution: ${f.remediation_hint}
+            <div class="diag-issue-resolution">
+              <span class="diag-resolution-label">Resolution</span>
+              <span class="diag-resolution-text">${f.remediation_hint}</span>
             </div>
           ` : ''}
 
           <div class="finding-actions-row">
-            ${primaryActionBtn}
-            ${reviewWithAiBtn}
-            ${openTargetBtn}
-            <button type="button"
-                    class="btn ${primaryActionBtn || reviewWithAiBtn ? 'btn-secondary' : 'btn-primary'} btn-finding-open-file"
-                    data-action="open-file"
-                    data-file="${f.file_path}"
-                    ${f.line_number ? `data-line="${f.line_number}"` : ''}
-                    title="Open file in editor">
-              Open File ↗
-            </button>
+            ${actionComponentHtml}
           </div>
         </div>
       `;

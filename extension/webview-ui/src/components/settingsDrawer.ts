@@ -1449,9 +1449,6 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
 
           const issuesHtml = pillarIssues.map((issue) => {
             const catClass = `cat-${issue.category.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
-            const targetHtml = issue.target
-              ? `<span class="diag-arrow">→</span><span class="diag-target-text diag-open-target-btn" data-target="${issue.target}" style="cursor: pointer; text-decoration: underline;" title="Click to open ${issue.target}">${issue.target}</span>`
-              : '';
             const lineStr = issue.line_number ? `:${issue.line_number}` : '';
             const isBroken = issue.category === 'broken_link' || issue.category === 'invalid_anchor' || issue.category === 'broken_fragment_anchor';
             const isSecondary =
@@ -1462,122 +1459,96 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               issue.category === 'harness_drift' ||
               issue.category === 'harnessdrift' ||
               (issue.description && (issue.description.toLowerCase().includes('harness route drift') || issue.description.toLowerCase().includes('harness drift')));
-            const isTraceability = issue.pillar?.toLowerCase() === 'traceability' || issue.pillar?.toLowerCase() === 'freshness';
-            const isFreshness = isTraceability;
-            const isConsistency = issue.pillar?.toLowerCase() === 'consistency';
-            const isStructure = issue.pillar?.toLowerCase() === 'structure';
-            const isDiscoverability = issue.pillar?.toLowerCase() === 'discoverability';
-
-            const fixBtnHtml = isBroken
-              ? `<button type="button" class="btn-tiny btn-primary diag-fix-ref-btn" data-file="${issue.file_path}" data-target="${issue.target || ''}" data-line="${issue.line_number ?? ''}">Fix Reference</button>`
-              : '';
-            const excludeBtnHtml = isBroken
-              ? `<button type="button" class="btn-tiny btn-secondary diag-exclude-path-btn" data-file="${issue.file_path}">Exclude Path</button>`
-              : '';
-            const removeSecBtnHtml = isSecondary
-              ? `<button type="button" class="btn-tiny btn-gov-eliminate-secondary" data-target="${issue.file_path}" style="padding: 4px 8px; font-size: 10px; background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.35); color: #f87171; border-radius: 4px; cursor: pointer; white-space: normal; word-break: break-all; overflow-wrap: anywhere; text-align: left; max-width: 100%; line-height: 1.35; display: inline-block; box-sizing: border-box;">Safely Remove ${issue.file_path}</button>`
-              : '';
-            const syncHarnessBtnHtml = isDrift
-              ? `<button type="button" class="btn-tiny btn-gov-sync-harnesses" data-target="${issue.file_path}" style="padding: 4px 8px; font-size: 10px; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.35); color: #c084fc; border-radius: 4px; cursor: pointer; white-space: normal; word-break: break-word; overflow-wrap: anywhere; text-align: left; max-width: 100%; line-height: 1.35; display: inline-block; box-sizing: border-box;">⚡ Review & Sync Harnesses</button>`
-              : '';
             const isReview =
               issue.category === 'review_required' ||
               issue.category === 'document_review' ||
               issue.category === 'unreviewed' ||
               (issue as any).obligation !== undefined ||
               (issue as any).review_status !== undefined;
-            const reviewBtnHtml = `
-              <button type="button"
-                      class="btn-tiny ${isReview ? 'btn-primary' : 'btn-secondary'} diag-mark-reviewed-btn"
-                      data-action="review-with-ai"
-                      data-file="${issue.file_path}"
-                      data-doc-id="${issue.file_path}"
-                      data-issue="${encodeURIComponent(JSON.stringify(issue))}"
-                      title="Review and resolve this specific issue with configured AI agent">
-                Review with AI
-              </button>
+
+            let cleanResolution = issue.remediation_hint || '';
+            if (isDrift) {
+              cleanResolution = 'Synchronize route definitions across configured AI harness files.';
+            } else if (isSecondary) {
+              cleanResolution = 'Consolidate routes into primary AI Harness Entry Point.';
+            } else if (isBroken) {
+              cleanResolution = issue.target
+                ? `Update reference to valid target note '${issue.target}'.`
+                : 'Fix broken link reference in document.';
+            } else if (!cleanResolution) {
+              cleanResolution = 'Review and resolve finding in editor.';
+            }
+
+            const targetRow = issue.target
+              ? `
+                <div class="diag-loc-row">
+                  <span class="diag-loc-label">Target</span>
+                  <span class="diag-loc-path diag-target-clickable ${isBroken ? 'target-missing' : ''}" data-target="${issue.target}" title="Open target file">${issue.target}</span>
+                </div>`
+              : '';
+
+            const sparklesSvg = `
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:5px;">
+                <path d="M7.5 1.5L9 5l3.5 1.5L9 8l-1.5 3.5L6 8 2.5 6.5 6 5z" fill="currentColor" fill-opacity="0.3"/>
+                <path d="M12.5 10.5l.75 1.75 1.75.75-1.75.75-.75 1.75-.75-1.75-1.75-.75 1.75-.75z" fill="currentColor"/>
+              </svg>
             `;
 
-            const openCodeBtnHtml = (isFreshness && issue.target)
-              ? `<button type="button" class="btn-tiny btn-primary diag-open-code-btn" data-file="${issue.target}" title="Open referenced code file '${issue.target}' in editor">Open Code</button>`
-              : '';
-            const openCandidateBtnHtml = (isConsistency && issue.target)
-              ? `<button type="button" class="btn-tiny btn-primary diag-open-doc-btn" data-file="${issue.target}" title="Open candidate note '${issue.target}' to compare">Open Candidate Note</button>`
-              : '';
-            const openHubBtnHtml = (isDiscoverability && props.primaryHub)
-              ? `<button type="button" class="btn-tiny btn-primary diag-open-doc-btn" data-file="${props.primaryHub}" title="Open primary hub '${props.primaryHub}' to add reference">Open Hub to Link</button>`
-              : '';
-            const openTargetBtnHtml = (issue.target && !openCodeBtnHtml && !openCandidateBtnHtml)
-              ? `<button type="button" class="btn-tiny btn-secondary diag-open-target-btn" data-target="${issue.target}" title="Open referenced target '${issue.target}' in editor">Open Target (${issue.target.split('/').pop()}) ↗</button>`
-              : '';
+            const hasDeterministicAction = isBroken || isSecondary || isDrift || isReview;
+            let actionBtnHtml = '';
 
-            let waysToFixHtml = '';
-            if (isBroken) {
-              waysToFixHtml = `
-                <div class="diag-fix-guidance">
-                  <div class="diag-fix-guidance-title">
-                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><line x1="8" y1="5" x2="8" y2="8"/><circle cx="8" cy="11" r="0.5" fill="currentColor"/></svg>
-                    <strong>Ways to fix:</strong>
+            if (hasDeterministicAction) {
+              let primaryActionClass = 'btn-primary diag-btn-deterministic';
+              let extraAttrs = '';
+              if (isBroken) {
+                primaryActionClass += ' diag-fix-ref-btn';
+                extraAttrs = `data-file="${issue.file_path}" data-target="${issue.target || ''}" data-line="${issue.line_number ?? ''}"`;
+              } else if (isSecondary) {
+                primaryActionClass += ' btn-gov-eliminate-secondary';
+                extraAttrs = `data-target="${issue.file_path}"`;
+              } else if (isDrift) {
+                primaryActionClass += ' btn-gov-sync-harnesses';
+                extraAttrs = `data-target="${issue.file_path}"`;
+              } else if (isReview) {
+                primaryActionClass += ' diag-mark-reviewed-btn';
+                extraAttrs = `data-action="mark-reviewed" data-file="${issue.file_path}" data-doc-id="${issue.file_path}"`;
+              }
+
+              actionBtnHtml = `
+                <div class="diag-action-split-btn">
+                  <button type="button" class="btn-tiny ${primaryActionClass} diag-split-primary" ${extraAttrs} title="Apply deterministic algorithmic fix">
+                    Review
+                  </button>
+                  <button type="button" class="btn-tiny btn-primary diag-split-toggle" title="More review options" aria-haspopup="true" aria-expanded="false">
+                    ▾
+                  </button>
+                  <div class="diag-split-menu" style="display: none;">
+                    <button type="button"
+                            class="diag-split-menu-item diag-mark-reviewed-btn"
+                            data-action="review-with-ai"
+                            data-file="${issue.file_path}"
+                            data-doc-id="${issue.file_path}"
+                            data-issue="${encodeURIComponent(JSON.stringify(issue))}"
+                            title="Resolve issue with AI">
+                      ${sparklesSvg}
+                      <span>Review with AI</span>
+                    </button>
                   </div>
-                  <ul>
-                    <li><strong>Interactive Fix:</strong> Click <em>Fix Reference</em> to select a valid replacement target.</li>
-                    <li><strong>CLI Auto-Repair:</strong> Run <code>knowframe fix</code> in terminal to auto-resolve broken wikilinks to closest matches.</li>
-                    <li><strong>Exclude Path:</strong> Click <em>Exclude Path</em> if target is an external or generated artifact.</li>
-                  </ul>
                 </div>
               `;
-            } else if (isFreshness) {
-              waysToFixHtml = `
-                <div class="diag-fix-guidance">
-                  <div class="diag-fix-guidance-title">
-                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><polyline points="8 4 8 8 11 10"/></svg>
-                    <strong>Ways to fix:</strong>
-                  </div>
-                  <ul>
-                    <li><strong>Update Documentation:</strong> ${issue.target ? `Click <em>Open Code</em> to inspect <code>${issue.target}</code> and ` : ''}check <code>git diff HEAD~5${issue.target ? ` -- ${issue.target}` : ''}</code> to refresh obsolete citations.</li>
-                    <li><strong>Acknowledge in Baseline:</strong> If doc update is deferred to next milestone, record baseline via <code>knowframe baseline record</code>.</li>
-                    <li><strong>CLI Drift Audit:</strong> Run <code>knowframe drift</code> to inspect detailed AST drift and commit citations.</li>
-                  </ul>
-                </div>
-              `;
-            } else if (isConsistency) {
-              waysToFixHtml = `
-                <div class="diag-fix-guidance">
-                  <div class="diag-fix-guidance-title">
-                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><line x1="5" y1="8" x2="11" y2="8"/></svg>
-                    <strong>Ways to fix:</strong>
-                  </div>
-                  <ul>
-                    <li><strong>Consolidate Notes:</strong> ${issue.target ? `Click <em>Open Candidate Note</em> to compare side-by-side, then ` : ''}merge duplicate sections into the canonical note.</li>
-                    <li><strong>Differentiate Scope:</strong> Refocus boundaries to reduce vocabulary overlap below 70%.</li>
-                    <li><strong>Acknowledge Baseline:</strong> Run <code>knowframe baseline record</code> if overlap is intentional across different domains.</li>
-                  </ul>
-                </div>
-              `;
-            } else if (isStructure) {
-              waysToFixHtml = `
-                <div class="diag-fix-guidance">
-                  <div class="diag-fix-guidance-title">
-                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><line x1="8" y1="4" x2="8" y2="12"/><line x1="4" y1="8" x2="12" y2="8"/></svg>
-                    <strong>Ways to fix:</strong>
-                  </div>
-                  <ul>
-                    <li><strong>Materialize Fragments:</strong> Run <code>knowframe materialize</code> in terminal to record heading fragment anchors in frontmatter.</li>
-                    <li><strong>Anchor Wikilinks:</strong> Change generic links <code>[[note]]</code> to targeted anchors <code>[[note#section]]</code>.</li>
-                  </ul>
-                </div>
-              `;
-            } else if (isDiscoverability) {
-              waysToFixHtml = `
-                <div class="diag-fix-guidance">
-                  <div class="diag-fix-guidance-title">
-                    <svg viewBox="0 0 16 16" width="11" height="11" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="8" cy="8" r="6"/><polyline points="5 8 7.5 10.5 11 5.5"/></svg>
-                    <strong>Ways to fix:</strong>
-                  </div>
-                  <ul>
-                    <li><strong>Connect to Hub:</strong> ${props.primaryHub ? `Click <em>Open Hub to Link</em> to add <code>[[${issue.file_path}]]</code> to <code>${props.primaryHub}</code>.` : `Add a wikilink from your central index.`}</li>
-                    <li><strong>Cross-Link:</strong> Add inbound links from parent or sibling domain notes.</li>
-                  </ul>
+            } else {
+              actionBtnHtml = `
+                <div class="diag-action-direct-btn">
+                  <button type="button"
+                          class="btn-tiny btn-primary diag-mark-reviewed-btn diag-btn-sparkles"
+                          data-action="review-with-ai"
+                          data-file="${issue.file_path}"
+                          data-doc-id="${issue.file_path}"
+                          data-issue="${encodeURIComponent(JSON.stringify(issue))}"
+                          title="Resolve issue with AI">
+                    ${sparklesSvg}
+                    <span>Review with AI</span>
+                  </button>
                 </div>
               `;
             }
@@ -1598,30 +1569,20 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
                   </div>
                   <span class="diag-penalty-badge">-${(issue.deduction_points ?? 5.0).toFixed(1)} pts (${(issue.weight ?? 1.0).toFixed(2)}x)</span>
                 </div>
-                <div class="diag-issue-loc">
-                  <svg viewBox="0 0 16 16" width="12" height="12" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink: 0; opacity: 0.7;">
-                    <path d="M9 1H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V5L9 1z"/>
-                    <polyline points="9 1 9 5 13 5"/>
-                  </svg>
-                  <span class="diag-file-clickable" data-file="${issue.file_path}" data-line="${issue.line_number ?? ''}" title="Click to open ${issue.file_path}${lineStr}">
-                    ${issue.file_path}${lineStr}
-                  </span>
-                  ${targetHtml}
+                <div class="diag-issue-locations">
+                  <div class="diag-loc-row">
+                    <span class="diag-loc-label">Source</span>
+                    <span class="diag-loc-path diag-file-clickable" data-file="${issue.file_path}" data-line="${issue.line_number ?? ''}" title="Open source file">${issue.file_path}${lineStr}</span>
+                  </div>
+                  ${targetRow}
                 </div>
                 <div class="diag-issue-desc">${issue.description}</div>
-                <div class="finding-hint" style="margin-top: 6px; font-size: 11px; padding: 4px 8px; border-radius: 4px; background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8;">💡 <strong>Suggested Resolution:</strong> ${issue.remediation_hint}</div>
-                ${waysToFixHtml}
+                <div class="diag-issue-resolution">
+                  <span class="diag-resolution-label">Resolution</span>
+                  <span class="diag-resolution-text">${cleanResolution}</span>
+                </div>
                 <div class="diag-issue-actions">
-                  <button type="button" class="btn-tiny btn-secondary diag-open-doc-btn" data-file="${issue.file_path}" data-line="${issue.line_number ?? ''}">Open Note</button>
-                  ${openTargetBtnHtml}
-                  ${openCodeBtnHtml}
-                  ${openCandidateBtnHtml}
-                  ${openHubBtnHtml}
-                  ${fixBtnHtml}
-                  ${excludeBtnHtml}
-                  ${removeSecBtnHtml}
-                  ${syncHarnessBtnHtml}
-                  ${reviewBtnHtml}
+                  ${actionBtnHtml}
                 </div>
               </div>
             `;
@@ -2953,8 +2914,8 @@ export function renderSettingsDrawer(
   }
 
   function wireHealthAndStructureActions(): void {
-    // Open Note & Open Code buttons & clickable file links & open target
-    container.querySelectorAll('.diag-open-doc-btn, .diag-open-code-btn, .diag-open-target-btn, .diag-file-clickable, [data-action="open-target"]').forEach((el) => {
+    // Clickable file links & open target
+    container.querySelectorAll('.diag-open-doc-btn, .diag-open-code-btn, .diag-open-target-btn, .diag-file-clickable, .diag-target-clickable, [data-action="open-target"]').forEach((el) => {
       el.addEventListener('click', (e) => {
         e.stopPropagation();
         const file = el.getAttribute('data-target') || el.getAttribute('data-file');
@@ -2962,6 +2923,27 @@ export function renderSettingsDrawer(
         const line = lineAttr ? parseInt(lineAttr, 10) : undefined;
         if (file) {
           callbacks.onOpenFile?.(file, line);
+        }
+      });
+    });
+
+    // Split button dropdown toggles
+    container.querySelectorAll('.diag-split-toggle').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const parent = btn.closest('.diag-action-split-btn');
+        const menu = parent?.querySelector('.diag-split-menu') as HTMLElement | null;
+        if (!menu) return;
+        const isShown = menu.style.display === 'block';
+        container.querySelectorAll<HTMLElement>('.diag-split-menu').forEach((m) => {
+          m.style.display = 'none';
+        });
+        container.querySelectorAll('.diag-split-toggle').forEach((t) => {
+          t.setAttribute('aria-expanded', 'false');
+        });
+        if (!isShown) {
+          menu.style.display = 'block';
+          btn.setAttribute('aria-expanded', 'true');
         }
       });
     });
@@ -3214,6 +3196,16 @@ export function renderSettingsDrawer(
           });
         }
 
+        // Dismiss split button menus if clicked outside .diag-action-split-btn
+        if (!target.closest('.diag-action-split-btn')) {
+          container.querySelectorAll<HTMLElement>('.diag-split-menu').forEach((m) => {
+            m.style.display = 'none';
+          });
+          container.querySelectorAll('.diag-split-toggle').forEach((b) => {
+            b.setAttribute('aria-expanded', 'false');
+          });
+        }
+
         const delBtn = target.closest<HTMLElement>('.rule-del-btn');
         if (delBtn) {
           event.stopPropagation();
@@ -3283,11 +3275,25 @@ export function renderSettingsDrawer(
           b.setAttribute('aria-expanded', 'false');
         });
       }
+      if (!target || !target.closest('.diag-action-split-btn')) {
+        container.querySelectorAll<HTMLElement>('.diag-split-menu').forEach((m) => {
+          m.style.display = 'none';
+        });
+        container.querySelectorAll('.diag-split-toggle').forEach((b) => {
+          b.setAttribute('aria-expanded', 'false');
+        });
+      }
     });
 
     // Close dropdown on Escape
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
+        container.querySelectorAll<HTMLElement>('.diag-split-menu').forEach((m) => {
+          m.style.display = 'none';
+        });
+        container.querySelectorAll('.diag-split-toggle').forEach((b) => {
+          b.setAttribute('aria-expanded', 'false');
+        });
         const menu = container.querySelector('#menu-scope-options') as HTMLElement | null;
         if (menu && menu.style.display === 'block') {
           menu.style.display = 'none';

@@ -188,8 +188,9 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(html.includes('Discoverability'), 'Must render Discoverability accordion');
     assert.ok(html.includes('00_meta/wiki_index.md:86'), 'Must display exact file location with line');
     assert.ok(html.includes('missing_target.md'), 'Must display target reference');
-    assert.ok(html.includes('Open Note'), 'Must offer Open Note action button');
-    assert.ok(html.includes('Fix Reference'), 'Must offer Fix Reference action button for broken links');
+    assert.ok(html.includes('diag-file-clickable'), 'Must offer clickable source file');
+    assert.ok(html.includes('diag-fix-ref-btn'), 'Must offer deterministic fix button for broken links');
+    assert.ok(html.includes('Review'), 'Must display Review action label');
   });
 
   test('renders Safely Remove action option for Secondary Routing Layer issues in Diagnostics and Git/Harness tabs', () => {
@@ -221,7 +222,7 @@ suite('SettingsDrawer Test Suite', () => {
       issuesReport,
     });
     assert.ok(diagHtml.includes('btn-gov-eliminate-secondary'), 'Must render eliminate secondary button in Diagnostics');
-    assert.ok(diagHtml.includes('Safely Remove index.md'), 'Must display Safely Remove index.md label in Diagnostics');
+    assert.ok(diagHtml.includes('Review'), 'Must display Review action button in Diagnostics');
 
     const harnessHtml = renderSettingsDrawerHtml({
       ...sampleProps,
@@ -387,16 +388,11 @@ suite('SettingsDrawer Test Suite', () => {
     assert.ok(html.includes('docs/guide.md:42'), 'Must show broken reference source file and line');
     assert.ok(html.includes('missing_target.md#setup'), 'Must show target with fragment');
 
-    // Action buttons
-    assert.ok(html.includes('diag-open-code-btn'), 'Must render Open Code action button for freshness');
-    assert.ok(html.includes('Open Code'), 'Must label button Open Code');
-    assert.ok(html.includes('Fix Reference'), 'Must offer Fix Reference action button for broken links');
-    assert.ok(html.includes('Exclude Path'), 'Must offer Exclude Path action button');
-
-    // Rich guidance
-    assert.ok(html.includes('diag-fix-guidance'), 'Must render rich guidance box');
-    assert.ok(html.includes('knowframe fix'), 'Must cite knowframe fix CLI command for integrity');
-    assert.ok(html.includes('knowframe baseline record'), 'Must cite knowframe baseline record command');
+    // Action buttons & locations
+    assert.ok(html.includes('diag-file-clickable'), 'Must render clickable source file');
+    assert.ok(html.includes('diag-target-clickable'), 'Must render clickable target reference');
+    assert.ok(html.includes('diag-fix-ref-btn'), 'Must offer Review action button for broken links');
+    assert.ok(html.includes('Review with AI'), 'Must offer Review with AI action');
   });
 
   test('scopes drawer-entering class strictly to isEntering state to prevent re-animation on updates', () => {

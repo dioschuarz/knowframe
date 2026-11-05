@@ -83,8 +83,12 @@ export function renderCollisionInspectorHtml(props: CollisionInspectorProps): st
             <button class="btn-canonical-propose" id="btn-propose-canonical" data-candidate="${canonicalCandidate}">
               Propose as Canonical
             </button>
-            <button class="btn-secondary" id="btn-collision-review-ai" data-action="review-with-ai" data-file="${props.sourceNote}" title="Review and resolve semantic collision with AI agent">
-              Review with AI
+            <button class="btn-secondary" id="btn-collision-review-ai" data-action="review-with-ai" data-file="${props.sourceNote}" title="Resolve issue with AI">
+              <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:4px;">
+                <path d="M7.5 1.5L9 5l3.5 1.5L9 8l-1.5 3.5L6 8 2.5 6.5 6 5z" fill="currentColor" fill-opacity="0.3"/>
+                <path d="M12.5 10.5l.75 1.75 1.75.75-1.75.75-.75 1.75-.75-1.75-1.75-.75 1.75-.75z" fill="currentColor"/>
+              </svg>
+              <span>Review with AI</span>
             </button>
           </div>
         </div>

@@ -101,7 +101,7 @@ export class AiReviewDispatcher {
         })
         .join('\n');
 
-      return `Review and fix the ${options.issues.length} active issue${options.issues.length > 1 ? 's' : ''} in '${filePath}':\n${issueBullets}\n\nIMPORTANT: Modify ONLY '${filePath}' and fix ONLY these issues. Re-check until all issues in '${filePath}' are completely resolved.`;
+      return `Review and fix the ${options.issues.length} active issue${options.issues.length > 1 ? 's' : ''} in '${filePath}':\n${issueBullets}\n\nPRIORITY: If a deterministic KnowFrame CLI command applies to this issue, run the CLI first and inspect the changes before manual edits. IMPORTANT: Modify ONLY '${filePath}' and fix ONLY these issues. Re-check until all issues in '${filePath}' are completely resolved.`;
     }
 
     const cat = options.issue?.category ? `${options.issue.category}` : 'integrity';
@@ -111,7 +111,7 @@ export class AiReviewDispatcher {
       ? ` If the referenced target file '${options.issue.target}' exists elsewhere in the workspace, locate its actual path and update the citation or link in '${filePath}' to point to the correct relative path.`
       : '';
 
-    return `Review and fix the ${cat} issue in '${filePath}'${line}${desc}.${targetHint} IMPORTANT: Modify ONLY '${filePath}' and fix ONLY this issue. Re-check until the ${cat} issue in '${filePath}' is completely resolved.`;
+    return `Review and fix the ${cat} issue in '${filePath}'${line}${desc}.${targetHint} PRIORITY: If a deterministic KnowFrame CLI command applies to this issue, run the CLI first and inspect the changes before manual edits. IMPORTANT: Modify ONLY '${filePath}' and fix ONLY this issue. Re-check until the ${cat} issue in '${filePath}' is completely resolved.`;
   }
 
   /**

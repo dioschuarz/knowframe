@@ -672,6 +672,15 @@ pub fn extract_all_issues(
             .unwrap_or(0.0);
         let weight = calculate_topological_weight(b);
         let deduction = (sf.penalty * weight * 10.0).round() / 10.0;
+        let hint = match sf.debt_type {
+            crate::quality::structure::StructureDebtType::HarnessDrift => "Synchronize route definitions across configured AI harness files",
+            crate::quality::structure::StructureDebtType::SecondaryRoutingLayer => "Consolidate routes into primary AI Harness Entry Point",
+            crate::quality::structure::StructureDebtType::UnanchoredReference => "Add section fragment anchor (#section) to wikilink",
+            crate::quality::structure::StructureDebtType::MissingFragmentMetadata => "Materialize fragment metadata with 'knowframe-core materialize'",
+            crate::quality::structure::StructureDebtType::OversizedDocument => "Decompose document into focused topical modules",
+            crate::quality::structure::StructureDebtType::HighReferenceConcentration => "Distribute inbound links across specific section anchors",
+            crate::quality::structure::StructureDebtType::UnfragmentedCentralHub => "Add section headings and anchors to central hub",
+        };
         issues.push(KnowledgeIssue {
             id: format!("structure:{}:{:?}", sf.document_path, sf.debt_type),
             pillar: "structure".to_string(),
@@ -682,7 +691,7 @@ pub fn extract_all_issues(
             deduction_points: deduction,
             weight: (weight * 100.0).round() / 100.0,
             description: sf.guidance.clone(),
-            remediation_hint: "Restructure document or materialize fragment metadata with 'knowframe-core materialize'".to_string(),
+            remediation_hint: hint.to_string(),
             is_legacy: false,
             is_excluded: false,
         });

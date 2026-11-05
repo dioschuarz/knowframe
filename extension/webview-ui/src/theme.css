@@ -3817,6 +3817,157 @@ textarea {
   background: var(--vscode-button-hoverBackground, #1177bb) !important;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────────
+ * Clean Finding Card Locations & Split Action Button Styles
+ * ───────────────────────────────────────────────────────────────────────────── */
+.diag-issue-locations {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  font-size: 11px;
+  margin-top: 2px;
+  min-width: 0;
+  max-width: 100%;
+}
+
+.diag-loc-row {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+  max-width: 100%;
+  line-height: 1.4;
+}
+
+.diag-loc-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--vscode-descriptionForeground, #94a3b8);
+  width: 52px;
+  flex-shrink: 0;
+}
+
+.diag-loc-path {
+  color: var(--vscode-textLink-foreground, #38bdf8);
+  cursor: pointer;
+  font-weight: 500;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+  text-decoration: none;
+  min-width: 0;
+}
+
+.diag-loc-path:hover {
+  text-decoration: underline;
+}
+
+.diag-loc-path.target-missing {
+  color: #ef4444;
+}
+
+.diag-issue-resolution {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 11px;
+  line-height: 1.35;
+  background: rgba(56, 189, 248, 0.05);
+  border-left: 2px solid #38bdf8;
+  padding: 4px 8px;
+  border-radius: 2px;
+  margin-top: 3px;
+}
+
+.diag-resolution-label {
+  font-size: 10px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: #38bdf8;
+  width: 70px;
+  flex-shrink: 0;
+}
+
+.diag-resolution-text {
+  color: var(--vscode-foreground, #e2e8f0);
+  word-break: break-word;
+  overflow-wrap: anywhere;
+}
+
+.diag-action-split-btn {
+  position: relative;
+  display: inline-flex;
+  align-items: stretch;
+  border-radius: 4px;
+}
+
+.diag-split-primary {
+  border-top-right-radius: 0 !important;
+  border-bottom-right-radius: 0 !important;
+  border-right: 1px solid rgba(0, 0, 0, 0.25) !important;
+}
+
+.diag-split-toggle {
+  border-top-left-radius: 0 !important;
+  border-bottom-left-radius: 0 !important;
+  padding: 4px 7px !important;
+  min-width: 22px !important;
+  font-size: 10px !important;
+}
+
+.diag-split-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  right: 0;
+  z-index: 100;
+  background: var(--vscode-menu-background, #252526);
+  border: 1px solid var(--vscode-menu-border, #454545);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.45);
+  border-radius: 4px;
+  padding: 4px 0;
+  min-width: 150px;
+}
+
+.diag-split-menu-item {
+  width: 100%;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 6px !important;
+  padding: 6px 12px !important;
+  background: transparent !important;
+  color: var(--vscode-menu-foreground, #cccccc) !important;
+  border: none !important;
+  border-radius: 0 !important;
+  font-size: 11px !important;
+  cursor: pointer !important;
+  text-align: left !important;
+  height: auto !important;
+  white-space: nowrap !important;
+}
+
+.diag-split-menu-item:hover {
+  background: var(--vscode-menu-selectionBackground, #04395e) !important;
+  color: var(--vscode-menu-selectionForeground, #ffffff) !important;
+}
+
+.diag-action-direct-btn {
+  display: inline-flex;
+}
+
+.diag-btn-sparkles {
+  background: rgba(168, 85, 247, 0.16) !important;
+  border: 1px solid rgba(168, 85, 247, 0.4) !important;
+  color: #c084fc !important;
+}
+
+.diag-btn-sparkles:hover {
+  background: rgba(168, 85, 247, 0.28) !important;
+  color: #e9d5ff !important;
+}
+
 .diag-empty-box {
   text-align: center;
   padding: 24px 12px;

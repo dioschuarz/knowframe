@@ -98,9 +98,10 @@ suite('EvolutionTab Unit Test Suite (T053)', () => {
     assert.ok(html.includes('62% Fit'));
     assert.ok(html.includes('Advisory'));
 
-    // Generate Plan button
+    // Deterministic Review button
     assert.ok(html.includes('data-rec-id="rec_decomp_1"'));
-    assert.ok(html.includes('Generate Transformation Plan'));
+    assert.ok(html.includes('btn-generate-multi-plan'));
+    assert.ok(html.includes('Review'));
   });
 
   test('renders raw snake_case Rust objects without errors or undefined badges', () => {
@@ -148,7 +149,7 @@ suite('EvolutionTab Unit Test Suite (T053)', () => {
     assert.ok(!html.includes('undefined'), 'Must never output literal undefined in badges or text');
   });
 
-  test('renders Review & Sync Harnesses action button with data-target for harness route drift', () => {
+  test('renders Review split-button with data-target for harness route drift', () => {
     const propsWithDrift: any = {
       signatures: [],
       recommendations: [],
@@ -166,7 +167,7 @@ suite('EvolutionTab Unit Test Suite (T053)', () => {
     const html = renderEvolutionTabHtml(propsWithDrift);
     assert.ok(html.includes('btn-gov-sync-harnesses'), 'Must render sync harnesses button class');
     assert.ok(html.includes('data-target="08_showcases/mcp-runner/.agents/rules/GEMINI.md"'), 'Must specify target harness file in data-target');
-    assert.ok(html.includes('⚡ Review & Sync Harnesses'), 'Must label button as Review & Sync Harnesses');
+    assert.ok(html.includes('Review'), 'Must label button as Review');
   });
 
   test('renders all 18 KOS methodologies in evolution menu with chip counters and select dropdown', () => {
@@ -614,7 +615,7 @@ suite('EvolutionTab Unit Test Suite (T053)', () => {
     assert.ok(!sigHtml.includes('style="color: #ef4444;"'), 'Pillar chip names must not have inline colorful font');
   });
 
-  test('strictly renders 1 primary button + 1 Open File button on finding card without duplicate strategy buttons', () => {
+  test('strictly renders 1 primary action button and clickable file location on finding card without duplicate strategy buttons', () => {
     const mockSig = {
       signatureId: 'opp_god_001',
       documentPath: 'notes/architecture/god_doc.md',
@@ -662,15 +663,16 @@ suite('EvolutionTab Unit Test Suite (T053)', () => {
     // Strategy container itself must NOT have a duplicate generate-multi-plan button inside
     assert.ok(!html.includes('strategy-set-actions-bar'), 'Must NOT have duplicate actions bar inside strategy set container');
 
-    // Finding actions row must have strictly 1 primary action button and 1 Open File button
+    // Finding actions row must have strictly 1 primary action button (Review split button)
     const multiPlanBtns = (html.match(/btn-generate-multi-plan/g) || []).length;
     assert.strictEqual(multiPlanBtns, 1, 'Must render exactly 1 btn-generate-multi-plan button on the entire card');
 
     const openFileBtns = (html.match(/btn-finding-open-file/g) || []).length;
-    assert.strictEqual(openFileBtns, 1, 'Must render exactly 1 Open File button on the card');
+    assert.strictEqual(openFileBtns, 0, 'Must NOT render redundant separate Open File button on the card');
+    assert.ok(html.includes('finding-loc'), 'Must render clickable source location');
 
-    // Zero parentheses in button text
-    assert.ok(html.includes('⚡ Generate Transformation Plan'), 'Must have clean label without parentheses');
+    // Clean Review label without parentheses
+    assert.ok(html.includes('Review'), 'Must have clean Review label');
     assert.ok(!html.includes('(Preview Change)'), 'Must not have (Preview Change)');
     assert.ok(!html.includes('(Generate Transformation Plan)'), 'Must not have (Generate Transformation Plan)');
     assert.ok(!html.includes('(Open Note)'), 'Must not have (Open Note)');
@@ -699,7 +701,7 @@ suite('EvolutionTab Unit Test Suite (T053)', () => {
     assert.ok(!html.includes('Read & Apply'), 'Must not render fake Read & Apply button');
     assert.ok(html.includes('btn-finding-review-ai'), 'Must always render Review with AI button');
     assert.ok(html.includes('Review with AI'), 'Must display Review with AI label');
-    assert.ok(html.includes('btn-finding-open-file'), 'Must render Open File button');
+    assert.ok(html.includes('finding-loc'), 'Must render clickable source file location');
   });
 
   test('renders finding tags on line 1 and file location on a new line (separate lines) inside finding header', () => {
@@ -734,7 +736,7 @@ suite('EvolutionTab Unit Test Suite (T053)', () => {
     assert.ok(html.includes('specs/009-deterministic-knowledge-engine/RESEARCH_2.md:42'), 'Must contain file path with line number');
   });
 
-  test('renders Review with AI and Open Target buttons for technical drift findings with target reference', () => {
+  test('renders Review with AI and clickable Target reference for technical drift findings with target reference', () => {
     const findings = [
       {
         file_path: 'notes/00_meta/wiki_index.md',
@@ -754,10 +756,10 @@ suite('EvolutionTab Unit Test Suite (T053)', () => {
 
     assert.ok(html.includes('btn-finding-review-ai'), 'Must render Review with AI button');
     assert.ok(html.includes('data-action="review-with-ai"'), 'Must have review-with-ai action hook');
-    assert.ok(html.includes('btn-finding-open-target'), 'Must render Open Target button');
+    assert.ok(html.includes('finding-target-link'), 'Must render clickable target link');
     assert.ok(html.includes('data-action="open-target"'), 'Must have open-target action hook');
-    assert.ok(html.includes('Open Target (hitch_consult.py) ↗'), 'Must display target basename on button');
-    assert.ok(html.includes('btn-finding-open-file'), 'Must render Open File button');
+    assert.ok(html.includes('hitch_consult.py'), 'Must display target reference');
+    assert.ok(html.includes('finding-loc'), 'Must render clickable source location');
   });
 });
 

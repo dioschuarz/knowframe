@@ -281,7 +281,7 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
 
     <!-- Footer Actions (Balanced 2x2 grid) -->
     <div class="insp-footer">
-      <button class="btn-primary insp-action-btn ${isHub ? 'insp-btn-span-2' : ''}" id="insp-btn-open-file" title="Open file in editor">
+      <button class="btn-primary insp-action-btn ${isHub ? 'insp-btn-span-2' : ''}" id="insp-btn-open-file" title="Open source file">
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h8a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H4a1.5 1.5 0 0 1-1.5-1.5v-9Z"/><line x1="5" y1="5.5" x2="11" y2="5.5"/><line x1="5" y1="8.5" x2="11" y2="8.5"/></svg>
         <span>Open file</span>
       </button>
@@ -294,7 +294,7 @@ export function renderNodeInspectionHtml(props: NodeInspectionProps): string {
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6"/><line x1="3.5" y1="3.5" x2="12.5" y2="12.5"/></svg>
         <span>Exclude note</span>
       </button>
-      <button class="btn-secondary insp-action-btn insp-btn-review-ai insp-btn-mark-reviewed" id="insp-btn-review-ai" title="Review and resolve with AI agent">
+      <button class="btn-secondary insp-action-btn insp-btn-review-ai insp-btn-mark-reviewed" id="insp-btn-review-ai" title="Resolve issue with AI">
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
           <path d="M7.5 1.5L9 5l3.5 1.5L9 8l-1.5 3.5L6 8 2.5 6.5 6 5z" fill="currentColor" fill-opacity="0.3"/>
           <path d="M12.5 10.5l.75 1.75 1.75.75-1.75.75-.75 1.75-.75-1.75-1.75-.75 1.75-.75z" fill="currentColor"/>
@@ -374,15 +374,15 @@ export function renderEdgeInspectionHtml(props: EdgeInspectionProps): string {
     </div>
 
     <div class="insp-footer">
-      <button class="btn-primary insp-action-btn" id="insp-btn-open-source">
+      <button class="btn-primary insp-action-btn" id="insp-btn-open-source" title="Open source file">
         <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><path d="M2.5 3.5A1.5 1.5 0 0 1 4 2h8a1.5 1.5 0 0 1 1.5 1.5v9a1.5 1.5 0 0 1-1.5 1.5H4a1.5 1.5 0 0 1-1.5-1.5v-9Z"/><line x1="5" y1="5.5" x2="11" y2="5.5"/><line x1="5" y1="8.5" x2="11" y2="8.5"/></svg>
         <span>Open source (${lineCoord})</span>
       </button>
-      <button class="btn-secondary insp-action-btn" id="insp-btn-fix-reference">
+      <button class="btn-secondary insp-action-btn" id="insp-btn-fix-reference" title="Apply deterministic algorithmic fix">
         <svg viewBox="0 0 16 16" width="13" height="13" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" style="display:inline-block; vertical-align:middle; margin-right:6px;"><path d="M12.5 1.5a3 3 0 0 0-3.8 3.8L2 12l2 2 6.7-6.7a3 3 0 0 0 3.8-3.8l-2 2-2-2 2-2Z"/></svg>
         <span>${isUnanchored ? 'Edit link' : 'Fix reference'}</span>
       </button>
-      <button class="btn-secondary insp-action-btn insp-btn-review-ai insp-btn-mark-reviewed insp-btn-span-2" id="insp-btn-edge-review-ai" title="Review and resolve with AI agent">
+      <button class="btn-secondary insp-action-btn insp-btn-review-ai insp-btn-mark-reviewed insp-btn-span-2" id="insp-btn-edge-review-ai" title="Resolve issue with AI">
         <svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
           <path d="M7.5 1.5L9 5l3.5 1.5L9 8l-1.5 3.5L6 8 2.5 6.5 6 5z" fill="currentColor" fill-opacity="0.3"/>
           <path d="M12.5 10.5l.75 1.75 1.75.75-1.75.75-.75 1.75-.75-1.75-1.75-.75 1.75-.75z" fill="currentColor"/>
