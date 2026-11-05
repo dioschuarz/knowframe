@@ -58,8 +58,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   );
 
   const refreshQualityScore = async (): Promise<void> => {
-    if (!admissionManager) {return;}
+    if (!admissionManager) {
+      GraphPanelManager.setPipelineRunning(false);
+      return;
+    }
     try {
+      GraphPanelManager.reportLoadingProgress('quality', 65, 'Evaluating 5-pillar health score...');
       latestQualityScore = await admissionManager.getQualityScore();
       outputChannel.appendLine(`[EXTENSION] Quality score updated: ${latestQualityScore.overall_score.toFixed(1)}/100`);
       if (governanceManager) {
@@ -73,21 +77,34 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       sidebarProvider?.updateQuality(latestQualityScore);
       updateStatusBarWithBudget(latestScanResult, latestQualityScore, latestGovernanceMatrix);
       if (ipcClient) {
+        GraphPanelManager.reportLoadingProgress('issues', 85, 'Gathering diagnostic issues...');
         latestIssuesReport = await ipcClient.sendRequest<KnowledgeIssuesReport>('workspace/getIssues', {});
         GraphPanelManager.setCachedIssuesReport(latestIssuesReport);
-        GraphPanelManager.currentPanel?.sendIssuesReport(latestIssuesReport);
+        if (GraphPanelManager.currentPanel) {
+          GraphPanelManager.currentPanel.sendIssuesReport(latestIssuesReport);
+        } else {
+          GraphPanelManager.reportLoadingProgress('complete', 100, 'Ready');
+        }
         sidebarProvider?.updateIssues(latestIssuesReport);
+      } else {
+        GraphPanelManager.reportLoadingProgress('complete', 100, 'Ready');
       }
     } catch (err: any) {
       outputChannel.appendLine(`[EXTENSION] Failed to compute quality score: ${err.message}`);
+      GraphPanelManager.reportLoadingProgress('complete', 100, 'Ready');
+    } finally {
+      GraphPanelManager.setPipelineRunning(false);
     }
   };
 
   const onScanResultUpdated = async (newResult: ScanResultPayload) => {
     latestScanResult = newResult;
+    GraphPanelManager.setPipelineRunning(true);
     updateStatusBarWithBudget(newResult, latestQualityScore, latestGovernanceMatrix);
     if (GraphPanelManager.currentPanel) {
       GraphPanelManager.currentPanel.updateData(newResult);
+    } else {
+      GraphPanelManager.reportLoadingProgress('layout', 50, 'Preparing graph topology & layout...');
     }
     sidebarProvider?.updateData(newResult, latestQualityScore);
     await refreshQualityScore();
@@ -252,8 +269,10 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   async function initWorkspace(rootPath: string): Promise<void> {
     try {
+      GraphPanelManager.setPipelineRunning(true);
+      GraphPanelManager.reportLoadingProgress('init', 15, 'Starting KnowFrame engine daemon...', true);
       if (statusBarItem) {
-        statusBarItem.text = '$(sync~spin) 10% Starting Daemon';
+        statusBarItem.text = '$(sync~spin) 15% Starting Daemon';
         statusBarItem.command = 'llmWiki.showKnowledgeGraph';
         statusBarItem.tooltip = 'Click to open KnowFrame - Graph';
       }
@@ -310,7 +329,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (statusBarItem) {
         statusBarItem.text = '$(sync~spin) 30% Scanning Graph...';
       }
-      GraphPanelManager.currentPanel?.sendLoadingProgress('graph', 30, 'Scanning graph topology...');
+      GraphPanelManager.reportLoadingProgress('graph', 30, 'Scanning graph topology...');
       outputChannel.appendLine(`[EXTENSION] Sidecar connected on port ${port}. Requesting fast workspace/scan...`);
 
       const scanStart = Date.now();
@@ -321,6 +340,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       updateStatusBarWithBudget(latestScanResult, latestQualityScore);
       if (GraphPanelManager.currentPanel) {
         GraphPanelManager.currentPanel.updateData(latestScanResult);
+      } else {
+        GraphPanelManager.reportLoadingProgress('layout', 50, 'Preparing graph topology & layout...');
       }
       sidebarProvider?.updateData(latestScanResult, latestQualityScore);
 
@@ -328,9 +349,9 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       (async () => {
         try {
           if (statusBarItem) {
-            statusBarItem.text = '$(sync~spin) 60% Checking Quality...';
+            statusBarItem.text = '$(sync~spin) 65% Checking Quality...';
           }
-          GraphPanelManager.currentPanel?.sendLoadingProgress('quality', 60, 'Evaluating 5-pillar health score...');
+          GraphPanelManager.reportLoadingProgress('quality', 65, 'Evaluating 5-pillar health score...');
 
           latestQualityScore = await admissionManager!.getQualityScore();
           outputChannel.appendLine(`[EXTENSION] Quality score updated: ${latestQualityScore.overall_score.toFixed(1)}/100`);
@@ -340,7 +361,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
           if (statusBarItem) {
             statusBarItem.text = '$(sync~spin) 85% Auditing Issues...';
           }
-          GraphPanelManager.currentPanel?.sendLoadingProgress('issues', 85, 'Gathering diagnostic issues...');
+          GraphPanelManager.reportLoadingProgress('issues', 85, 'Gathering diagnostic issues...');
 
           if (ipcClient) {
             try {
@@ -355,15 +376,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
             }
           }
 
-          GraphPanelManager.currentPanel?.sendLoadingProgress('complete', 100, 'Ready');
+          GraphPanelManager.reportLoadingProgress('complete', 100, 'Ready');
           updateStatusBarWithBudget(latestScanResult, latestQualityScore);
           outputChannel.appendLine('[EXTENSION] Background knowledge pipeline fully ready.');
         } catch (err: any) {
           outputChannel.appendLine(`[EXTENSION] Quality check warning: ${err.message}`);
+          GraphPanelManager.reportLoadingProgress('complete', 100, 'Ready');
           updateStatusBarWithBudget(latestScanResult, latestQualityScore);
+        } finally {
+          GraphPanelManager.setPipelineRunning(false);
         }
       })();
     } catch (err: any) {
+      GraphPanelManager.setPipelineRunning(false);
       outputChannel.appendLine(`[EXTENSION ERROR] Sidecar initialization failed: ${err.message}`);
       if (statusBarItem) {
         statusBarItem.text = '$(error) Offline';

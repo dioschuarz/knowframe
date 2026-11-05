@@ -22,6 +22,8 @@ export class GraphPanelManager implements vscode.Disposable {
   private harnessToolService: HarnessToolService = new HarnessToolService();
   private currentScanResult: ScanResultPayload | null = null;
   private static cachedIssuesReport: unknown | null = null;
+  private static isPipelineRunning: boolean = false;
+  private static latestLoadingProgress: { stage: string; percent: number; message: string; resetCycle?: boolean } | null = null;
   private isFetchingIssues: boolean = false;
   private isSendingEvolutionState: boolean = false;
   private pendingOpenTab: string | null = null;
@@ -34,6 +36,25 @@ export class GraphPanelManager implements vscode.Disposable {
 
   public static getCachedIssuesReport(): unknown | null {
     return GraphPanelManager.cachedIssuesReport;
+  }
+
+  public static setPipelineRunning(running: boolean): void {
+    GraphPanelManager.isPipelineRunning = running;
+  }
+
+  public static isPipelineActive(): boolean {
+    return GraphPanelManager.isPipelineRunning;
+  }
+
+  public static reportLoadingProgress(stage: string, percent: number, message: string, resetCycle: boolean = false): void {
+    if (GraphPanelManager.currentPanel) {
+      GraphPanelManager.currentPanel.sendLoadingProgress(stage, percent, message, resetCycle);
+    } else {
+      const prev = GraphPanelManager.latestLoadingProgress;
+      if (resetCycle || !prev || percent >= prev.percent) {
+        GraphPanelManager.latestLoadingProgress = { stage, percent, message, resetCycle };
+      }
+    }
   }
 
   public static createOrShow(
@@ -134,7 +155,7 @@ export class GraphPanelManager implements vscode.Disposable {
     }
   }
 
-  private currentLoadingProgress: { stage: string; percent: number; message: string } | null = null;
+  private currentLoadingProgress: { stage: string; percent: number; message: string; resetCycle?: boolean } | null = null;
 
   public getCurrentScanResult(): ScanResultPayload | null {
     return this.currentScanResult;
@@ -144,8 +165,13 @@ export class GraphPanelManager implements vscode.Disposable {
     this.ipcClient = client;
   }
 
-  public sendLoadingProgress(stage: string, percent: number, message: string): void {
-    this.currentLoadingProgress = { stage, percent, message };
+  public sendLoadingProgress(stage: string, percent: number, message: string, resetCycle: boolean = false): void {
+    const prev = this.currentLoadingProgress ?? GraphPanelManager.latestLoadingProgress;
+    if (!resetCycle && prev && percent < prev.percent) {
+      return;
+    }
+    this.currentLoadingProgress = { stage, percent, message, resetCycle };
+    GraphPanelManager.latestLoadingProgress = this.currentLoadingProgress;
     this.panel.webview.postMessage({
       type: 'loadingProgress',
       payload: this.currentLoadingProgress,
@@ -177,7 +203,7 @@ export class GraphPanelManager implements vscode.Disposable {
 
   public updateData(scanResult: ScanResultPayload): void {
     this.currentScanResult = scanResult;
-    this.sendLoadingProgress('issues', 65, 'Reconciling baseline debt & findings...');
+    this.sendLoadingProgress('layout', 50, 'Preparing graph topology & layout...');
     this.panel.webview.postMessage({
       type: 'graphDataUpdate',
       payload: {
@@ -223,8 +249,9 @@ export class GraphPanelManager implements vscode.Disposable {
         payload: GraphPanelManager.cachedIssuesReport,
       });
       this.sendLoadingProgress('complete', 100, 'Ready');
-    } else if (this.ipcClient && !this.isFetchingIssues) {
+    } else if (this.ipcClient && !this.isFetchingIssues && !GraphPanelManager.isPipelineRunning) {
       this.isFetchingIssues = true;
+      this.sendLoadingProgress('issues', 85, 'Gathering diagnostic issues...');
       this.ipcClient.sendRequest('workspace/getIssues', {}).then((issuesReport: any) => {
         GraphPanelManager.cachedIssuesReport = issuesReport;
         this.panel.webview.postMessage({
@@ -741,12 +768,20 @@ export class GraphPanelManager implements vscode.Disposable {
         break;
       }
       case 'requestGraphData': {
+        const activeProgress = this.currentLoadingProgress ?? GraphPanelManager.latestLoadingProgress;
         if (this.currentScanResult) {
           this.updateData(this.currentScanResult);
-        } else if (this.currentLoadingProgress) {
+          if (activeProgress && activeProgress.percent > 50 && activeProgress.percent < 100) {
+            this.panel.webview.postMessage({
+              type: 'loadingProgress',
+              payload: activeProgress,
+            });
+          }
+        } else if (activeProgress) {
+          this.currentLoadingProgress = activeProgress;
           this.panel.webview.postMessage({
             type: 'loadingProgress',
-            payload: this.currentLoadingProgress,
+            payload: activeProgress,
           });
         } else {
           this.sendLoadingProgress('graph', 20, 'Scanning vault topology...');
@@ -757,7 +792,7 @@ export class GraphPanelManager implements vscode.Disposable {
             type: 'issuesReportUpdate',
             payload: GraphPanelManager.cachedIssuesReport,
           });
-        } else if (this.ipcClient && !this.isFetchingIssues) {
+        } else if (this.ipcClient && !this.isFetchingIssues && !GraphPanelManager.isPipelineRunning) {
           this.isFetchingIssues = true;
           this.ipcClient.sendRequest('workspace/getIssues', {}).then((issuesReport: any) => {
             GraphPanelManager.cachedIssuesReport = issuesReport;

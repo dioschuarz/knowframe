@@ -24,17 +24,13 @@ export function registerRescanVaultCommand(
           }
 
           GraphPanelManager.setCachedIssuesReport(null);
+          GraphPanelManager.setPipelineRunning(true);
           progress.report({ message: 'Scanning markdown documents & graph topology...' });
-          if (GraphPanelManager.currentPanel) {
-            GraphPanelManager.currentPanel.sendLoadingProgress('graph', 30, 'Rescanning vault...');
-          }
+          GraphPanelManager.reportLoadingProgress('graph', 30, 'Rescanning vault...', true);
 
           const scan = await ipc.sendRequest<ScanResultPayload>('workspace/scan');
 
           progress.report({ message: 'Reconciling baseline debt & quality metrics...' });
-          if (GraphPanelManager.currentPanel) {
-            GraphPanelManager.currentPanel.sendLoadingProgress('issues', 65, 'Reconciling baseline debt & findings...');
-          }
           await onScanResultUpdated(scan);
 
           const docCount = scan.nodes?.length ?? 0;
@@ -43,9 +39,8 @@ export function registerRescanVaultCommand(
             `KnowFrame: Vault scan complete (${docCount} documents, ${refCount} references).`
           );
         } catch (err: any) {
-          if (GraphPanelManager.currentPanel) {
-            GraphPanelManager.currentPanel.sendLoadingProgress('complete', 100, 'Ready');
-          }
+          GraphPanelManager.setPipelineRunning(false);
+          GraphPanelManager.reportLoadingProgress('complete', 100, 'Ready');
           vscode.window.showErrorMessage(`KnowFrame: Rescan failed: ${err.message}`);
         }
       }

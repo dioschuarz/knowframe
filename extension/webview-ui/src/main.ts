@@ -747,6 +747,7 @@ const loadingStage = document.getElementById('loading-stage') as HTMLElement | n
 const loadingBarFill = document.getElementById('loading-bar-fill') as HTMLElement | null;
 
 let loadingTimeoutTimer: any = null;
+let currentDisplayedPercent = 0;
 
 function startLoadingTimeoutGuard(): void {
   clearLoadingTimeoutGuard();
@@ -764,10 +765,15 @@ function clearLoadingTimeoutGuard(): void {
   }
 }
 
-function updateLoadingProgress(percent: number, stage: string): void {
-  if (loadingPercent) loadingPercent.textContent = `${Math.round(percent)}%`;
+function updateLoadingProgress(percent: number, stage: string, resetCycle: boolean = false): void {
+  const clamped = Math.max(0, Math.min(100, Math.round(percent)));
+  if (!resetCycle && clamped < currentDisplayedPercent) {
+    return;
+  }
+  currentDisplayedPercent = clamped;
+  if (loadingPercent) loadingPercent.textContent = `${currentDisplayedPercent}%`;
   if (loadingStage) loadingStage.textContent = stage;
-  if (loadingBarFill) loadingBarFill.style.width = `${Math.round(percent)}%`;
+  if (loadingBarFill) loadingBarFill.style.width = `${currentDisplayedPercent}%`;
 }
 
 function hideLoadingOverlay(): void {
@@ -804,7 +810,7 @@ document.getElementById('btn-open-folder-loading')?.addEventListener('click', ()
 });
 document.getElementById('btn-retry-loading')?.addEventListener('click', () => {
   if (loadingTimeoutActions) loadingTimeoutActions.classList.add('hidden');
-  updateLoadingProgress(15, 'Retrying vault scan...');
+  updateLoadingProgress(15, 'Retrying vault scan...', true);
   startLoadingTimeoutGuard();
   rpc.sendMessage({ type: 'rescanVault' });
 });
@@ -930,12 +936,13 @@ rpc.on('loadingProgress', (data: any) => {
     if (noWorkspaceCard) noWorkspaceCard.classList.add('hidden');
     const p = typeof data.percent === 'number' ? data.percent : 0;
     const msg = data.message || 'Loading...';
-    updateLoadingProgress(p, msg);
+    const shouldResetCycle = Boolean(data.resetCycle) || (isScanCycleComplete && (data.stage === 'init' || data.stage === 'graph'));
+    updateLoadingProgress(p, msg, shouldResetCycle);
     if (data.stage === 'complete' || p >= 100) {
       isScanCycleComplete = true;
       checkAndRevealGraph();
     } else {
-      if (data.stage === 'graph' || p <= 35) {
+      if (shouldResetCycle || ((data.stage === 'init' || data.stage === 'graph') && currentDisplayedPercent <= 35)) {
         hasReceivedGraphData = false;
         hasReceivedIssuesReport = false;
         isPhysicsWarmedUp = false;

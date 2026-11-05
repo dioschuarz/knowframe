@@ -47,10 +47,12 @@ export function registerShowGraphCommand(
     if (scan) {
       panel.updateData(scan);
     } else if (ipc) {
-      panel.sendLoadingProgress('graph', 30, 'Scanning vault topology...');
-      vscode.commands.executeCommand('llmWiki.rescanVault');
+      if (!GraphPanelManager.isPipelineActive()) {
+        panel.sendLoadingProgress('graph', 30, 'Scanning vault topology...', true);
+        vscode.commands.executeCommand('llmWiki.rescanVault');
+      }
     } else {
-      panel.sendLoadingProgress('graph', 15, 'Starting KnowFrame engine daemon...');
+      panel.sendLoadingProgress('init', 15, 'Starting KnowFrame engine daemon...');
     }
   });
 }
