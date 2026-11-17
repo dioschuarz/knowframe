@@ -1,23 +1,27 @@
 ---
 wiki:
-  content_hash: 57aec8fbb351ffbc340fe97e0a7fa7546f292c67ef34489e0766cae2eae57b6f
+  content_hash: 0f70e568e85be4052213a68316ced77a3b0fff08a3ab4fa073ad1b3007fcc0ec
   fragments:
     agentsmd-ai-harness-entry-point:
-      tokens: 1459
+      tokens: 1675
       inbound: 0
-      outbound: 67
+      outbound: 69
     1-naming-standards-conventions:
-      tokens: 46
+      tokens: 93
       inbound: 0
       outbound: 0
-    knowledge-index:
-      tokens: 1375
-      inbound: 0
-      outbound: 67
-    governance-invariants:
-      tokens: 22
+    2-mermaid-visual-architecture-standard:
+      tokens: 137
       inbound: 0
       outbound: 1
+    knowledge-index:
+      tokens: 1407
+      inbound: 0
+      outbound: 68
+    governance-invariants:
+      tokens: 54
+      inbound: 0
+      outbound: 2
     feature-specifications-architecture:
       tokens: 1327
       inbound: 0

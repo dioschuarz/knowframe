@@ -3,10 +3,10 @@ name: llm-wiki-extension
 description: Operate the KnowFrame extension, its Rust core engine (llm-wiki-core), and JSON-RPC daemon from the terminal or AI agent workflows. Covers workspace scanning, 5-pillar quality diagnostics and remediation, context trace & section budgeting, frontmatter materialization, dual Git hooks & candidate validation, knowledge debt baselining, and multi-strategy method evolution (KOS strategy selection, combination, composite plan valuation, and atomic transformation application).
 compatibility: Requires the llm-wiki-core binary and a workspace containing Markdown documentation.
 wiki:
-  content_hash: a654378be46c211052af1fc73cf509519a21b9f568663188fadc9348e5845018
+  content_hash: ea496026424fc4432a92a421e69243e7dfe186f738b28e605eda70334874f045
   fragments:
     knowframe-extension-cli-automation-skill:
-      tokens: 4838
+      tokens: 5252
       inbound: 0
       outbound: 0
     1-locating-the-binary-execution-syntax:
@@ -34,7 +34,7 @@ wiki:
       inbound: 0
       outbound: 0
     3-the-5-quality-pillars-defect-remediation-guide:
-      tokens: 585
+      tokens: 623
       inbound: 0
       outbound: 0
     4-ai-context-observatory-token-budgeting:
@@ -110,7 +110,7 @@ wiki:
       inbound: 0
       outbound: 0
     8-git-admission-control-hooks-debt-baseline:
-      tokens: 390
+      tokens: 457
       inbound: 0
       outbound: 0
     dual-hook-architecture-prek:
@@ -126,7 +126,7 @@ wiki:
       inbound: 0
       outbound: 0
     knowledge-debt-baseline-context-vaultbaselinejson:
-      tokens: 136
+      tokens: 203
       inbound: 0
       outbound: 0
     9-background-websocket-json-rpc-20-daemon:
@@ -142,7 +142,7 @@ wiki:
       inbound: 0
       outbound: 0
     11-autonomous-agent-workflow-recipes:
-      tokens: 403
+      tokens: 712
       inbound: 0
       outbound: 0
     recipe-a-full-workspace-health-audit-triage:
@@ -154,7 +154,11 @@ wiki:
       inbound: 0
       outbound: 0
     recipe-c-pre-commit-cicd-gate:
-      tokens: 105
+      tokens: 106
+      inbound: 0
+      outbound: 0
+    recipe-d-achieving-100-quality-score-0-active-findings-triage-fixes-baseline-convergence:
+      tokens: 308
       inbound: 0
       outbound: 0
 ---
