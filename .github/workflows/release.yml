@@ -14,6 +14,7 @@ on:
 
 permissions:
   contents: write
+  id-token: write
 
 jobs:
   build-binaries:
@@ -196,27 +197,40 @@ jobs:
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
-          if [ -z "$VSCE_PAT" ]; then
-            echo "⚠️ VSCE_PAT secret is NOT configured in repository secrets."
-            echo "To publish automatically to the Visual Studio Marketplace (publisher: dscorpsolutions),"
-            echo "create a Personal Access Token in Azure DevOps (Marketplace -> Manage) and add it as 'VSCE_PAT' in GitHub Settings -> Secrets -> Actions."
-            echo "Skipping marketplace publish step; GitHub release with VSIX packages was created successfully."
+          VERSION=$(node -p "require('./package.json').version")
+          
+          if [ -n "$VSCE_PAT" ]; then
+            echo "🔑 Publishing using VSCE_PAT secret..."
+            AUTH_ARGS=(-p "$VSCE_PAT")
           else
-            echo "🚀 Publishing KnowFrame to Visual Studio Marketplace (publisher: dscorpsolutions)..."
-            VERSION=$(node -p "require('./package.json').version")
-            
-            # Publish platform-specific packages first if available
-            for target in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
-              if [ -f "knowframe-${target}-${VERSION}.vsix" ]; then
-                echo "Publishing target $target: knowframe-${target}-${VERSION}.vsix..."
-                npx --yes @vscode/vsce publish --packagePath "knowframe-${target}-${VERSION}.vsix" -p "$VSCE_PAT" || true
-              fi
-            done
-
-            # Publish universal package as fallback / default
-            if [ -f "knowframe-${VERSION}.vsix" ]; then
-              echo "Publishing universal package: knowframe-${VERSION}.vsix..."
-              npx --yes @vscode/vsce publish --packagePath "knowframe-${VERSION}.vsix" -p "$VSCE_PAT"
-            fi
-            echo "✅ Successfully published to Visual Studio Marketplace!"
+            echo "🛡️ Publishing using OIDC Trusted Publishing (--oidc)..."
+            AUTH_ARGS=(--oidc)
           fi
+
+          echo "🚀 Publishing KnowFrame to Visual Studio Marketplace (publisher: dscorpsolutions)..."
+          
+          # Publish platform-specific packages first if available
+          for target in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
+            if [ -f "knowframe-${target}-${VERSION}.vsix" ]; then
+              echo "Publishing target $target: knowframe-${target}-${VERSION}.vsix..."
+              npx --yes @vscode/vsce publish --packagePath "knowframe-${target}-${VERSION}.vsix" "${AUTH_ARGS[@]}" || true
+            fi
+          done
+
+          # Publish universal package as fallback / default
+          if [ -f "knowframe-${VERSION}.vsix" ]; then
+            echo "Publishing universal package: knowframe-${VERSION}.vsix..."
+            if ! npx --yes @vscode/vsce publish --packagePath "knowframe-${VERSION}.vsix" "${AUTH_ARGS[@]}"; then
+              echo "⚠️ Publishing failed."
+              if [ -z "$VSCE_PAT" ]; then
+                echo "If using OIDC Trusted Publishing, please verify that your Trusted Publishing policy is configured for:"
+                echo "  Publisher: dscorpsolutions"
+                echo "  Owner: dioschuarz"
+                echo "  Repository: knowframe"
+                echo "  Workflow: release.yml"
+                echo "at https://marketplace.visualstudio.com/manage/publishers/dscorpsolutions"
+              fi
+              exit 1
+            fi
+          fi
+          echo "✅ Successfully published to Visual Studio Marketplace!"
