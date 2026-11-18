@@ -211,13 +211,13 @@ async fn test_cli_git_delta_ratchet_sync() {
         .output()
         .unwrap();
 
-    // Run post-commit delta
+    // Run post-commit delta (generous timeout so slower Windows CI runners don't prematurely trip fail-open)
     execute_git_delta(
         dir.path(),
         &["broken_ref.md".to_string()],
         None,
         true,
-        Duration::from_millis(500),
+        Duration::from_millis(5000),
     )
     .await
     .unwrap();

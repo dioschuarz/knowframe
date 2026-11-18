@@ -1,4 +1,4 @@
-name: Engine CI & Cross-Compilation Matrix
+name: KnowFrame CI - Automated Tests & Quality Gates
 
 on:
   push:
