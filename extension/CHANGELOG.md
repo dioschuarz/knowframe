@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.3] - 2026-11-18
+
+### Changed
+- **Marketplace Display Name**: Updated extension title to `KnowFrame - Knowledge Management Framework` (`dscorpsolutions.knowframe-vscode`) to satisfy Visual Studio Marketplace name uniqueness policy.
+
+---
+
 ## [1.0.2] - 2026-11-18
 
 ### Changed

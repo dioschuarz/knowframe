@@ -1,8 +1,8 @@
 {
   "name": "knowframe-vscode",
-  "displayName": "KnowFrame",
+  "displayName": "KnowFrame - Knowledge Management Framework",
   "description": "KnowFrame — Knowledge Management Framework: dynamic knowledge graph, deterministic admission control, structural evolution, and BPE token economics for AI agents",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "publisher": "dscorpsolutions",
   "repository": {
     "type": "git",
@@ -239,10 +239,10 @@
     "watch": "node esbuild.js --watch",
     "package": "node esbuild.js --production",
     "build:rust": "cargo build --release --manifest-path ../Cargo.toml && cp ../target/release/knowframe-core bin/ && cp ../target/release/knowframe-cli bin/",
-    "vsix": "npm run build:rust && npm run package && npx --yes @vscode/vsce package --no-dependencies -o knowframe-1.0.2.vsix",
+    "vsix": "npm run build:rust && npm run package && npx --yes @vscode/vsce package --no-dependencies -o knowframe-1.0.3.vsix",
     "reinstall": "bash ../scripts/distribute.sh",
     "distribute": "bash ../scripts/distribute.sh",
-    "package:verify": "npm run package && node -e \"const fs = require('fs'); const file = fs.existsSync('knowframe-1.0.2.vsix') ? 'knowframe-1.0.2.vsix' : 'knowframe-1.0.1.vsix'; const st = fs.statSync(file); console.log('VSIX size: ' + (st.size / (1024*1024)).toFixed(2) + ' MB'); if(st.size > 25*1024*1024) { console.error('VSIX exceeds 25MB budget'); process.exit(1); }\"",
+    "package:verify": "npm run package && node -e \"const fs = require('fs'); const file = fs.existsSync('knowframe-1.0.3.vsix') ? 'knowframe-1.0.3.vsix' : 'knowframe-1.0.2.vsix'; const st = fs.statSync(file); console.log('VSIX size: ' + (st.size / (1024*1024)).toFixed(2) + ' MB'); if(st.size > 25*1024*1024) { console.error('VSIX exceeds 25MB budget'); process.exit(1); }\"",
     "lint": "eslint src --ext ts",
     "test": "node --test --experimental-strip-types test/suite/*.test.ts",
     "test:e2e": "node --test --experimental-strip-types test/suite/evolution.e2e.test.ts",
