@@ -7,6 +7,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.1] - 2026-11-18
+
+### Changed
+- **Visual Studio Marketplace Publication**: Bumped patch version to `1.0.1` for clean Marketplace release under publisher `dscorpsolutions`.
+- **High-Resolution Branding**: Bundled new 256x256 high-resolution icon (`media/icon.png`).
+- **CI Stability**: Adjusted Windows test timeout in `cli_validate_test.rs` and relaxed frame budget timing threshold for virtualized GitHub runners in `evolution.e2e.test.ts`.
+
+---
+
 ## [1.0.0] - 2026-11-17
 
 ### Added
