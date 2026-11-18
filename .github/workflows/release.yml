@@ -1,0 +1,222 @@
+name: Release & Marketplace Publish
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      publish_marketplace:
+        description: 'Publish extension to Visual Studio Marketplace'
+        required: false
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+
+jobs:
+  build-binaries:
+    name: Compile Engine (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            platform: linux-x64
+            core_bin: knowframe-core
+            cli_bin: knowframe-cli
+            use_cross: false
+
+          - os: ubuntu-latest
+            target: aarch64-unknown-linux-gnu
+            platform: linux-arm64
+            core_bin: knowframe-core
+            cli_bin: knowframe-cli
+            use_cross: true
+
+          - os: macos-13
+            target: x86_64-apple-darwin
+            platform: darwin-x64
+            core_bin: knowframe-core
+            cli_bin: knowframe-cli
+            use_cross: false
+
+          - os: macos-latest
+            target: aarch64-apple-darwin
+            platform: darwin-arm64
+            core_bin: knowframe-core
+            cli_bin: knowframe-cli
+            use_cross: false
+
+          - os: windows-latest
+            target: x86_64-pc-windows-msvc
+            platform: win32-x64
+            core_bin: knowframe-core.exe
+            cli_bin: knowframe-cli.exe
+            use_cross: false
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Rust toolchain
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Install cross (for ARM Linux cross-compilation)
+        if: matrix.use_cross
+        run: cargo install cross --git https://github.com/cross-rs/cross
+
+      - name: Build Release Binaries
+        shell: bash
+        run: |
+          if [ "${{ matrix.use_cross }}" = "true" ]; then
+            cross build --release --target ${{ matrix.target }}
+          else
+            cargo build --release --target ${{ matrix.target }}
+          fi
+
+      - name: Stage Artifacts
+        shell: bash
+        run: |
+          mkdir -p stage/${{ matrix.platform }}
+          TARGET_DIR="target/${{ matrix.target }}/release"
+          if [ ! -d "$TARGET_DIR" ]; then
+            TARGET_DIR="target/release"
+          fi
+          cp "$TARGET_DIR/${{ matrix.core_bin }}" stage/${{ matrix.platform }}/
+          cp "$TARGET_DIR/${{ matrix.cli_bin }}" stage/${{ matrix.platform }}/
+
+      - name: Upload Platform Binaries
+        uses: actions/upload-artifact@v4
+        with:
+          name: binaries-${{ matrix.platform }}
+          path: stage/${{ matrix.platform }}/*
+
+  package-and-publish:
+    name: Package VSIX & Publish
+    needs: [build-binaries]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: extension/package-lock.json
+
+      - name: Install extension dependencies
+        working-directory: extension
+        run: npm ci
+
+      - name: Download all platform binaries
+        uses: actions/download-artifact@v4
+        with:
+          path: staged-binaries
+
+      - name: Organize Binaries inside Extension
+        run: |
+          mkdir -p extension/bin
+          # Organize platform-specific subfolders for runtime detection
+          for plat in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
+            if [ -d "staged-binaries/binaries-$plat" ]; then
+              mkdir -p "extension/bin/$plat"
+              cp staged-binaries/binaries-$plat/* "extension/bin/$plat/"
+              chmod +x extension/bin/$plat/* 2>/dev/null || true
+            fi
+          done
+
+          # Also put default linux-x64 binaries directly in extension/bin/
+          if [ -d "staged-binaries/binaries-linux-x64" ]; then
+            cp staged-binaries/binaries-linux-x64/* extension/bin/
+            chmod +x extension/bin/* 2>/dev/null || true
+          fi
+
+          echo "--> Bundled binaries structure:"
+          ls -laR extension/bin/
+
+      - name: Build Extension Host & Webview UI
+        working-directory: extension
+        run: npm run package
+
+      - name: Run Extension Unit Tests
+        working-directory: extension
+        run: npm test
+
+      - name: Package VSIX Archives
+        working-directory: extension
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "Packaging KnowFrame v$VERSION..."
+
+          # Universal VSIX (bundles all platforms)
+          npx --yes @vscode/vsce package --no-dependencies -o "knowframe-${VERSION}.vsix"
+
+          # Platform-specific VSIX packages
+          for target in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
+            echo "Packaging target: $target..."
+            # For platform target, place the target's binaries at extension/bin/ root
+            mkdir -p bin_temp
+            cp -r bin/* bin_temp/ 2>/dev/null || true
+            if [ -d "bin/$target" ]; then
+              cp bin/$target/* bin/
+            fi
+            npx --yes @vscode/vsce package --target "$target" --no-dependencies -o "knowframe-${target}-${VERSION}.vsix" || true
+            # Restore
+            rm -rf bin
+            mv bin_temp bin
+          done
+
+          echo "--> Generated packages:"
+          ls -la *.vsix
+
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: KnowFrame ${{ github.ref_name }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+          files: |
+            extension/*.vsix
+
+      - name: Publish to Visual Studio Marketplace
+        if: (startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_marketplace == 'true')
+        working-directory: extension
+        env:
+          VSCE_PAT: ${{ secrets.VSCE_PAT }}
+        run: |
+          if [ -z "$VSCE_PAT" ]; then
+            echo "⚠️ VSCE_PAT secret is NOT configured in repository secrets."
+            echo "To publish automatically to the Visual Studio Marketplace (publisher: dscorpsolutions),"
+            echo "create a Personal Access Token in Azure DevOps (Marketplace -> Manage) and add it as 'VSCE_PAT' in GitHub Settings -> Secrets -> Actions."
+            echo "Skipping marketplace publish step; GitHub release with VSIX packages was created successfully."
+          else
+            echo "🚀 Publishing KnowFrame to Visual Studio Marketplace (publisher: dscorpsolutions)..."
+            VERSION=$(node -p "require('./package.json').version")
+            
+            # Publish platform-specific packages first if available
+            for target in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
+              if [ -f "knowframe-${target}-${VERSION}.vsix" ]; then
+                echo "Publishing target $target: knowframe-${target}-${VERSION}.vsix..."
+                npx --yes @vscode/vsce publish --packagePath "knowframe-${target}-${VERSION}.vsix" -p "$VSCE_PAT" || true
+              fi
+            done
+
+            # Publish universal package as fallback / default
+            if [ -f "knowframe-${VERSION}.vsix" ]; then
+              echo "Publishing universal package: knowframe-${VERSION}.vsix..."
+              npx --yes @vscode/vsce publish --packagePath "knowframe-${VERSION}.vsix" -p "$VSCE_PAT"
+            fi
+            echo "✅ Successfully published to Visual Studio Marketplace!"
+          fi

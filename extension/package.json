@@ -2,14 +2,32 @@
   "name": "knowframe",
   "displayName": "KnowFrame",
   "description": "KnowFrame — Knowledge Management Framework: dynamic knowledge graph, deterministic admission control, structural evolution, and BPE token economics for AI agents",
-  "version": "0.1.0",
-  "publisher": "antigravity",
+  "version": "1.0.0",
+  "publisher": "dscorpsolutions",
   "repository": {
     "type": "git",
-    "url": "https://github.com/antigravity/knowframe"
+    "url": "https://github.com/dioschuarz/knowframe"
+  },
+  "homepage": "https://github.com/dioschuarz/knowframe#readme",
+  "bugs": {
+    "url": "https://github.com/dioschuarz/knowframe/issues"
   },
   "license": "MIT",
   "icon": "media/icon.png",
+  "galleryBanner": {
+    "color": "#0a0a0f",
+    "theme": "dark"
+  },
+  "keywords": [
+    "knowledge-graph",
+    "ai-agents",
+    "context-observatory",
+    "markdown-notes",
+    "token-budget",
+    "admission-control",
+    "obsidian",
+    "llm-wiki"
+  ],
   "engines": {
     "vscode": "^1.90.0"
   },
@@ -221,10 +239,10 @@
     "watch": "node esbuild.js --watch",
     "package": "node esbuild.js --production",
     "build:rust": "cargo build --release --manifest-path ../Cargo.toml && cp ../target/release/knowframe-core bin/ && cp ../target/release/knowframe-cli bin/",
-    "vsix": "npm run build:rust && npm run package && npx --yes @vscode/vsce package --no-dependencies -o knowframe-0.1.0.vsix",
+    "vsix": "npm run build:rust && npm run package && npx --yes @vscode/vsce package --no-dependencies -o knowframe-1.0.0.vsix",
     "reinstall": "bash ../scripts/distribute.sh",
     "distribute": "bash ../scripts/distribute.sh",
-    "package:verify": "npm run package && node -e \"const fs = require('fs'); const file = fs.existsSync('knowframe-0.1.0.vsix') ? 'knowframe-0.1.0.vsix' : 'llm-wiki-0.1.0.vsix'; const st = fs.statSync(file); console.log('VSIX size: ' + (st.size / (1024*1024)).toFixed(2) + ' MB'); if(st.size > 25*1024*1024) { console.error('VSIX exceeds 25MB budget'); process.exit(1); }\"",
+    "package:verify": "npm run package && node -e \"const fs = require('fs'); const file = fs.existsSync('knowframe-1.0.0.vsix') ? 'knowframe-1.0.0.vsix' : 'knowframe-0.1.0.vsix'; const st = fs.statSync(file); console.log('VSIX size: ' + (st.size / (1024*1024)).toFixed(2) + ' MB'); if(st.size > 25*1024*1024) { console.error('VSIX exceeds 25MB budget'); process.exit(1); }\"",
     "lint": "eslint src --ext ts",
     "test": "node --test --experimental-strip-types test/suite/*.test.ts",
     "test:e2e": "node --test --experimental-strip-types test/suite/evolution.e2e.test.ts",

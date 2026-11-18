@@ -29,8 +29,8 @@ cd "${ROOT_DIR}/extension"
 npm run package
 
 # 4. Package VSIX archive
-echo "--> [4/6] Packaging knowframe-0.1.0.vsix with vsce..."
-npx --yes @vscode/vsce package --no-dependencies -o "${ROOT_DIR}/extension/knowframe-0.1.0.vsix"
+echo "--> [4/6] Packaging knowframe-1.0.0.vsix with vsce..."
+npx --yes @vscode/vsce package --no-dependencies -o "${ROOT_DIR}/extension/knowframe-1.0.0.vsix"
 
 # 5. Terminate lingering/stale background daemon processes
 echo "--> [5/6] Terminating stale background daemons..."
@@ -41,11 +41,11 @@ sleep 0.5
 # 6. Reinstall clean VSIX in VS Code
 echo "--> [6/6] Installing extension into VS Code..."
 if command -v code &> /dev/null; then
-    code --install-extension "${ROOT_DIR}/extension/knowframe-0.1.0.vsix" --force
+    code --install-extension "${ROOT_DIR}/extension/knowframe-1.0.0.vsix" --force
     echo "=========================================================="
     echo "✅ Successfully installed fresh KnowFrame extension!"
     echo "💡 Trigger 'Developer: Reload Window' in VS Code to activate."
     echo "=========================================================="
 else
-    echo "⚠️ 'code' CLI not found on PATH. VSIX ready at ${ROOT_DIR}/extension/knowframe-0.1.0.vsix"
+    echo "⚠️ 'code' CLI not found on PATH. VSIX ready at ${ROOT_DIR}/extension/knowframe-1.0.0.vsix"
 fi
