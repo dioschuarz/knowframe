@@ -1,4 +1,4 @@
-name: KnowFrame CI - Automated Tests & Quality Gates
+name: CI - Automated Tests & Quality Gates
 
 on:
   push:
