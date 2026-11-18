@@ -37,7 +37,7 @@ jobs:
             cli_bin: knowframe-cli
             use_cross: true
 
-          - os: macos-13
+          - os: macos-latest
             target: x86_64-apple-darwin
             platform: darwin-x64
             core_bin: knowframe-core

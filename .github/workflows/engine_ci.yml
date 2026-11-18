@@ -27,7 +27,7 @@ jobs:
           - os: macos-latest
             target: aarch64-apple-darwin
             binary_name: knowframe-core
-          - os: macos-13
+          - os: macos-latest
             target: x86_64-apple-darwin
             binary_name: knowframe-core
           - os: windows-latest
@@ -49,9 +49,10 @@ jobs:
 
       - name: Run Cargo Check & Tests
         if: "!matrix.use_cross"
+        shell: bash
         run: |
           cargo check --workspace
-          cargo test --workspace --exclude llm-wiki-cli
+          cargo test --workspace --exclude knowframe-cli
 
       - name: Build Release Binary
         run: |
