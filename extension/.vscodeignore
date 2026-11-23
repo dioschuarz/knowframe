@@ -18,3 +18,5 @@ esbuild.js
 .cargo/**
 Cargo.toml
 Cargo.lock
+bin_temp/**
+*.vsix

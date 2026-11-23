@@ -124,26 +124,16 @@ jobs:
         with:
           path: staged-binaries
 
-      - name: Organize Binaries inside Extension
+      - name: Verify All Platform Binaries
         run: |
-          mkdir -p extension/bin
-          # Organize platform-specific subfolders for runtime detection
-          for plat in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
-            if [ -d "staged-binaries/binaries-$plat" ]; then
-              mkdir -p "extension/bin/$plat"
-              cp staged-binaries/binaries-$plat/* "extension/bin/$plat/"
-              chmod +x extension/bin/$plat/* 2>/dev/null || true
+          for plat in win32-x64 darwin-arm64 darwin-x64 linux-x64 linux-arm64; do
+            if [ ! -d "staged-binaries/binaries-$plat" ] || [ -z "$(ls -A "staged-binaries/binaries-$plat")" ]; then
+              echo "❌ Missing compiled binaries for platform: $plat"
+              exit 1
             fi
           done
-
-          # Also put default linux-x64 binaries directly in extension/bin/
-          if [ -d "staged-binaries/binaries-linux-x64" ]; then
-            cp staged-binaries/binaries-linux-x64/* extension/bin/
-            chmod +x extension/bin/* 2>/dev/null || true
-          fi
-
-          echo "--> Bundled binaries structure:"
-          ls -laR extension/bin/
+          echo "--> Staged platform binaries verified:"
+          ls -laR staged-binaries/
 
       - name: Build Extension Host & Webview UI
         working-directory: extension
@@ -153,32 +143,34 @@ jobs:
         working-directory: extension
         run: npm test
 
-      - name: Package VSIX Archives
+      - name: Package Clean Platform-Specific & Universal VSIX Archives
         working-directory: extension
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "Packaging KnowFrame v$VERSION..."
 
-          # Universal VSIX (bundles all platforms)
-          npx --yes @vscode/vsce package --no-dependencies -o "knowframe-${VERSION}.vsix"
-
-          # Platform-specific VSIX packages
-          for target in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
-            echo "Packaging target: $target..."
-            # For platform target, place the target's binaries at extension/bin/ root
-            mkdir -p bin_temp
-            cp -r bin/* bin_temp/ 2>/dev/null || true
-            if [ -d "bin/$target" ]; then
-              cp bin/$target/* bin/
-            fi
-            npx --yes @vscode/vsce package --target "$target" --no-dependencies -o "knowframe-${target}-${VERSION}.vsix" || true
-            # Restore
+          # 1. Clean platform-specific VSIX packages (ONLY that platform's binaries, ~6-7 MB each)
+          for target in win32-x64 darwin-arm64 darwin-x64 linux-x64 linux-arm64; do
+            echo "📦 Packaging target: $target..."
             rm -rf bin
-            mv bin_temp bin
+            mkdir -p "bin/$target"
+            cp "../staged-binaries/binaries-$target/"* "bin/$target/"
+            chmod +x "bin/$target/"* 2>/dev/null || true
+            npx --yes @vscode/vsce package --target "$target" --no-dependencies -o "knowframe-${target}-${VERSION}.vsix"
           done
 
-          echo "--> Generated packages:"
-          ls -la *.vsix
+          # 2. Clean Universal Fallback VSIX (bundles all 5 platform folders once for win32-arm64, alpine, etc.)
+          echo "📦 Packaging universal fallback VSIX..."
+          rm -rf bin
+          for plat in win32-x64 darwin-arm64 darwin-x64 linux-x64 linux-arm64; do
+            mkdir -p "bin/$plat"
+            cp "../staged-binaries/binaries-$plat/"* "bin/$plat/"
+            chmod +x "bin/$plat/"* 2>/dev/null || true
+          done
+          npx --yes @vscode/vsce package --no-dependencies -o "knowframe-${VERSION}.vsix"
+
+          echo "--> Generated clean VSIX packages:"
+          ls -lh *.vsix
 
       - name: Create GitHub Release
         if: startsWith(github.ref, 'refs/tags/v')
@@ -191,14 +183,17 @@ jobs:
           files: |
             extension/*.vsix
 
-      - name: Publish to Visual Studio Marketplace
+      - name: Publish All Platforms to Visual Studio Marketplace
         if: (startsWith(github.ref, 'refs/tags/v') || github.event.inputs.publish_marketplace == 'true')
         working-directory: extension
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
           VERSION=$(node -p "require('./package.json').version")
-          
+          PUBLISHER=$(node -p "require('./package.json').publisher")
+          EXT_NAME=$(node -p "require('./package.json').name")
+          FULL_ID="${PUBLISHER}.${EXT_NAME}"
+
           if [ -n "$VSCE_PAT" ]; then
             echo "🔑 Publishing using VSCE_PAT secret..."
             AUTH_ARGS=(-p "$VSCE_PAT")
@@ -207,30 +202,84 @@ jobs:
             AUTH_ARGS=(--oidc)
           fi
 
-          echo "🚀 Publishing KnowFrame to Visual Studio Marketplace (publisher: dscorpsolutions)..."
-          
-          # Publish platform-specific packages first if available
-          for target in linux-x64 linux-arm64 darwin-x64 darwin-arm64 win32-x64; do
-            if [ -f "knowframe-${target}-${VERSION}.vsix" ]; then
-              echo "Publishing target $target: knowframe-${target}-${VERSION}.vsix..."
-              npx --yes @vscode/vsce publish --packagePath "knowframe-${target}-${VERSION}.vsix" "${AUTH_ARGS[@]}" || true
-            fi
-          done
-
-          # Publish universal package as fallback / default
-          if [ -f "knowframe-${VERSION}.vsix" ]; then
-            echo "Publishing universal package: knowframe-${VERSION}.vsix..."
-            if ! npx --yes @vscode/vsce publish --packagePath "knowframe-${VERSION}.vsix" "${AUTH_ARGS[@]}"; then
-              echo "⚠️ Publishing failed."
-              if [ -z "$VSCE_PAT" ]; then
-                echo "If using OIDC Trusted Publishing, please verify that your Trusted Publishing policy is configured for:"
-                echo "  Publisher: dscorpsolutions"
-                echo "  Owner: dioschuarz"
-                echo "  Repository: knowframe"
-                echo "  Workflow: release.yml"
-                echo "at https://marketplace.visualstudio.com/manage/publishers/dscorpsolutions"
-              fi
+          publish_pkg() {
+            local label="$1"
+            local file="$2"
+            if [ ! -f "$file" ]; then
+              echo "❌ Missing VSIX package: $file"
               exit 1
             fi
+            echo "🚀 Publishing ${label}: ${file}..."
+            npx --yes @vscode/vsce publish --packagePath "$file" --skip-duplicate "${AUTH_ARGS[@]}"
+          }
+
+          # 1. Publish Universal fallback first (ensures every OS/architecture including win32-arm64 & alpine is supported)
+          publish_pkg "universal" "knowframe-${VERSION}.vsix"
+          sleep 5
+
+          # 2. Publish all 5 native platform-specific packages (no || true; fail fast on auth/API error)
+          for target in win32-x64 darwin-arm64 darwin-x64 linux-x64 linux-arm64; do
+            publish_pkg "$target" "knowframe-${target}-${VERSION}.vsix"
+            sleep 5
+          done
+
+          # 3. Verify all 6 packages (universal + 5 platforms) are validated on the live Marketplace API
+          #    Self-heals if Marketplace drops concurrent uploads while an earlier upload is validating.
+          echo "🔍 Verifying Marketplace validation for ${FULL_ID} v${VERSION}..."
+          RETRY_COUNT=0
+          MAX_RETRIES=12
+          ALL_VALID="PENDING"
+
+          for attempt in $(seq 1 45); do
+            RESPONSE=$(curl -sS -m 20 -X POST \
+              -H "Content-Type: application/json" \
+              -H "Accept: application/json;api-version=7.1-preview.1" \
+              -d "{\"filters\":[{\"criteria\":[{\"filterType\":7,\"value\":\"${FULL_ID}\"}],\"pageSize\":10}],\"flags\":1}" \
+              "https://marketplace.visualstudio.com/_apis/public/gallery/extensionquery")
+
+            STATUS_LINE=$(echo "$RESPONSE" | node -e "
+              const d = JSON.parse(require('fs').readFileSync(0, 'utf8'));
+              const vs = (d.results?.[0]?.extensions?.[0]?.versions || []).filter(v => v.version === '${VERSION}');
+              const expected = ['universal', 'win32-x64', 'darwin-arm64', 'darwin-x64', 'linux-x64', 'linux-arm64'];
+              const byTarget = new Map(vs.map(v => [v.targetPlatform || 'universal', v.flags || 'none']));
+              const summary = expected.map(t => t + '=' + (byTarget.get(t) || 'MISSING')).join(' ');
+              const validating = expected.filter(t => byTarget.has(t) && !String(byTarget.get(t)).includes('validated'));
+              const missing = expected.filter(t => !byTarget.has(t));
+              const validatedCount = expected.filter(t => String(byTarget.get(t) || '').includes('validated')).length;
+              console.log(JSON.stringify({ summary, validating, missing, validatedCount, total: expected.length }));
+            ")
+
+            SUMMARY=$(echo "$STATUS_LINE" | node -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).summary)")
+            VALIDATED_COUNT=$(echo "$STATUS_LINE" | node -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).validatedCount)")
+            TOTAL_COUNT=$(echo "$STATUS_LINE" | node -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).total)")
+            VALIDATING_COUNT=$(echo "$STATUS_LINE" | node -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).validating.length)")
+            FIRST_MISSING=$(echo "$STATUS_LINE" | node -e "console.log(JSON.parse(require('fs').readFileSync(0,'utf8')).missing[0] || '')")
+
+            echo "Attempt ${attempt}/45 (${VALIDATED_COUNT}/${TOTAL_COUNT} validated): ${SUMMARY}"
+
+            if [ "$VALIDATED_COUNT" -eq "$TOTAL_COUNT" ]; then
+              ALL_VALID="OK"
+              echo "✅ All ${TOTAL_COUNT} Marketplace packages (universal + Windows/macOS/Linux) are VALIDATED and LIVE!"
+              break
+            fi
+
+            # If nothing is currently validating, yet a target is missing, re-upload that single missing target
+            if [ "$VALIDATING_COUNT" -eq 0 ] && [ -n "$FIRST_MISSING" ]; then
+              if [ "$RETRY_COUNT" -lt "$MAX_RETRIES" ]; then
+                RETRY_COUNT=$((RETRY_COUNT + 1))
+                echo "🔄 Target '${FIRST_MISSING}' not present after validation settled (retry ${RETRY_COUNT}/${MAX_RETRIES}). Re-publishing..."
+                if [ "$FIRST_MISSING" = "universal" ]; then
+                  publish_pkg "universal" "knowframe-${VERSION}.vsix"
+                else
+                  publish_pkg "$FIRST_MISSING" "knowframe-${FIRST_MISSING}-${VERSION}.vsix"
+                fi
+              fi
+            fi
+
+            sleep 20
+          done
+
+          if [ "$ALL_VALID" != "OK" ]; then
+            echo "❌ Marketplace validation did not complete for all platforms: ${SUMMARY}"
+            exit 1
           fi
-          echo "✅ Successfully published to Visual Studio Marketplace!"

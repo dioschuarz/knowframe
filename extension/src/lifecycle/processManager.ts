@@ -1,4 +1,5 @@
 import { ChildProcess, spawn } from 'child_process';
+import * as fs from 'fs';
 import * as vscode from 'vscode';
 import { resolveBinaryPath } from './binaryResolver';
 import { SecretManager } from './secretManager';
@@ -38,13 +39,20 @@ export class ProcessManager implements vscode.Disposable {
     if (this.process) {
       await this.stop();
     }
-    // Clean up any orphaned sidecar daemons running for this workspace root
-    try {
-      const { execSync } = require('child_process');
-      execSync(`pkill -9 -f "knowframe-core daemon --root ${workspaceRoot}" 2>/dev/null || true`, { stdio: 'ignore' });
-    } catch {}
+    // Clean up any orphaned sidecar daemons running for this workspace root (POSIX)
+    if (process.platform !== 'win32') {
+      try {
+        const { execSync } = require('child_process');
+        execSync(`pkill -9 -f "knowframe-core daemon --root ${workspaceRoot}" 2>/dev/null || true`, { stdio: 'ignore' });
+      } catch {}
+    }
 
     const binaryPath = resolveBinaryPath(this.context.extensionPath);
+    if (process.platform !== 'win32' && fs.existsSync(binaryPath)) {
+      try {
+        fs.chmodSync(binaryPath, 0o755);
+      } catch {}
+    }
     const token = await this.secretManager.initializeToken();
 
     return new Promise<number>((resolve, reject) => {
@@ -61,6 +69,7 @@ export class ProcessManager implements vscode.Disposable {
           env,
           cwd: workspaceRoot,
           stdio: ['ignore', 'pipe', 'pipe'],
+          windowsHide: true,
         });
       } catch (err) {
         return reject(new Error(`Failed to spawn daemon: ${err}`));

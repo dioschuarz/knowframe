@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.4] - 2026-11-23
+
+### Fixed
+- **All-Platform Visual Studio Marketplace Distribution**: Fixed multi-platform VSIX packaging (removed `bin_temp/` duplication and cross-OS binary contamination, shrinking platform VSIXs from ~75 MB to ~7 MB each) and added live Marketplace Gallery API verification with self-healing retry so Windows (`win32-x64`), macOS (`darwin-arm64`, `darwin-x64`), Linux (`linux-x64`, `linux-arm64`), and Universal fallback (`win32-arm64`, Alpine, etc.) are all validated and available in VS Code.
+- **Cross-Platform Daemon Launch**: Hardened `processManager.ts` (`windowsHide: true`, POSIX-only `pkill` & `chmod`) and `binaryResolver.ts` (Windows ARM64 / macOS Rosetta fallback).
+
+---
+
 ## [1.0.3] - 2026-11-18
 
 ### Changed

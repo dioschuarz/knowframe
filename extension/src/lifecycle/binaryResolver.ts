@@ -29,7 +29,7 @@ export function resolveBinaryPath(extensionPath: string): string {
       platformKey = os.arch() === 'arm64' ? 'darwin-arm64' : 'darwin-x64';
       break;
     case 'win32':
-      platformKey = 'win32-x64';
+      platformKey = os.arch() === 'arm64' ? 'win32-arm64' : 'win32-x64';
       break;
     default:
       platformKey = `${os.platform()}-${os.arch()}`;
@@ -38,6 +38,20 @@ export function resolveBinaryPath(extensionPath: string): string {
   const bundledPath = path.join(extensionPath, 'bin', platformKey, binaryName);
   if (fs.existsSync(bundledPath)) {
     return bundledPath;
+  }
+
+  // On Windows ARM64 / macOS ARM64, fall back to bundled x64 binary (Prism / Rosetta 2)
+  if (os.platform() === 'win32' && platformKey !== 'win32-x64') {
+    const winX64Fallback = path.join(extensionPath, 'bin', 'win32-x64', binaryName);
+    if (fs.existsSync(winX64Fallback)) {
+      return winX64Fallback;
+    }
+  }
+  if (os.platform() === 'darwin' && platformKey !== 'darwin-x64') {
+    const macX64Fallback = path.join(extensionPath, 'bin', 'darwin-x64', binaryName);
+    if (fs.existsSync(macX64Fallback)) {
+      return macX64Fallback;
+    }
   }
 
   // 3. Fallback to binary directly inside extensionPath / bin

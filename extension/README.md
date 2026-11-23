@@ -66,14 +66,14 @@ Sub-second, mathematical evaluation of documentation health without non-determin
 1. Open VS Code.
 2. Press `Ctrl+P` (or `Cmd+P` on macOS) and run:
    ```bash
-   ext install dscorpsolutions.knowframe
+   ext install dscorpsolutions.knowframe-vscode
    ```
 3. Alternatively, search for **KnowFrame** in the Extensions view (`Ctrl+Shift+X`).
 
 ### From VSIX Package
-Download the latest `knowframe-1.0.3.vsix` from [GitHub Releases](https://github.com/dioschuarz/knowframe/releases) and install via CLI:
+Download the latest `knowframe-1.0.4.vsix` from [GitHub Releases](https://github.com/dioschuarz/knowframe/releases) and install via CLI:
 ```bash
-code --install-extension knowframe-1.0.3.vsix
+code --install-extension knowframe-1.0.4.vsix
 ```
 
 ---
@@ -138,7 +138,7 @@ KnowFrame is organized as a Cargo workspace with an integrated VS Code extension
 
 ```
 knowframe/
-├── Cargo.toml                  # Cargo Workspace configuration (v1.0.3)
+├── Cargo.toml                  # Cargo Workspace configuration (v1.0.4)
 ├── crates/
 │   ├── core/                   # High-performance Rust quality engine & graph compiler
 │   ├── cli/                    # Headless CLI driver for CI/CD gates and scripting
