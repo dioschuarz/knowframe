@@ -89,6 +89,10 @@ No links here.
         anchor: None,
         line: Some(2), // Originates in Section Alpha (lines 1..=3)
         resolution_status: Some(LinkResolutionStatus::Resolved),
+        raw_target: Some("./beta.md".to_string()),
+        is_clickable: true,
+        non_clickable_reason: None,
+        clickable_target: Some("beta.md".to_string()),
     };
 
     let fragments = extract_fragments_from_document(content, &[edge]);
@@ -121,6 +125,10 @@ No links here.
         anchor: Some("#target-section".to_string()),
         line: Some(1),
         resolution_status: Some(LinkResolutionStatus::Resolved),
+        raw_target: Some("./beta.md".to_string()),
+        is_clickable: true,
+        non_clickable_reason: None,
+        clickable_target: Some("beta.md#target-section".to_string()),
     };
 
     populate_fragment_inbounds(&mut nodes, &[inbound_edge]);
@@ -159,6 +167,10 @@ fn test_fragment_link_resolution_and_dead_anchor_reporting() {
         anchor: Some("#auth-flow".to_string()),
         line: Some(2),
         resolution_status: None,
+        raw_target: Some("./target.md".to_string()),
+        is_clickable: true,
+        non_clickable_reason: None,
+        clickable_target: None,
     };
     topology.add_edge(valid_edge);
 
@@ -174,6 +186,10 @@ fn test_fragment_link_resolution_and_dead_anchor_reporting() {
         anchor: Some("#non-existent-section".to_string()),
         line: Some(4),
         resolution_status: None,
+        raw_target: Some("./target.md".to_string()),
+        is_clickable: true,
+        non_clickable_reason: None,
+        clickable_target: None,
     };
     topology.add_edge(broken_edge);
 

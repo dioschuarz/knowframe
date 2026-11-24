@@ -2,7 +2,7 @@
   "name": "knowframe-vscode",
   "displayName": "KnowFrame - Knowledge Management Framework",
   "description": "KnowFrame — Knowledge Management Framework: dynamic knowledge graph, deterministic admission control, structural evolution, and BPE token economics for AI agents",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "publisher": "dscorpsolutions",
   "repository": {
     "type": "git",
@@ -66,6 +66,12 @@
         "title": "KnowFrame: Fix Broken Links",
         "category": "KnowFrame",
         "icon": "$(tools)"
+      },
+      {
+        "command": "llmWiki.makeLinksClickable",
+        "title": "KnowFrame: Make Links Clickable (Convert to Standard Markdown)",
+        "category": "KnowFrame",
+        "icon": "$(link)"
       },
       {
         "command": "llmWiki.installGitHooks",
@@ -202,6 +208,7 @@
         }
       }
     },
+    "markdown.markdownItPlugins": true,
     "configuration": {
       "title": "KnowFrame",
       "properties": {
@@ -229,6 +236,26 @@
           "type": "number",
           "default": 100000,
           "description": "Critical threshold for Active Prompt Load tokens"
+        },
+        "llmWiki.linkPortabilityMode": {
+          "type": "string",
+          "enum": [
+            "standard_markdown",
+            "obsidian_wikilink",
+            "any"
+          ],
+          "default": "standard_markdown",
+          "description": "Link clickability policy enforced by KnowFrame integrity diagnostics ('standard_markdown' ensures links are clickable in VS Code, GitHub, GitLab, Obsidian, and all standard Markdown renderers)"
+        },
+        "llmWiki.enableEditorWikilinkNavigation": {
+          "type": "boolean",
+          "default": true,
+          "description": "Enable Ctrl+Click / Cmd+Click navigation on valid [[wikilinks]] and #fragments inside the VS Code Markdown editor"
+        },
+        "llmWiki.enableMarkdownPreviewWikilinks": {
+          "type": "boolean",
+          "default": true,
+          "description": "Render valid [[wikilinks]] and #fragments as clickable hyperlinks in VS Code's built-in Markdown Preview"
         }
       }
     }
@@ -239,10 +266,10 @@
     "watch": "node esbuild.js --watch",
     "package": "node esbuild.js --production",
     "build:rust": "cargo build --release --manifest-path ../Cargo.toml && cp ../target/release/knowframe-core bin/ && cp ../target/release/knowframe-cli bin/",
-    "vsix": "npm run build:rust && npm run package && npx --yes @vscode/vsce package --no-dependencies -o knowframe-1.0.4.vsix",
+    "vsix": "npm run build:rust && npm run package && npx --yes @vscode/vsce package --no-dependencies -o knowframe-1.0.5.vsix",
     "reinstall": "bash ../scripts/distribute.sh",
     "distribute": "bash ../scripts/distribute.sh",
-    "package:verify": "npm run package && node -e \"const fs = require('fs'); const file = fs.existsSync('knowframe-1.0.4.vsix') ? 'knowframe-1.0.4.vsix' : 'knowframe-1.0.3.vsix'; const st = fs.statSync(file); console.log('VSIX size: ' + (st.size / (1024*1024)).toFixed(2) + ' MB'); if(st.size > 25*1024*1024) { console.error('VSIX exceeds 25MB budget'); process.exit(1); }\"",
+    "package:verify": "npm run package && node -e \"const fs = require('fs'); const file = fs.existsSync('knowframe-1.0.5.vsix') ? 'knowframe-1.0.5.vsix' : 'knowframe-1.0.4.vsix'; const st = fs.statSync(file); console.log('VSIX size: ' + (st.size / (1024*1024)).toFixed(2) + ' MB'); if(st.size > 25*1024*1024) { console.error('VSIX exceeds 25MB budget'); process.exit(1); }\"",
     "lint": "eslint src --ext ts",
     "test": "node --test --experimental-strip-types test/suite/*.test.ts",
     "test:e2e": "node --test --experimental-strip-types test/suite/evolution.e2e.test.ts",

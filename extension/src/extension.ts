@@ -8,7 +8,10 @@ import { registerShowGraphCommand } from './commands/showGraph';
 import { registerSetHubCommand } from './commands/setHub';
 import { registerRescanVaultCommand } from './commands/rescanVault';
 import { registerFixBrokenLinksCommand } from './commands/fixBrokenLinks';
+import { registerMakeLinksClickableCommand } from './commands/makeLinksClickable';
 import { registerInstallHooksCommand } from './commands/installHooks';
+import { KnowFrameMarkdownDocumentLinkProvider } from './providers/markdownDocumentLinkProvider';
+import { registerKnowFrameWikilinkPlugin } from './providers/markdownItWikilinks';
 import { SidebarViewProvider } from './webview/sidebarViewProvider';
 import { AdmissionManager } from './services/admissionManager';
 import { EvolutionManager } from './evolution/evolutionManager';
@@ -29,7 +32,9 @@ let latestQualityScore: KnowledgeQualityScore | null = null;
 let latestIssuesReport: KnowledgeIssuesReport | null = null;
 let latestGovernanceMatrix: AIOrientedCapabilityMatrix | null = null;
 
-export async function activate(context: vscode.ExtensionContext): Promise<void> {
+export async function activate(
+  context: vscode.ExtensionContext
+): Promise<{ extendMarkdownIt: (md: any) => any }> {
   const outputChannel = vscode.window.createOutputChannel('KnowFrame');
   outputChannel.appendLine('[EXTENSION] Activating KnowFrame extension...');
 
@@ -164,12 +169,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     )
   );
 
+  // Register Markdown Editor Ctrl+Click DocumentLinkProvider for wikilinks & fragments
+  context.subscriptions.push(
+    vscode.languages.registerDocumentLinkProvider(
+      { language: 'markdown' },
+      new KnowFrameMarkdownDocumentLinkProvider(() => latestScanResult)
+    )
+  );
+
   // Register modular commands
   context.subscriptions.push(
     registerShowGraphCommand(context, () => ipcClient, () => latestScanResult, () => evolutionManager, () => governanceManager),
     registerSetHubCommand(() => ipcClient, () => latestScanResult, onScanResultUpdated),
     registerRescanVaultCommand(ensureIpcClient, onScanResultUpdated),
     registerFixBrokenLinksCommand(() => latestScanResult),
+    registerMakeLinksClickableCommand(ensureIpcClient),
     registerInstallHooksCommand(outputChannel),
     vscode.commands.registerCommand('llmWiki.openFolder', () => {
       vscode.commands.executeCommand('vscode.openFolder');
@@ -473,6 +487,36 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     })
   );
+
+  // Export markdown-it plugin so VS Code's built-in Markdown Preview (Ctrl+Shift+V)
+  // renders every valid [[wikilink#fragment|Label]] as a real clickable hyperlink.
+  return {
+    extendMarkdownIt(md: any) {
+      return registerKnowFrameWikilinkPlugin(md, {
+        isEnabled: () =>
+          vscode.workspace
+            .getConfiguration('llmWiki')
+            .get<boolean>('enableMarkdownPreviewWikilinks', true) !== false,
+        getWorkspaceRoot: (sourcePath?: string) => {
+          if (sourcePath) {
+            const folder = vscode.workspace.getWorkspaceFolder(vscode.Uri.file(sourcePath));
+            if (folder) {
+              return folder.uri.fsPath;
+            }
+          }
+          return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath || null;
+        },
+        getFallbackDocumentPath: () => {
+          const active = vscode.window.activeTextEditor?.document;
+          if (active && (active.languageId === 'markdown' || active.uri.fsPath.endsWith('.md'))) {
+            return active.uri.fsPath;
+          }
+          return null;
+        },
+        getScanResult: () => latestScanResult,
+      });
+    },
+  };
 }
 
 function updateStatusBarWithBudget(

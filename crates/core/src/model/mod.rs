@@ -48,6 +48,38 @@ pub enum LinkType {
     Wikilink,
 }
 
+/// Reason why a resolved link is not universally clickable across standard Markdown renderers
+/// (VS Code preview/editor, GitHub, GitLab, Obsidian, Antigravity, Cursor, Typora, etc.).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[serde(rename_all = "snake_case")]
+pub enum NonClickableReason {
+    /// Obsidian-specific `[[target|label]]` syntax is not rendered as a link in standard Markdown viewers.
+    WikilinkSyntax,
+    /// Target omits explicit `.md` file extension (fails in VS Code, GitHub, and CommonMark renderers).
+    MissingExtension,
+    /// Target relies on vault-root, workspace-root, or basename heuristics instead of an exact relative path.
+    NonRelativePath,
+    /// Path casing differs from the canonical file path on disk (breaks on Linux and GitHub).
+    CaseMismatch,
+    /// Unencoded spaces inside Markdown link destination break standard Markdown parsers.
+    UnencodedSpaces,
+    /// Section anchor does not match the canonical GFM heading slug (e.g. contains spaces or wrong case).
+    UnslugifiedAnchor,
+}
+
+/// Configurable policy controlling universal link clickability enforcement in `.context-vault.yaml`.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize, Default)]
+#[serde(rename_all = "snake_case")]
+pub enum LinkPortabilityMode {
+    /// Sensible default: enforce universally clickable standard Markdown relative links `[Label](rel/path.md#slug)`.
+    #[default]
+    StandardMarkdown,
+    /// Allow Obsidian `[[wikilink]]` syntax while still checking standard Markdown link relative paths.
+    ObsidianWikilink,
+    /// Disable non-clickable link portability diagnostics.
+    Any,
+}
+
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 #[serde(rename_all = "lowercase")]
 pub enum ClusterQueryType {
@@ -163,6 +195,19 @@ pub struct NoteEdge {
     /// Link resolution status
     #[serde(default)]
     pub resolution_status: Option<LinkResolutionStatus>,
+    /// Original link target path as written in the source document before canonical resolution
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_target: Option<String>,
+    /// True when the link is universally clickable in standard CommonMark/GFM renderers
+    /// (VS Code preview/editor, GitHub, GitLab, Obsidian, etc.)
+    #[serde(default = "default_true")]
+    pub is_clickable: bool,
+    /// Diagnostic reason when `!is_broken && !is_clickable`
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub non_clickable_reason: Option<NonClickableReason>,
+    /// Deterministic POSIX relative Markdown destination (e.g. `../knowframe/README.md#overview`)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clickable_target: Option<String>,
 }
 
 impl NoteEdge {
@@ -183,7 +228,7 @@ impl NoteEdge {
         Self {
             id,
             source: src,
-            target: tgt,
+            target: tgt.clone(),
             link_type,
             is_broken: false,
             raw_text: raw_text.into(),
@@ -191,6 +236,10 @@ impl NoteEdge {
             target_fragment,
             line,
             resolution_status: Some(LinkResolutionStatus::Resolved),
+            raw_target: Some(tgt),
+            is_clickable: true,
+            non_clickable_reason: None,
+            clickable_target: None,
         }
     }
 }

@@ -108,6 +108,8 @@ pub enum GovernanceStrategyType {
     RestructureDirectoryDomain,
     #[serde(rename = "sync_harness_routes")]
     SyncHarnessRoutes,
+    #[serde(rename = "normalize_links_to_markdown")]
+    NormalizeLinksToMarkdown,
 }
 
 impl GovernanceStrategyType {
@@ -123,6 +125,7 @@ impl GovernanceStrategyType {
             GovernanceStrategyType::IntroduceSectionAddressing => "introduce_section_addressing",
             GovernanceStrategyType::RestructureDirectoryDomain => "restructure_directory_domain",
             GovernanceStrategyType::SyncHarnessRoutes => "sync_harness_routes",
+            GovernanceStrategyType::NormalizeLinksToMarkdown => "normalize_links_to_markdown",
         }
     }
 
@@ -147,6 +150,9 @@ impl GovernanceStrategyType {
             }
             "sync_harness_routes" | "sync_harnesses" => {
                 Some(GovernanceStrategyType::SyncHarnessRoutes)
+            }
+            "normalize_links_to_markdown" | "make_links_clickable" | "fix_links" => {
+                Some(GovernanceStrategyType::NormalizeLinksToMarkdown)
             }
             _ => None,
         }

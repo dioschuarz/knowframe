@@ -13,7 +13,7 @@ pub fn execute_governance_plan(
 ) -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let strategy = GovernanceStrategyType::from_str(strategy_str).ok_or_else(|| {
         format!(
-            "Unknown governance strategy '{}'. Available strategies: sync_harness_routes, eliminate_secondary_routing_layer, introduce_section_addressing, restructure_directory_domain",
+            "Unknown governance strategy '{}'. Available strategies: sync_harness_routes, eliminate_secondary_routing_layer, introduce_section_addressing, restructure_directory_domain, normalize_links_to_markdown",
             strategy_str
         )
     })?;
@@ -91,7 +91,7 @@ pub fn execute_governance_apply(
 
     let strategy = GovernanceStrategyType::from_str(strategy_str).ok_or_else(|| {
         format!(
-            "Unknown governance strategy '{}'. Available strategies: sync_harness_routes, eliminate_secondary_routing_layer, introduce_section_addressing, restructure_directory_domain",
+            "Unknown governance strategy '{}'. Available strategies: sync_harness_routes, eliminate_secondary_routing_layer, introduce_section_addressing, restructure_directory_domain, normalize_links_to_markdown",
             strategy_str
         )
     })?;

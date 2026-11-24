@@ -6,17 +6,23 @@ use regex::Regex;
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct RawWikilink {
     pub target: String,
+    pub raw_target: String,
     pub label: String,
+    pub has_explicit_alias: bool,
     pub anchor: Option<String>,
     pub start_offset: usize,
+    pub end_offset: usize,
+    pub is_embed: bool,
 }
 
 pub fn parse_wikilinks(text: &str) -> Vec<RawWikilink> {
     let re = Regex::new(r"\[\[([^\[\]\r\n]+)\]\]").unwrap();
+    let bytes = text.as_bytes();
     let mut links = Vec::new();
 
     for cap in re.captures_iter(text) {
         let mat = cap.get(0).unwrap();
+        let is_embed = mat.start() > 0 && bytes[mat.start() - 1] == b'!';
         let inner = cap.get(1).unwrap().as_str().trim();
         if inner.is_empty() {
             continue;
@@ -43,6 +49,7 @@ pub fn parse_wikilinks(text: &str) -> Vec<RawWikilink> {
             target_path.push_str(".md");
         }
 
+        let has_explicit_alias = alias.is_some();
         let label = alias.unwrap_or_else(|| {
             if raw_target.is_empty() {
                 anchor.clone().unwrap_or_default()
@@ -53,9 +60,13 @@ pub fn parse_wikilinks(text: &str) -> Vec<RawWikilink> {
 
         links.push(RawWikilink {
             target: target_path,
+            raw_target: raw_target.to_string(),
             label,
+            has_explicit_alias,
             anchor,
             start_offset: mat.start(),
+            end_offset: mat.end(),
+            is_embed,
         });
     }
 
@@ -78,5 +89,9 @@ pub fn wikilink_to_edge(source: &str, link: RawWikilink, line: Option<u32>) -> N
         anchor: link.anchor,
         line,
         resolution_status: Some(LinkResolutionStatus::Resolved),
+        raw_target: Some(link.raw_target),
+        is_clickable: false,
+        non_clickable_reason: Some(crate::model::NonClickableReason::WikilinkSyntax),
+        clickable_target: None,
     }
 }

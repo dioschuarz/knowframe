@@ -25,6 +25,8 @@ pub fn calculate_quality_score(
     // 1. Pillar: Integrity (25%)
     let mut raw_integrity_deductions = 0.0f32;
     let mut eff_integrity_deductions = 0.0f32;
+    let mut raw_non_clickable_deductions = 0.0f32;
+    let mut eff_non_clickable_deductions = 0.0f32;
     for edge in &topology.edges {
         if edge.is_broken {
             let b = topology
@@ -54,8 +56,34 @@ pub fn calculate_quality_score(
                 eff_integrity_deductions += penalty;
                 eff_degradation_factors.push(factor);
             }
+        } else if !edge.is_clickable {
+            let b = topology
+                .nodes
+                .get(&edge.source)
+                .map(|n| n.betweenness)
+                .unwrap_or(0.0);
+            let weight = calculate_topological_weight(b);
+            let penalty = 0.5 * weight;
+            raw_non_clickable_deductions = (raw_non_clickable_deductions + penalty).min(20.0);
+            eff_non_clickable_deductions = (eff_non_clickable_deductions + penalty).min(20.0);
+
+            let reason_label = format_non_clickable_reason(edge.non_clickable_reason);
+            let factor = QualityDegradationFactor {
+                category: "non_clickable_link".to_string(),
+                affected_node: edge.source.clone(),
+                betweenness_weight: weight,
+                deduction_points: penalty,
+                description: format!(
+                    "Link to '{}' is valid but not clickable in standard Markdown renderers ({})",
+                    edge.target, reason_label
+                ),
+            };
+            raw_degradation_factors.push(factor.clone());
+            eff_degradation_factors.push(factor);
         }
     }
+    raw_integrity_deductions += raw_non_clickable_deductions;
+    eff_integrity_deductions += eff_non_clickable_deductions;
     let raw_integrity_score = (100.0f32 - raw_integrity_deductions).clamp(0.0, 100.0);
     let eff_integrity_score = (100.0f32 - eff_integrity_deductions).clamp(0.0, 100.0);
 
@@ -431,6 +459,30 @@ pub fn calculate_quality_score(
     }
 }
 
+fn format_non_clickable_reason(reason: Option<crate::model::NonClickableReason>) -> &'static str {
+    match reason {
+        Some(crate::model::NonClickableReason::WikilinkSyntax) => {
+            "Obsidian wikilink syntax not clickable in VS Code or standard Markdown renderers"
+        }
+        Some(crate::model::NonClickableReason::MissingExtension) => {
+            "missing explicit .md file extension"
+        }
+        Some(crate::model::NonClickableReason::NonRelativePath) => {
+            "path is not relative to source file directory"
+        }
+        Some(crate::model::NonClickableReason::CaseMismatch) => {
+            "path casing does not match target filename on disk"
+        }
+        Some(crate::model::NonClickableReason::UnencodedSpaces) => {
+            "unencoded whitespace in Markdown link destination"
+        }
+        Some(crate::model::NonClickableReason::UnslugifiedAnchor) => {
+            "fragment anchor is not a canonical GFM heading slug"
+        }
+        None => "non-portable Markdown link format",
+    }
+}
+
 /// Extracts full categorized list of knowledge issues across all 4 pillars.
 pub fn extract_all_issues(
     topology: &GraphTopology,
@@ -439,7 +491,7 @@ pub fn extract_all_issues(
 ) -> Vec<KnowledgeIssue> {
     let mut issues = Vec::new();
 
-    // 1. Integrity Issues (broken references)
+    // 1. Integrity Issues (broken references + non-clickable valid links)
     for edge in &topology.edges {
         if edge.is_broken {
             let b = topology
@@ -467,6 +519,49 @@ pub fn extract_all_issues(
                 remediation_hint: format!(
                     "Create target file '{}' or update link in '{}'",
                     edge.target, edge.source
+                ),
+                is_legacy: false,
+                is_excluded: false,
+            });
+        } else if !edge.is_clickable {
+            let b = topology
+                .nodes
+                .get(&edge.source)
+                .map(|n| n.betweenness)
+                .unwrap_or(0.0);
+            let weight = calculate_topological_weight(b);
+            let deduction = (0.5 * weight * 10.0).round() / 10.0;
+            let reason_label = format_non_clickable_reason(edge.non_clickable_reason);
+            let suggested_dest = edge
+                .clickable_target
+                .as_deref()
+                .unwrap_or(&edge.target);
+            let label = if edge.raw_text.trim().is_empty() {
+                edge.target.as_str()
+            } else {
+                edge.raw_text.as_str()
+            };
+            issues.push(KnowledgeIssue {
+                id: format!(
+                    "integrity:non_clickable:{}:{}:{}",
+                    edge.source,
+                    edge.target,
+                    edge.line.unwrap_or(0)
+                ),
+                pillar: "integrity".to_string(),
+                category: "non_clickable_link".to_string(),
+                file_path: edge.source.clone(),
+                line_number: edge.line,
+                target: Some(edge.target.clone()),
+                deduction_points: deduction,
+                weight: (weight * 100.0).round() / 100.0,
+                description: format!(
+                    "Link to '{}' exists, but is not clickable when rendered ({})",
+                    edge.target, reason_label
+                ),
+                remediation_hint: format!(
+                    "Convert to standard clickable Markdown link: [{}]({})",
+                    label, suggested_dest
                 ),
                 is_legacy: false,
                 is_excluded: false,

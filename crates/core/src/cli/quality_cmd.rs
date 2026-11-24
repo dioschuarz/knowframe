@@ -47,17 +47,7 @@ pub fn execute_quality_with_options(
         topology.add_node(n);
     }
     for edge in scan_res.edges {
-        let mut e = crate::model::NoteEdge::new(
-            edge.source,
-            edge.target,
-            edge.link_type,
-            String::new(),
-            edge.anchor,
-            edge.line,
-        );
-        e.is_broken = edge.is_broken;
-        e.resolution_status = edge.resolution_status;
-        topology.add_edge(e);
+        topology.add_edge(edge.to_note_edge());
     }
 
     let baseline = load_baseline(workspace_root).ok().flatten();

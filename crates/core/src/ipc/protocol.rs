@@ -123,6 +123,10 @@ impl From<&NoteNode> for NodePayload {
     }
 }
 
+fn default_edge_clickable() -> bool {
+    true
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub struct EdgePayload {
     pub id: String,
@@ -138,6 +142,14 @@ pub struct EdgePayload {
     pub line: Option<u32>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub resolution_status: Option<crate::model::LinkResolutionStatus>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub raw_target: Option<String>,
+    #[serde(default = "default_edge_clickable")]
+    pub is_clickable: bool,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub non_clickable_reason: Option<crate::model::NonClickableReason>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub clickable_target: Option<String>,
 }
 
 impl From<&NoteEdge> for EdgePayload {
@@ -152,6 +164,37 @@ impl From<&NoteEdge> for EdgePayload {
             anchor: e.anchor.clone(),
             line: e.line,
             resolution_status: e.resolution_status,
+            raw_target: e.raw_target.clone(),
+            is_clickable: e.is_clickable,
+            non_clickable_reason: e.non_clickable_reason,
+            clickable_target: e.clickable_target.clone(),
+        }
+    }
+}
+
+impl EdgePayload {
+    /// Converts an IPC/scan `EdgePayload` back into a full `NoteEdge`, preserving
+    /// resolution status and universal clickability diagnostics.
+    pub fn to_note_edge(&self) -> NoteEdge {
+        let target_fragment = self
+            .target_fragment
+            .clone()
+            .or_else(|| self.anchor.as_ref().map(|a| a.trim_start_matches('#').to_string()));
+        NoteEdge {
+            id: self.id.clone(),
+            source: self.source.clone(),
+            target: self.target.clone(),
+            target_fragment,
+            link_type: self.link_type,
+            is_broken: self.is_broken,
+            raw_text: String::new(),
+            anchor: self.anchor.clone(),
+            line: self.line,
+            resolution_status: self.resolution_status,
+            raw_target: self.raw_target.clone(),
+            is_clickable: self.is_clickable,
+            non_clickable_reason: self.non_clickable_reason,
+            clickable_target: self.clickable_target.clone(),
         }
     }
 }

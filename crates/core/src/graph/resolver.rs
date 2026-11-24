@@ -1,7 +1,9 @@
 //! Relative path resolver, multi-repo/submodule traversal, and dead link & anchor detector.
 
 pub use crate::fragment::extractor::slugify_heading;
-use crate::model::{LinkResolutionStatus, LinkType, NoteEdge};
+use crate::model::{
+    LinkPortabilityMode, LinkResolutionStatus, LinkType, NonClickableReason, NoteEdge,
+};
 use std::collections::{HashMap, HashSet};
 use std::path::{Path, PathBuf};
 
@@ -144,6 +146,223 @@ pub fn resolve_relative_path(source_id: &str, target_path: &str) -> String {
     normalized.join("/")
 }
 
+/// Strictly normalizes a Markdown link destination relative to `source_id`'s parent directory
+/// (following exact CommonMark / VS Code / GitHub resolution semantics — NO vault-root shortcut).
+pub fn resolve_strict_relative_path(source_id: &str, target_path: &str) -> String {
+    let source_path = Path::new(source_id);
+    let parent = source_path.parent().unwrap_or_else(|| Path::new(""));
+    let trimmed = target_path.trim().replace('\\', "/");
+
+    // Leading `/` in Markdown is workspace-root relative (not strictly relative to source dir)
+    if trimmed.starts_with('/') {
+        return trimmed.trim_start_matches('/').to_string();
+    }
+
+    let combined = if parent.as_os_str().is_empty() {
+        PathBuf::from(&trimmed)
+    } else {
+        parent.join(&trimmed)
+    };
+
+    let mut normalized = Vec::new();
+    for component in combined.components() {
+        match component {
+            std::path::Component::Normal(c) => normalized.push(c.to_string_lossy().to_string()),
+            std::path::Component::ParentDir => {
+                if normalized.is_empty() {
+                    // Escaped above workspace root
+                    normalized.push("..".to_string());
+                } else if normalized.last().map(|s| s.as_str()) == Some("..") {
+                    normalized.push("..".to_string());
+                } else {
+                    normalized.pop();
+                }
+            }
+            std::path::Component::CurDir => {}
+            _ => {}
+        }
+    }
+
+    normalized.join("/")
+}
+
+/// Computes the exact POSIX relative path from `source_file` to `target_file`.
+/// Example: `compute_relative_posix_path("notes/AGENTS.md", "knowframe/README.md") == "../knowframe/README.md"`.
+/// Example: `compute_relative_posix_path("notes/AGENTS.md", "notes/00_meta/wiki_index.md") == "00_meta/wiki_index.md"`.
+/// Returns `""` when `source_file == target_file`.
+pub fn compute_relative_posix_path(source_file: &str, target_file: &str) -> String {
+    let src_norm = source_file.replace('\\', "/");
+    let tgt_norm = target_file.replace('\\', "/");
+
+    if src_norm == tgt_norm {
+        return String::new();
+    }
+
+    let src_parent = Path::new(&src_norm)
+        .parent()
+        .map(|p| p.to_string_lossy().replace('\\', "/"))
+        .unwrap_or_default();
+
+    let src_parts: Vec<&str> = src_parent.split('/').filter(|s| !s.is_empty()).collect();
+    let tgt_parts: Vec<&str> = tgt_norm.split('/').filter(|s| !s.is_empty()).collect();
+
+    let mut common = 0usize;
+    while common < src_parts.len() && common < tgt_parts.len() && src_parts[common] == tgt_parts[common] {
+        common += 1;
+    }
+
+    let mut result_parts: Vec<&str> = Vec::new();
+    for _ in common..src_parts.len() {
+        result_parts.push("..");
+    }
+    for part in &tgt_parts[common..] {
+        result_parts.push(part);
+    }
+
+    result_parts.join("/")
+}
+
+/// Percent-encodes spaces for valid CommonMark/GFM link destinations.
+pub fn encode_markdown_path(path: &str) -> String {
+    path.replace(' ', "%20")
+}
+
+/// Builds the exact universally clickable Markdown link destination (`rel/path.md#slug`).
+pub fn build_clickable_destination(
+    source_file: &str,
+    canonical_target: &str,
+    matched_slug: Option<&str>,
+) -> String {
+    let rel = encode_markdown_path(&compute_relative_posix_path(source_file, canonical_target));
+    match matched_slug {
+        Some(slug) if !slug.is_empty() => {
+            if rel.is_empty() {
+                format!("#{}", slug)
+            } else {
+                format!("{}#{}", rel, slug)
+            }
+        }
+        _ => {
+            if rel.is_empty() {
+                Path::new(canonical_target)
+                    .file_name()
+                    .map(|f| encode_markdown_path(&f.to_string_lossy()))
+                    .unwrap_or_default()
+            } else {
+                rel
+            }
+        }
+    }
+}
+
+/// Evaluates whether a resolved edge is universally clickable in standard Markdown renderers
+/// (VS Code preview/editor, GitHub, GitLab, Obsidian, Cursor, Antigravity, Typora, etc.).
+pub fn evaluate_edge_clickability(
+    edge: &mut NoteEdge,
+    canonical_target: &str,
+    matched_slug: Option<&str>,
+    policy: LinkPortabilityMode,
+) {
+    let clickable_dest = build_clickable_destination(&edge.source, canonical_target, matched_slug);
+    edge.clickable_target = Some(clickable_dest);
+
+    if policy == LinkPortabilityMode::Any {
+        edge.is_clickable = true;
+        edge.non_clickable_reason = None;
+        return;
+    }
+
+    if edge.link_type == LinkType::Wikilink {
+        if policy == LinkPortabilityMode::ObsidianWikilink {
+            edge.is_clickable = true;
+            edge.non_clickable_reason = None;
+        } else {
+            edge.is_clickable = false;
+            edge.non_clickable_reason = Some(NonClickableReason::WikilinkSyntax);
+        }
+        return;
+    }
+
+    // Standard Markdown `[label](dest)` clickability checks
+    let raw_dest = edge
+        .raw_target
+        .as_deref()
+        .unwrap_or(&edge.target)
+        .trim()
+        .replace('\\', "/");
+
+    if raw_dest.contains(' ') {
+        edge.is_clickable = false;
+        edge.non_clickable_reason = Some(NonClickableReason::UnencodedSpaces);
+        return;
+    }
+
+    let decoded_raw = raw_dest.replace("%20", " ");
+
+    // Same-file pure anchor link `[Section](#slug)`
+    if decoded_raw.is_empty() {
+        if let Some(slug) = matched_slug {
+            let raw_anchor = edge
+                .anchor
+                .as_deref()
+                .map(|a| a.trim_start_matches('#'))
+                .unwrap_or("");
+            if raw_anchor != slug {
+                edge.is_clickable = false;
+                edge.non_clickable_reason = Some(NonClickableReason::UnslugifiedAnchor);
+                return;
+            }
+        }
+        edge.is_clickable = true;
+        edge.non_clickable_reason = None;
+        return;
+    }
+
+    // Workspace-absolute leading `/` fails in local VS Code / filesystem renderers
+    if decoded_raw.starts_with('/') {
+        edge.is_clickable = false;
+        edge.non_clickable_reason = Some(NonClickableReason::NonRelativePath);
+        return;
+    }
+
+    // Check explicit `.md` extension when canonical target is Markdown
+    if canonical_target.ends_with(".md") && !decoded_raw.to_lowercase().ends_with(".md") {
+        edge.is_clickable = false;
+        edge.non_clickable_reason = Some(NonClickableReason::MissingExtension);
+        return;
+    }
+
+    // Strictly resolve relative path from source document directory
+    let strict_rel = resolve_strict_relative_path(&edge.source, &decoded_raw);
+    if strict_rel != canonical_target {
+        if strict_rel.eq_ignore_ascii_case(canonical_target) {
+            edge.is_clickable = false;
+            edge.non_clickable_reason = Some(NonClickableReason::CaseMismatch);
+            return;
+        }
+        edge.is_clickable = false;
+        edge.non_clickable_reason = Some(NonClickableReason::NonRelativePath);
+        return;
+    }
+
+    // Check anchor slug normalization if fragment present
+    if let Some(slug) = matched_slug {
+        let raw_anchor = edge
+            .anchor
+            .as_deref()
+            .map(|a| a.trim_start_matches('#'))
+            .unwrap_or("");
+        if raw_anchor != slug {
+            edge.is_clickable = false;
+            edge.non_clickable_reason = Some(NonClickableReason::UnslugifiedAnchor);
+            return;
+        }
+    }
+
+    edge.is_clickable = true;
+    edge.non_clickable_reason = None;
+}
+
 /// Resolves edges against registered nodes and validates section heading anchors.
 /// Supports multi-repo cross-submodule traversal, case-insensitive normalization,
 /// and Obsidian shortest-path vault lookups with O(1) indexed lookups.
@@ -152,7 +371,25 @@ pub fn resolve_edge_integrity(
     index: &ResolverIndex,
     node_headings: &HashMap<String, Vec<String>>,
 ) {
-    let raw_target = edge.target.trim().replace('\\', "/");
+    resolve_edge_integrity_with_policy(
+        edge,
+        index,
+        node_headings,
+        LinkPortabilityMode::StandardMarkdown,
+    );
+}
+
+/// Same as `resolve_edge_integrity` with configurable `LinkPortabilityMode`.
+pub fn resolve_edge_integrity_with_policy(
+    edge: &mut NoteEdge,
+    index: &ResolverIndex,
+    node_headings: &HashMap<String, Vec<String>>,
+    portability_mode: LinkPortabilityMode,
+) {
+    if edge.raw_target.is_none() {
+        edge.raw_target = Some(edge.target.clone());
+    }
+    let raw_target = edge.target.trim().replace('\\', "/").replace("%20", " ");
     let rel_target = resolve_relative_path(&edge.source, &raw_target);
 
     // Build ordered list of candidate paths to check:
@@ -173,26 +410,48 @@ pub fn resolve_edge_integrity(
         candidate_paths.push(raw_target.clone());
     }
 
-    // Step A: Direct match in known_nodes (trying with .md appended if missing)
+    let has_anchor = edge.anchor.is_some() || edge.target_fragment.is_some();
+
+    // Step A: Direct match in known_nodes (trying with .md appended if missing).
+    // If an anchorless bare reference like `[[AGENTS]]` inside `notes/AGENTS.md` collides
+    // with itself, prefer a distinct candidate (e.g. workspace root `AGENTS.md`) if it exists.
     let mut matched_target: Option<String> = None;
+    let mut self_fallback: Option<String> = None;
 
     for cand in &candidate_paths {
-        if cand.ends_with(".md") {
+        let hit = if cand.ends_with(".md") {
             if index.known_nodes.contains_key(cand) {
-                matched_target = Some(cand.clone());
-                break;
+                Some(cand.clone())
+            } else {
+                None
             }
         } else {
             let cand_md = format!("{}.md", cand);
             if index.known_nodes.contains_key(&cand_md) {
-                matched_target = Some(cand_md);
-                break;
+                Some(cand_md)
+            } else if index.known_nodes.contains_key(cand) {
+                Some(cand.clone())
+            } else {
+                None
             }
-            if index.known_nodes.contains_key(cand) {
-                matched_target = Some(cand.clone());
-                break;
+        };
+
+        let skip_anchorless_self =
+            edge.link_type == LinkType::Wikilink && !has_anchor && !raw_target.contains('/');
+
+        if let Some(found) = hit {
+            if skip_anchorless_self && found == edge.source {
+                if self_fallback.is_none() {
+                    self_fallback = Some(found);
+                }
+                continue;
             }
+            matched_target = Some(found);
+            break;
         }
+    }
+    if matched_target.is_none() {
+        matched_target = self_fallback;
     }
 
     // Step B: Case-folded match in case_folded
@@ -265,12 +524,16 @@ pub fn resolve_edge_integrity(
                 edge.id = format!("{}->{}", edge.source, edge.target);
                 edge.is_broken = false;
                 edge.resolution_status = Some(LinkResolutionStatus::Resolved);
+                evaluate_edge_clickability(edge, &rel_target, None, portability_mode);
                 return;
             }
 
             edge.target = rel_target.clone();
             edge.id = format!("{}->{}", edge.source, edge.target);
             edge.is_broken = true;
+            edge.is_clickable = false;
+            edge.non_clickable_reason = None;
+            edge.clickable_target = None;
             edge.resolution_status = Some(if edge.link_type == LinkType::Wikilink {
                 LinkResolutionStatus::BrokenWikilink
             } else {
@@ -289,6 +552,7 @@ pub fn resolve_edge_integrity(
         .as_ref()
         .or(edge.target_fragment.as_ref())
         .cloned();
+    let mut validated_slug: Option<String> = None;
 
     if let Some(ref anchor) = anchor_candidate {
         let clean_anchor = anchor.trim_start_matches('#');
@@ -314,10 +578,14 @@ pub fn resolve_edge_integrity(
 
         if !anchor_found {
             edge.is_broken = true;
+            edge.is_clickable = false;
+            edge.non_clickable_reason = None;
+            edge.clickable_target = None;
             edge.resolution_status = Some(LinkResolutionStatus::BrokenFragmentAnchor);
             return;
         } else {
-            edge.target_fragment = Some(matched_slug);
+            edge.target_fragment = Some(matched_slug.clone());
+            validated_slug = Some(matched_slug);
         }
     }
 
@@ -327,6 +595,13 @@ pub fn resolve_edge_integrity(
     } else {
         edge.resolution_status = Some(LinkResolutionStatus::Resolved);
     }
+
+    evaluate_edge_clickability(
+        edge,
+        &canonical_target,
+        validated_slug.as_deref(),
+        portability_mode,
+    );
 }
 
 /// Validates fragment anchors across edges and emits deterministic BROKEN_FRAGMENT_ANCHOR findings.

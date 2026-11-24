@@ -129,8 +129,8 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
         }
     }
 
-    // 2. Resolve link destinations and anchor integrity
-    topology.resolve_links();
+    // 2. Resolve link destinations, anchor integrity, and universal clickability
+    topology.resolve_links_with_policy(config.get_link_portability_mode());
 
     // 3. Compute Brandes betweenness centrality
     topology.compute_betweenness();

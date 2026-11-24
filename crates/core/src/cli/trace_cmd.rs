@@ -59,6 +59,10 @@ pub fn execute_trace(
             anchor: edge.anchor,
             line: edge.line,
             resolution_status: edge.resolution_status,
+            raw_target: edge.raw_target,
+            is_clickable: edge.is_clickable,
+            non_clickable_reason: edge.non_clickable_reason,
+            clickable_target: edge.clickable_target,
         });
     }
 

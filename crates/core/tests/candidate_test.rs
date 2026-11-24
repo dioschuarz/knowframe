@@ -134,6 +134,10 @@ fn test_candidate_admission_decision_gate() {
         anchor: None,
         line: Some(5),
         resolution_status: None,
+        raw_target: Some("notes/legacy_missing.md".to_string()),
+        is_clickable: false,
+        non_clickable_reason: None,
+        clickable_target: None,
     });
 
     // Baseline records existing legacy broken link

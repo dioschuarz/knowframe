@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.0.5] - 2026-11-24
+
+### Added
+- **Universal Link Clickability Verification (`non_clickable_link`)**: Integrity Pillar now audits whether every valid link is actually clickable when rendered in VS Code, GitHub, GitLab, Obsidian, and standard CommonMark/GFM viewers — flagging Obsidian `[[wikilinks]]`, missing `.md` extensions, non-relative/vault-root paths, case mismatches, unencoded spaces, and unslugified anchors. Configurable via `links.portability` in `.context-vault.yaml` or `llmWiki.linkPortabilityMode` (`standard_markdown` default, `obsidian_wikilink`, `any`).
+- **Native VS Code Editor & Markdown Preview Wikilink Clickability**: Added `KnowFrameMarkdownDocumentLinkProvider` (Ctrl+Click / Cmd+Click jumps directly to target file and heading line) and built-in `markdown-it` Preview plugin (`markdown.markdownItPlugins`) rendering valid `[[target#fragment|label]]` links as clickable hyperlinks inside VS Code Markdown Preview (`Ctrl+Shift+V`), while leaving broken links unclickable.
+- **Deterministic Link Normalizer (CLI + Governance Strategy + VS Code Command)**:
+  - CLI command `knowframe-core fix-links [--root <dir>] [--file <path>] [--apply] [--json]`
+  - Governance strategy `normalize_links_to_markdown` wired to `[ Review ]` in Diagnostics Drawer with unified diff preview and approval gate
+  - VS Code Command Palette action `KnowFrame: Make Links Clickable (Convert to Standard Markdown)` (`llmWiki.makeLinksClickable`)
+  - Safely preserves YAML frontmatter, fenced code blocks, inline code spans, `![[embeds]]`, external URLs, and skips broken links.
+
+### Fixed
+- **Frontmatter Masking in AST Parser**: Masked YAML frontmatter before regex wikilink and hashtag extraction so metadata fields never emit false-positive graph edges.
+- **EdgePayload Clickability Preservation**: Added `EdgePayload::to_note_edge()` so CLI `issues`/`quality` and JSON-RPC daemon handlers consistently propagate `is_clickable`, `non_clickable_reason`, and `clickable_target`.
+
+---
+
 ## [1.0.4] - 2026-11-23
 
 ### Fixed

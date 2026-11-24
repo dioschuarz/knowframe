@@ -1,7 +1,7 @@
 # KnowFrame — Knowledge Management Framework
 
-[![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/dscorpsolutions.knowframe?style=flat-square&label=Marketplace&color=38bdf8)](https://marketplace.visualstudio.com/items?itemName=dscorpsolutions.knowframe)
-[![Visual Studio Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/dscorpsolutions.knowframe?style=flat-square&color=22c55e)](https://marketplace.visualstudio.com/items?itemName=dscorpsolutions.knowframe)
+[![VS Code Marketplace Version](https://img.shields.io/visual-studio-marketplace/v/dscorpsolutions.knowframe-vscode?style=flat-square&label=Marketplace&color=38bdf8)](https://marketplace.visualstudio.com/items?itemName=dscorpsolutions.knowframe-vscode)
+[![Visual Studio Marketplace Installs](https://img.shields.io/visual-studio-marketplace/i/dscorpsolutions.knowframe-vscode?style=flat-square&color=22c55e)](https://marketplace.visualstudio.com/items?itemName=dscorpsolutions.knowframe-vscode)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg?style=flat-square)](https://opensource.org/licenses/MIT)
 [![Rust 2021](https://img.shields.io/badge/Rust-2021_Edition-orange.svg?style=flat-square&logo=rust)](https://www.rust-lang.org/)
 [![VS Code](https://img.shields.io/badge/VS_Code-%E2%89%A51.90.0-007ACC.svg?style=flat-square&logo=visual-studio-code)](https://code.visualstudio.com/)
@@ -34,7 +34,7 @@ When modern developers and autonomous AI coding agents (Claude Code, Antigravity
 
 ### 2. 🛡️ Deterministic 5-Pillar Quality Scoring (0–100)
 Sub-second, mathematical evaluation of documentation health without non-deterministic LLM hallucinations:
-- **Pillar 1: Integrity (Weight: 25%)**: Detects broken wikilinks, circular file paths, unanchored section references, and missing target documents.
+- **Pillar 1: Integrity (Weight: 25%)**: Detects broken wikilinks, circular file paths, unanchored section references, missing target documents, and valid-yet-unclickable links (`non_clickable_link`) across VS Code, GitHub, GitLab, and standard Markdown renderers — with one-click conversion (`knowframe-core fix-links`) plus native VS Code editor & Markdown Preview clickability.
 - **Pillar 2: Structure (Weight: 25%)**: Identifies God Documents (>3,000 tokens), taxonomy cycles, reference concentration, and AI harness route drifts.
 - **Pillar 3: Consistency (Weight: 20%)**: Flags homograph term collisions, synonym ring drift, and metadata schema inconsistencies.
 - **Pillar 4: Discoverability (Weight: 15%)**: Discovers isolated silos, unindexed leaves, and high-degree bridge cut vertices.
@@ -71,9 +71,9 @@ Sub-second, mathematical evaluation of documentation health without non-determin
 3. Alternatively, search for **KnowFrame** in the Extensions view (`Ctrl+Shift+X`).
 
 ### From VSIX Package
-Download the latest `knowframe-1.0.4.vsix` from [GitHub Releases](https://github.com/dioschuarz/knowframe/releases) and install via CLI:
+Download the latest `knowframe-1.0.5.vsix` from [GitHub Releases](https://github.com/dioschuarz/knowframe/releases) and install via CLI:
 ```bash
-code --install-extension knowframe-1.0.4.vsix
+code --install-extension knowframe-1.0.5.vsix
 ```
 
 ---
@@ -138,7 +138,7 @@ KnowFrame is organized as a Cargo workspace with an integrated VS Code extension
 
 ```
 knowframe/
-├── Cargo.toml                  # Cargo Workspace configuration (v1.0.4)
+├── Cargo.toml                  # Cargo Workspace configuration (v1.0.5)
 ├── crates/
 │   ├── core/                   # High-performance Rust quality engine & graph compiler
 │   ├── cli/                    # Headless CLI driver for CI/CD gates and scripting

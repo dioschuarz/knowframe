@@ -194,6 +194,10 @@ fn test_initial_baseline_capture_on_brownfield() {
         anchor: None,
         line: Some(12),
         resolution_status: None,
+        raw_target: Some("notes/missing.md".to_string()),
+        is_clickable: false,
+        non_clickable_reason: None,
+        clickable_target: None,
     });
 
     let baseline = capture_initial_baseline(&topology, "init_sha", vec![], vec![]);

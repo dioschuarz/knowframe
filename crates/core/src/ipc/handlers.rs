@@ -86,18 +86,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                         st.topology.add_node(n);
                     }
                     for edge in &payload.edges {
-                        let mut e = crate::model::NoteEdge::new(
-                            edge.source.clone(),
-                            edge.target.clone(),
-                            edge.link_type,
-                            String::new(),
-                            edge.anchor.clone(),
-                            edge.line,
-                        );
-                        e.is_broken = edge.is_broken;
-                        e.target_fragment = edge.target_fragment.clone();
-                        e.resolution_status = edge.resolution_status;
-                        st.topology.add_edge(e);
+                        st.topology.add_edge(edge.to_note_edge());
                     }
                     JsonRpcResponse::success(req.id, json!(payload))
                 }
@@ -257,7 +246,8 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 }
             }
 
-            st.topology.resolve_links();
+            let link_policy = st.config.get_link_portability_mode();
+            st.topology.resolve_links_with_policy(link_policy);
             if let Some(ref hub) = st.active_hub.clone() {
                 st.topology.compute_hops(hub);
             }
@@ -357,7 +347,8 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 }
             }
 
-            st.topology.resolve_links();
+            let link_policy = st.config.get_link_portability_mode();
+            st.topology.resolve_links_with_policy(link_policy);
             if let Some(ref hub) = st.active_hub.clone() {
                 st.topology.compute_hops(hub);
             }
@@ -425,17 +416,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                         topology.add_node(n);
                     }
                     for edge in scan_res.edges {
-                        let mut e = crate::model::NoteEdge::new(
-                            edge.source,
-                            edge.target,
-                            edge.link_type,
-                            String::new(),
-                            edge.anchor,
-                            edge.line,
-                        );
-                        e.is_broken = edge.is_broken;
-                        e.resolution_status = edge.resolution_status;
-                        topology.add_edge(e);
+                        topology.add_edge(edge.to_note_edge());
                     }
                 }
             }
@@ -515,17 +496,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                         topology.add_node(n);
                     }
                     for edge in scan_res.edges {
-                        let mut e = crate::model::NoteEdge::new(
-                            edge.source,
-                            edge.target,
-                            edge.link_type,
-                            String::new(),
-                            edge.anchor,
-                            edge.line,
-                        );
-                        e.is_broken = edge.is_broken;
-                        e.resolution_status = edge.resolution_status;
-                        topology.add_edge(e);
+                        topology.add_edge(edge.to_note_edge());
                     }
                 }
             }
@@ -676,6 +647,27 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 }),
             )
         }
+        "workspace/normalizeLinks" => {
+            let (file, apply) = match req.params {
+                Some(ref p) => (
+                    p.get("file").and_then(|v| v.as_str()).map(|s| s.to_string()),
+                    p.get("apply").and_then(|v| v.as_bool()).unwrap_or(false),
+                ),
+                None => (None, false),
+            };
+            let root = {
+                let st = state.read().await;
+                st.workspace_root.clone()
+            };
+            match crate::automation::link_normalizer::normalize_workspace_links(
+                &root,
+                file.as_deref(),
+                apply,
+            ) {
+                Ok(report) => JsonRpcResponse::success(req.id, json!(report)),
+                Err(e) => JsonRpcResponse::error(req.id, -32603, e.to_string()),
+            }
+        }
         "workspace/getBaseline" => {
             let root = {
                 let st = state.read().await;
@@ -783,17 +775,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                         topology.add_node(n);
                     }
                     for edge in scan_res.edges {
-                        let mut e = crate::model::NoteEdge::new(
-                            edge.source,
-                            edge.target,
-                            edge.link_type,
-                            String::new(),
-                            edge.anchor,
-                            edge.line,
-                        );
-                        e.is_broken = edge.is_broken;
-                        e.resolution_status = edge.resolution_status;
-                        topology.add_edge(e);
+                        topology.add_edge(edge.to_note_edge());
                     }
                 }
             }
@@ -2552,7 +2534,8 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                         }
                     }
                 }
-                st.topology.resolve_links();
+                let link_policy = st.config.get_link_portability_mode();
+                st.topology.resolve_links_with_policy(link_policy);
             }
 
             let trace_res = crate::trace::traversal::trace_from_harness(

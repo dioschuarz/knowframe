@@ -2,7 +2,7 @@
 
 use super::centrality::compute_brandes_betweenness;
 use super::hops::assign_bfs_hops;
-use super::resolver::{resolve_edge_integrity, ResolverIndex};
+use super::resolver::{resolve_edge_integrity_with_policy, ResolverIndex};
 use crate::model::{NoteEdge, NoteNode};
 use petgraph::graph::DiGraph;
 use std::collections::HashMap;
@@ -162,8 +162,14 @@ impl GraphTopology {
         assign_bfs_hops(hub_id, &mut self.nodes, &adj);
     }
 
-    /// Resolves all edges: normalizes relative paths, validates disk presence and section heading anchors.
+    /// Resolves all edges: normalizes relative paths, validates disk presence, section anchors,
+    /// and universal link clickability using the default `StandardMarkdown` policy.
     pub fn resolve_links(&mut self) {
+        self.resolve_links_with_policy(crate::model::LinkPortabilityMode::StandardMarkdown);
+    }
+
+    /// Resolves all edges with an explicit `LinkPortabilityMode`.
+    pub fn resolve_links_with_policy(&mut self, portability_mode: crate::model::LinkPortabilityMode) {
         let known_nodes: HashMap<String, PathBuf> = self
             .nodes
             .iter()
@@ -180,7 +186,7 @@ impl GraphTopology {
         let index = ResolverIndex::with_exclusions(&known_nodes, excluded_nodes);
 
         for edge in &mut self.edges {
-            resolve_edge_integrity(edge, &index, &self.headings);
+            resolve_edge_integrity_with_policy(edge, &index, &self.headings, portability_mode);
         }
 
         crate::fragment::extractor::populate_fragment_inbounds(&mut self.nodes, &self.edges);

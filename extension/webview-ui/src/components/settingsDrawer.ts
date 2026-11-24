@@ -1451,6 +1451,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
             const catClass = `cat-${issue.category.toLowerCase().replace(/[^a-z0-9_]/g, '')}`;
             const lineStr = issue.line_number ? `:${issue.line_number}` : '';
             const isBroken = issue.category === 'broken_link' || issue.category === 'invalid_anchor' || issue.category === 'broken_fragment_anchor';
+            const isNonClickable = issue.category === 'non_clickable_link';
             const isSecondary =
               issue.category === 'secondaryroutinglayer' ||
               issue.category === 'secondary_routing_layer' ||
@@ -1494,7 +1495,7 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               </svg>
             `;
 
-            const hasDeterministicAction = isBroken || isSecondary || isDrift || isReview;
+            const hasDeterministicAction = isBroken || isNonClickable || isSecondary || isDrift || isReview;
             let actionBtnHtml = '';
 
             if (hasDeterministicAction) {
@@ -1503,6 +1504,9 @@ export function renderSettingsDrawerHtml(props: SettingsDrawerProps, isEntering 
               if (isBroken) {
                 primaryActionClass += ' diag-fix-ref-btn';
                 extraAttrs = `data-file="${issue.file_path}" data-target="${issue.target || ''}" data-line="${issue.line_number ?? ''}"`;
+              } else if (isNonClickable) {
+                primaryActionClass += ' btn-gov-normalize-links';
+                extraAttrs = `data-target="${issue.file_path}"`;
               } else if (isSecondary) {
                 primaryActionClass += ' btn-gov-eliminate-secondary';
                 extraAttrs = `data-target="${issue.file_path}"`;
@@ -2515,6 +2519,16 @@ export function renderSettingsDrawer(
       });
     });
 
+    container.querySelectorAll('.btn-gov-normalize-links').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = (btn as HTMLElement).getAttribute('data-target') || '';
+        if (target) {
+          callbacks.onGenerateGovernancePlan?.('normalize_links_to_markdown', target);
+        }
+      });
+    });
+
     container.querySelectorAll('.btn-gov-promote-skill').forEach((btn) => {
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
@@ -3023,6 +3037,16 @@ export function renderSettingsDrawer(
         e.stopPropagation();
         const target = (btn as HTMLElement).getAttribute('data-target') || 'AGENTS.md';
         callbacks.onGenerateGovernancePlan?.('sync_harness_routes', target);
+      });
+    });
+
+    container.querySelectorAll('.btn-gov-normalize-links').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = (btn as HTMLElement).getAttribute('data-target') || '';
+        if (target) {
+          callbacks.onGenerateGovernancePlan?.('normalize_links_to_markdown', target);
+        }
       });
     });
   }
@@ -3746,6 +3770,16 @@ export function renderSettingsDrawer(
         e.stopPropagation();
         const target = (btn as HTMLElement).getAttribute('data-target') || 'AGENTS.md';
         callbacks.onGenerateGovernancePlan?.('sync_harness_routes', target);
+      });
+    });
+
+    container.querySelectorAll('.btn-gov-normalize-links').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const target = (btn as HTMLElement).getAttribute('data-target') || '';
+        if (target) {
+          callbacks.onGenerateGovernancePlan?.('normalize_links_to_markdown', target);
+        }
       });
     });
 

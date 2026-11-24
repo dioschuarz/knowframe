@@ -44,8 +44,26 @@ pub fn parse_markdown_ast(file_id: &str, content: &str) -> ParsedDocument {
     let mut current_link_text = String::new();
     let mut current_link_offset: usize = 0;
 
-    // Mask for code blocks and code spans to ensure immunity for regexes
+    // Mask YAML frontmatter, code blocks, and code spans to ensure immunity for regexes
     let mut masked_bytes = content.as_bytes().to_vec();
+    let fm_end = if content.starts_with("---\n") {
+        content[4..]
+            .find("\n---")
+            .map(|p| (4 + p + 4).min(masked_bytes.len()))
+            .unwrap_or(0)
+    } else if content.starts_with("---\r\n") {
+        content[5..]
+            .find("\r\n---")
+            .map(|p| (5 + p + 5).min(masked_bytes.len()))
+            .unwrap_or(0)
+    } else {
+        0
+    };
+    for b in &mut masked_bytes[..fm_end] {
+        if *b != b'\n' && *b != b'\r' {
+            *b = b' ';
+        }
+    }
 
     for (event, range) in Parser::new_ext(content, Options::all()).into_offset_iter() {
         match event {
@@ -118,7 +136,7 @@ pub fn parse_markdown_ast(file_id: &str, content: &str) -> ParsedDocument {
                         edges.push(NoteEdge {
                             id: format!("{}->{}", file_id, path_part),
                             source: file_id.to_string(),
-                            target: path_part,
+                            target: path_part.clone(),
                             target_fragment: target_frag,
                             link_type: LinkType::Markdown,
                             is_broken: false,
@@ -126,6 +144,10 @@ pub fn parse_markdown_ast(file_id: &str, content: &str) -> ParsedDocument {
                             anchor,
                             line,
                             resolution_status: Some(LinkResolutionStatus::Resolved),
+                            raw_target: Some(path_part),
+                            is_clickable: true,
+                            non_clickable_reason: None,
+                            clickable_target: None,
                         });
                     }
                 }

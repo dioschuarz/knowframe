@@ -43,10 +43,19 @@ export interface NodePayload {
   broken_links: number;
 }
 
+export type NonClickableReason =
+  | 'wikilink_syntax'
+  | 'missing_extension'
+  | 'non_relative_path'
+  | 'case_mismatch'
+  | 'unencoded_spaces'
+  | 'unslugified_anchor';
+
 export interface EdgePayload {
   id: string;
   source: string;
   target: string;
+  target_fragment?: string | null;
   is_broken: boolean;
   link_type: 'markdown' | 'wikilink';
   anchor?: string | null;
@@ -56,7 +65,12 @@ export interface EdgePayload {
     | 'resolved_excluded'
     | 'broken_missing_file'
     | 'broken_missing_anchor'
+    | 'broken_fragment_anchor'
     | 'broken_wikilink';
+  raw_target?: string | null;
+  is_clickable?: boolean;
+  non_clickable_reason?: NonClickableReason | null;
+  clickable_target?: string | null;
 }
 
 export interface TokenSummaryPayload {

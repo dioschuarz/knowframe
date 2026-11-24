@@ -277,6 +277,35 @@ enum Commands {
         #[command(subcommand)]
         subcommand: ReviewCommands,
     },
+
+    /// Convert valid non-clickable links (wikilinks, missing .md, non-relative paths, unslugified anchors)
+    /// into universally clickable standard Markdown relative links `[Label](relative/path.md#slug)`
+    #[command(name = "fix-links")]
+    FixLinks {
+        /// Workspace root directory (flag)
+        #[arg(short, long)]
+        root: Option<PathBuf>,
+
+        /// Workspace root directory (path flag alias)
+        #[arg(long)]
+        path: Option<PathBuf>,
+
+        /// Positional workspace root directory
+        #[arg(index = 1)]
+        positional_root: Option<PathBuf>,
+
+        /// Restrict normalization to a single file path (relative to root or absolute)
+        #[arg(short, long)]
+        file: Option<String>,
+
+        /// Apply rewrites to disk (defaults to dry-run preview with unified diff)
+        #[arg(long, default_value_t = false)]
+        apply: bool,
+
+        /// Emit machine-readable JSON report
+        #[arg(long, default_value_t = false)]
+        json: bool,
+    },
 }
 
 #[derive(Subcommand)]
@@ -773,6 +802,55 @@ async fn main() -> anyhow::Result<()> {
                 }
             }
         },
+        Commands::FixLinks {
+            root,
+            path,
+            positional_root,
+            file,
+            apply,
+            json,
+        } => {
+            let workspace_root = path
+                .or(root)
+                .or(positional_root)
+                .unwrap_or_else(|| PathBuf::from("."));
+            match llm_wiki_core::automation::link_normalizer::normalize_workspace_links(
+                &workspace_root,
+                file.as_deref(),
+                apply,
+            ) {
+                Ok(report) => {
+                    if json {
+                        println!("{}", serde_json::to_string_pretty(&report)?);
+                    } else {
+                        let mode = if report.applied { "APPLIED" } else { "DRY-RUN" };
+                        println!(
+                            "[{}] Scanned {} file(s) | {} link(s) {} across {} file(s) | {} already clickable | {} broken skipped",
+                            mode,
+                            report.files_scanned,
+                            report.total_rewrites,
+                            if report.applied { "rewritten" } else { "to rewrite" },
+                            report.documents.len(),
+                            report.total_already_clickable,
+                            report.total_broken_skipped
+                        );
+                        for doc in &report.documents {
+                            println!("\n--- {} ({} rewrites) ---", doc.file_path, doc.rewrites.len());
+                            if !doc.unified_diff.is_empty() {
+                                println!("{}", doc.unified_diff);
+                            }
+                        }
+                        if !report.applied && report.total_rewrites > 0 {
+                            println!("Run with --apply to write changes to disk.");
+                        }
+                    }
+                }
+                Err(e) => {
+                    eprintln!("fix-links error: {}", e);
+                    std::process::exit(1);
+                }
+            }
+        }
     }
 
     Ok(())

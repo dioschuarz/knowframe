@@ -47,6 +47,16 @@ pub struct ContextVaultConfig {
     /// Feature 010: Architectural rules configuration
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub architecture: Option<ArchitectureConfig>,
+    /// Link clickability and portability policy (.context-vault.yaml)
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub links: Option<LinkSettings>,
+}
+
+/// Link clickability & portability settings in `.context-vault.yaml`
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, Default)]
+pub struct LinkSettings {
+    #[serde(default)]
+    pub portability: crate::model::LinkPortabilityMode,
 }
 
 /// Architectural rules configuration schema in `.context-vault.yaml`
@@ -175,11 +185,18 @@ impl Default for ContextVaultConfig {
             harness_paths: Vec::new(),
             review_policy: None,
             architecture: None,
+            links: None,
         }
     }
 }
 
 impl ContextVaultConfig {
+    pub fn get_link_portability_mode(&self) -> crate::model::LinkPortabilityMode {
+        self.links
+            .as_ref()
+            .map(|l| l.portability)
+            .unwrap_or_default()
+    }
     pub fn get_scan_include(&self) -> Vec<String> {
         if let Some(ref scan) = self.scan {
             if !scan.include.is_empty() {

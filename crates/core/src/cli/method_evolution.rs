@@ -41,18 +41,7 @@ fn build_topology(root: &Path) -> Result<GraphTopology, Box<dyn std::error::Erro
         topology.add_node(n);
     }
     for edge in scan.edges {
-        let mut e = crate::model::NoteEdge::new(
-            edge.source,
-            edge.target,
-            edge.link_type,
-            String::new(),
-            edge.anchor,
-            edge.line,
-        );
-        e.is_broken = edge.is_broken;
-        e.target_fragment = edge.target_fragment;
-        e.resolution_status = edge.resolution_status;
-        topology.add_edge(e);
+        topology.add_edge(edge.to_note_edge());
     }
     Ok(topology)
 }

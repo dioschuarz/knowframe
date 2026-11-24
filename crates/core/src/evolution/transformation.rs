@@ -766,6 +766,71 @@ impl GovernancePlanGenerator {
                     )
                 }
             }
+            NormalizeLinksToMarkdown => {
+                let target_filter = if target.trim().is_empty() || target == "." || target == "*" {
+                    None
+                } else {
+                    Some(target)
+                };
+                let report = crate::automation::link_normalizer::normalize_workspace_links(
+                    root,
+                    target_filter,
+                    false,
+                )
+                .map_err(|e| {
+                    crate::harness::GovernanceError::PlanGenerationFailed(format!(
+                        "Failed to normalize links: {}",
+                        e
+                    ))
+                })?;
+
+                let mut diffs = Vec::new();
+                let mut actions = Vec::new();
+                for doc in &report.documents {
+                    if !doc.unified_diff.is_empty() {
+                        diffs.push(doc.unified_diff.clone());
+                    }
+                    actions.push(TransformationAction::UpdateDocumentContent {
+                        file_path: doc.file_path.clone(),
+                        updated_content: doc.updated_content.clone(),
+                    });
+                }
+
+                let scope_label = target_filter.unwrap_or("workspace");
+                let unified_diff = if diffs.is_empty() {
+                    format!(
+                        "# All valid links in '{}' are already universally clickable standard Markdown links.\n",
+                        scope_label
+                    )
+                } else {
+                    diffs.join("\n")
+                };
+
+                let title = format!("Make Links Universally Clickable in '{}'", scope_label);
+                let description = format!(
+                    "Deterministically convert {} valid non-clickable link(s) across {} file(s) into standard CommonMark/GFM relative Markdown links `[Label](relative/path.md#slug)` clickable in VS Code, GitHub, GitLab, Obsidian, and all Markdown renderers. Skipped {} broken link(s).",
+                    report.total_rewrites,
+                    report.documents.len(),
+                    report.total_broken_skipped
+                );
+
+                (
+                    title,
+                    description,
+                    vec![
+                        "Every valid link becomes natively clickable in VS Code preview & editor, GitHub, GitLab, Obsidian, and all standard Markdown viewers".to_string(),
+                        "Preserves exact relative paths, case-matching extensions (.md), validated GFM heading anchors (#slug), and code-block immunity".to_string(),
+                        "Zero LLM tokens consumed (100% deterministic AST normalization)".to_string(),
+                    ],
+                    vec![
+                        "Replaces Obsidian-only [[wikilinks]] with standard Markdown relative links (fully supported by Obsidian Graph & Backlinks)".to_string(),
+                    ],
+                    0,
+                    0,
+                    unified_diff,
+                    actions,
+                )
+            }
         };
 
         // Invariant XVI: Deterministic Approval Token
