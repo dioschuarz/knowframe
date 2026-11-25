@@ -28,7 +28,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 - **All-Platform Visual Studio Marketplace Distribution**: Fixed multi-platform VSIX packaging (removed `bin_temp/` duplication and cross-OS binary contamination, shrinking platform VSIXs from ~75 MB to ~7 MB each) and added live Marketplace Gallery API verification with self-healing retry so Windows (`win32-x64`), macOS (`darwin-arm64`, `darwin-x64`), Linux (`linux-x64`, `linux-arm64`), and Universal fallback (`win32-arm64`, Alpine, etc.) are all validated and available in VS Code.
-- **Cross-Platform Daemon Launch**: Hardened `processManager.ts` (`windowsHide: true`, POSIX-only `pkill` & `chmod`) and `binaryResolver.ts` (Windows ARM64 / macOS Rosetta fallback).
+- **Cross-Platform Daemon Launch**: Hardened `extension/src/lifecycle/processManager.ts` (`windowsHide: true`, POSIX-only `pkill` & `chmod`) and `extension/src/lifecycle/binaryResolver.ts` (Windows ARM64 / macOS Rosetta fallback).
 
 ---
 
@@ -51,7 +51,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Changed
 - **Visual Studio Marketplace Publication**: Bumped patch version to `1.0.1` for clean Marketplace release under publisher `dscorpsolutions`.
 - **High-Resolution Branding**: Bundled new 256x256 high-resolution icon (`media/icon.png`).
-- **CI Stability**: Adjusted Windows test timeout in `cli_validate_test.rs` and relaxed frame budget timing threshold for virtualized GitHub runners in `evolution.e2e.test.ts`.
+- **CI Stability**: Adjusted Windows test timeout in `crates/core/tests/cli_validate_test.rs` and relaxed frame budget timing threshold for virtualized GitHub runners in `extension/test/suite/evolution.e2e.test.ts`.
 
 ---
 
@@ -67,7 +67,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   - *Discoverability* (isolated silos, unindexed leaves, bridge cut vertices)
   - *Traceability & Freshness* (Git commit decay, review obligations, AST code dependencies)
 - **Active Prompt Load & BPE Token Observatory**: Exact byte-pair encoding (cl100k_base) token calculations and live warning thresholds (60k/100k tokens) to prevent AI context window saturation.
-- **Knowledge Debt Baselining & Pre-Commit Git Admission Control**: Sub-500ms pre-commit hooks via `prek` or native git hooks validating changes against `.context-vault/baseline.json`.
+- **Knowledge Debt Baselining & Pre-Commit Git Admission Control**: Sub-500ms pre-commit hooks via `prek` or native git hooks validating changes against *.context-vault/baseline.json*.
 - **18 KOS Structural Evolution Strategies**: Automated transformation recommendations (Topic Decomposition, Section Addressing, Faceted Classification, Thesaurus Relational Reciprocity, Lightweight Routing, Metadata Materialization) with composite plan valuation and unified diff preview.
 - **Unified Split-Button Action Architecture**:
   - Deterministic fast-path `[ Review | ▾ ]` applying algorithmic repairs with zero LLM tokens.

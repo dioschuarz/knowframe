@@ -286,5 +286,5 @@ wiki:
 - [x] T067 [P] Implement Criterion benchmark `crates/core/benches/pre_commit_bench.rs` asserting pre-commit validation in $\le 500$ ms fail-open and post-commit sync $\le 50$ ms (NFR-003, NFR-005, SC-003)
 - [x] T067b [P] Implement memory profiling benchmark in `crates/core/benches/memory_bench.rs` verifying resting RSS $\le 35$ MB for 5,000 documents and peak scan RAM $\le 250$ MB (NFR-006)
 - [x] T068 Verify binary packaging size $\le 25$ MB per platform in `crates/cli` release build (NFR-009)
-- [x] T068b [P] Configure CI cross-compilation matrix workflow for Linux x86_64/aarch64, macOS arm64/x86_64, Windows x86_64 in `.github/workflows/engine_ci.yml` (NFR-010)
+- [x] T068b [P] Configure CI cross-compilation matrix workflow for Linux x86_64/aarch64, macOS arm64/x86_64, Windows x86_64 in `.github/workflows/ci.yml` (NFR-010)
 - [x] T069 End-to-end integration test verifying full pipeline execution across all 18 KOS methodologies with 0 external AI calls (FR-001..FR-046, NFR-001..NFR-010, SC-001..SC-008)

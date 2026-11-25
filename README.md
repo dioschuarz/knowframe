@@ -46,7 +46,7 @@ Sub-second, mathematical evaluation of documentation health without non-determin
 - **Short Context Tracing**: Constrained beam-search route discovery allowing agents to trace only relevant subtrees.
 
 ### 4. 🔒 Knowledge Debt Baselining & Pre-Commit Git Admission Control
-- **Zero-Tolerance Baseline Ratchet**: Record existing legacy debt in `.context-vault/baseline.json`. Future commits are guaranteed to never introduce new regressions (`knowframe-core validate-candidate`).
+- **Zero-Tolerance Baseline Ratchet**: Record existing legacy debt in *.context-vault/baseline.json*. Future commits are guaranteed to never introduce new regressions (`knowframe-core validate-candidate`).
 - **Sub-500ms Pre-Commit Admission Hooks**: Seamless integration with [prek](https://github.com/jdx/prek) and standard Git hooks to validate file changes before committing.
 
 ### 5. 🧬 18 KOS Structural Evolution Strategies
@@ -71,7 +71,7 @@ Sub-second, mathematical evaluation of documentation health without non-determin
 3. Alternatively, search for **KnowFrame** in the Extensions view (`Ctrl+Shift+X`).
 
 ### From VSIX Package
-Download the latest `knowframe-1.0.5.vsix` from [GitHub Releases](https://github.com/dioschuarz/knowframe/releases) and install via CLI:
+Download the latest `knowframe-1.0.5.vsix` from [GitHub Releases](https://github.com/dioschuarz/knowframe/releases) (see [CHANGELOG.md](CHANGELOG.md)) and install via CLI:
 ```bash
 code --install-extension knowframe-1.0.5.vsix
 ```
@@ -121,7 +121,7 @@ knowframe-cli trace --from docs/index.md --to docs/api.md
 
 ## ⚙️ Configuration Settings
 
-Configure KnowFrame via VS Code Settings (`settings.json`):
+Configure KnowFrame via VS Code Settings (*settings.json*):
 
 | Setting | Type | Default | Description |
 | :--- | :--- | :--- | :--- |
