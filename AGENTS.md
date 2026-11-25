@@ -81,7 +81,7 @@ Welcome to `knowframe` (**KnowFrame** — Knowledge Management Framework). This 
 - **DRY & Single Source of Truth**: Never duplicate architectural principles, rules, or schemas across markdown files. Always promote shared principles into canonical documents under `foundations/` or `concepts/` and link to them.
 
 ## 2. Mermaid & Visual Architecture Standard
-- **Canonical Specification**: Obey [[04_harness/skills/mermaid-reviewer/SKILL|Mermaid Visualization & Terminal Rendering Standard]] — Single Source of Truth.
+- **Canonical Specification**: Obey [Mermaid Visualization & Terminal Rendering Standard](../notes/04_harness/skills/mermaid-reviewer/SKILL.md) — Single Source of Truth.
 - **Dual Modality Protocol**:
   - **In Markdown files (`.md`)**: Always write clean, valid ````mermaid```` code blocks (rendered natively in Obsidian and GitHub).
   - **In Terminal chat sessions**: NEVER output raw Mermaid code. Render visually to Unicode/ASCII via `merman-cli` (constrained to **max 155 characters** per line) before responding to the user.
@@ -89,6 +89,7 @@ Welcome to `knowframe` (**KnowFrame** — Knowledge Management Framework). This 
 ## Knowledge Index
 
 ### Governance & Invariants
+- [KnowFrame README](README.md)
 - [KnowFrame Constitution & 17 Invariants](CONSTITUTION.md)
 - [Product Management Foundations: Sensible Defaults with Unconstrained Customization](../notes/07_c_suite/ctaas/foundations/product_management.md)
 

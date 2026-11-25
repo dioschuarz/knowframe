@@ -27,9 +27,9 @@ wiki:
 
 **Purpose**: Validate specification completeness, determinism, and constitutional alignment before proceeding to planning and task breakdown.  
 **Created**: 2026-10-13  
-**Feature**: [spec.md](spec.md) (`specs/010-deterministic-traceability-review`)  
+**Feature**: [spec.md](../spec.md) (`specs/010-deterministic-traceability-review`)  
 
-**Note**: This checklist validates requirements quality against the 16 Critical Invariants in [CONSTITUTION.md](../../CONSTITUTION.md) v1.6.0.  
+**Note**: This checklist validates requirements quality against the 16 Critical Invariants in [CONSTITUTION.md](../../../CONSTITUTION.md) v1.6.0.  
 **Review Ownership**: Reviewer-owned requirements-quality review artifact. Mark an item `[x]` only when verified.  
 
 ---

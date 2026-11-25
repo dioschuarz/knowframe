@@ -79,6 +79,7 @@ Welcome to `knowframe` (**KnowFrame** — Knowledge Management Framework). This 
 ## Knowledge Index
 
 ### Governance & Invariants
+- [KnowFrame README](README.md)
 - [KnowFrame Constitution & 17 Invariants](CONSTITUTION.md)
 
 ### Feature Specifications & Architecture
@@ -170,3 +171,5 @@ Welcome to `knowframe` (**KnowFrame** — Knowledge Management Framework). This 
 
 ### Historical & Design Records
 - [Review Extension UX & Exploration](specs/chatgpt_conversation.md)
+- [Product Management Foundations: Sensible Defaults with Unconstrained Customization](../notes/07_c_suite/ctaas/foundations/product_management.md)
+- [Mermaid Visualization & Terminal Rendering Standard](../notes/04_harness/skills/mermaid-reviewer/SKILL.md)

@@ -93,7 +93,7 @@ wiki:
 ---
 # KnowFrame Extension for VS Code (`knowframe`) Constitution
 
-> Canonical Source of Truth: [`.specify/memory/constitution.md`](.specify/memory/constitution.md)  
+> Canonical Source of Truth: [`.specify/memory/constitution.md`](CONSTITUTION.md)  
 > AI Agent Entry Points: [`AGENTS.md`](AGENTS.md) | [`GEMINI.md`](GEMINI.md)
 
 ---
