@@ -10,7 +10,8 @@ export function registerShowGraphCommand(
   getIpcClient: () => IpcClient | null,
   getScanResult: () => ScanResultPayload | null,
   getEvolutionManager?: () => EvolutionManager | null,
-  getGovernanceManager?: () => GovernanceManager | null
+  getGovernanceManager?: () => GovernanceManager | null,
+  onEnsureAnalysis?: () => Promise<void>
 ): vscode.Disposable {
   return vscode.commands.registerCommand('llmWiki.showKnowledgeGraph', () => {
     const ipc = getIpcClient();
@@ -46,6 +47,11 @@ export function registerShowGraphCommand(
 
     if (scan) {
       panel.updateData(scan);
+    } else if (onEnsureAnalysis) {
+      if (!GraphPanelManager.isPipelineActive()) {
+        panel.sendLoadingProgress('init', 15, 'Starting KnowFrame engine on demand...', true);
+        void onEnsureAnalysis();
+      }
     } else if (ipc) {
       if (!GraphPanelManager.isPipelineActive()) {
         panel.sendLoadingProgress('graph', 30, 'Scanning vault topology...', true);

@@ -755,7 +755,7 @@ function startLoadingTimeoutGuard(): void {
     if (loadingOverlay && !loadingOverlay.classList.contains('hidden') && loadingTimeoutActions) {
       loadingTimeoutActions.classList.remove('hidden');
     }
-  }, 8000);
+  }, 25000);
 }
 
 function clearLoadingTimeoutGuard(): void {
@@ -784,13 +784,14 @@ function hideLoadingOverlay(): void {
 }
 
 function checkAndRevealGraph(): void {
-  const isIssuesReady = hasReceivedIssuesReport || isScanCycleComplete;
-  if (hasReceivedGraphData && isIssuesReady && isPhysicsWarmedUp) {
+  // Reveal interactive graph immediately once topology + initial layout ticks finish;
+  // diagnostic issues and quality pillars hydrate asynchronously without blocking the canvas.
+  if (hasReceivedGraphData && isPhysicsWarmedUp) {
     updateLoadingProgress(100, 'Ready');
     clearLoadingTimeoutGuard();
     setTimeout(() => {
       hideLoadingOverlay();
-    }, 200);
+    }, 150);
   }
 }
 
@@ -848,7 +849,8 @@ rpc.on('graphDataUpdate', (data: any) => {
   applyFocusFilter(0.4);
 
   if (isFirstLoad) {
-    physics.tickSync?.(35);
+    const warmupTicks = rawNodes.length > 1200 ? 8 : (rawNodes.length > 400 ? 15 : 35);
+    physics.tickSync?.(warmupTicks);
   }
 
   if (isFirstLoad && rawNodes.length > 0 && !savedState?.viewTransform) {
@@ -887,14 +889,20 @@ rpc.on('graphDataUpdate', (data: any) => {
     resolutionStatus: e.resolutionStatus,
   }));
 
+  const obsSummary = data.observatorySummary || data.observatory_summary;
+  const totalNotesCount = obsSummary?.total_notes ?? obsSummary?.totalNotes ?? data.enterpriseWindow?.totalNodes ?? rawNodes.length;
+  const connectedTotal = obsSummary?.connected_notes ?? obsSummary?.connectedNotes ?? connectedCount;
+  const orphanTotal = obsSummary?.orphan_notes ?? obsSummary?.orphanNotes ?? orphanCount;
+  const excludedTotal = obsSummary?.excluded_notes ?? obsSummary?.excludedNotes ?? excludedCount;
+
   settingsDrawer.updateProps({
-    primaryHub: data.recommended_hub || (rawNodes[0] ? rawNodes[0].label : null),
+    primaryHub: data.recommended_hub || data.recommendedHub || (rawNodes[0] ? rawNodes[0].label : null),
     brokenLinksCount,
     brokenEdges,
-    totalNotes: rawNodes.length,
-    connectedNotes: connectedCount,
-    orphanNotes: orphanCount,
-    excludedNotes: excludedCount,
+    totalNotes: totalNotesCount,
+    connectedNotes: connectedTotal,
+    orphanNotes: orphanTotal,
+    excludedNotes: excludedTotal,
     colorGroups,
     nodes: rawNodes,
     tokenSummary: data.tokenSummary || lastTokenSummary,
@@ -1160,12 +1168,6 @@ rpc.on('constraintValidationResult', (data: any) => {
   }
 });
 
-// Request initial or refreshed graph data, harness, skills, and directory metrics from Extension Host
-rpc.send('requestGraphData');
-rpc.sendMessage({ type: 'requestIssues', payload: { include_debt: true } });
-rpc.send('requestHarnessStatus');
-rpc.getSkillCatalog();
-rpc.analyzeDirectoryStructure();
-rpc.requestExclusions();
-rpc.getEvolutionState();
-rpc.requestHarnessTools();
+// Signal readiness to Extension Host (replays live progress, delivers cached graph,
+// or kicks off an on-demand workspace analysis without firing redundant background RPC storms).
+rpc.sendMessage({ type: 'webviewReady' });

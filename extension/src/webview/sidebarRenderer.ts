@@ -15,6 +15,151 @@ export interface SidebarRenderOptions {
   orientation?: DocumentationOrientation;
 }
 
+export interface SlimSidebarScanPayload {
+  total_nodes: number;
+  total_edges: number;
+  connected_nodes: number;
+  orphan_nodes: number;
+  recommended_hub: string | null;
+  top_nodes: Array<{
+    id: string;
+    label: string;
+    file_path: string;
+    in_degree: number;
+    out_degree: number;
+    tokens: number;
+  }>;
+  observatory_summary?: ScanResultPayload['observatory_summary'];
+  token_summary?: ScanResultPayload['token_summary'];
+}
+
+/**
+ * Projects a potentially massive (20,000+ node) ScanResultPayload into a tiny (<2 KB)
+ * sidebar summary payload containing only aggregate counters and top-5 hub nodes.
+ */
+export function buildSlimSidebarScanPayload(
+  scan: ScanResultPayload | SlimSidebarScanPayload | null | undefined
+): SlimSidebarScanPayload | null {
+  if (!scan) {
+    return null;
+  }
+  if ('top_nodes' in scan && typeof (scan as SlimSidebarScanPayload).total_nodes === 'number') {
+    return scan as SlimSidebarScanPayload;
+  }
+  const full = scan as ScanResultPayload;
+  const nodes = Array.isArray(full.nodes) ? full.nodes : [];
+  const edges = Array.isArray(full.edges) ? full.edges : [];
+  const obs: any = full.observatory_summary;
+
+  let connected = obs?.connectedNotes ?? obs?.connected_notes;
+  let orphan = obs?.orphanNotes ?? obs?.orphan_notes;
+  if (connected === undefined || orphan === undefined) {
+    let connCount = 0;
+    let orphCount = 0;
+    for (const n of nodes) {
+      if (n.status === 'orphan') {
+        orphCount++;
+      } else if (n.status === 'active' || n.status === 'connected_inactive') {
+        connCount++;
+      }
+    }
+    connected = connected ?? connCount;
+    orphan = orphan ?? orphCount;
+  }
+
+  // Keep only top-5 highest-degree nodes (O(N) linear scan, zero full sort of 20k objects)
+  const top: Array<{
+    id: string;
+    label: string;
+    file_path: string;
+    in_degree: number;
+    out_degree: number;
+    tokens: number;
+    score: number;
+  }> = [];
+  for (const n of nodes) {
+    const score = (n.in_degree || 0) + (n.out_degree || 0);
+    if (
+      top.length < 5 ||
+      score > top[top.length - 1].score ||
+      (score === top[top.length - 1].score && (n.tokens || 0) > top[top.length - 1].tokens)
+    ) {
+      top.push({
+        id: n.id,
+        label: n.label,
+        file_path: n.file_path,
+        in_degree: n.in_degree || 0,
+        out_degree: n.out_degree || 0,
+        tokens: n.tokens || 0,
+        score,
+      });
+      top.sort((a, b) => b.score - a.score || b.tokens - a.tokens);
+      if (top.length > 5) {
+        top.pop();
+      }
+    }
+  }
+
+  return {
+    total_nodes: nodes.length,
+    total_edges: edges.length,
+    connected_nodes: connected,
+    orphan_nodes: orphan,
+    recommended_hub: full.recommended_hub || (nodes[0] ? nodes[0].id : null),
+    top_nodes: top.map(({ score: _score, ...rest }) => rest),
+    observatory_summary: full.observatory_summary,
+    token_summary: full.token_summary,
+  };
+}
+
+/**
+ * Strips the raw `issues` array when sending an issues report to the Sidebar, which
+ * only displays aggregate pillar scores and finding/regression counters.
+ */
+export function buildSlimSidebarIssuesPayload(
+  issues: KnowledgeIssuesReport | null | undefined
+): Record<string, unknown> | null {
+  if (!issues) {
+    return null;
+  }
+  const anyReport = issues as any;
+  const activeCount =
+    anyReport.active_issues_count !== undefined && anyReport.active_issues_count !== null
+      ? anyReport.active_issues_count
+      : anyReport.new_regressions !== undefined && anyReport.new_regressions !== null
+        ? anyReport.new_regressions
+        : Array.isArray(anyReport.issues)
+          ? anyReport.issues.filter((i: any) => !i.is_legacy).length
+          : 0;
+  const legacyCount =
+    anyReport.legacy_debt_count !== undefined && anyReport.legacy_debt_count !== null
+      ? anyReport.legacy_debt_count
+      : anyReport.legacy_debt !== undefined && anyReport.legacy_debt !== null
+        ? anyReport.legacy_debt
+        : Array.isArray(anyReport.issues)
+          ? anyReport.issues.filter((i: any) => !!i.is_legacy).length
+          : 0;
+
+  return {
+    overall_score: anyReport.overall_score,
+    integrity_score: anyReport.integrity_score,
+    structure_score: anyReport.structure_score,
+    consistency_score: anyReport.consistency_score,
+    discoverability_score: anyReport.discoverability_score,
+    freshness_score: anyReport.freshness_score,
+    traceability_score: anyReport.traceability_score,
+    total_issues: anyReport.total_issues,
+    active_issues_count: activeCount,
+    legacy_debt_count: legacyCount,
+    integrity_count: anyReport.integrity_count,
+    structure_count: anyReport.structure_count,
+    consistency_count: anyReport.consistency_count,
+    discoverability_count: anyReport.discoverability_count,
+    freshness_count: anyReport.freshness_count,
+    traceability_count: anyReport.traceability_count,
+  };
+}
+
 export function renderSidebarHtml(options: SidebarRenderOptions): string {
   const {
     cspPolicy,
@@ -62,10 +207,12 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
     initialRegressions = initialQuality.regressions_count != null ? initialQuality.regressions_count : initialFindings;
   }
 
-  const dataJson = JSON.stringify(initialData || {});
+  const slimData = buildSlimSidebarScanPayload(initialData);
+  const slimIssues = buildSlimSidebarIssuesPayload(initialIssues);
+  const dataJson = JSON.stringify(slimData || {});
   const qualityJson = JSON.stringify(initialQuality || null);
   const summaryJson = JSON.stringify(initialSummary || null);
-  const issuesJson = JSON.stringify(initialIssues || null);
+  const issuesJson = JSON.stringify(slimIssues || null);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -1011,20 +1158,25 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
           dEl.textContent = activeCount + ' regressions · ' + baselined + ' baselined';
         }
       }
-      if (initData && initData.nodes) {
+      if (initData && (initData.top_nodes || initData.nodes)) {
         const obs = initData.observatory_summary;
-        const totalDocs = initData.nodes.length;
-        const connected = obs ? obs.connectedNotes : initData.nodes.filter(n => n.status === 'active' || n.status === 'connected_inactive').length;
-        const isolated = obs ? obs.orphanNotes : initData.nodes.filter(n => n.status === 'orphan').length;
-        const refs = initData.edges ? initData.edges.length : 0;
+        const totalDocs = initData.total_nodes != null ? initData.total_nodes : (initData.nodes ? initData.nodes.length : 0);
+        const connected = initData.connected_nodes != null
+          ? initData.connected_nodes
+          : (obs ? (obs.connectedNotes != null ? obs.connectedNotes : obs.connected_notes) : (initData.nodes ? initData.nodes.filter(n => n.status === 'active' || n.status === 'connected_inactive').length : 0));
+        const isolated = initData.orphan_nodes != null
+          ? initData.orphan_nodes
+          : (obs ? (obs.orphanNotes != null ? obs.orphanNotes : obs.orphan_notes) : (initData.nodes ? initData.nodes.filter(n => n.status === 'orphan').length : 0));
+        const refs = initData.total_edges != null ? initData.total_edges : (initData.edges ? initData.edges.length : 0);
+        const topNodes = initData.top_nodes || initData.nodes;
         partialUpdateStructure({
           total_documents: totalDocs,
           connected_documents: connected,
           isolated_documents: isolated,
           total_references: refs,
-        }, initData.nodes);
+        }, topNodes);
 
-        const hubId = initData.recommended_hub || (initData.nodes[0] ? initData.nodes[0].id : '00_meta/wiki_index.md');
+        const hubId = initData.recommended_hub || (topNodes && topNodes[0] ? topNodes[0].id : '00_meta/wiki_index.md');
         const hubEl = document.getElementById('dash-hub-link');
         if (hubEl) hubEl.textContent = hubId;
       }
@@ -1039,20 +1191,25 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
         renderSummary(msg.payload);
       } else if (msg.type === 'graphDataUpdate') {
         const data = msg.payload;
-        if (data && data.nodes) {
+        if (data && (data.top_nodes || data.nodes)) {
           const obs = data.observatory_summary;
-          const totalDocs = data.nodes.length;
-          const connected = obs ? obs.connectedNotes : data.nodes.filter(n => n.status === 'active' || n.status === 'connected_inactive').length;
-          const isolated = obs ? obs.orphanNotes : data.nodes.filter(n => n.status === 'orphan').length;
-          const refs = data.edges ? data.edges.length : 0;
+          const totalDocs = data.total_nodes != null ? data.total_nodes : (data.nodes ? data.nodes.length : 0);
+          const connected = data.connected_nodes != null
+            ? data.connected_nodes
+            : (obs ? (obs.connectedNotes != null ? obs.connectedNotes : obs.connected_notes) : (data.nodes ? data.nodes.filter(n => n.status === 'active' || n.status === 'connected_inactive').length : 0));
+          const isolated = data.orphan_nodes != null
+            ? data.orphan_nodes
+            : (obs ? (obs.orphanNotes != null ? obs.orphanNotes : obs.orphan_notes) : (data.nodes ? data.nodes.filter(n => n.status === 'orphan').length : 0));
+          const refs = data.total_edges != null ? data.total_edges : (data.edges ? data.edges.length : 0);
+          const topNodes = data.top_nodes || data.nodes;
           partialUpdateStructure({
             total_documents: totalDocs,
             connected_documents: connected,
             isolated_documents: isolated,
             total_references: refs,
-          }, data.nodes);
+          }, topNodes);
 
-          const hubId = data.recommended_hub || (data.nodes[0] ? data.nodes[0].id : '00_meta/wiki_index.md');
+          const hubId = data.recommended_hub || (topNodes && topNodes[0] ? topNodes[0].id : '00_meta/wiki_index.md');
           const hubEl = document.getElementById('dash-hub-link');
           if (hubEl) hubEl.textContent = hubId;
         }

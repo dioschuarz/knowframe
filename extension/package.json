@@ -2,7 +2,7 @@
   "name": "knowframe-vscode",
   "displayName": "KnowFrame - Knowledge Management Framework",
   "description": "KnowFrame — Knowledge Management Framework: dynamic knowledge graph, deterministic admission control, structural evolution, and BPE token economics for AI agents",
-  "version": "1.0.6",
+  "version": "1.1.0",
   "publisher": "dscorpsolutions",
   "repository": {
     "type": "git",
@@ -37,7 +37,6 @@
     "Other"
   ],
   "activationEvents": [
-    "onStartupFinished",
     "onLanguage:markdown"
   ],
   "main": "./dist/extension.js",
@@ -120,6 +119,12 @@
         "title": "KnowFrame: Restart Knowledge Engine Daemon",
         "category": "KnowFrame",
         "icon": "$(refresh)"
+      },
+      {
+        "command": "llmWiki.stopDaemon",
+        "title": "KnowFrame: Stop Engine Daemon (Free Memory)",
+        "category": "KnowFrame",
+        "icon": "$(debug-stop)"
       }
     ],
     "menus": {
@@ -256,6 +261,27 @@
           "type": "boolean",
           "default": true,
           "description": "Render valid [[wikilinks]] and #fragments as clickable hyperlinks in VS Code's built-in Markdown Preview"
+        },
+        "llmWiki.executionMode": {
+          "type": "string",
+          "enum": [
+            "on_demand",
+            "live_watch"
+          ],
+          "default": "on_demand",
+          "description": "Engine execution lifecycle. 'on_demand' (recommended for enterprise repos) uses 0 MB background RAM and starts the engine only when you open KnowFrame or run a command; 'live_watch' keeps the daemon running and auto-rescans on Markdown saves."
+        },
+        "llmWiki.daemonIdleTimeoutSeconds": {
+          "type": "number",
+          "default": 60,
+          "minimum": 0,
+          "description": "In 'on_demand' mode, automatically stop the Rust engine daemon and return 100% of its RAM to the OS this many seconds after closing the KnowFrame Graph panel (0 disables auto-stop)."
+        },
+        "llmWiki.maxGraphNodes": {
+          "type": "number",
+          "default": 2000,
+          "minimum": 0,
+          "description": "Maximum nodes rendered simultaneously in the interactive D3 Graph canvas (Enterprise Focus Mode selects the Central Hub, closest hops, and top-degree hubs; 0 renders all nodes)."
         }
       }
     }
@@ -266,10 +292,10 @@
     "watch": "node esbuild.js --watch",
     "package": "node esbuild.js --production",
     "build:rust": "cargo build --release --manifest-path ../Cargo.toml && cp ../target/release/knowframe-core bin/ && cp ../target/release/knowframe-cli bin/",
-    "vsix": "npm run build:rust && npm run package && npx --yes @vscode/vsce package --no-dependencies -o knowframe-1.0.5.vsix",
+    "vsix": "npm run build:rust && npm run package && npx --yes @vscode/vsce package --no-dependencies -o knowframe-1.1.0.vsix",
     "reinstall": "bash ../scripts/distribute.sh",
     "distribute": "bash ../scripts/distribute.sh",
-    "package:verify": "npm run package && node -e \"const fs = require('fs'); const file = fs.existsSync('knowframe-1.0.5.vsix') ? 'knowframe-1.0.5.vsix' : 'knowframe-1.0.4.vsix'; const st = fs.statSync(file); console.log('VSIX size: ' + (st.size / (1024*1024)).toFixed(2) + ' MB'); if(st.size > 25*1024*1024) { console.error('VSIX exceeds 25MB budget'); process.exit(1); }\"",
+    "package:verify": "npm run package && node -e \"const fs = require('fs'); const file = fs.existsSync('knowframe-1.1.0.vsix') ? 'knowframe-1.1.0.vsix' : 'knowframe-1.0.5.vsix'; const st = fs.statSync(file); console.log('VSIX size: ' + (st.size / (1024*1024)).toFixed(2) + ' MB'); if(st.size > 25*1024*1024) { console.error('VSIX exceeds 25MB budget'); process.exit(1); }\"",
     "lint": "eslint src --ext ts",
     "test": "node --test --experimental-strip-types test/suite/*.test.ts",
     "test:e2e": "node --test --experimental-strip-types test/suite/evolution.e2e.test.ts",

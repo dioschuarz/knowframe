@@ -8,6 +8,8 @@ export class ProcessManager implements vscode.Disposable {
   private process: ChildProcess | null = null;
   private activePort: number | null = null;
   private isIntentionallyStopped = false;
+  private hasStartedOnce = false;
+  private autoRestartEnabled = false;
   private restartAttempts = 0;
   private readonly maxRestartAttempts = 3;
   private readonly onDidRestartEmitter = new vscode.EventEmitter<number>();
@@ -18,6 +20,10 @@ export class ProcessManager implements vscode.Disposable {
     private readonly secretManager: SecretManager,
     private readonly outputChannel: vscode.OutputChannel,
   ) {}
+
+  public setAutoRestart(enabled: boolean): void {
+    this.autoRestartEnabled = enabled;
+  }
 
   public get port(): number | null {
     return this.activePort;
@@ -89,7 +95,11 @@ export class ProcessManager implements vscode.Disposable {
             if (data.event === 'daemon_ready' && data.port) {
               this.activePort = Number(data.port);
               this.restartAttempts = 0;
-              this.onDidRestartEmitter.fire(this.activePort);
+              const isActualRestart = this.hasStartedOnce;
+              this.hasStartedOnce = true;
+              if (isActualRestart) {
+                this.onDidRestartEmitter.fire(this.activePort);
+              }
               if (!resolved) {
                 resolved = true;
                 resolve(this.activePort);
@@ -118,7 +128,13 @@ export class ProcessManager implements vscode.Disposable {
         this.activePort = null;
         this.process = null;
 
-        if (!this.isIntentionallyStopped && this.restartAttempts < this.maxRestartAttempts) {
+        const killedByOomOrSignal = signal === 'SIGKILL';
+        if (
+          !this.isIntentionallyStopped &&
+          this.autoRestartEnabled &&
+          !killedByOomOrSignal &&
+          this.restartAttempts < this.maxRestartAttempts
+        ) {
           this.restartAttempts++;
           const delay = Math.pow(2, this.restartAttempts) * 500;
           this.outputChannel.appendLine(
@@ -129,6 +145,10 @@ export class ProcessManager implements vscode.Disposable {
               this.outputChannel.appendLine(`[PROCESS RESTART FAILED] ${e.message}`);
             });
           }, delay);
+        } else if (killedByOomOrSignal) {
+          this.outputChannel.appendLine(
+            '[PROCESS EXIT] Daemon terminated via SIGKILL; skipping automatic restart to avoid memory restart loops.',
+          );
         }
       });
 

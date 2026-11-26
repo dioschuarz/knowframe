@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import * as path from 'path';
 import { generateNonce, buildCspPolicy } from './cspHelper';
+import { buildGraphWebviewPayload } from './graphPayloadProjector';
 import { IpcClient } from '../ipc/client';
 import { ScanResultPayload, WebviewInboundMessage, NavigationIntent } from '../types/protocol';
 import type { EvolutionManager } from '../evolution/evolutionManager';
@@ -24,11 +25,22 @@ export class GraphPanelManager implements vscode.Disposable {
   private static cachedIssuesReport: unknown | null = null;
   private static isPipelineRunning: boolean = false;
   private static latestLoadingProgress: { stage: string; percent: number; message: string; resetCycle?: boolean } | null = null;
+  private static onPanelDisposedCallback: (() => void) | null = null;
+  private static onPanelReadyNeedsScanCallback: (() => void) | null = null;
   private isFetchingIssues: boolean = false;
   private isSendingEvolutionState: boolean = false;
+  private hasDeliveredGraphData: boolean = false;
   private pendingOpenTab: string | null = null;
   private lastToolInstallTime: number = 0;
   private lastInstalledToolId: string | null = null;
+
+  public static setOnPanelDisposed(cb: (() => void) | null): void {
+    GraphPanelManager.onPanelDisposedCallback = cb;
+  }
+
+  public static setOnPanelReadyNeedsScan(cb: (() => void) | null): void {
+    GraphPanelManager.onPanelReadyNeedsScanCallback = cb;
+  }
 
   public static setCachedIssuesReport(report: unknown): void {
     GraphPanelManager.cachedIssuesReport = report;
@@ -133,7 +145,9 @@ export class GraphPanelManager implements vscode.Disposable {
 
     this.panel.onDidChangeViewState(
       (e) => {
-        if (e.webviewPanel.visible && this.currentScanResult) {
+        // retainContextWhenHidden: true preserves canvas & graph data across tab switches.
+        // Only deliver initial data if it has never been delivered to this panel yet.
+        if (e.webviewPanel.visible && this.currentScanResult && !this.hasDeliveredGraphData) {
           this.updateData(this.currentScanResult);
         }
       },
@@ -201,34 +215,24 @@ export class GraphPanelManager implements vscode.Disposable {
     });
   }
 
+  public static buildGraphWebviewPayload(
+    scanResult: ScanResultPayload,
+    maxGraphNodes: number
+  ): Record<string, unknown> {
+    return buildGraphWebviewPayload(scanResult, maxGraphNodes) as unknown as Record<string, unknown>;
+  }
+
   public updateData(scanResult: ScanResultPayload): void {
     this.currentScanResult = scanResult;
+    this.hasDeliveredGraphData = true;
+    const maxGraphNodes = vscode.workspace
+      .getConfiguration('llmWiki')
+      .get<number>('maxGraphNodes', 2000);
+
     this.sendLoadingProgress('layout', 50, 'Preparing graph topology & layout...');
     this.panel.webview.postMessage({
       type: 'graphDataUpdate',
-      payload: {
-        nodes: scanResult.nodes.map((n) => ({
-          ...n,
-          hopDistance: n.hop_distance,
-          inDegree: n.in_degree,
-          outDegree: n.out_degree,
-          brokenLinks: n.broken_links,
-          filePath: n.file_path,
-        })),
-        edges: scanResult.edges.map((e) => ({
-          ...e,
-          isBroken: e.is_broken,
-          linkType: e.link_type,
-        })),
-        tokenSummary: {
-          activeHarnessTokens: scanResult.token_summary.active_harness_tokens,
-          subcallAccessibleTokens: scanResult.token_summary.subcall_accessible_tokens,
-          warningThreshold: scanResult.token_summary.warning_threshold,
-          criticalThreshold: scanResult.token_summary.critical_threshold,
-          status: scanResult.token_summary.status,
-        },
-        recommendedHub: scanResult.recommended_hub,
-      },
+      payload: GraphPanelManager.buildGraphWebviewPayload(scanResult, maxGraphNodes),
     });
 
     if (this.ipcClient) {
@@ -252,7 +256,7 @@ export class GraphPanelManager implements vscode.Disposable {
     } else if (this.ipcClient && !this.isFetchingIssues && !GraphPanelManager.isPipelineRunning) {
       this.isFetchingIssues = true;
       this.sendLoadingProgress('issues', 85, 'Gathering diagnostic issues...');
-      this.ipcClient.sendRequest('workspace/getIssues', {}).then((issuesReport: any) => {
+      this.ipcClient.sendRequest('workspace/getIssues', { limit: 500 }).then((issuesReport: any) => {
         GraphPanelManager.cachedIssuesReport = issuesReport;
         this.panel.webview.postMessage({
           type: 'issuesReportUpdate',
@@ -286,7 +290,7 @@ export class GraphPanelManager implements vscode.Disposable {
     if (this.ipcClient && !GraphPanelManager.cachedIssuesReport && !this.isFetchingIssues) {
       try {
         this.isFetchingIssues = true;
-        const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', {});
+        const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', { limit: 500 });
         GraphPanelManager.cachedIssuesReport = issuesReport;
         this.panel.webview.postMessage({
           type: 'issuesReportUpdate',
@@ -346,7 +350,7 @@ export class GraphPanelManager implements vscode.Disposable {
     if (this.ipcClient) {
       try {
         this.isFetchingIssues = true;
-        const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', {});
+        const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', { limit: 500 });
         GraphPanelManager.cachedIssuesReport = issuesReport;
         this.panel.webview.postMessage({
           type: 'issuesReportUpdate',
@@ -539,7 +543,7 @@ export class GraphPanelManager implements vscode.Disposable {
 
     if (this.ipcClient && !GraphPanelManager.cachedIssuesReport) {
       try {
-        const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', {});
+        const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', { limit: 500 });
         GraphPanelManager.cachedIssuesReport = issuesReport;
         this.panel.webview.postMessage({
           type: 'issuesReportUpdate',
@@ -572,7 +576,7 @@ export class GraphPanelManager implements vscode.Disposable {
       }
       if (this.ipcClient) {
         try {
-          const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', {});
+          const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', { limit: 500 });
           GraphPanelManager.cachedIssuesReport = issuesReport;
           this.panel.webview.postMessage({
             type: 'issuesReportUpdate',
@@ -767,6 +771,7 @@ export class GraphPanelManager implements vscode.Disposable {
         }
         break;
       }
+      case 'webviewReady':
       case 'requestGraphData': {
         const activeProgress = this.currentLoadingProgress ?? GraphPanelManager.latestLoadingProgress;
         if (this.currentScanResult) {
@@ -777,6 +782,20 @@ export class GraphPanelManager implements vscode.Disposable {
               payload: activeProgress,
             });
           }
+        } else if (GraphPanelManager.isPipelineRunning) {
+          const progressToReplay = activeProgress || {
+            stage: 'graph',
+            percent: 25,
+            message: 'Scanning workspace topology...',
+          };
+          this.currentLoadingProgress = progressToReplay;
+          this.panel.webview.postMessage({
+            type: 'loadingProgress',
+            payload: progressToReplay,
+          });
+        } else if (GraphPanelManager.onPanelReadyNeedsScanCallback) {
+          this.sendLoadingProgress('init', 15, 'Starting KnowFrame engine on demand...', true);
+          GraphPanelManager.onPanelReadyNeedsScanCallback();
         } else if (activeProgress) {
           this.currentLoadingProgress = activeProgress;
           this.panel.webview.postMessage({
@@ -792,9 +811,9 @@ export class GraphPanelManager implements vscode.Disposable {
             type: 'issuesReportUpdate',
             payload: GraphPanelManager.cachedIssuesReport,
           });
-        } else if (this.ipcClient && !this.isFetchingIssues && !GraphPanelManager.isPipelineRunning) {
+        } else if (this.ipcClient && !this.isFetchingIssues && !GraphPanelManager.isPipelineRunning && this.currentScanResult) {
           this.isFetchingIssues = true;
-          this.ipcClient.sendRequest('workspace/getIssues', {}).then((issuesReport: any) => {
+          this.ipcClient.sendRequest('workspace/getIssues', { limit: 500 }).then((issuesReport: any) => {
             GraphPanelManager.cachedIssuesReport = issuesReport;
             this.panel.webview.postMessage({
               type: 'issuesReportUpdate',
@@ -844,7 +863,8 @@ export class GraphPanelManager implements vscode.Disposable {
         if (this.ipcClient) {
           try {
             this.isFetchingIssues = true;
-            const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', payload);
+            const issuesPayload = { limit: 500, ...(payload && typeof payload === 'object' ? payload : {}) };
+            const issuesReport = await this.ipcClient.sendRequest('workspace/getIssues', issuesPayload);
             if (!isCustomQuery) {
               GraphPanelManager.cachedIssuesReport = issuesReport;
             }
@@ -1541,6 +1561,7 @@ export class GraphPanelManager implements vscode.Disposable {
         d.dispose();
       }
     }
+    GraphPanelManager.onPanelDisposedCallback?.();
   }
 }
 

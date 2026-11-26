@@ -33,6 +33,7 @@ export function createPhysicsSimulation(
 
   const manyBody = d3.forceManyBody<NoteNode>()
     .strength(-params.repulsion)
+    .theta(1.2)
     .distanceMax(700);
 
   const forceX = d3.forceX<NoteNode>(width / 2).strength(params.centerGravity);

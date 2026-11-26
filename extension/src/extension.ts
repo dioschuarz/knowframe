@@ -42,13 +42,112 @@ export async function activate(
   processManager = new ProcessManager(context, secretManager, outputChannel);
   context.subscriptions.push(processManager);
 
+  const getExecutionMode = (): 'on_demand' | 'live_watch' => {
+    const raw = vscode.workspace.getConfiguration('llmWiki').get<string>('executionMode', 'on_demand');
+    return raw === 'live_watch' ? 'live_watch' : 'on_demand';
+  };
+
+  const getIdleTimeoutSeconds = (): number => {
+    const val = vscode.workspace.getConfiguration('llmWiki').get<number>('daemonIdleTimeoutSeconds', 60);
+    return typeof val === 'number' && val >= 0 ? val : 60;
+  };
+
+  processManager.setAutoRestart(getExecutionMode() === 'live_watch');
+
+  let idleShutdownTimer: ReturnType<typeof setTimeout> | null = null;
+  let inFlightInitPromise: Promise<void> | null = null;
+
+  const clearIdleShutdownTimer = (): void => {
+    if (idleShutdownTimer) {
+      clearTimeout(idleShutdownTimer);
+      idleShutdownTimer = null;
+    }
+  };
+
+  const stopDaemonAndReleaseMemory = async (reason: string): Promise<void> => {
+    clearIdleShutdownTimer();
+    if (ipcClient) {
+      ipcClient.dispose();
+      ipcClient = null;
+    }
+    admissionManager = null;
+    if (evolutionManager) {
+      evolutionManager.dispose();
+      evolutionManager = null;
+    }
+    governanceManager = null;
+    if (GraphPanelManager.currentPanel) {
+      GraphPanelManager.currentPanel.setIpcClient(null);
+      GraphPanelManager.currentPanel.setEvolutionManager(null);
+      GraphPanelManager.currentPanel.setGovernanceManager(null);
+    }
+    if (processManager && processManager.isRunning()) {
+      outputChannel.appendLine(`[EXTENSION] Stopping KnowFrame daemon (${reason}) to release memory...`);
+      await processManager.stop();
+    }
+    if (statusBarItem && !latestScanResult) {
+      statusBarItem.text = '$(llm-wiki-graph) KnowFrame';
+      statusBarItem.tooltip = 'KnowFrame (On-Demand — click to analyze workspace)';
+    }
+  };
+
+  const scheduleIdleShutdown = (): void => {
+    clearIdleShutdownTimer();
+    if (getExecutionMode() !== 'on_demand') {
+      return;
+    }
+    const timeoutSec = getIdleTimeoutSeconds();
+    if (timeoutSec <= 0) {
+      return;
+    }
+    idleShutdownTimer = setTimeout(() => {
+      idleShutdownTimer = null;
+      if (GraphPanelManager.currentPanel) {
+        return;
+      }
+      if (GraphPanelManager.isPipelineActive() || ipcClient?.hasPendingRequests()) {
+        scheduleIdleShutdown();
+        return;
+      }
+      void stopDaemonAndReleaseMemory(`idle timeout ${timeoutSec}s after panel close`);
+    }, timeoutSec * 1000);
+  };
+
   // Status Bar Item
   statusBarItem = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
   statusBarItem.command = 'llmWiki.showKnowledgeGraph';
-  statusBarItem.text = '$(llm-wiki-graph) Initializing';
-  statusBarItem.tooltip = 'Click to open KnowFrame - Graph';
+  statusBarItem.text = getExecutionMode() === 'on_demand' ? '$(llm-wiki-graph) KnowFrame' : '$(llm-wiki-graph) Initializing';
+  statusBarItem.tooltip =
+    getExecutionMode() === 'on_demand'
+      ? 'KnowFrame (On-Demand — click to open Graph & analyze workspace)'
+      : 'Click to open KnowFrame - Graph';
   statusBarItem.show();
   context.subscriptions.push(statusBarItem);
+
+  const ensureWorkspaceAnalyzed = async (): Promise<void> => {
+    const rootPath = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
+    if (!rootPath) {
+      return;
+    }
+    clearIdleShutdownTimer();
+    if (inFlightInitPromise) {
+      return inFlightInitPromise;
+    }
+    if (latestScanResult && processManager?.isRunning() && ipcClient?.isConnected()) {
+      return;
+    }
+    inFlightInitPromise = initWorkspace(rootPath).finally(() => {
+      inFlightInitPromise = null;
+    });
+    return inFlightInitPromise;
+  };
+
+  GraphPanelManager.setOnPanelDisposed(() => {
+    scheduleIdleShutdown();
+  });
+  GraphPanelManager.setOnPanelReadyNeedsScan(() => {
+    void ensureWorkspaceAnalyzed();
+  });
 
   // Register Sidebar Webview View Provider (Activity Bar)
   sidebarProvider = new SidebarViewProvider(
@@ -56,7 +155,13 @@ export async function activate(
     () => latestScanResult,
     () => latestQualityScore,
     undefined,
-    () => latestIssuesReport
+    () => latestIssuesReport,
+    () => {
+      // Trigger a single on-demand analysis only when user explicitly opens the KnowFrame Sidebar
+      if (!latestScanResult && !GraphPanelManager.isPipelineActive()) {
+        void ensureWorkspaceAnalyzed();
+      }
+    }
   );
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(SidebarViewProvider.viewType, sidebarProvider)
@@ -83,7 +188,7 @@ export async function activate(
       updateStatusBarWithBudget(latestScanResult, latestQualityScore, latestGovernanceMatrix);
       if (ipcClient) {
         GraphPanelManager.reportLoadingProgress('issues', 85, 'Gathering diagnostic issues...');
-        latestIssuesReport = await ipcClient.sendRequest<KnowledgeIssuesReport>('workspace/getIssues', {});
+        latestIssuesReport = await ipcClient.sendRequest<KnowledgeIssuesReport>('workspace/getIssues', { limit: 500 });
         GraphPanelManager.setCachedIssuesReport(latestIssuesReport);
         if (GraphPanelManager.currentPanel) {
           GraphPanelManager.currentPanel.sendIssuesReport(latestIssuesReport);
@@ -120,6 +225,7 @@ export async function activate(
     if (!rootPath) {
       return null;
     }
+    clearIdleShutdownTimer();
     if (!processManager || !processManager.isRunning()) {
       outputChannel.appendLine('[EXTENSION] Daemon not running, starting via ProcessManager...');
       try {
@@ -130,6 +236,17 @@ export async function activate(
           context.subscriptions.push(ipcClient);
         } else {
           ipcClient.setPort(port);
+        }
+        await ipcClient.ensureConnected();
+        if (!admissionManager) {
+          admissionManager = new AdmissionManager(ipcClient);
+        }
+        if (!governanceManager) {
+          governanceManager = new GovernanceManager(ipcClient);
+        }
+        if (GraphPanelManager.currentPanel) {
+          GraphPanelManager.currentPanel.setIpcClient(ipcClient);
+          GraphPanelManager.currentPanel.setGovernanceManager(governanceManager);
         }
       } catch (err: any) {
         outputChannel.appendLine(`[EXTENSION ERROR] Failed to start daemon: ${err.message}`);
@@ -153,7 +270,11 @@ export async function activate(
       ipcClient.setPort(newPort);
       try {
         await ipcClient.ensureConnected();
-        const scan = await ipcClient.sendRequest<ScanResultPayload>('workspace/scan');
+        const scan = await ipcClient.sendRequest<ScanResultPayload>(
+          'workspace/scan',
+          { include_fragments: false },
+          180000
+        );
         onScanResultUpdated(scan);
       } catch (err: any) {
         outputChannel.appendLine(`[EXTENSION] Background recovery after daemon restart warning: ${err.message}`);
@@ -179,7 +300,14 @@ export async function activate(
 
   // Register modular commands
   context.subscriptions.push(
-    registerShowGraphCommand(context, () => ipcClient, () => latestScanResult, () => evolutionManager, () => governanceManager),
+    registerShowGraphCommand(
+      context,
+      () => ipcClient,
+      () => latestScanResult,
+      () => evolutionManager,
+      () => governanceManager,
+      ensureWorkspaceAnalyzed
+    ),
     registerSetHubCommand(() => ipcClient, () => latestScanResult, onScanResultUpdated),
     registerRescanVaultCommand(ensureIpcClient, onScanResultUpdated),
     registerFixBrokenLinksCommand(() => latestScanResult),
@@ -208,17 +336,20 @@ export async function activate(
         outputChannel.appendLine('[EXTENSION] User triggered manual daemon restart');
         vscode.window.showInformationMessage('Restarting KnowFrame Knowledge Engine daemon...');
         try {
-          await processManager.stop();
-          const port = await processManager.start(rootPath, 0);
-          await ensureIpcClient();
-          await vscode.commands.executeCommand('llmWiki.rescanVault');
-          vscode.window.showInformationMessage(`KnowFrame daemon restarted successfully on port ${port}.`);
+          await stopDaemonAndReleaseMemory('manual restart');
+          await ensureWorkspaceAnalyzed();
+          vscode.window.showInformationMessage('KnowFrame daemon restarted successfully.');
         } catch (err: any) {
           vscode.window.showErrorMessage(`Failed to restart KnowFrame daemon: ${err.message}`);
         }
       }
     }),
+    vscode.commands.registerCommand('llmWiki.stopDaemon', async () => {
+      await stopDaemonAndReleaseMemory('manual user stop');
+      vscode.window.showInformationMessage('KnowFrame engine daemon stopped — memory freed.');
+    }),
     vscode.commands.registerCommand('llmWiki.reviewIssues', async () => {
+      await ensureWorkspaceAnalyzed();
       const panel = GraphPanelManager.createOrShow(context.extensionUri, ipcClient, latestScanResult);
       if (evolutionManager) {
         panel.setEvolutionManager(evolutionManager);
@@ -226,6 +357,7 @@ export async function activate(
       await panel.openDiagnosticsTab();
     }),
     vscode.commands.registerCommand('llmWiki.reviewEvolution', async () => {
+      await ensureWorkspaceAnalyzed();
       const panel = GraphPanelManager.createOrShow(context.extensionUri, ipcClient, latestScanResult);
       if (evolutionManager) {
         panel.setEvolutionManager(evolutionManager);
@@ -233,6 +365,7 @@ export async function activate(
       await panel.openEvolutionTab();
     }),
     vscode.commands.registerCommand('llmWiki.navigateToDetail', async (intent?: any) => {
+      await ensureWorkspaceAnalyzed();
       const panel = GraphPanelManager.createOrShow(context.extensionUri, ipcClient, latestScanResult);
       if (evolutionManager) {
         panel.setEvolutionManager(evolutionManager);
@@ -242,6 +375,7 @@ export async function activate(
       }
     }),
     vscode.commands.registerCommand('llmWiki.openSettings', async (tab?: string) => {
+      await ensureWorkspaceAnalyzed();
       const panel = GraphPanelManager.createOrShow(context.extensionUri, ipcClient, latestScanResult);
       if (evolutionManager) {
         panel.setEvolutionManager(evolutionManager);
@@ -347,7 +481,11 @@ export async function activate(
       outputChannel.appendLine(`[EXTENSION] Sidecar connected on port ${port}. Requesting fast workspace/scan...`);
 
       const scanStart = Date.now();
-      latestScanResult = await ipcClient.sendRequest<ScanResultPayload>('workspace/scan', undefined, 30000);
+      latestScanResult = await ipcClient.sendRequest<ScanResultPayload>(
+        'workspace/scan',
+        { include_fragments: false },
+        180000
+      );
       outputChannel.appendLine(`[EXTENSION] Fast scan completed in ${Date.now() - scanStart}ms. Nodes: ${latestScanResult.nodes.length}, Edges: ${latestScanResult.edges.length}`);
 
       // Render Graph and Sidebar immediately
@@ -359,7 +497,7 @@ export async function activate(
       }
       sidebarProvider?.updateData(latestScanResult, latestQualityScore);
 
-      // Phase 2 & 3: Background Staged Quality Evaluation & Issues Auditing
+      // Phase 2 & 3: Background Staged Quality Evaluation & Issues Auditing (cached in Rust engine)
       (async () => {
         try {
           if (statusBarItem) {
@@ -379,7 +517,7 @@ export async function activate(
 
           if (ipcClient) {
             try {
-              latestIssuesReport = await ipcClient.sendRequest<KnowledgeIssuesReport>('workspace/getIssues', {});
+              latestIssuesReport = await ipcClient.sendRequest<KnowledgeIssuesReport>('workspace/getIssues', { limit: 500 });
               GraphPanelManager.setCachedIssuesReport(latestIssuesReport);
               if (GraphPanelManager.currentPanel) {
                 GraphPanelManager.currentPanel.sendIssuesReport(latestIssuesReport);
@@ -399,6 +537,9 @@ export async function activate(
           updateStatusBarWithBudget(latestScanResult, latestQualityScore);
         } finally {
           GraphPanelManager.setPipelineRunning(false);
+          if (!GraphPanelManager.currentPanel) {
+            scheduleIdleShutdown();
+          }
         }
       })();
     } catch (err: any) {
@@ -414,7 +555,11 @@ export async function activate(
 
   const workspaceFolders = vscode.workspace.workspaceFolders;
   if (workspaceFolders && workspaceFolders.length > 0) {
-    await initWorkspace(workspaceFolders[0].uri.fsPath);
+    if (getExecutionMode() === 'live_watch') {
+      await initWorkspace(workspaceFolders[0].uri.fsPath);
+    } else {
+      outputChannel.appendLine('[EXTENSION] Running in on_demand mode — 0 background daemon RAM until user opens KnowFrame.');
+    }
   } else {
     outputChannel.appendLine('[EXTENSION] No open workspace folder detected.');
     if (statusBarItem) {
@@ -427,7 +572,12 @@ export async function activate(
 
   let mdWatchDebounceTimer: ReturnType<typeof setTimeout> | null = null;
   let isBackgroundRescanning = false;
+  let mdWatcher: vscode.FileSystemWatcher | null = null;
+
   const triggerSilentRescan = (uri?: vscode.Uri) => {
+    if (getExecutionMode() !== 'live_watch') {
+      return;
+    }
     if (uri) {
       const p = uri.fsPath.replace(/\\/g, '/');
       if (
@@ -450,7 +600,11 @@ export async function activate(
       isBackgroundRescanning = true;
       try {
         GraphPanelManager.setCachedIssuesReport(null);
-        const scan = await ipcClient.sendRequest<ScanResultPayload>('workspace/scan');
+        const scan = await ipcClient.sendRequest<ScanResultPayload>(
+          'workspace/scan',
+          { include_fragments: false },
+          180000
+        );
         await onScanResultUpdated(scan);
       } catch (err: any) {
         outputChannel.appendLine(`[EXTENSION] Background file-watch rescan warning: ${err.message}`);
@@ -460,30 +614,69 @@ export async function activate(
     }, 1200);
   };
 
-  const mdWatcher = vscode.workspace.createFileSystemWatcher('**/*.md');
-  mdWatcher.onDidChange(triggerSilentRescan);
-  mdWatcher.onDidCreate(triggerSilentRescan);
-  mdWatcher.onDidDelete(triggerSilentRescan);
-  context.subscriptions.push(mdWatcher);
+  const syncFileWatcherWithExecutionMode = (): void => {
+    const isLive = getExecutionMode() === 'live_watch';
+    processManager?.setAutoRestart(isLive);
+    if (isLive && !mdWatcher) {
+      mdWatcher = vscode.workspace.createFileSystemWatcher('**/*.md');
+      mdWatcher.onDidChange(triggerSilentRescan);
+      mdWatcher.onDidCreate(triggerSilentRescan);
+      mdWatcher.onDidDelete(triggerSilentRescan);
+      outputChannel.appendLine('[EXTENSION] Live watch enabled: monitoring **/*.md changes.');
+    } else if (!isLive && mdWatcher) {
+      mdWatcher.dispose();
+      mdWatcher = null;
+      if (mdWatchDebounceTimer) {
+        clearTimeout(mdWatchDebounceTimer);
+        mdWatchDebounceTimer = null;
+      }
+      outputChannel.appendLine('[EXTENSION] On-demand mode active: markdown file watcher disabled.');
+    }
+  };
+
+  syncFileWatcherWithExecutionMode();
+  context.subscriptions.push({
+    dispose: () => {
+      clearIdleShutdownTimer();
+      mdWatcher?.dispose();
+      mdWatcher = null;
+    },
+  });
+
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (e.affectsConfiguration('llmWiki.executionMode')) {
+        syncFileWatcherWithExecutionMode();
+        if (getExecutionMode() === 'live_watch' && vscode.workspace.workspaceFolders?.[0]) {
+          void ensureWorkspaceAnalyzed();
+        } else if (getExecutionMode() === 'on_demand' && !GraphPanelManager.currentPanel) {
+          scheduleIdleShutdown();
+        }
+      }
+    })
+  );
 
   context.subscriptions.push(
     vscode.workspace.onDidChangeWorkspaceFolders(async (event) => {
       if (event.added.length > 0) {
         const rootPath = event.added[0].uri.fsPath;
         outputChannel.appendLine(`[EXTENSION] Workspace folder opened: ${rootPath}`);
-        await initWorkspace(rootPath);
+        if (getExecutionMode() === 'live_watch') {
+          await initWorkspace(rootPath);
+        }
       } else if (!vscode.workspace.workspaceFolders || vscode.workspace.workspaceFolders.length === 0) {
         outputChannel.appendLine('[EXTENSION] All workspace folders closed.');
         latestScanResult = null;
         latestQualityScore = null;
         latestIssuesReport = null;
+        await stopDaemonAndReleaseMemory('all workspace folders closed');
         if (statusBarItem) {
           statusBarItem.text = '$(folder-opened) KnowFrame: Open Folder';
           statusBarItem.tooltip = 'Click to open a workspace folder or Obsidian vault';
           statusBarItem.command = 'llmWiki.openFolder';
         }
         GraphPanelManager.currentPanel?.sendNoWorkspace();
-        sidebarProvider?.updateData(null as any, null);
+        sidebarProvider?.updateData(null, null);
       }
     })
   );

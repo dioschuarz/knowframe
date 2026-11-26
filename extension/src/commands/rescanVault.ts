@@ -28,7 +28,11 @@ export function registerRescanVaultCommand(
           progress.report({ message: 'Scanning markdown documents & graph topology...' });
           GraphPanelManager.reportLoadingProgress('graph', 30, 'Rescanning vault...', true);
 
-          const scan = await ipc.sendRequest<ScanResultPayload>('workspace/scan');
+          const scan = await ipc.sendRequest<ScanResultPayload>(
+            'workspace/scan',
+            { include_fragments: false },
+            180000
+          );
 
           progress.report({ message: 'Reconciling baseline debt & quality metrics...' });
           await onScanResultUpdated(scan);

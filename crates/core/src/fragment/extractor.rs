@@ -165,10 +165,62 @@ fn extract_raw_headings_with_ranges(content: &str) -> Vec<(RawHeading, usize)> {
 
 /// Extracts all section fragments from Markdown content, calculating line ranges,
 /// BPE tokens, and outbound link references originating within each fragment.
+/// Uses disjoint heading-boundary slicing with prefix sums so each byte of the document
+/// is BPE-tokenized at most once (instead of once per nesting depth).
 pub fn extract_fragments_from_document(content: &str, edges: &[NoteEdge]) -> Vec<FragmentMetadata> {
     let raw_ranges = extract_raw_headings_with_ranges(content);
+    if raw_ranges.is_empty() {
+        return Vec::new();
+    }
+
     let mut disambiguator = AnchorDisambiguator::new();
-    let content_lines: Vec<&str> = content.lines().collect();
+
+    // Record byte start offsets of each 0-indexed line for zero-copy slicing
+    let mut line_starts: Vec<usize> = Vec::new();
+    line_starts.push(0);
+    for (idx, b) in content.bytes().enumerate() {
+        if b == b'\n' {
+            line_starts.push(idx + 1);
+        }
+    }
+    let total_lines = content.lines().count();
+
+    // Collect sorted unique 0-indexed line boundaries across all fragments
+    let mut boundaries: Vec<usize> = Vec::with_capacity(raw_ranges.len() * 2);
+    for (raw, end_line) in &raw_ranges {
+        let s = raw.start_line.saturating_sub(1).min(total_lines);
+        let e = (*end_line).min(total_lines);
+        boundaries.push(s);
+        boundaries.push(e);
+    }
+    boundaries.sort_unstable();
+    boundaries.dedup();
+
+    // Tokenize each disjoint boundary interval ONCE and build prefix sums
+    let mut prefix_tokens: Vec<u32> = Vec::with_capacity(boundaries.len());
+    prefix_tokens.push(0);
+    for win in boundaries.windows(2) {
+        let s_line = win[0];
+        let e_line = win[1];
+        let seg_tokens = if s_line < e_line && s_line < total_lines {
+            let start_byte = line_starts[s_line];
+            let end_byte = if e_line < line_starts.len() {
+                line_starts[e_line].min(content.len())
+            } else {
+                content.len()
+            };
+            if start_byte < end_byte {
+                let slice = content[start_byte..end_byte].trim_end_matches('\n');
+                count_bpe_tokens(slice).unwrap_or(0)
+            } else {
+                0
+            }
+        } else {
+            0
+        };
+        let acc = prefix_tokens.last().copied().unwrap_or(0).saturating_add(seg_tokens);
+        prefix_tokens.push(acc);
+    }
 
     let mut fragments = Vec::with_capacity(raw_ranges.len());
 
@@ -176,16 +228,15 @@ pub fn extract_fragments_from_document(content: &str, edges: &[NoteEdge]) -> Vec
         let base_slug = slugify_heading(&raw.heading_text);
         let anchor = disambiguator.disambiguate(&base_slug);
 
-        // Slice lines for token counting
-        let start_idx = raw.start_line.saturating_sub(1);
-        let end_idx = end_line.min(content_lines.len());
-        let section_slice = if start_idx < content_lines.len() && start_idx < end_idx {
-            content_lines[start_idx..end_idx].join("\n")
+        let start_idx = raw.start_line.saturating_sub(1).min(total_lines);
+        let end_idx = end_line.min(total_lines);
+        let tokens = if start_idx < end_idx {
+            let b_start = boundaries.binary_search(&start_idx).unwrap_or(0);
+            let b_end = boundaries.binary_search(&end_idx).unwrap_or(b_start);
+            prefix_tokens[b_end].saturating_sub(prefix_tokens[b_start])
         } else {
-            String::new()
+            0
         };
-
-        let tokens = count_bpe_tokens(&section_slice).unwrap_or(0);
 
         // Count outbound links originating in [raw.start_line, end_line]
         let outbound = edges

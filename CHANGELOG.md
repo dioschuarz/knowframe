@@ -7,6 +7,24 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.0] - 2026-11-26
+
+### Added
+- **On-Demand Zero-Background Architecture (`llmWiki.executionMode`)**: KnowFrame now defaults to `on_demand` mode — **0 background processes and 0 MB RAM** on VS Code startup (removed `onStartupFinished` activation and disabled the continuous `**/*.md` file watcher by default). The Rust sidecar launches only when you open KnowFrame or invoke a command, and automatically shuts down to release 100% of engine RAM after closing the Graph panel (`llmWiki.daemonIdleTimeoutSeconds`, default `60s`). Users who prefer continuous auto-rescanning can opt into `live_watch` anytime.
+- **Manual Memory Release Command**: Added `KnowFrame: Stop Engine Daemon (Free Memory)` (`llmWiki.stopDaemon`).
+- **Enterprise Focus Windowing (`llmWiki.maxGraphNodes`)**: Automatically prioritizes the Central Hub, closest hops, and top-degree hubs (default `2,000` rendered nodes) so 20,000+ document enterprise repositories render smoothly at 60 FPS while preserving exact global counters.
+
+### Performance & Reliability
+- **>90% RAM Reduction on Enterprise Repositories (20,000+ docs)**:
+  - Rewrote full-graph semantic collision detection ([fingerprint.rs](crates/core/src/collision/fingerprint.rs)) using compact `u64` hashed tokens, top-80 TF vectors, bottom-64 `u32` MinHash 3-gram sketches, and an interned `u32` inverted index (~1.5 KB/doc instead of ~250 KB/doc).
+  - Switched Brandes betweenness centrality ([centrality.rs](crates/core/src/graph/centrality.rs)) to deterministic `k=256` pivot approximation above 1,500 nodes with sparse visited-set resets, cutting 20k-node centrality from minutes to milliseconds.
+  - Replaced repeated per-depth BPE tokenization in fragment extraction ([extractor.rs](crates/core/src/fragment/extractor.rs)) with single-pass disjoint heading-boundary prefix sums.
+  - Added generation-keyed `CachedAnalysis` in the IPC daemon ([handlers.rs](crates/core/src/ipc/handlers.rs)) so `workspace/getQualityScore` and `workspace/getIssues` compute collisions/drift once instead of twice.
+  - Capped default `workspace/getIssues` RPC payloads to 500 items (with exact totals + `offset`/`limit` pagination), stripped unused per-heading `fragments` from `workspace/scan` wire payloads, raised WebSocket `maxPayload` to 256 MiB, and compacted Sidebar payloads to `<2 KB`.
+- **Fixed Graph Panel Stuck at 0% / False Timeout**: Added explicit `webviewReady` handshake, removed the 8-request thundering herd on panel mount, decoupled Graph reveal from background issues loading, eliminated redundant `onDidChangeViewState` full re-posts, and prevented OOM restart loops in `ProcessManager`.
+
+---
+
 ## [1.0.6] - 2026-11-26
 
 ### Fixed (issue #1 — symlinked skill catalogs)

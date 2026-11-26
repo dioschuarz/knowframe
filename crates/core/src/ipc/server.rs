@@ -8,9 +8,10 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::{oneshot, RwLock};
-use tokio_tungstenite::accept_hdr_async;
+use tokio_tungstenite::accept_hdr_async_with_config;
 use tokio_tungstenite::tungstenite::{
     handshake::server::{Request, Response},
+    protocol::WebSocketConfig,
     Message,
 };
 
@@ -83,7 +84,11 @@ async fn handle_connection(
         Ok(response)
     };
 
-    let ws_stream = match accept_hdr_async(stream, callback).await {
+    let mut ws_config = WebSocketConfig::default();
+    ws_config.max_message_size = Some(256 * 1024 * 1024);
+    ws_config.max_frame_size = Some(256 * 1024 * 1024);
+
+    let ws_stream = match accept_hdr_async_with_config(stream, callback, Some(ws_config)).await {
         Ok(ws) => ws,
         Err(e) => {
             eprintln!("WebSocket handshake error with {}: {}", peer_addr, e);

@@ -232,7 +232,8 @@ export type WebviewInboundType =
   | 'reviewAllWithAi'
   | 'getAffectedDocuments'
   | 'requestHarnessTools'
-  | 'installHarnessTool';
+  | 'installHarnessTool'
+  | 'webviewReady';
 
 export interface WebviewInboundMessage {
   requestId?: string;

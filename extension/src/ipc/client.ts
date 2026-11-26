@@ -62,6 +62,10 @@ export class IpcClient implements vscode.Disposable {
     return !this.isDisposed && this.ws !== null && this.ws.readyState === WebSocket.OPEN;
   }
 
+  public hasPendingRequests(): boolean {
+    return this.pendingRequests.size > 0;
+  }
+
   private startKeepalive(): void {
     this.stopKeepalive();
     this.pingInterval = setInterval(() => {
@@ -126,7 +130,10 @@ export class IpcClient implements vscode.Disposable {
 
       let wsInstance: WebSocket;
       try {
-        wsInstance = new WebSocket(url, { headers });
+        wsInstance = new WebSocket(url, {
+          headers,
+          maxPayload: 256 * 1024 * 1024,
+        });
       } catch (err) {
         return reject(err);
       }

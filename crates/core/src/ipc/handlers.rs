@@ -14,6 +14,16 @@ use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+/// Cached quality score and diagnostic issues computed once per scan generation,
+/// eliminating duplicate collision/drift sweeps between `workspace/getQualityScore`
+/// and `workspace/getIssues`.
+#[derive(Clone)]
+pub struct CachedAnalysis {
+    pub generation: u64,
+    pub quality: crate::quality::KnowledgeQualityScore,
+    pub issues: Vec<crate::quality::KnowledgeIssue>,
+}
+
 pub struct AppState {
     pub workspace_root: PathBuf,
     pub topology: GraphTopology,
@@ -22,6 +32,8 @@ pub struct AppState {
     pub cached_plans: std::collections::HashMap<String, crate::evolution::TransformationPlan>,
     pub active_harness: Option<String>,
     pub governance_store: crate::evolution::transformation::GovernancePlanStore,
+    pub scan_generation: u64,
+    pub cached_analysis: Option<Arc<CachedAnalysis>>,
 }
 
 impl AppState {
@@ -35,7 +47,14 @@ impl AppState {
             cached_plans: std::collections::HashMap::new(),
             active_harness: None,
             governance_store: crate::evolution::transformation::GovernancePlanStore::default(),
+            scan_generation: 0,
+            cached_analysis: None,
         }
+    }
+
+    pub fn invalidate_analysis_cache(&mut self) {
+        self.scan_generation = self.scan_generation.wrapping_add(1);
+        self.cached_analysis = None;
     }
 
     pub fn get_active_profile(&self) -> crate::evolution::OptimizationProfile {
@@ -46,9 +65,147 @@ impl AppState {
     }
 }
 
+fn populate_topology_from_scan(
+    topology: &mut GraphTopology,
+    payload: &super::protocol::ScanResultPayload,
+) {
+    *topology = GraphTopology::new();
+    for node in &payload.nodes {
+        let mut n = crate::model::NoteNode::new(
+            node.id.clone(),
+            node.file_path.clone(),
+            node.label.clone(),
+        );
+        n.tags = node.tags.clone();
+        n.tokens = node.tokens;
+        n.status = node.status;
+        n.color = node.color.clone();
+        n.hop_distance = node.hop_distance;
+        n.in_degree = node.in_degree;
+        n.out_degree = node.out_degree;
+        n.betweenness = node.betweenness;
+        n.broken_links = node.broken_links;
+        n.fragments = node.fragments.clone();
+        topology.set_headings(
+            node.id.clone(),
+            node.fragments.iter().map(|f| f.heading.clone()).collect(),
+        );
+        topology.add_node(n);
+    }
+    for edge in &payload.edges {
+        topology.add_edge(edge.to_note_edge());
+    }
+}
+
+/// Returns cached quality score + issues for the current `scan_generation`, or computes
+/// them once on a blocking worker thread and caches the `Arc<CachedAnalysis>`.
+async fn get_or_compute_analysis(state: &Arc<RwLock<AppState>>) -> Arc<CachedAnalysis> {
+    // 1. Fast path: cache hit (0 allocations, <0.01 ms)
+    {
+        let st = state.read().await;
+        if let Some(ref cached) = st.cached_analysis {
+            if cached.generation == st.scan_generation && !st.topology.nodes.is_empty() {
+                return Arc::clone(cached);
+            }
+        }
+    }
+
+    // 2. Ensure topology is populated if called before `workspace/scan`
+    let (root, mut topology, active_hub, configured_hub, gen_snapshot) = {
+        let st = state.read().await;
+        (
+            st.workspace_root.clone(),
+            st.topology.clone(),
+            st.active_hub.clone(),
+            st.config.vault.hubs.first().cloned(),
+            st.scan_generation,
+        )
+    };
+
+    let (computed, scanned_topology) = tokio::task::spawn_blocking(move || {
+        let mut did_scan = false;
+        if topology.nodes.is_empty() {
+            if let Ok(scan_res) = execute_scan(ScanOptions {
+                workspace_root: root.clone(),
+                hub: None,
+                pretty: false,
+            }) {
+                populate_topology_from_scan(&mut topology, &scan_res);
+                did_scan = true;
+            }
+        }
+
+        // Only compute degrees/betweenness/hops if topology wasn't already computed by execute_scan
+        if !did_scan {
+            let needs_betweenness = topology.nodes.len() > 2
+                && topology.nodes.values().all(|n| n.betweenness == 0.0)
+                && !topology.edges.is_empty();
+            topology.compute_degrees();
+            if needs_betweenness {
+                topology.compute_betweenness();
+            }
+            let hub_to_use = active_hub
+                .or(configured_hub)
+                .or_else(|| topology.suggest_hub());
+            if let Some(ref hub) = hub_to_use {
+                topology.compute_hops(hub);
+            }
+        }
+
+        let baseline = crate::debt::baseline::load_baseline(&root).ok().flatten();
+        let collisions = crate::collision::detect_collisions_in_graph(&topology, &root, 0.70);
+        let drifts = crate::drift::detect_all_drifts_in_graph(&topology, &root);
+        let quality = crate::quality::calculate_quality_score(
+            &topology,
+            baseline.as_ref(),
+            &collisions,
+            &drifts,
+        );
+        let issues = crate::quality::extract_all_issues_with_baseline(
+            &topology,
+            &collisions,
+            &drifts,
+            baseline.as_ref(),
+        );
+
+        let cached = Arc::new(CachedAnalysis {
+            generation: gen_snapshot,
+            quality,
+            issues,
+        });
+        (cached, if did_scan { Some(topology) } else { None })
+    })
+    .await
+    .expect("analysis blocking task panicked");
+
+    // 3. Store in cache if generation has not moved forward concurrently
+    {
+        let mut st = state.write().await;
+        if let Some(scanned) = scanned_topology {
+            if st.topology.nodes.is_empty() {
+                st.topology = scanned;
+            }
+        }
+        if st.scan_generation == gen_snapshot {
+            st.cached_analysis = Some(Arc::clone(&computed));
+        }
+    }
+
+    computed
+}
+
 pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) -> JsonRpcResponse {
     match req.method.as_str() {
         "workspace/scan" => {
+            let include_fragments = req
+                .params
+                .as_ref()
+                .and_then(|p| {
+                    p.get("include_fragments")
+                        .or_else(|| p.get("includeFragments"))
+                })
+                .and_then(|v| v.as_bool())
+                .unwrap_or(true);
             let root = {
                 let st = state.read().await;
                 st.workspace_root.clone()
@@ -58,39 +215,26 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 hub: None,
                 pretty: false,
             };
-            match execute_scan(options) {
-                Ok(payload) => {
+            let scan_res = tokio::task::spawn_blocking(move || execute_scan(options)).await;
+            match scan_res {
+                Ok(Ok(mut payload)) => {
                     let mut st = state.write().await;
                     st.active_hub = payload.recommended_hub.clone();
-                    st.topology = GraphTopology::new();
-                    for node in &payload.nodes {
-                        let mut n = crate::model::NoteNode::new(
-                            node.id.clone(),
-                            node.file_path.clone(),
-                            node.label.clone(),
-                        );
-                        n.tags = node.tags.clone();
-                        n.tokens = node.tokens;
-                        n.status = node.status;
-                        n.color = node.color.clone();
-                        n.hop_distance = node.hop_distance;
-                        n.in_degree = node.in_degree;
-                        n.out_degree = node.out_degree;
-                        n.betweenness = node.betweenness;
-                        n.broken_links = node.broken_links;
-                        n.fragments = node.fragments.clone();
-                        st.topology.set_headings(
-                            node.id.clone(),
-                            node.fragments.iter().map(|f| f.heading.clone()).collect(),
-                        );
-                        st.topology.add_node(n);
-                    }
-                    for edge in &payload.edges {
-                        st.topology.add_edge(edge.to_note_edge());
+                    populate_topology_from_scan(&mut st.topology, &payload);
+                    st.invalidate_analysis_cache();
+                    drop(st);
+
+                    // Strip per-heading fragments from wire payload when caller only needs graph topology
+                    // (daemon retains full fragments in `st.topology` for on-demand `fragment/list`).
+                    if !include_fragments {
+                        for node in &mut payload.nodes {
+                            node.fragments.clear();
+                        }
                     }
                     JsonRpcResponse::success(req.id, json!(payload))
                 }
-                Err(e) => JsonRpcResponse::error(req.id, -32000, format!("Scan failed: {}", e)),
+                Ok(Err(e)) => JsonRpcResponse::error(req.id, -32000, format!("Scan failed: {}", e)),
+                Err(e) => JsonRpcResponse::error(req.id, -32000, format!("Scan task failed: {}", e)),
             }
         }
         "graph/setHub" => {
@@ -145,6 +289,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             let _ = st.config.save_to_file(&config_path);
 
             st.topology.compute_hops(&params.hub_path);
+            st.invalidate_analysis_cache();
 
             let result = SetCentralHubResult {
                 success: true,
@@ -251,6 +396,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             if let Some(ref hub) = st.active_hub.clone() {
                 st.topology.compute_hops(hub);
             }
+            st.invalidate_analysis_cache();
 
             if let Err(e) = st.config.save_to_file(&config_path) {
                 eprintln!("[ERROR] Failed to save config to {:?}: {}", config_path, e);
@@ -352,6 +498,7 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             if let Some(ref hub) = st.active_hub.clone() {
                 st.topology.compute_hops(hub);
             }
+            st.invalidate_analysis_cache();
 
             if let Err(e) = st.config.save_to_file(&config_path) {
                 eprintln!("[ERROR] Failed to save config to {:?}: {}", config_path, e);
@@ -383,60 +530,8 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             JsonRpcResponse::success(req.id, json!(result))
         }
         "workspace/getQualityScore" => {
-            let (root, mut topology, active_hub, configured_hub) = {
-                let st = state.read().await;
-                (
-                    st.workspace_root.clone(),
-                    st.topology.clone(),
-                    st.active_hub.clone(),
-                    st.config.vault.hubs.first().cloned(),
-                )
-            };
-            if topology.nodes.is_empty() {
-                if let Ok(scan_res) = execute_scan(ScanOptions {
-                    workspace_root: root.clone(),
-                    hub: None,
-                    pretty: false,
-                }) {
-                    for node in scan_res.nodes {
-                        let mut n = crate::model::NoteNode::new(
-                            node.id.clone(),
-                            node.file_path,
-                            node.label,
-                        );
-                        n.tags = node.tags;
-                        n.tokens = node.tokens;
-                        n.status = node.status;
-                        n.color = node.color;
-                        n.fragments = node.fragments.clone();
-                        topology.set_headings(
-                            node.id.clone(),
-                            node.fragments.iter().map(|f| f.heading.clone()).collect(),
-                        );
-                        topology.add_node(n);
-                    }
-                    for edge in scan_res.edges {
-                        topology.add_edge(edge.to_note_edge());
-                    }
-                }
-            }
-            topology.compute_degrees();
-            topology.compute_betweenness();
-            let hub_to_use = active_hub
-                .or(configured_hub)
-                .or_else(|| topology.suggest_hub());
-            if let Some(ref hub) = hub_to_use {
-                topology.compute_hops(hub);
-            }
-            let baseline = crate::debt::baseline::load_baseline(&root).ok().flatten();
-            let collisions = crate::collision::detect_collisions_in_graph(&topology, &root, 0.70);
-            let drifts = crate::drift::detect_all_drifts_in_graph(&topology, &root);
-            let quality = crate::quality::calculate_quality_score(
-                &topology,
-                baseline.as_ref(),
-                &collisions,
-                &drifts,
-            );
+            let analysis = get_or_compute_analysis(state).await;
+            let quality = &analysis.quality;
             JsonRpcResponse::success(
                 req.id,
                 json!({
@@ -463,66 +558,9 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             )
         }
         "workspace/getIssues" => {
-            let (root, mut topology, active_hub, configured_hub) = {
-                let st = state.read().await;
-                (
-                    st.workspace_root.clone(),
-                    st.topology.clone(),
-                    st.active_hub.clone(),
-                    st.config.vault.hubs.first().cloned(),
-                )
-            };
-            if topology.nodes.is_empty() {
-                if let Ok(scan_res) = execute_scan(ScanOptions {
-                    workspace_root: root.clone(),
-                    hub: None,
-                    pretty: false,
-                }) {
-                    for node in scan_res.nodes {
-                        let mut n = crate::model::NoteNode::new(
-                            node.id.clone(),
-                            node.file_path,
-                            node.label,
-                        );
-                        n.tags = node.tags;
-                        n.tokens = node.tokens;
-                        n.status = node.status;
-                        n.color = node.color;
-                        n.fragments = node.fragments.clone();
-                        topology.set_headings(
-                            node.id.clone(),
-                            node.fragments.iter().map(|f| f.heading.clone()).collect(),
-                        );
-                        topology.add_node(n);
-                    }
-                    for edge in scan_res.edges {
-                        topology.add_edge(edge.to_note_edge());
-                    }
-                }
-            }
-            topology.compute_degrees();
-            topology.compute_betweenness();
-            let hub_to_use = active_hub
-                .or(configured_hub)
-                .or_else(|| topology.suggest_hub());
-            if let Some(ref hub) = hub_to_use {
-                topology.compute_hops(hub);
-            }
-            let baseline = crate::debt::baseline::load_baseline(&root).ok().flatten();
-            let collisions = crate::collision::detect_collisions_in_graph(&topology, &root, 0.70);
-            let drifts = crate::drift::detect_all_drifts_in_graph(&topology, &root);
-            let quality = crate::quality::calculate_quality_score(
-                &topology,
-                baseline.as_ref(),
-                &collisions,
-                &drifts,
-            );
-            let all_issues = crate::quality::extract_all_issues_with_baseline(
-                &topology,
-                &collisions,
-                &drifts,
-                baseline.as_ref(),
-            );
+            let analysis = get_or_compute_analysis(state).await;
+            let quality = &analysis.quality;
+            let all_issues = &analysis.issues;
 
             let include_debt = req
                 .params
@@ -553,27 +591,17 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
             let legacy_debt_count = all_issues.iter().filter(|i| i.is_legacy).count();
             let active_issues_count = all_issues.iter().filter(|i| !i.is_legacy).count();
 
-            let mut filtered_issues = all_issues;
-
-            if !include_debt {
-                filtered_issues.retain(|i| !i.is_legacy);
-            }
-
-            if !include_excluded {
-                filtered_issues.retain(|i| {
-                    if let Some(node) = topology.nodes.get(&i.file_path) {
-                        node.status != crate::model::NodeStatus::Excluded
-                    } else {
-                        true
-                    }
-                });
-            }
-
-            if let Some(ref prefix) = filter_path {
-                filtered_issues.retain(|i| {
-                    i.file_path.starts_with(prefix) || i.file_path.contains(prefix)
-                });
-            }
+            let excluded_ids: std::collections::HashSet<String> = if !include_excluded {
+                let st = state.read().await;
+                st.topology
+                    .nodes
+                    .values()
+                    .filter(|n| n.status == crate::model::NodeStatus::Excluded)
+                    .map(|n| n.id.clone())
+                    .collect()
+            } else {
+                std::collections::HashSet::new()
+            };
 
             let pillar_filter = req
                 .params
@@ -583,43 +611,81 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                 .unwrap_or("all")
                 .to_lowercase();
 
-            if pillar_filter != "all" && !pillar_filter.is_empty() {
-                filtered_issues.retain(|i| i.pillar.to_lowercase() == pillar_filter);
-            }
+            let filtered_refs: Vec<&crate::quality::KnowledgeIssue> = all_issues
+                .iter()
+                .filter(|i| include_debt || !i.is_legacy)
+                .filter(|i| include_excluded || !excluded_ids.contains(&i.file_path))
+                .filter(|i| {
+                    if let Some(ref prefix) = filter_path {
+                        i.file_path.starts_with(prefix) || i.file_path.contains(prefix)
+                    } else {
+                        true
+                    }
+                })
+                .filter(|i| {
+                    pillar_filter == "all"
+                        || pillar_filter.is_empty()
+                        || i.pillar.to_lowercase() == pillar_filter
+                })
+                .collect();
 
-            let integrity_count = filtered_issues
+            let filtered_total = filtered_refs.len();
+            let integrity_count = filtered_refs
                 .iter()
                 .filter(|i| i.pillar == "integrity")
                 .count();
-            let structure_count = filtered_issues
+            let structure_count = filtered_refs
                 .iter()
                 .filter(|i| i.pillar == "structure")
                 .count();
-            let consistency_count = filtered_issues
+            let consistency_count = filtered_refs
                 .iter()
                 .filter(|i| i.pillar == "consistency")
                 .count();
-            let discoverability_count = filtered_issues
+            let discoverability_count = filtered_refs
                 .iter()
                 .filter(|i| i.pillar == "discoverability")
                 .count();
-            let freshness_count = filtered_issues
+            let freshness_count = filtered_refs
                 .iter()
                 .filter(|i| i.pillar == "freshness" || i.pillar == "traceability")
                 .count();
 
-            let limit = req
+            let offset = req
+                .params
+                .as_ref()
+                .and_then(|p| p.get("offset"))
+                .and_then(|v| v.as_u64())
+                .map(|v| v as usize)
+                .unwrap_or(0);
+
+            // Default cap of 500 issues per RPC response prevents unbounded JSON payloads
+            // from exhausting VS Code's V8 heap on 20,000+ document enterprise repositories.
+            // Callers can pass `limit: N` (or `limit: 0` for explicit unbounded export).
+            const DEFAULT_MAX_ISSUES_PER_RESPONSE: usize = 500;
+            let requested_limit = req
                 .params
                 .as_ref()
                 .and_then(|p| p.get("limit"))
                 .and_then(|v| v.as_u64())
                 .map(|v| v as usize);
 
-            let report_issues = if let Some(lim) = limit {
-                filtered_issues.into_iter().take(lim).collect()
-            } else {
-                filtered_issues
+            let effective_limit = match requested_limit {
+                Some(0) => None,
+                Some(n) => Some(n),
+                None => Some(DEFAULT_MAX_ISSUES_PER_RESPONSE),
             };
+
+            let report_issues: Vec<crate::quality::KnowledgeIssue> = match effective_limit {
+                Some(lim) => filtered_refs
+                    .into_iter()
+                    .skip(offset)
+                    .take(lim)
+                    .cloned()
+                    .collect(),
+                None => filtered_refs.into_iter().skip(offset).cloned().collect(),
+            };
+            let truncated = offset.saturating_add(report_issues.len()) < filtered_total;
 
             JsonRpcResponse::success(
                 req.id,
@@ -634,6 +700,8 @@ pub async fn handle_request(state: &Arc<RwLock<AppState>>, req: JsonRpcRequest) 
                     "total_issues": total_issues,
                     "active_issues_count": active_issues_count,
                     "legacy_debt_count": legacy_debt_count,
+                    "filtered_total": filtered_total,
+                    "truncated": truncated,
                     "is_quiet_default": !include_debt,
                     "raw_score": quality.raw_score,
                     "is_effective": quality.is_effective,
@@ -2819,6 +2887,7 @@ pub async fn handle_notification(state: &Arc<RwLock<AppState>>, notif: JsonRpcNo
                 &items,
                 hub.as_deref(),
             );
+            st.invalidate_analysis_cache();
         }
     }
 }

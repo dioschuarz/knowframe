@@ -8,7 +8,12 @@ import {
 } from '../types/evolution';
 import { KnowledgeQualityScore, KnowledgeIssuesReport } from '../types/admission';
 
-import { renderSidebarHtml, type SidebarRenderOptions } from './sidebarRenderer.js';
+import {
+  renderSidebarHtml,
+  buildSlimSidebarScanPayload,
+  buildSlimSidebarIssuesPayload,
+  type SidebarRenderOptions,
+} from './sidebarRenderer.js';
 export { renderSidebarHtml, type SidebarRenderOptions };
 
 export class SidebarViewProvider implements vscode.WebviewViewProvider {
@@ -25,19 +30,22 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
   private readonly getQualityScore?: () => KnowledgeQualityScore | null;
   private readonly getManagerSummary?: () => ManagerSummaryState | null;
   private readonly getIssuesReport?: () => KnowledgeIssuesReport | null;
+  private readonly onSidebarOpened?: () => void;
 
   constructor(
     extensionUri: vscode.Uri,
     getScanResult: () => ScanResultPayload | null,
     getQualityScore?: () => KnowledgeQualityScore | null,
     getManagerSummary?: () => ManagerSummaryState | null,
-    getIssuesReport?: () => KnowledgeIssuesReport | null
+    getIssuesReport?: () => KnowledgeIssuesReport | null,
+    onSidebarOpened?: () => void
   ) {
     this.extensionUri = extensionUri;
     this.getScanResult = getScanResult;
     this.getQualityScore = getQualityScore;
     this.getManagerSummary = getManagerSummary;
     this.getIssuesReport = getIssuesReport;
+    this.onSidebarOpened = onSidebarOpened;
   }
 
   public resolveWebviewView(
@@ -113,6 +121,8 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       this.updateSummary(this.currentSummary);
     } else if (this.currentScanResult) {
       this.updateData(this.currentScanResult, this.currentQualityScore);
+    } else if (this.onSidebarOpened) {
+      this.onSidebarOpened();
     }
     if (this.currentIssuesReport) {
       this.updateIssues(this.currentIssuesReport);
@@ -139,7 +149,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  public updateData(scanResult: ScanResultPayload, qualityScore?: KnowledgeQualityScore | null): void {
+  public updateData(scanResult: ScanResultPayload | null, qualityScore?: KnowledgeQualityScore | null): void {
     this.currentScanResult = scanResult;
     if (qualityScore !== undefined) {
       this.currentQualityScore = qualityScore;
@@ -147,7 +157,7 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     if (this._view) {
       this._view.webview.postMessage({
         type: 'graphDataUpdate',
-        payload: scanResult,
+        payload: buildSlimSidebarScanPayload(scanResult),
         qualityScore: this.currentQualityScore,
       });
     }
@@ -163,12 +173,12 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  public updateIssues(issuesReport: KnowledgeIssuesReport): void {
+  public updateIssues(issuesReport: KnowledgeIssuesReport | null): void {
     this.currentIssuesReport = issuesReport;
     if (this._view) {
       this._view.webview.postMessage({
         type: 'issuesUpdate',
-        payload: issuesReport,
+        payload: buildSlimSidebarIssuesPayload(issuesReport),
       });
     }
   }
