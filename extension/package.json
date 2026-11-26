@@ -2,7 +2,7 @@
   "name": "knowframe-vscode",
   "displayName": "KnowFrame - Knowledge Management Framework",
   "description": "KnowFrame — Knowledge Management Framework: dynamic knowledge graph, deterministic admission control, structural evolution, and BPE token economics for AI agents",
-  "version": "1.0.5",
+  "version": "1.0.6",
   "publisher": "dscorpsolutions",
   "repository": {
     "type": "git",
