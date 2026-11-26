@@ -7,7 +7,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
-## [Unreleased]
+## [1.0.6] - 2026-11-26
 
 ### Fixed (issue #1 — symlinked skill catalogs)
 - **Symlinks are followed**: both scanners (`issues`/`scan` and `validate`/`sync`/`analyze`) follow symlinked directories and files that resolve inside the workspace root. Cycles, dangling links and targets outside the root are skipped.

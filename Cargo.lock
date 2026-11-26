@@ -725,7 +725,7 @@ checksum = "32a66949e030da00e8c7d4434b251670a91556f4144941d37452769c25d58a53"
 
 [[package]]
 name = "llm-wiki-cli"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "clap",
@@ -738,7 +738,7 @@ dependencies = [
 
 [[package]]
 name = "llm-wiki-core"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "aho-corasick",
  "anyhow",
@@ -768,7 +768,7 @@ dependencies = [
 
 [[package]]
 name = "llm-wiki-engine"
-version = "1.0.5"
+version = "1.0.6"
 dependencies = [
  "anyhow",
  "llm-wiki-core",
