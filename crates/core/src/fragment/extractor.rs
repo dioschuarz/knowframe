@@ -49,6 +49,21 @@ pub fn slugify_heading(heading: &str) -> String {
     }
 }
 
+/// GitHub-flavored Markdown heading slug (the algorithm GitHub and VS Code use):
+/// lowercase, drop every character that is not a letter, mark, number, connector
+/// punctuation (`_`), space or hyphen, then turn each space into a hyphen. Hyphens are
+/// **not** collapsed, so `Skill Catalog & Canonical Location` becomes
+/// `skill-catalog--canonical-location`.
+pub fn github_slug(heading: &str) -> String {
+    heading
+        .trim()
+        .to_lowercase()
+        .chars()
+        .filter(|c| c.is_alphanumeric() || *c == '_' || *c == '-' || *c == ' ')
+        .map(|c| if c == ' ' { '-' } else { c })
+        .collect()
+}
+
 /// Disambiguates duplicate anchors within a single document by suffixing -1, -2, etc.
 #[derive(Debug, Default, Clone)]
 pub struct AnchorDisambiguator {

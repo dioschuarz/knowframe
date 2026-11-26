@@ -134,6 +134,23 @@ pub struct ScanSettings {
     pub include: Vec<String>,
     #[serde(default = "default_scan_exclude")]
     pub exclude: Vec<String>,
+    /// Follow symlinked directories and files that resolve inside the workspace root.
+    /// Default `true`: catalogs of symlinks (e.g. a skills catalog pointing at the one
+    /// canonical copy in a nested repository) are scanned like real folders.
+    #[serde(default = "default_follow_symlinks")]
+    pub follow_symlinks: bool,
+    /// Skip linked git worktrees (directories whose `.git` file points into
+    /// `<repo>/.git/worktrees/`). Default `true`: they are duplicate checkouts.
+    #[serde(default = "default_skip_linked_worktrees")]
+    pub skip_linked_worktrees: bool,
+}
+
+fn default_follow_symlinks() -> bool {
+    true
+}
+
+fn default_skip_linked_worktrees() -> bool {
+    true
 }
 
 impl Default for ScanSettings {
@@ -141,6 +158,8 @@ impl Default for ScanSettings {
         Self {
             include: default_include(),
             exclude: default_scan_exclude(),
+            follow_symlinks: default_follow_symlinks(),
+            skip_linked_worktrees: default_skip_linked_worktrees(),
         }
     }
 }
@@ -211,18 +230,43 @@ impl ContextVaultConfig {
         default_include()
     }
 
+    /// Effective scan exclusions: the union of `scan.exclude` and the legacy top-level
+    /// `exclude` (in that order, deduplicated). A pattern written in either list is honored;
+    /// previously a non-empty `scan.exclude` silently discarded the top-level list.
     pub fn get_scan_exclude(&self) -> Vec<String> {
-        if let Some(ref scan) = self.scan {
-            if !scan.exclude.is_empty() {
-                return scan.exclude.clone();
+        let mut merged: Vec<String> = Vec::new();
+        let sources = [
+            self.scan.as_ref().map(|s| &s.exclude),
+            self.exclude.as_ref(),
+        ];
+        for list in sources.into_iter().flatten() {
+            for pat in list {
+                if !merged.contains(pat) {
+                    merged.push(pat.clone());
+                }
             }
         }
-        if let Some(ref exc) = self.exclude {
-            if !exc.is_empty() {
-                return exc.clone();
-            }
+        if merged.is_empty() {
+            default_scan_exclude()
+        } else {
+            merged
         }
-        default_scan_exclude()
+    }
+
+    /// Whether the scanner skips linked git worktrees (default `true`).
+    pub fn get_skip_linked_worktrees(&self) -> bool {
+        self.scan
+            .as_ref()
+            .map(|s| s.skip_linked_worktrees)
+            .unwrap_or_else(default_skip_linked_worktrees)
+    }
+
+    /// Whether the scanner follows symlinks that resolve inside the workspace root (default `true`).
+    pub fn get_follow_symlinks(&self) -> bool {
+        self.scan
+            .as_ref()
+            .map(|s| s.follow_symlinks)
+            .unwrap_or_else(default_follow_symlinks)
     }
 
     pub fn get_graph_exclude(&self) -> Vec<String> {
@@ -474,10 +518,36 @@ exclude:
         let config: ContextVaultConfig = serde_yaml::from_str(yaml).unwrap();
         assert_eq!(config.get_scan_include(), vec!["notes/**/*.md".to_string()]);
         assert_eq!(config.get_scan_exclude(), vec!["**/tmp/**".to_string()]);
+        assert!(config.get_follow_symlinks());
         assert_eq!(config.get_graph_exclude(), Vec::<String>::new());
         assert_eq!(config.get_focus_mode(), FocusMode::All);
         assert!(config.get_show_orphans());
         assert!(!config.get_show_excluded());
+    }
+
+    #[test]
+    fn test_scan_exclude_merges_top_level_and_scan_lists() {
+        let yaml = r#"
+version: "2.0"
+exclude:
+  - "**/graphify-out/**"
+  - "**/node_modules/**"
+scan:
+  exclude:
+    - "**/node_modules/**"
+    - "vendor/**"
+  follow_symlinks: false
+"#;
+        let config: ContextVaultConfig = serde_yaml::from_str(yaml).unwrap();
+        assert_eq!(
+            config.get_scan_exclude(),
+            vec![
+                "**/node_modules/**".to_string(),
+                "vendor/**".to_string(),
+                "**/graphify-out/**".to_string(),
+            ]
+        );
+        assert!(!config.get_follow_symlinks());
     }
 
     #[test]

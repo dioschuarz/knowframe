@@ -9,7 +9,6 @@ use crate::tokens::counter::{compute_token_summary, count_bpe_tokens};
 use anyhow::{Context, Result};
 use globset::{Glob, GlobSet, GlobSetBuilder};
 use std::path::PathBuf;
-use walkdir::WalkDir;
 
 pub struct ScanOptions {
     pub workspace_root: PathBuf,
@@ -38,53 +37,48 @@ pub fn execute_scan(options: ScanOptions) -> Result<ScanResultPayload> {
 
     let mut topology = GraphTopology::new();
 
-    // 1. Walk directory and collect markdown files, pruning ignored directories
-    let walker = WalkDir::new(root).into_iter().filter_entry(|e| {
-        if e.file_type().is_dir() {
-            let name = e.file_name().to_string_lossy();
-            if name == ".git"
-                || name == "node_modules"
-                || name == "target"
-                || name == "dist"
-                || name == "out"
-                || name == "build"
-                || name == ".venv"
-                || name == "venv"
-                || name == ".tox"
-                || name == ".mypy_cache"
-                || name == ".pytest_cache"
-                || name == ".next"
-                || name == ".nuxt"
-                || name == ".cache"
-                || name == ".turbo"
-                || name == ".code-review-graph"
-                || name == ".understand-anything"
-                || name == "coverage"
-            {
-                return false;
-            }
-        }
-        true
-    });
+    // 1. Walk directory and collect markdown files, pruning ignored directories.
+    //    Symlinks resolving inside the root are followed (cycle-safe) and files reachable
+    //    through several logical paths are deduplicated, keeping the extra paths as aliases.
+    const PRUNED_DIRS: &[&str] = &[
+        ".git",
+        "node_modules",
+        "target",
+        "dist",
+        "out",
+        "build",
+        ".venv",
+        "venv",
+        ".tox",
+        ".mypy_cache",
+        ".pytest_cache",
+        ".next",
+        ".nuxt",
+        ".cache",
+        ".turbo",
+        ".code-review-graph",
+        ".understand-anything",
+        "coverage",
+    ];
 
     use rayon::prelude::*;
     use std::path::Path;
 
-    let mut matching_files: Vec<(PathBuf, String)> = walker
-        .filter_map(|e| e.ok())
-        .filter(|e| e.file_type().is_file())
-        .filter_map(|e| {
-            let abs_path = e.path().to_path_buf();
-            let rel_path = abs_path.strip_prefix(root).ok()?;
-            let rel_str = rel_path.to_string_lossy().replace('\\', "/");
-            if !include_set.is_match(&rel_str) || exclude_set.is_match(&rel_str) {
-                return None;
-            }
-            Some((abs_path, rel_str))
-        })
-        .collect();
+    let walked = crate::observation::fs_walk::walk_workspace_files(
+        root,
+        config.get_follow_symlinks(),
+        config.get_skip_linked_worktrees(),
+        |name| PRUNED_DIRS.contains(&name),
+        |rel| include_set.is_match(rel) && !exclude_set.is_match(rel),
+    );
 
-    matching_files.sort_by(|a, b| a.1.cmp(&b.1));
+    let mut matching_files: Vec<(PathBuf, String)> = Vec::with_capacity(walked.len());
+    for file in walked {
+        for alias in &file.aliases {
+            topology.aliases.insert(alias.clone(), file.rel_path.clone());
+        }
+        matching_files.push((file.abs_path, file.rel_path));
+    }
 
     let mut parsed_items: Vec<_> = matching_files
         .into_par_iter()
