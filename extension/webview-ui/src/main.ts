@@ -420,6 +420,17 @@ function inspectNode(node: NoteNode): void {
   const isHub = node.hopDistance === 0;
   const nodeIssues = getIssuesForNode(node);
   inspectorDrawer.inspectNode(node, inLinks, outLinks, isHub, nodeIssues);
+
+  // Lazy-load heading fragments on demand when a node is inspected
+  if (!Array.isArray((node as any).fragments) || (node as any).fragments.length === 0) {
+    if (!(node as any).__fragmentsRequested) {
+      (node as any).__fragmentsRequested = true;
+      rpc.sendMessage({
+        type: 'requestDocumentFragments',
+        payload: { path: node.id },
+      });
+    }
+  }
 }
 
 const inspectorDrawer = renderInspectorDrawer(inspectorContainer, {
@@ -1158,6 +1169,18 @@ rpc.on('transformationPlanApplyError', (data: any) => {
   applyTransformationPlanError = data?.error || 'Failed to apply transformation plan';
   console.error('[TransformationPlan] Apply failed:', applyTransformationPlanError);
   renderTransformationModal();
+});
+
+rpc.on('documentFragmentsUpdate', (data: any) => {
+  if (data && data.path && Array.isArray(data.fragments)) {
+    const match = rawNodes.find((n) => n.id === data.path);
+    if (match) {
+      (match as any).fragments = data.fragments;
+      if (selectedNode && selectedNode.id === match.id && inspectorDrawer.isOpen()) {
+        inspectNode(match);
+      }
+    }
+  }
 });
 
 rpc.on('constraintValidationResult', (data: any) => {

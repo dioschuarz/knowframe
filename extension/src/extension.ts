@@ -164,7 +164,9 @@ export async function activate(
     }
   );
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider(SidebarViewProvider.viewType, sidebarProvider)
+    vscode.window.registerWebviewViewProvider(SidebarViewProvider.viewType, sidebarProvider, {
+      webviewOptions: { retainContextWhenHidden: true },
+    })
   );
 
   const refreshQualityScore = async (): Promise<void> => {

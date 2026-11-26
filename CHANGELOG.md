@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [1.1.1] - 2026-11-26
+
+### Fixed
+- **Sidebar STRUCTURE & HEALTH Counters Staying at 0 on View Switch / Late Hydration**: Added `retainContextWhenHidden: true` to `SidebarViewProvider`, implemented an explicit `sidebarReady` handshake + `onDidChangeVisibility` state replay, server-side hydrated initial document/connected/isolated/reference counters in `sidebarRenderer.ts`, and escaped inline JSON payloads (`safeInlineJson`).
+- **On-Demand Node Fragments in Inspector Drawer**: Wired `requestDocumentFragments` -> `graph/getDocumentFragments` so clicking any node in the Graph immediately populates its heading `Fragments (N)` list on demand while keeping the initial 20,000-node `workspace/scan` payload ~70% smaller.
+
+---
+
 ## [1.1.0] - 2026-11-26
 
 ### Added

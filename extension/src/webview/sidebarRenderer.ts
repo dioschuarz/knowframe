@@ -207,12 +207,39 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
     initialRegressions = initialQuality.regressions_count != null ? initialQuality.regressions_count : initialFindings;
   }
 
+  const safeInlineJson = (value: unknown): string =>
+    JSON.stringify(value)
+      .replace(/</g, '\\u003c')
+      .replace(/\u2028/g, '\\u2028')
+      .replace(/\u2029/g, '\\u2029');
+
+  const formatCompactInit = (n: number): string => {
+    if (!n || isNaN(n) || n <= 0) {
+      return '0';
+    }
+    if (n < 1000) {
+      return Math.round(n).toString();
+    }
+    if (n < 10000) {
+      return (n / 1000).toFixed(1) + 'k';
+    }
+    if (n < 1000000) {
+      return Math.round(n / 1000) + 'k';
+    }
+    return (n / 1000000).toFixed(1) + 'M';
+  };
+
   const slimData = buildSlimSidebarScanPayload(initialData);
   const slimIssues = buildSlimSidebarIssuesPayload(initialIssues);
-  const dataJson = JSON.stringify(slimData || {});
-  const qualityJson = JSON.stringify(initialQuality || null);
-  const summaryJson = JSON.stringify(initialSummary || null);
-  const issuesJson = JSON.stringify(slimIssues || null);
+  const initialDocsCount = slimData ? slimData.total_nodes : (initialSummary?.structure?.total_documents ?? 0);
+  const initialConnectedCount = slimData ? slimData.connected_nodes : (initialSummary?.structure?.connected_documents ?? 0);
+  const initialIsolatedCount = slimData ? slimData.orphan_nodes : (initialSummary?.structure?.isolated_documents ?? 0);
+  const initialRefsCount = slimData ? slimData.total_edges : (initialSummary?.structure?.total_references ?? 0);
+  const initialHubPath = slimData?.recommended_hub || '00_meta/wiki_index.md';
+  const dataJson = safeInlineJson(slimData || {});
+  const qualityJson = safeInlineJson(initialQuality || null);
+  const summaryJson = safeInlineJson(initialSummary || null);
+  const issuesJson = safeInlineJson(slimIssues || null);
 
   return `<!DOCTYPE html>
 <html lang="en">
@@ -764,19 +791,19 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
       <!-- Standardized Terminology 4-Pill Grid -->
       <div class="stats-pills-row" title="Knowledge Base Document & Reference Metrics">
         <div class="pill-stat" title="Total active Markdown documents in knowledge base">
-          <span class="pill-value" id="val-documents">0</span>
+          <span class="pill-value" id="val-documents">${formatCompactInit(initialDocsCount)}</span>
           <span class="pill-label">Documents</span>
         </div>
         <div class="pill-stat" title="Documents participating in references">
-          <span class="pill-value" id="val-connected">0</span>
+          <span class="pill-value" id="val-connected">${formatCompactInit(initialConnectedCount)}</span>
           <span class="pill-label">Connected</span>
         </div>
         <div class="pill-stat" title="Documents with zero references">
-          <span class="pill-value" id="val-isolated">0</span>
+          <span class="pill-value" id="val-isolated">${formatCompactInit(initialIsolatedCount)}</span>
           <span class="pill-label">Isolated</span>
         </div>
         <div class="pill-stat" title="Total references in graph">
-          <span class="pill-value" id="val-references">0</span>
+          <span class="pill-value" id="val-references">${formatCompactInit(initialRefsCount)}</span>
           <span class="pill-label">References</span>
         </div>
       </div>
@@ -789,7 +816,7 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
               <circle cx="8" cy="8" r="2.5" fill="#38bdf8"/>
             </svg>
           </span>
-          <span class="hub-path-link" id="dash-hub-link" title="Designated primary hub">00_meta/wiki_index.md</span>
+          <span class="hub-path-link" id="dash-hub-link" title="Designated primary hub">${initialHubPath}</span>
         </div>
       </div>
 
@@ -1251,6 +1278,9 @@ export function renderSidebarHtml(options: SidebarRenderOptions): string {
         partialUpdateEvolution({ orientation: msg.payload });
       }
     });
+
+    // Notify Extension Host that the Sidebar listener is mounted so cached metrics are replayed immediately
+    vscode.postMessage({ type: 'sidebarReady' });
   </script>
 </body>
 </html>`;

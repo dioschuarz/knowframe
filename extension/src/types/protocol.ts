@@ -233,7 +233,8 @@ export type WebviewInboundType =
   | 'getAffectedDocuments'
   | 'requestHarnessTools'
   | 'installHarnessTool'
-  | 'webviewReady';
+  | 'webviewReady'
+  | 'requestDocumentFragments';
 
 export interface WebviewInboundMessage {
   requestId?: string;

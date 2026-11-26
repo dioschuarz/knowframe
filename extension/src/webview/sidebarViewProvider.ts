@@ -114,8 +114,26 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
         case 'reviewAllWithAi':
           vscode.commands.executeCommand('llmWiki.reviewAllWithAi');
           break;
+        case 'sidebarReady':
+          this.syncCurrentStateToWebview();
+          break;
       }
     });
+
+    webviewView.onDidChangeVisibility(() => {
+      if (webviewView.visible) {
+        this.syncCurrentStateToWebview();
+      }
+    });
+
+    this.syncCurrentStateToWebview();
+  }
+
+  private syncCurrentStateToWebview(): void {
+    this.currentScanResult = this.getScanResult() ?? this.currentScanResult;
+    this.currentQualityScore = (this.getQualityScore ? this.getQualityScore() : null) ?? this.currentQualityScore;
+    this.currentSummary = (this.getManagerSummary ? this.getManagerSummary() : null) ?? this.currentSummary;
+    this.currentIssuesReport = (this.getIssuesReport ? this.getIssuesReport() : null) ?? this.currentIssuesReport;
 
     if (this.currentSummary) {
       this.updateSummary(this.currentSummary);
@@ -123,6 +141,9 @@ export class SidebarViewProvider implements vscode.WebviewViewProvider {
       this.updateData(this.currentScanResult, this.currentQualityScore);
     } else if (this.onSidebarOpened) {
       this.onSidebarOpened();
+    }
+    if (this.currentQualityScore) {
+      this.updateQuality(this.currentQualityScore);
     }
     if (this.currentIssuesReport) {
       this.updateIssues(this.currentIssuesReport);

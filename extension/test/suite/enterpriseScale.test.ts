@@ -1,6 +1,7 @@
 import { describe, it } from 'node:test';
 import * as assert from 'node:assert/strict';
 import {
+  renderSidebarHtml,
   buildSlimSidebarScanPayload,
   buildSlimSidebarIssuesPayload,
 } from '../../src/webview/sidebarRenderer.ts';
@@ -124,5 +125,21 @@ describe('Enterprise Scale Payload Projection Test Suite (20,000+ docs)', () => 
     assert.equal((projected.nodes[0] as any).fragments, undefined);
     // All 600 connected edges (within hop 0..2) MUST be preserved
     assert.equal(projected.edges.length, 600);
+  });
+
+  it('hydrates Sidebar STRUCTURE counters server-side and emits sidebarReady handshake', () => {
+    const scan = createEnterpriseScanPayload(1_426);
+    const html = renderSidebarHtml({
+      cspPolicy: '',
+      nonce: 'testnonce',
+      initialData: scan,
+    });
+
+    assert.ok(html.includes('id="val-documents">1.4k<'), 'Documents pill must render hydrated 1.4k count');
+    assert.ok(html.includes('id="val-connected">601<'), 'Connected pill must render hydrated 601 count');
+    assert.ok(html.includes('id="val-isolated">825<'), 'Isolated pill must render hydrated 825 count');
+    assert.ok(html.includes('id="val-references">600<'), 'References pill must render hydrated 600 count');
+    assert.ok(html.includes('id="dash-hub-link" title="Designated primary hub">AGENTS.md<'));
+    assert.ok(html.includes("vscode.postMessage({ type: 'sidebarReady' })"));
   });
 });

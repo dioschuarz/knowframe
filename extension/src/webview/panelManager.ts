@@ -613,6 +613,27 @@ export class GraphPanelManager implements vscode.Disposable {
         }
         break;
       }
+      case 'requestDocumentFragments': {
+        const payload = message.payload as { path?: string };
+        if (payload?.path && this.ipcClient) {
+          try {
+            const res: any = await this.ipcClient.sendRequest('graph/getDocumentFragments', {
+              path: payload.path,
+            });
+            this.panel.webview.postMessage({
+              type: 'documentFragmentsUpdate',
+              payload: {
+                path: payload.path,
+                fragments: res?.fragments || [],
+                total_tokens: res?.total_tokens,
+              },
+            });
+          } catch {
+            // Non-fatal: inspector keeps empty state if daemon stopped or file missing
+          }
+        }
+        break;
+      }
       case 'setHub': {
         const payload = message.payload as { hub_id: string };
         if (payload?.hub_id && this.ipcClient) {
