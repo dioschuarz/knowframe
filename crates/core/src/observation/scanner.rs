@@ -9,13 +9,12 @@ use crate::model::{DocumentNode, GraphTopology, LinkType, NoteEdge, Optimization
 use anyhow::Result;
 use std::collections::HashMap;
 use std::path::{Path, PathBuf};
-use walkdir::WalkDir;
 
 /// Resolves every outgoing reference of every node against the scanned document set,
 /// using the same resolver as the graph engine (relative path, vault-root, case-folded
 /// and Obsidian shortest-path basename lookup, plus heading-anchor validation).
 /// Same-document anchor links (`#heading`, `[[#heading]]`) resolve against the source note.
-fn resolve_document_references(nodes: &mut [DocumentNode]) {
+fn resolve_document_references(nodes: &mut [DocumentNode], aliases: &HashMap<String, String>) {
     let known_nodes: HashMap<String, PathBuf> = nodes
         .iter()
         .map(|n| (n.relative_path.clone(), PathBuf::from(&n.relative_path)))
@@ -29,7 +28,7 @@ fn resolve_document_references(nodes: &mut [DocumentNode]) {
             )
         })
         .collect();
-    let index = ResolverIndex::new(&known_nodes);
+    let index = ResolverIndex::new(&known_nodes).with_aliases(aliases.clone());
 
     for node in nodes.iter_mut() {
         let source = node.relative_path.clone();
@@ -64,7 +63,18 @@ fn resolve_document_references(nodes: &mut [DocumentNode]) {
 /// Configuration options for repository scanner.
 #[derive(Debug, Clone)]
 pub struct ScanOptions {
+    /// Exclusions. A plain name (no `/`, `*`, `?`, `[` or `{`) prunes every directory with that
+    /// exact name (legacy behavior); anything else is a glob matched against the
+    /// workspace-relative POSIX path (e.g. `**/graphify-out/**`).
     pub excluded_patterns: Vec<String>,
+    /// Follow symlinks that resolve inside the root (cycle-safe, deduplicated). Default `true`.
+    pub follow_symlinks: bool,
+    /// Skip linked git worktrees (duplicate checkouts). Default `true`.
+    pub skip_linked_worktrees: bool,
+}
+
+fn is_glob_pattern(pattern: &str) -> bool {
+    pattern.contains(['/', '*', '?', '[', '{'])
 }
 
 impl Default for ScanOptions {
@@ -77,6 +87,8 @@ impl Default for ScanOptions {
                 "dist".to_string(),
                 ".obsidian".to_string(),
             ],
+            follow_symlinks: true,
+            skip_linked_worktrees: true,
         }
     }
 }
@@ -97,44 +109,42 @@ pub fn scan_repository(
     profile: &OptimizationProfile,
     commit_hash: &str,
 ) -> Result<ScanResult> {
-    let mut file_paths: Vec<PathBuf> = Vec::new();
+    let plain_names: Vec<&str> = options
+        .excluded_patterns
+        .iter()
+        .map(String::as_str)
+        .filter(|p| !is_glob_pattern(p))
+        .collect();
+    let glob_patterns: Vec<String> = options
+        .excluded_patterns
+        .iter()
+        .filter(|p| is_glob_pattern(p))
+        .cloned()
+        .collect();
+    let exclude_globs = crate::cli::scan::build_globset(&glob_patterns)?;
 
-    let is_excluded_name = |name: &str| options.excluded_patterns.iter().any(|p| p == name);
+    let walked = crate::observation::fs_walk::walk_workspace_files(
+        root,
+        options.follow_symlinks,
+        options.skip_linked_worktrees,
+        |name| plain_names.contains(&name),
+        |rel| rel.ends_with(".md") && !exclude_globs.is_match(rel),
+    );
 
-    let walker = WalkDir::new(root).follow_links(false).into_iter().filter_entry(|e| {
-        // Never prune the root itself; prune excluded directory components below it.
-        e.depth() == 0 || !(e.file_type().is_dir() && is_excluded_name(&e.file_name().to_string_lossy()))
-    });
-
-    for entry in walker.filter_map(|e| e.ok()) {
-        if !entry.file_type().is_file() {
-            continue;
+    let mut aliases: HashMap<String, String> = HashMap::new();
+    let mut file_paths: Vec<(PathBuf, String)> = Vec::with_capacity(walked.len());
+    for file in walked {
+        for alias in &file.aliases {
+            aliases.insert(alias.clone(), file.rel_path.clone());
         }
-
-        let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) != Some("md") {
-            continue;
-        }
-
-        file_paths.push(path.to_path_buf());
+        file_paths.push((file.abs_path, file.rel_path));
     }
-
-    // Canonical sorting by relative POSIX path for strict determinism
-    file_paths.sort_by(|a, b| {
-        let rel_a = a.strip_prefix(root).unwrap_or(a).to_string_lossy().replace('\\', "/");
-        let rel_b = b.strip_prefix(root).unwrap_or(b).to_string_lossy().replace('\\', "/");
-        rel_a.cmp(&rel_b)
-    });
 
     let mut nodes = Vec::with_capacity(file_paths.len());
     let mut total_tokens = 0u64;
 
-    for path in &file_paths {
-        let rel_path = path
-            .strip_prefix(root)
-            .unwrap_or(path)
-            .to_string_lossy()
-            .replace('\\', "/");
+    for (path, rel_path) in &file_paths {
+        let rel_path = rel_path.clone();
 
         let content = std::fs::read_to_string(path).unwrap_or_default();
         let visited = AstVisitor::visit(&rel_path, &content);
@@ -163,7 +173,7 @@ pub fn scan_repository(
         nodes.push(node);
     }
 
-    resolve_document_references(&mut nodes);
+    resolve_document_references(&mut nodes, &aliases);
     let all_edges: Vec<ReferenceEdge> = nodes
         .iter()
         .flat_map(|n| n.outgoing_references.iter().cloned())
@@ -215,5 +225,64 @@ mod tests {
         assert_eq!(result.topology.nodes[1].relative_path, "m_monkey.md");
         assert_eq!(result.topology.nodes[2].relative_path, "z_zebra.md");
         assert_eq!(result.analysis_id.len(), 64);
+    }
+
+    #[test]
+    fn test_glob_and_plain_name_excludes() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("pkg/graphify-out")).unwrap();
+        std::fs::create_dir_all(root.join("vendor")).unwrap();
+        std::fs::write(root.join("pkg/graphify-out/GRAPH_REPORT.md"), "# Report").unwrap();
+        std::fs::write(root.join("vendor/lib.md"), "# Vendor").unwrap();
+        std::fs::write(root.join("keep.md"), "# Keep").unwrap();
+
+        let options = ScanOptions {
+            excluded_patterns: vec!["**/graphify-out/**".to_string(), "vendor".to_string()],
+            ..ScanOptions::default()
+        };
+        let profile = OptimizationProfile::ai_oriented();
+        let result = scan_repository(root, &options, &profile, "c").unwrap();
+        let ids: Vec<_> = result.topology.nodes.iter().map(|n| n.relative_path.as_str()).collect();
+        assert_eq!(ids, vec!["keep.md"]);
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn test_symlinked_directory_links_resolve() {
+        let dir = tempdir().unwrap();
+        let root = dir.path();
+        std::fs::create_dir_all(root.join("repo/skills/radar")).unwrap();
+        std::fs::write(root.join("repo/skills/radar/SKILL.md"), "# Radar").unwrap();
+        std::fs::create_dir_all(root.join("catalog")).unwrap();
+        std::os::unix::fs::symlink("../repo/skills/radar", root.join("catalog/radar")).unwrap();
+        std::fs::write(
+            root.join("index.md"),
+            "# Index\n[via catalog](catalog/radar/SKILL.md)\n[real](repo/skills/radar/SKILL.md)\n[gone](catalog/missing/SKILL.md)\n",
+        )
+        .unwrap();
+
+        let profile = OptimizationProfile::ai_oriented();
+        let result = scan_repository(root, &ScanOptions::default(), &profile, "c").unwrap();
+        assert_eq!(result.total_documents, 2, "symlinked file deduplicated by canonical path");
+        let index = result
+            .topology
+            .nodes
+            .iter()
+            .find(|n| n.relative_path == "index.md")
+            .unwrap();
+        let resolved: Vec<_> = index
+            .outgoing_references
+            .iter()
+            .map(|r| (r.target_document.as_str(), r.is_resolved))
+            .collect();
+        assert_eq!(
+            resolved,
+            vec![
+                ("repo/skills/radar/SKILL.md", true),
+                ("repo/skills/radar/SKILL.md", true),
+                ("catalog/missing/SKILL.md", false),
+            ]
+        );
     }
 }

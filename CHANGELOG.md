@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ---
 
+## [Unreleased]
+
+### Fixed (issue #1 — symlinked skill catalogs)
+- **Symlinks are followed**: both scanners (`issues`/`scan` and `validate`/`sync`/`analyze`) follow symlinked directories and files that resolve inside the workspace root. Cycles, dangling links and targets outside the root are skipped.
+- **Dedupe by canonical path, with aliases**: a file reachable through several logical paths becomes one node. Its id is the path with the fewest symlink hops (ties broken alphabetically). Every other path is an alias, so links written with the canonical name, the catalog name or a repo-prefixed name all resolve to the same node and stay clickable.
+- **Glob excludes honored**: the top-level `exclude` list and `scan.exclude` are now merged. Before, a non-empty `scan.exclude` silently discarded the top-level list, e.g. `**/graphify-out/**`. The `observation` scanner now matches glob patterns against the relative POSIX path, and plain names still prune directories by exact name.
+- **No cross-directory basename fallback**: a link whose target has a directory (`skills/radar/SKILL.md`) only falls back to candidates whose path ends with that target. Before, it could resolve to an unrelated `SKILL.md`, which hid broken links.
+- **GFM anchors**: anchors written with GitHub's slug (`#skill-catalog--canonical-location` for `Skill Catalog & Canonical Location`) are accepted and clickable (`github_slug`).
+
+### Added
+- `scan.follow_symlinks` (default `true`) and `scan.skip_linked_worktrees` (default `true`) in `.context-vault.yaml`. Linked git worktrees are directories whose `.git` file points into `<repo>/.git/worktrees/`; they are duplicate checkouts. Submodules are not affected.
+
+---
+
 ## [1.0.5] - 2026-11-24
 
 ### Added

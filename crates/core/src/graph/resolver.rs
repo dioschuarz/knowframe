@@ -1,6 +1,6 @@
 //! Relative path resolver, multi-repo/submodule traversal, and dead link & anchor detector.
 
-pub use crate::fragment::extractor::slugify_heading;
+pub use crate::fragment::extractor::{github_slug, slugify_heading};
 use crate::model::{
     LinkPortabilityMode, LinkResolutionStatus, LinkType, NonClickableReason, NoteEdge,
 };
@@ -13,6 +13,8 @@ pub struct ResolverIndex<'a> {
     pub case_folded: HashMap<String, String>,
     pub basename_map: HashMap<String, Vec<String>>,
     pub excluded_nodes: HashSet<String>,
+    /// Alternate logical paths (symlinked paths) -> canonical node id.
+    pub aliases: HashMap<String, String>,
 }
 
 impl<'a> ResolverIndex<'a> {
@@ -51,8 +53,77 @@ impl<'a> ResolverIndex<'a> {
             case_folded,
             basename_map,
             excluded_nodes,
+            aliases: HashMap::new(),
         }
     }
+
+    /// Registers alternate logical paths (e.g. symlinked catalog paths) for known nodes.
+    /// Links written with an alias resolve to the canonical node and stay clickable,
+    /// because the alias path exists on disk relative to the source document.
+    pub fn with_aliases(mut self, aliases: HashMap<String, String>) -> Self {
+        let mut sorted: Vec<(&String, &String)> = aliases.iter().collect();
+        sorted.sort();
+        for (alias, target) in sorted {
+            if !self.known_nodes.contains_key(target) {
+                continue;
+            }
+            self.case_folded
+                .entry(alias.to_lowercase())
+                .or_insert_with(|| alias.clone());
+            if let Some(file_name) = Path::new(alias).file_name() {
+                let name = file_name.to_string_lossy().to_lowercase();
+                let stem = Path::new(alias)
+                    .file_stem()
+                    .map(|s| s.to_string_lossy().to_lowercase())
+                    .unwrap_or_else(|| name.clone());
+                self.basename_map.entry(name.clone()).or_default().push(alias.clone());
+                if stem != name {
+                    self.basename_map.entry(stem).or_default().push(alias.clone());
+                }
+            }
+        }
+        self.aliases = aliases;
+        self
+    }
+
+    /// True when `path` is a scanned node id or a registered alias of one.
+    fn contains_path(&self, path: &str) -> bool {
+        self.known_nodes.contains_key(path) || self.aliases.contains_key(path)
+    }
+
+    /// Maps an alias to its canonical node id (identity for node ids).
+    fn canonical_id<'b>(&'b self, path: &'b str) -> &'b str {
+        self.aliases.get(path).map(String::as_str).unwrap_or(path)
+    }
+}
+
+/// Keeps only basename candidates whose path ends with the directory-qualified `raw_target`
+/// (Obsidian partial-path semantics). Leading `./` and `../` segments are ignored for the
+/// suffix. A target without a directory component keeps every candidate.
+fn filter_candidates_by_path_suffix(candidates: &[String], raw_target: &str) -> Vec<String> {
+    let segments: Vec<&str> = raw_target
+        .split('/')
+        .filter(|s| !s.is_empty() && *s != "." && *s != "..")
+        .collect();
+    if segments.len() < 2 {
+        return candidates.to_vec();
+    }
+    let suffix = segments.join("/").to_lowercase();
+    let suffix_md = if suffix.ends_with(".md") {
+        suffix.clone()
+    } else {
+        format!("{}.md", suffix)
+    };
+    candidates
+        .iter()
+        .filter(|c| {
+            let lc = c.to_lowercase();
+            [&suffix, &suffix_md]
+                .iter()
+                .any(|sfx| lc == **sfx || lc.ends_with(&format!("/{}", sfx)))
+        })
+        .cloned()
+        .collect()
 }
 
 /// Given a list of candidate file paths for a basename/stem and the source file path,
@@ -420,16 +491,16 @@ pub fn resolve_edge_integrity_with_policy(
 
     for cand in &candidate_paths {
         let hit = if cand.ends_with(".md") {
-            if index.known_nodes.contains_key(cand) {
+            if index.contains_path(cand) {
                 Some(cand.clone())
             } else {
                 None
             }
         } else {
             let cand_md = format!("{}.md", cand);
-            if index.known_nodes.contains_key(&cand_md) {
+            if index.contains_path(&cand_md) {
                 Some(cand_md)
-            } else if index.known_nodes.contains_key(cand) {
+            } else if index.contains_path(cand) {
                 Some(cand.clone())
             } else {
                 None
@@ -440,7 +511,7 @@ pub fn resolve_edge_integrity_with_policy(
             edge.link_type == LinkType::Wikilink && !has_anchor && !raw_target.contains('/');
 
         if let Some(found) = hit {
-            if skip_anchorless_self && found == edge.source {
+            if skip_anchorless_self && index.canonical_id(&found) == edge.source {
                 if self_fallback.is_none() {
                     self_fallback = Some(found);
                 }
@@ -499,7 +570,11 @@ pub fn resolve_edge_integrity_with_policy(
             .get(&target_name_md)
             .or_else(|| index.basename_map.get(&target_stem.to_lowercase()))
         {
-            matched_target = resolve_best_basename_candidate(cands, &edge.source);
+            // A directory-qualified target must match on its trailing path, never on the
+            // bare file name alone (e.g. `skills/radar/SKILL.md` must not resolve to an
+            // unrelated `skills/other/SKILL.md`, which would hide a genuinely broken link).
+            let narrowed = filter_candidates_by_path_suffix(cands, &raw_target);
+            matched_target = resolve_best_basename_candidate(&narrowed, &edge.source);
         }
     }
 
@@ -543,6 +618,11 @@ pub fn resolve_edge_integrity_with_policy(
         }
     };
 
+    // A link written through an alias (symlinked path) targets the canonical node, while
+    // clickability is judged against the logical path the link actually uses.
+    let link_path = canonical_target;
+    let canonical_target = index.canonical_id(&link_path).to_string();
+
     edge.target = canonical_target.clone();
     edge.id = format!("{}->{}", edge.source, edge.target);
 
@@ -562,9 +642,18 @@ pub fn resolve_edge_integrity_with_policy(
 
         if let Some(headings) = node_headings.get(&canonical_target) {
             let mut disambiguator = crate::fragment::extractor::AnchorDisambiguator::new();
+            let mut gfm_disambiguator = crate::fragment::extractor::AnchorDisambiguator::new();
             for h in headings {
                 let h_slug = slugify_heading(h);
                 let disambiguated = disambiguator.disambiguate(&h_slug);
+                // GitHub (GFM) slug: strips punctuation without collapsing hyphens, so
+                // `A & B` becomes `a--b`. Accept it verbatim; it is what GitHub renders.
+                let gfm_disambiguated = gfm_disambiguator.disambiguate(&github_slug(h));
+                if clean_anchor == gfm_disambiguated {
+                    anchor_found = true;
+                    matched_slug = gfm_disambiguated;
+                    break;
+                }
                 if h_slug == anchor_slug
                     || disambiguated == anchor_slug
                     || h.trim().eq_ignore_ascii_case(clean_anchor)
@@ -598,7 +687,7 @@ pub fn resolve_edge_integrity_with_policy(
 
     evaluate_edge_clickability(
         edge,
-        &canonical_target,
+        &link_path,
         validated_slug.as_deref(),
         portability_mode,
     );

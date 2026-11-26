@@ -13,6 +13,8 @@ pub struct GraphTopology {
     pub nodes: HashMap<String, NoteNode>,
     pub edges: Vec<NoteEdge>,
     pub headings: HashMap<String, Vec<String>>,
+    /// Alternate logical paths (e.g. symlinked catalog paths) mapped to the canonical node id.
+    pub aliases: HashMap<String, String>,
 }
 
 impl Default for GraphTopology {
@@ -27,6 +29,7 @@ impl GraphTopology {
             nodes: HashMap::new(),
             edges: Vec::new(),
             headings: HashMap::new(),
+            aliases: HashMap::new(),
         }
     }
 
@@ -183,7 +186,8 @@ impl GraphTopology {
             .map(|(k, _)| k.clone())
             .collect();
 
-        let index = ResolverIndex::with_exclusions(&known_nodes, excluded_nodes);
+        let index = ResolverIndex::with_exclusions(&known_nodes, excluded_nodes)
+            .with_aliases(self.aliases.clone());
 
         for edge in &mut self.edges {
             resolve_edge_integrity_with_policy(edge, &index, &self.headings, portability_mode);
